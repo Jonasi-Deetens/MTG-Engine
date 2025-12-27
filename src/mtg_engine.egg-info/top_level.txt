@@ -1,0 +1,6 @@
+api
+axis1
+axis2
+axis3
+db
+scryfall

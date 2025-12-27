@@ -1,0 +1,42 @@
+# src/axis3/translate/ability_builder.py
+
+from __future__ import annotations
+from typing import List
+
+from axis3.abilities.triggered import RuntimeTriggeredAbility
+from axis3.state.objects import RuntimeObject
+from axis3.rules.events import Event
+from axis3.rules.stack import StackItem
+from axis3.state.game_state import GameState
+
+
+def register_runtime_triggers_for_object(game_state: GameState, rt_obj: RuntimeObject):
+    """
+    For each Axis2 trigger on this object, subscribe to the appropriate event.
+    """
+
+    for trig in rt_obj.axis2_card.triggers:
+        event_type = trig.event  # e.g. "enters_battlefield", "dies", "attacks"
+
+        def make_callback(trig=trig, source_id=rt_obj.id):
+            def callback(event: Event):
+                # Build runtime triggered ability
+                rta = RuntimeTriggeredAbility(
+                    source_id=source_id,
+                    axis2_trigger=trig,
+                    controller=rt_obj.controller,
+                )
+
+                # Put it on the stack
+                game_state.stack.push(StackItem(
+                    obj_id=source_id,
+                    controller=rt_obj.controller,
+                    x_value=None,  # triggers rarely use X
+                ))
+
+                # Attach the triggered ability object to the stack item
+                game_state.stack.items[-1].triggered_ability = rta
+
+            return callback
+
+        game_state.event_bus.subscribe(event_type, make_callback())
