@@ -1,18 +1,11 @@
-# src/axis3/abilities/triggered.py
+# axis3/abilities/triggered.py
 
-from __future__ import annotations
-from dataclasses import dataclass
-from typing import Optional
-
-from axis3.state.objects import RuntimeObjectId
-from axis2.schema import Trigger
-
-
-@dataclass
 class RuntimeTriggeredAbility:
     """
-    A triggered ability ready to be put on the stack.
+    Runtime representation of triggered abilities.
+    Usually pushed to stack by triggers/registry.
     """
-    source_id: RuntimeObjectId
-    axis2_trigger: Trigger
-    controller: int
+    def __init__(self, source_id: int, controller: int, axis2_trigger):
+        self.source_id = source_id
+        self.controller = controller
+        self.axis2_trigger = axis2_trigger  # Original Axis2 trigger
