@@ -1,6 +1,5 @@
 # axis3/rules/sba/checker.py
 
-from axis3.state.game_state import GameState
 from axis3.rules.sba.rules import (
     check_lethal_damage,
     check_zero_toughness,
@@ -8,10 +7,11 @@ from axis3.rules.sba.rules import (
     check_legend_rule,
 )
 
-def run_sbas(game_state: GameState):
+def run_sbas(game_state: "GameState"):
     """
     Run state-based actions until the game state stabilizes.
     """
+    
     while True:
         changed = False
 

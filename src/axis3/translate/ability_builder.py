@@ -24,7 +24,7 @@ def register_runtime_abilities_for_object(game_state: GameState, rt_obj: Runtime
     # --------------------------
     # 1. Triggered abilities
     # --------------------------
-    for trig in getattr(rt_obj.axis2, "triggers", []):
+    for trig in getattr(rt_obj.axis2_card, "triggers", []):
         event_type = trig.event  # e.g., "enters_battlefield", "dies"
 
         def make_callback(trig=trig, source_id=rt_obj.id):
@@ -51,7 +51,7 @@ def register_runtime_abilities_for_object(game_state: GameState, rt_obj: Runtime
     # 2. Activated abilities
     # --------------------------
     rt_obj.activated_abilities = []
-    for act in getattr(rt_obj.axis2, "activated_abilities", []):
+    for act in getattr(rt_obj.axis2_card, "activated_abilities", []):
         raa = RuntimeActivatedAbility(
             source_id=rt_obj.id,
             axis2_ability=act,
@@ -63,7 +63,7 @@ def register_runtime_abilities_for_object(game_state: GameState, rt_obj: Runtime
     # 3. Static / continuous effects
     # --------------------------
     rt_obj.static_abilities = []
-    for eff in getattr(rt_obj.axis2, "static_effects", []):
+    for eff in getattr(rt_obj.axis2_card, "static_effects", []):
         rce = RuntimeContinuousEffect(
             source_id=rt_obj.id,
             layer=eff.layer,

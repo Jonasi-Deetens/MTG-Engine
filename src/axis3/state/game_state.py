@@ -7,9 +7,10 @@ from enum import Enum, auto
 from typing import Dict, List, Optional
 
 from axis3.state.objects import RuntimeObject, RuntimeObjectId
-from axis3.rules.events import EventBus
-from axis3.rules.stack import Stack   # FIXED: import Stack properly
-
+from axis3.rules.events.bus import EventBus
+from axis3.rules.stack.resolver import Stack
+from axis3.rules.layers.layersystem import LayerSystem
+from axis3.state.zones import ZoneType
 
 class Phase(Enum):
     BEGINNING = auto()
@@ -58,19 +59,39 @@ class TurnState:
 
     stack_empty_since_last_priority: bool = True
 
-
 @dataclass
 class GameState:
     players: List[PlayerState]
-    objects: Dict[RuntimeObjectId, RuntimeObject]
+    objects: Dict[RuntimeObject]
 
     turn: TurnState = field(default_factory=TurnState)
-
     stack: Stack = field(default_factory=Stack)
-    event_bus: EventBus = field(default_factory=EventBus)
+    event_bus: EventBus = None  # placeholder
 
     replacement_effects: List[object] = field(default_factory=list)
+    continuous_effects: list = field(default_factory=list)
+    global_restrictions: list = field(default_factory=list)    
+    layers: LayerSystem = field(init=False)
 
-    # FIXED: forward reference avoids circular import
-    continuous_effects: List["RuntimeContinuousEffect"] = field(default_factory=list)
-    global_restrictions: list = field(default_factory=list)
+    def zone_list(self, controller_id: str, zone: ZoneType):
+        """Return the list of object IDs in a given player's zone."""
+        player = self.players[int(controller_id)]
+        if zone == ZoneType.LIBRARY:
+            return player.library
+        elif zone == ZoneType.HAND:
+            return player.hand
+        elif zone == ZoneType.BATTLEFIELD:
+            return player.battlefield
+        elif zone == ZoneType.GRAVEYARD:
+            return player.graveyard
+        elif zone == ZoneType.EXILE:
+            return player.exile
+        elif zone == ZoneType.COMMAND:
+            return player.command
+        else:
+            return []
+
+    def __post_init__(self):
+        # Set up EventBus and Layers
+        self.event_bus = EventBus(game_state=self)
+        self.layers = LayerSystem(game_state=self)

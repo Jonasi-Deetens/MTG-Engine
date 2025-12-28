@@ -16,7 +16,7 @@ def build_continuous_effects_for_object(game_state: GameState, rt_obj: RuntimeOb
     and append them to game_state.continuous_effects.
     """
 
-    axis2 = rt_obj.axis2
+    axis2 = rt_obj.axis2_card
 
     for ce in axis2.continuous_effects:
         kind = ce.kind  # This depends on your Axis2 schema

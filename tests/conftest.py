@@ -11,7 +11,6 @@ from axis2.builder import Axis2Builder
 from axis2.schema import ContinuousEffect, ReplacementEffect
 from axis3.state.game_state import GameState as Axis3GameState
 from axis3.state.characteristics import RuntimeCharacteristics as Characteristics
-from axis3.state.game_state import GameState as Axis3GameState, PlayerState
 from axis3.state.objects import RuntimeObject
 from axis3.state.zones import ZoneType
 

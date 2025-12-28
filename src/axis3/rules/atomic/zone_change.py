@@ -19,6 +19,8 @@ def apply_zone_change(game_state, event: Event):
     controller = event.payload["controller"]
     cause = event.payload.get("cause", None)
 
+    print(f"Applying zone change for {obj_id} from {from_zone} to {to_zone} for controller {controller} with cause {cause} from event {event}")
+
     rt_obj = game_state.objects.get(obj_id)
     if not rt_obj:
         return  # object may have already been removed

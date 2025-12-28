@@ -18,6 +18,7 @@ class StackItem:
     controller: Optional[int] = None
     x_value: Optional[int] = None
     triggered_ability: Optional["RuntimeTriggeredAbility"] = None
+    activated_ability: Optional["RuntimeActivatedAbility"] = None
 
 
 class Stack:

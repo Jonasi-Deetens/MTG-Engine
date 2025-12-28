@@ -34,3 +34,4 @@ class RuntimeCharacteristics:
     loyalty: Optional[int] = None
     counters: Optional[Dict[str, int]] = None
     keywords: Optional[List[str]] = None
+    abilities: Optional[List[str]] = None 

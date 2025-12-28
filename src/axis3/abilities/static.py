@@ -1,12 +1,15 @@
 # axis3/abilities/static.py
 
 from __future__ import annotations
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Callable, Optional, Set, List
 
 from axis3.state.objects import RuntimeObjectId
-from axis3.state.game_state import GameState
 
+# For type hints only:
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from axis3.state.game_state import GameState
 
 @dataclass
 class RuntimeContinuousEffect:
@@ -22,9 +25,20 @@ class RuntimeContinuousEffect:
     # Optional effect functions
     modify_power: Optional[Callable[[GameState, RuntimeObjectId, int], int]] = None
     modify_toughness: Optional[Callable[[GameState, RuntimeObjectId, int], int]] = None
-    grant_abilities: Optional[Callable[[GameState, RuntimeObjectId, Set[str]], None]] = None
+    add_abilities: Optional[Callable[[GameState, RuntimeObjectId, Set[str]], None]] = None
     remove_abilities: Optional[Callable[[GameState, RuntimeObjectId, Set[str]], None]] = None
 
+    # Optional additions/removals for types/colors/keywords
+    add_types: Set[str] = field(default_factory=set)
+    remove_types: Set[str] = field(default_factory=set)
+    add_subtypes: Set[str] = field(default_factory=set)
+    remove_subtypes: Set[str] = field(default_factory=set)
+    add_supertypes: Set[str] = field(default_factory=set)
+    remove_supertypes: Set[str] = field(default_factory=set)
+    add_colors: Set[str] = field(default_factory=set)
+    remove_colors: Set[str] = field(default_factory=set)
+    add_keywords: Set[str] = field(default_factory=set)
+    remove_keywords: Set[str] = field(default_factory=set)
 
 @dataclass
 class RuntimeStaticAbility:

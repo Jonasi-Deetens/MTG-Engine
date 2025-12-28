@@ -6,7 +6,7 @@ from axis3.rules.replacement.apply import apply_replacements
 from axis3.rules.sba.rules import run_sbas
 from axis3.rules.triggers.registry import check_triggers
 from axis3.rules.stack.resolver import resolve_top_of_stack, push_to_stack, StackItem
-from axis3.rules.atomic import zone_change, draw, damage, life
+from axis3.rules.atomic.dispatch import apply_atomic_event
 
 class GameOrchestrator:
     """
@@ -40,14 +40,7 @@ class GameOrchestrator:
         check_triggers(self.game_state, event)
 
         # 3️⃣ Execute atomic rules
-        if event.type == "draw":
-            draw.apply_draw(self.game_state, event.payload["player_id"], event.payload.get("n", 1))
-        elif event.type == "damage":
-            damage.apply_damage(self.game_state, event.payload["obj_id"], event.payload["amount"])
-        elif event.type == "life_change":
-            life.apply_life_change(self.game_state, event.payload["player_id"], event.payload["amount"])
-        elif event.type == "zone_change":
-            zone_change.apply_zone_change(self.game_state, event)
+        apply_atomic_event(self.game_state, event)
 
         # 4️⃣ Run SBAs after atomic changes
         run_sbas(self.game_state)

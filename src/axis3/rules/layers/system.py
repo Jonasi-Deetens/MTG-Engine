@@ -3,23 +3,10 @@
 from typing import Dict
 from axis3.state.objects import RuntimeObject
 from axis3.abilities.static import RuntimeStaticAbility
-from axis3.state.game_state import GameState
+from axis3.rules.layers.types import EvaluatedCharacteristics
 
-@dataclass
-class EvaluatedCharacteristics:
-    """
-    Holds the final characteristics of a permanent after applying layers.
-    """
-    power: int
-    toughness: int
-    types: set
-    subtypes: set
-    supertypes: set
-    colors: set
-    abilities: set
-
-
-def evaluate_characteristics(game_state: GameState, obj_id: int) -> EvaluatedCharacteristics:
+def evaluate_characteristics(game_state: "GameState", obj_id: int) -> EvaluatedCharacteristics:
+    from axis3.abilities.keyword import apply_keyword_abilities
     """
     Evaluate all characteristics for a permanent, applying static abilities in layer order.
     """
@@ -53,5 +40,8 @@ def evaluate_characteristics(game_state: GameState, obj_id: int) -> EvaluatedCha
 
         for _, sa, eff in layer_effects:
             sa.apply(game_state, obj_id, ec)
+
+        if layer_num == 6:
+            ec = apply_keyword_abilities(game_state, rt_obj, ec)
 
     return ec

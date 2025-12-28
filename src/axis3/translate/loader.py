@@ -16,9 +16,10 @@ from axis3.state.zones import ZoneType as Zone
 from axis3.rules.stack import Stack
 from axis3.rules.events import EventBus
 
-from axis3.translate.ability_builder import register_runtime_triggers_for_object
+from axis3.translate.ability_builder import register_runtime_abilities_for_object
 from axis3.translate.continuous_builder import build_continuous_effects_for_object
 from axis3.translate.replacement_builder import build_replacement_effects_for_object
+from axis3.translate.activated_builder import register_runtime_activated_abilities
 
 
 _uid_counter = itertools.count(1)
@@ -38,6 +39,7 @@ def derive_base_characteristics(axis1_card: Axis1Card) -> RuntimeCharacteristics
         colors=list(getattr(face, "colors", []) or []),
         power=int(getattr(face, "power", 0)) if getattr(face, "power", None) not in (None, "") else None,
         toughness=int(getattr(face, "toughness", 0)) if getattr(face, "toughness", None) not in (None, "") else None,
+        abilities=list(getattr(face, "abilities", []) or []),
     )
 
 
@@ -57,15 +59,16 @@ def create_runtime_object(
         controller=str(owner_id),
         zone=zone,
         name=axis1_card.names[0] if hasattr(axis1_card, "names") else "",
-        axis1=axis1_card,
-        axis2=axis2_card,
+        axis1_card=axis1_card,
+        axis2_card=axis2_card,
         characteristics=characteristics,
     )
 
     # --- FULL INTEGRATION ---
-    register_runtime_triggers_for_object(game_state, rt_obj)
+    register_runtime_abilities_for_object(game_state, rt_obj)
     build_continuous_effects_for_object(game_state, rt_obj)
     build_replacement_effects_for_object(game_state, rt_obj)
+    register_runtime_activated_abilities(game_state, rt_obj)
 
     return rt_obj
 

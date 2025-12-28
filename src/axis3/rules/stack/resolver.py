@@ -3,14 +3,12 @@
 from axis3.rules.stack.item import StackItem
 from axis3.rules.events.event import Event
 from axis3.rules.replacement.apply import apply_replacements
-from axis3.rules.atomic import zone_change, draw, damage, life
+from axis3.rules.atomic import zone_change
 from axis3.rules.sba import run_sbas
-from axis3.abilities.triggered import resolve_runtime_triggered_ability
+from axis3.rules.triggers.runtime import resolve_runtime_triggered_ability
 
 class Stack:
-    """
-    Represents the stack in the game. LIFO order.
-    """
+    """Represents the stack in the game. LIFO order."""
     def __init__(self):
         self.items = []
 
@@ -20,81 +18,124 @@ class Stack:
     def pop(self) -> StackItem:
         return self.items.pop() if self.items else None
 
-    def is_empty(self) -> bool:
-        return len(self.items) == 0
-
     def peek(self) -> StackItem:
         return self.items[-1] if self.items else None
+
+    def is_empty(self) -> bool:
+        return len(self.items) == 0
 
 
 # -----------------------
 # Resolver Functions
 # -----------------------
 
-def push_to_stack(game_state, stack_item: StackItem):
-    """
-    Push a spell or ability onto the stack.
-    """
+def push_to_stack(game_state: "GameState", stack_item: StackItem):
+    """Push a spell or ability onto the stack."""
     if not hasattr(game_state, "stack") or game_state.stack is None:
         game_state.stack = Stack()
     game_state.stack.push(stack_item)
 
-def resolve_top_of_stack(game_state):
+
+# axis3/rules/stack/resolver.py
+
+from axis3.rules.stack.item import StackItem
+from axis3.rules.events.event import Event
+from axis3.rules.replacement.apply import apply_replacements
+from axis3.rules.atomic import zone_change, draw, damage, life
+from axis3.rules.sba import run_sbas
+from axis3.rules.triggers.runtime import resolve_runtime_triggered_ability
+
+def resolve_top_of_stack(game_state: "GameState"):
     """
-    Resolve the top item on the stack.
+    Resolve the top item on the stack (LIFO).
+    Handles triggered abilities, activated abilities, permanents, spells, and lands.
     """
     if not game_state.stack or game_state.stack.is_empty():
         return
 
-    item = game_state.stack.pop()
+    item: StackItem = game_state.stack.pop()
 
-    # Triggered ability? Resolve differently
+    # -------------------------------
+    # 1️⃣ Triggered Ability
+    # -------------------------------
     if item.is_triggered_ability():
         resolve_runtime_triggered_ability(game_state, item.triggered_ability)
+        run_sbas(game_state)
         return
 
-    # Spell or permanent
+    # -------------------------------
+    # 2️⃣ Activated Ability
+    # -------------------------------
+    if item.is_activated_ability():
+        raa = item.activated_ability
+        # Apply costs, restrictions, and any replacement effects
+        # For now, we just execute the effect
+        raa.effect(game_state)
+        run_sbas(game_state)
+        return
+
+    # -------------------------------
+    # 3️⃣ Permanent or Land
+    # -------------------------------
     obj_id = item.obj_id
-    if obj_id is None:
+    if obj_id is None or obj_id not in game_state.objects:
         return
 
     rt_obj = game_state.objects[obj_id]
 
-    # Determine if permanent (Creature, Artifact, Enchantment, Planeswalker, Land, Battle)
-    is_permanent = any(t in ("Creature", "Artifact", "Enchantment", "Planeswalker", "Battle", "Land")
-                       for t in rt_obj.characteristics.types)
+    is_permanent = any(
+        t in ("Creature", "Artifact", "Enchantment", "Planeswalker", "Land", "Battle")
+        for t in rt_obj.characteristics.types
+    )
 
+    # Determine target zone
     if is_permanent:
-        # Move permanent to battlefield
-        event = Event(
-            type="zone_change",
-            payload={
-                "obj_id": rt_obj.id,
-                "from_zone": rt_obj.zone,
-                "to_zone": "BATTLEFIELD",
-                "controller": item.controller
-            }
-        )
-        event = apply_replacements(game_state, event)
-        zone_change.apply_zone_change(game_state, event)
+        to_zone = "BATTLEFIELD"
     else:
-        # Non-permanent: move to graveyard
-        event = Event(
-            type="zone_change",
-            payload={
-                "obj_id": rt_obj.id,
-                "from_zone": rt_obj.zone,
-                "to_zone": "GRAVEYARD",
-                "controller": item.controller
-            }
-        )
-        event = apply_replacements(game_state, event)
-        zone_change.apply_zone_change(game_state, event)
+        # Non-permanent spell goes to graveyard after resolution
+        to_zone = "GRAVEYARD"
 
-    # Run state-based actions after resolution
+    # -------------------------------
+    # 4️⃣ Handle tokens separately
+    # -------------------------------
+    if rt_obj.is_token and not is_permanent:
+        # Tokens disappear after resolution
+        del game_state.objects[rt_obj.id]
+        run_sbas(game_state)
+        return
+
+    # -------------------------------
+    # 5️⃣ Apply zone change with replacements
+    # -------------------------------
+    event = Event(
+        type="zone_change",
+        payload={
+            "obj_id": rt_obj.id,
+            "from_zone": rt_obj.zone,
+            "to_zone": to_zone,
+            "controller": item.controller,
+            "cause": "resolution",
+        }
+    )
+
+    event = apply_replacements(game_state, event)
+    zone_change.apply_zone_change(game_state, event)
+
+    # -------------------------------
+    # 6️⃣ Handle lands entering tapped/untapped
+    # -------------------------------
+    if "Land" in rt_obj.characteristics.types:
+        # Check for replacement effects (e.g., ETB tapped)
+        # Already applied via replacements above
+        pass
+
+    # -------------------------------
+    # 7️⃣ Update game state after resolution
+    # -------------------------------
     run_sbas(game_state)
+    
 
-def resolve_stack(game_state):
+def resolve_stack(game_state: "GameState"):
     """
     Resolve all items on the stack (LIFO) until empty.
     """

@@ -2,17 +2,17 @@
 
 from axis3.rules.events.event import Event
 from axis3.rules.events.queue import EventQueue
-from axis3.rules.replacement import apply_replacement_effects
-from axis3.rules.triggers.registry import TriggerRegistry
+from axis3.rules.replacement.apply import apply_replacements
+from axis3.rules.triggers.types import TriggerRegistry
 from axis3.rules.sba.checker import run_sbas
 from axis3.rules.atomic.dispatch import apply_atomic_event
 
 
 class EventBus:
-    def __init__(self, game_state):
+    def __init__(self, game_state: "GameState"):
         self.game_state = game_state
         self.queue = EventQueue()
-        self.triggers = TriggerRegistry(game_state)
+        self.triggers = TriggerRegistry()
 
     def publish(self, event: Event):
         """
@@ -26,7 +26,7 @@ class EventBus:
             event = self.queue.pop()
 
             # 1️⃣ Replacement effects
-            event = apply_replacement_effects(self.game_state, event)
+            event = apply_replacements(self.game_state, event)
             if event is None:
                 continue  # event was replaced away
 
@@ -34,7 +34,11 @@ class EventBus:
             apply_atomic_event(self.game_state, event)
 
             # 3️⃣ Observe triggers
-            self.triggers.observe(event)
+            self.triggers.notify(event)
 
             # 4️⃣ State-based actions
             run_sbas(self.game_state)
+
+    # Add this so tests and other code can subscribe to triggers
+    def subscribe(self, event_type: str, callback):
+        self.triggers.register(event_type, callback)

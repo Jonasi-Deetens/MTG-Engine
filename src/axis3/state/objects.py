@@ -32,8 +32,8 @@ class RuntimeObject:
     name: str = ""  
 
     # Axis1 + Axis2 references
-    axis1: Any = None
-    axis2: Any = None
+    axis1_card: Any = None
+    axis2_card: Any = None
 
     # Dynamic state
     tapped: bool = False
@@ -42,6 +42,9 @@ class RuntimeObject:
 
     # Characteristics (P/T, colors, types, etc.)
     characteristics: Characteristics = None
+    
+    # Token flag (used by SBA rules)
+    is_token: bool = False
 
     def has_type(self, t: str) -> bool:
         """Check if the object has a given type (Creature, Instant, etc.)."""

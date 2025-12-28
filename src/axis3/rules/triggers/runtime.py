@@ -1,6 +1,5 @@
 # axis3/rules/triggers/runtime.py
 
-from axis3.rules.stack.resolver import push_to_stack
 from axis3.rules.stack.item import StackItem
 
 class RuntimeTriggeredAbility:
@@ -12,11 +11,12 @@ class RuntimeTriggeredAbility:
         self.controller = controller
         self.axis2_trigger = axis2_trigger  # Original Axis2 trigger object
 
-def resolve_runtime_triggered_ability(game_state, rta: RuntimeTriggeredAbility):
+def resolve_runtime_triggered_ability(game_state: "GameState", rta: RuntimeTriggeredAbility):
     """
     Resolve a triggered ability immediately (Phase 2 simplification).
     Executes the effect_text in Axis2 trigger.
     """
+    from axis3.rules.stack.resolver import push_to_stack
     effect = rta.axis2_trigger.effect_text.lower()
     
     # Example effect parsing (stub, extend later)

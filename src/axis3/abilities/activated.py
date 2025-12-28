@@ -18,12 +18,23 @@ class RuntimeActivatedAbility:
             return False
         # TODO: Check costs (mana, tap, discard, etc.)
         return True
-
+        
     def activate(self, game_state):
         if not self.can_activate(game_state):
             return False
-        # TODO: Pay costs
-        if self.effect:
+
+        if getattr(self, "is_mana_ability", False):
+            # resolve immediately
             self.effect(game_state, self.source_id, self.controller)
+        else:
+            # push to stack
+            from axis3.rules.stack.resolver import push_to_stack
+            from axis3.rules.stack.item import StackItem
+            push_to_stack(game_state, StackItem(
+                obj_id=self.source_id,
+                controller=self.controller,
+                activated_ability=self
+            ))
+
         self.has_activated_this_turn = True
         return True

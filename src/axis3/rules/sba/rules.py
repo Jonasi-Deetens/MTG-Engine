@@ -26,6 +26,7 @@ def check_lethal_damage(game_state) -> bool:
                     "obj_id": obj.id,
                     "from_zone": Zone.BATTLEFIELD,
                     "to_zone": Zone.GRAVEYARD,
+                    "controller": obj.controller,
                     "cause": "lethal_damage",
                 }
             ))
@@ -55,6 +56,7 @@ def check_zero_toughness(game_state) -> bool:
                     "obj_id": obj.id,
                     "from_zone": Zone.BATTLEFIELD,
                     "to_zone": Zone.GRAVEYARD,
+                    "controller": obj.controller,
                     "cause": "zero_toughness",
                 }
             ))
@@ -83,6 +85,7 @@ def check_tokens(game_state) -> bool:
                 "obj_id": obj.id,
                 "from_zone": obj.zone,
                 "to_zone": None,          # interpreted as removal
+                "controller": obj.controller,
                 "cause": "token_cleanup",
             }
         ))
@@ -120,6 +123,7 @@ def check_legend_rule(game_state) -> bool:
                         "obj_id": obj.id,
                         "from_zone": Zone.BATTLEFIELD,
                         "to_zone": Zone.GRAVEYARD,
+                        "controller": obj.controller,
                         "cause": "legend_rule",
                     }
                 ))
