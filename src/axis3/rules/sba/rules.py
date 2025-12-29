@@ -15,10 +15,10 @@ def check_lethal_damage(game_state) -> bool:
     for obj in game_state.objects.values():
         if obj.zone != Zone.BATTLEFIELD:
             continue
-        if "Creature" not in obj.characteristics.types:
-            continue
 
         ec = game_state.layers.evaluate(obj.id)
+        if "Creature" not in ec.types:
+            continue
         if obj.damage >= ec.toughness:
             game_state.event_bus.publish(Event(
                 type=EventType.ZONE_CHANGE,
@@ -45,10 +45,10 @@ def check_zero_toughness(game_state) -> bool:
     for obj in game_state.objects.values():
         if obj.zone != Zone.BATTLEFIELD:
             continue
-        if "Creature" not in obj.characteristics.types:
-            continue
 
         ec = game_state.layers.evaluate(obj.id)
+        if "Creature" not in ec.types:
+            continue
         if ec.toughness <= 0:
             game_state.event_bus.publish(Event(
                 type=EventType.ZONE_CHANGE,
@@ -106,7 +106,8 @@ def check_legend_rule(game_state) -> bool:
 
         for obj_id in player.battlefield:
             obj = game_state.objects[obj_id]
-            if "Legendary" in obj.characteristics.supertypes:
+            ec = game_state.layers.evaluate(obj.id)
+            if "Legendary" in ec.supertypes:
                 name = obj.characteristics.name
                 legends_by_name.setdefault(name, []).append(obj)
 

@@ -36,3 +36,6 @@ def is_public_zone(zone: ZoneType) -> bool:
 
 def is_ordered_zone(zone: ZoneType) -> bool:
     return zone in ORDERED_ZONES
+
+def __str__(self):
+    return self.name

@@ -16,31 +16,20 @@ def apply_atomic_event(game_state, event: Event):
     """
 
     if event.type == EventType.DRAW:
-        draw.apply_draw(
-            game_state,
-            player_id=event.payload["player_id"],
-            amount=event.payload.get("amount", 1),
-        )
+        draw.apply_draw(game_state, event)
 
     elif event.type == EventType.DAMAGE:
-        damage.apply_damage(
-            game_state,
-            obj_id=event.payload["obj_id"],
-            amount=event.payload["amount"],
-        )
+        damage.apply_damage(game_state, event)
 
     elif event.type == EventType.LIFE_CHANGE:
-        life.apply_life_change(
-            game_state,
-            player_id=event.payload["player_id"],
-            amount=event.payload["amount"],
-        )
+        life.apply_life_change(game_state, event)
+
 
     elif event.type == EventType.ZONE_CHANGE:
-        zone_change.apply_zone_change(
-            game_state,
-            event,
-        )
+        zone_change.apply_zone_change(game_state, event)
+    else:
+        game_state.add_debug_log(f"Unhandled atomic event type: {event.type}")
+
 
     # Events that do not directly mutate game state
     # (e.g. CAST, TRIGGERED, ABILITY_ADDED) are intentionally ignored here

@@ -4,11 +4,10 @@ import pytest
 from axis3.state.game_state import GameState, PlayerState
 from axis3.state.objects import RuntimeObject
 from axis3.state.zones import ZoneType as Zone
-from axis3.translate.loader import create_runtime_object
+from axis3.compiler.loader import create_runtime_object
 from axis3.rules.sba.checker import run_sbas
-from axis3.rules.layers.system import evaluate_characteristics
 from axis3.rules.events.types import EventType
-from axis3.rules.stack.resolver import resolve_stack
+from axis3.engine.stack.resolver import resolve_stack
 from axis3.rules.events.event import Event
 # Dummy Axis1 and Axis2 objects for testing
 class DummyAxis1Card:
@@ -71,10 +70,27 @@ def test_sba_creature_death(game_state):
 def test_zero_toughness_death(game_state):
     gs = game_state
 
-    # Set toughness to 0
     c1 = gs.objects[gs.players[0].battlefield[0]]
-    c1.characteristics.toughness = 0
 
+    # Apply a continuous effect that sets toughness to 0
+    from axis3.abilities.static import RuntimeContinuousEffect
+
+    def applies_to(gs_inner, obj_id):
+        return obj_id == c1.id
+
+    def mod_toughness(gs_inner, obj_id, current):
+        return 0  # force toughness to 0
+
+    ce = RuntimeContinuousEffect(
+        source_id=c1.id,
+        layer=7,
+        sublayer="7b",
+        applies_to=applies_to,
+        modify_toughness=mod_toughness,
+    )
+    gs.continuous_effects.append(ce)
+
+    # Run SBAs
     run_sbas(gs)
 
     assert c1.zone == Zone.GRAVEYARD
@@ -177,7 +193,7 @@ def test_activated_ability_registration(game_state):
             self.cost = None
             self.effect = lambda gs_inner: setattr(gs_inner, "dummy_flag", True)
 
-    from axis3.translate.activated_builder import register_runtime_activated_abilities
+    from axis3.compiler.activated_builder import register_runtime_activated_abilities
     c1.axis2_card.activated_abilities = [DummyActivated()]
     register_runtime_activated_abilities(gs, c1)
 
@@ -196,7 +212,7 @@ def test_runtime_activated_ability_activation(game_state):
             self.effect = lambda gs_inner, source_id, controller: setattr(gs_inner, "dummy_flag", True)
 
     c1.axis2_card.activated_abilities = [DummyActivated()]
-    from axis3.translate.activated_builder import register_runtime_activated_abilities
+    from axis3.compiler.activated_builder import register_runtime_activated_abilities
     register_runtime_activated_abilities(gs, c1)
 
     raa = c1.runtime_activated_abilities[0]
@@ -219,14 +235,14 @@ def test_runtime_activated_ability_resolution(game_state):
             self.effect = lambda gs_inner, source_id, controller: setattr(gs_inner, "dummy_flag", True)
 
     c1.axis2_card.activated_abilities = [DummyActivated()]
-    from axis3.translate.activated_builder import register_runtime_activated_abilities
+    from axis3.compiler.activated_builder import register_runtime_activated_abilities
     register_runtime_activated_abilities(gs, c1)
 
     raa = c1.runtime_activated_abilities[0]
     raa.activate(gs)
 
     # Stack has the ability
-    from axis3.rules.stack.resolver import resolve_stack
+    from axis3.engine.stack.resolver import resolve_stack
     resolve_stack(gs)
 
     # After resolution, effect should have run
@@ -234,3 +250,20 @@ def test_runtime_activated_ability_resolution(game_state):
     # Stack should now be empty
     assert gs.stack.is_empty()
 
+def test_life_change_event_pipeline(game_state):
+    gs = game_state
+
+    from axis3.rules.events.event import Event
+    from axis3.rules.events.types import EventType
+
+    # Snapshot before
+    old_life = gs.players[0].life
+
+    # This should apply one life change and stop (no infinite loop)
+    gs.event_bus.publish(Event(
+        type=EventType.LIFE_CHANGE,
+        payload={"player_id": 0, "amount": -3}
+    ))
+
+    # Life should be reduced by 3
+    assert gs.players[0].life == old_life - 3

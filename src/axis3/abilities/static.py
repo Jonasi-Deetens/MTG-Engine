@@ -42,31 +42,21 @@ class RuntimeContinuousEffect:
 
 @dataclass
 class RuntimeStaticAbility:
-    """
-    Container for one or more RuntimeContinuousEffects.
-    Attached to a permanent.
-    """
     source_id: RuntimeObjectId
     effects: List[RuntimeContinuousEffect]
 
     def apply(self, game_state: GameState, obj_id: RuntimeObjectId, ec):
-        """
-        Apply all continuous effects to the evaluated characteristics (ec)
-        of obj_id, respecting layer/sub-layer order.
-        """
         for effect in self.effects:
-            # Skip if effect does not apply
             if not effect.applies_to(game_state, obj_id):
                 continue
 
-            # Apply P/T modifications
             if effect.modify_power:
                 ec.power = effect.modify_power(game_state, obj_id, ec.power)
             if effect.modify_toughness:
                 ec.toughness = effect.modify_toughness(game_state, obj_id, ec.toughness)
 
-            # Apply abilities
-            if effect.grant_abilities:
-                effect.grant_abilities(game_state, obj_id, ec.abilities)
+            if effect.add_abilities:
+                effect.add_abilities(game_state, obj_id, ec.abilities)
             if effect.remove_abilities:
                 effect.remove_abilities(game_state, obj_id, ec.abilities)
+

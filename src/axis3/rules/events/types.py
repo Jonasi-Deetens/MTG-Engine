@@ -12,6 +12,7 @@ class EventType:
     # CARD FLOW
     # ─────────────────────────────────────────────
     DRAW = "draw"                               # player draws cards
+    CARD_DRAWN = "card_drawn"
     DISCARD = "discard"                         # player discards
     MILL = "mill"                               # library → graveyard
     SEARCH_LIBRARY = "search_library"
@@ -20,8 +21,10 @@ class EventType:
     # ─────────────────────────────────────────────
     # LIFE & DAMAGE
     # ─────────────────────────────────────────────
-    DAMAGE = "damage"                           # damage dealt
-    LIFE_CHANGE = "life_change"                 # life gain or loss
+    DAMAGE = "damage"              
+    DAMAGE_DEALT = "damage_dealt"             # damage dealt
+    LIFE_CHANGE = "life_change"    
+    LIFE_CHANGED = "life_changed"                 # life gain or loss
     PREVENT_DAMAGE = "prevent_damage"           # optional (replacement-heavy)
 
     # ─────────────────────────────────────────────

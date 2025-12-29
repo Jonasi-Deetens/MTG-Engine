@@ -1,11 +1,10 @@
-# src/axis3/abilities/keyword.py
+# axis3/abilities/keyword.py
 
 from __future__ import annotations
 from typing import Set
 from axis3.state.objects import RuntimeObject
 from axis3.rules.layers.types import EvaluatedCharacteristics
 
-# Standard keywords we support
 KEYWORDS = {
     "flying",
     "vigilance",
@@ -15,7 +14,6 @@ KEYWORDS = {
     "hexproof",
     "indestructible",
 }
-
 
 def apply_keyword_abilities(game_state: "GameState", rt_obj: RuntimeObject, ec: EvaluatedCharacteristics):
     """
@@ -27,12 +25,11 @@ def apply_keyword_abilities(game_state: "GameState", rt_obj: RuntimeObject, ec: 
 
     # Add keywords from continuous effects
     for ce in getattr(game_state, "continuous_effects", []):
-        if ce.layer == 6 and ce.grant_abilities and ce.applies_to(game_state, rt_obj.id):
-            ce.grant_abilities(game_state, rt_obj.id, keywords)
+        if ce.layer == 6 and ce.add_abilities and ce.applies_to(game_state, rt_obj.id):
+            ce.add_abilities(game_state, rt_obj.id, keywords)
 
     # Only keep valid keywords
     keywords.intersection_update(KEYWORDS)
 
-    # Update the evaluated characteristics
     ec.abilities = keywords
     return ec

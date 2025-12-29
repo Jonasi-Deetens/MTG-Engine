@@ -1,6 +1,7 @@
 # axis3/rules/layers/types.py
 
 from dataclasses import dataclass
+from typing import Set
 
 @dataclass
 class EvaluatedCharacteristics:
@@ -9,8 +10,10 @@ class EvaluatedCharacteristics:
     """
     power: int
     toughness: int
-    types: set
-    subtypes: set
-    supertypes: set
-    colors: set
-    abilities: set
+
+    types: Set[str]
+    subtypes: Set[str]
+    supertypes: Set[str]
+    colors: Set[str]
+    abilities: Set[str]
+

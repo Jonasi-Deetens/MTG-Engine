@@ -4,8 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional, List
 from .zones import ZoneType
-from .characteristics import RuntimeCharacteristics as Characteristics
-
+from axis3.model.characteristics import PrintedCharacteristics
 # ---------------------------------------------------------
 # Runtime Object ID
 # ---------------------------------------------------------
@@ -41,8 +40,8 @@ class RuntimeObject:
     counters: Dict[str, int] = field(default_factory=dict)
 
     # Characteristics (P/T, colors, types, etc.)
-    characteristics: Characteristics = None
-    
+    characteristics: PrintedCharacteristics = None
+
     # Token flag (used by SBA rules)
     is_token: bool = False
 

@@ -26,7 +26,7 @@ def test_global_anthem_buff(game_state_factory):
 
     # Build continuous effects for Anthem (you'll hook this in automatically
     # on ETB later, but for now you can call the builder explicitly)
-    from axis3.translate.continuous_builder import build_continuous_effects_for_object
+    from axis3.compiler.continuous_builder import build_continuous_effects_for_object
     build_continuous_effects_for_object(game_state, game_state.objects[anthem_id])
 
     ec = evaluate_characteristics(game_state, bear_id)
@@ -59,7 +59,7 @@ def test_aura_buff_and_ability(game_state_factory):
     aura = game_state.objects[aura_id]
     aura.attached_to = bear_id
 
-    from axis3.translate.continuous_builder import build_continuous_effects_for_object
+    from axis3.compiler.continuous_builder import build_continuous_effects_for_object
     build_continuous_effects_for_object(game_state, aura)
 
     ec = evaluate_characteristics(game_state, bear_id)

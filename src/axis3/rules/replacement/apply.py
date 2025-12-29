@@ -1,43 +1,63 @@
-# src/axis3/rules/replacement/apply.py
+# axis3/rules/replacement/apply.py
 
+from __future__ import annotations
 from axis3.rules.events.event import Event
 from axis3.state.objects import RuntimeObject
 
-def apply_replacements(game_state: "GameState", event: Event) -> Event:
+# For type hints only
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from axis3.state.game_state import GameState
+
+
+def apply_replacements(game_state: GameState, event: Event) -> Event:
     """
-    Apply all replacement effects to a given event.
-    Returns a new Event object (or the original if unchanged).
+    Apply all replacement effects to an event, returning the modified event.
+    Replacement effects may chain, so we loop until stable.
     """
-    obj_id = event.payload.get("obj_id")
-    new_event = event
+    current_event = event
 
-    # 1️⃣ Object-specific replacement effects
-    if obj_id is not None:
-        rt_obj = game_state.objects.get(obj_id)
-        if rt_obj:
-            for eff in getattr(rt_obj, "replacement_effects", []):
-                result = _check_and_apply(eff, new_event, game_state, rt_obj)
-                if result is not None:
-                    new_event = result
+    while True:
+        changed = False
 
-    # 2️⃣ Global replacement effects
-    for eff in getattr(game_state, "replacement_effects", []):
-        result = _check_and_apply(eff, new_event, game_state, None)
-        if result is not None:
-            new_event = result
+        # 1️⃣ Object-specific replacement effects
+        obj_id = current_event.payload.get("obj_id")
+        if obj_id is not None:
+            rt_obj: RuntimeObject | None = game_state.objects.get(obj_id)
+            if rt_obj:
+                for eff in getattr(rt_obj, "replacement_effects", []):
+                    new_event = _check_and_apply(eff, current_event, game_state, rt_obj)
+                    if new_event is not None and new_event is not current_event:
+                        current_event = new_event
+                        changed = True
 
-    return new_event
+        # 2️⃣ Global replacement effects
+        for eff in getattr(game_state, "replacement_effects", []):
+            new_event = _check_and_apply(eff, current_event, game_state, None)
+            if new_event is not None and new_event is not current_event:
+                current_event = new_event
+                changed = True
+
+        # No more changes → event is stable
+        if not changed:
+            return current_event
 
 
-def _check_and_apply(eff, event: Event, game_state: "GameState", rt_obj) -> Event | None:
+def _check_and_apply(eff, event: Event, game_state: GameState, rt_obj: RuntimeObject | None) -> Event | None:
     """
     Apply a single replacement effect if its condition passes.
-    Returns a new Event or None if no change.
+    Returns a new Event or None if unchanged.
     """
+    # Must have both condition and apply
     if not hasattr(eff, "condition") or not hasattr(eff, "apply"):
         return None
 
-    if eff.condition(event):
-        return eff.apply(event)
+    try:
+        if eff.condition(game_state, event, rt_obj):
+            return eff.apply(game_state, event, rt_obj)
+    except TypeError:
+        # Backwards compatibility for older effects using condition(event)
+        if eff.condition(event):
+            return eff.apply(event)
 
     return None

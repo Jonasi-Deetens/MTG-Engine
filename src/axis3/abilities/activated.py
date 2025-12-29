@@ -7,8 +7,8 @@ class RuntimeActivatedAbility:
     def __init__(self, source_id: int, controller: int, cost=None, effect=None):
         self.source_id = source_id
         self.controller = controller
-        self.cost = cost          # Axis2 cost object
-        self.effect = effect      # Function to execute when ability resolves
+        self.cost = cost
+        self.effect = effect
         self.is_tapped_required = False
         self.once_per_turn = False
         self.has_activated_this_turn = False
@@ -27,10 +27,9 @@ class RuntimeActivatedAbility:
             # resolve immediately
             self.effect(game_state, self.source_id, self.controller)
         else:
-            # push to stack
-            from axis3.rules.stack.resolver import push_to_stack
-            from axis3.rules.stack.item import StackItem
-            push_to_stack(game_state, StackItem(
+            from axis3.engine.stack.item import StackItem
+
+            game_state.stack.push(StackItem(
                 obj_id=self.source_id,
                 controller=self.controller,
                 activated_ability=self

@@ -81,7 +81,7 @@ def move_object_between_players_zone(
     rt_obj.zone = to_zone
     rt_obj.controller = to_player_id  # may or may not be desired; adjust later
 
-from axis3.rules.stack import StackItem
+from axis3.engine.stack.item import StackItem
 from axis3.state.zones import ZoneType as Zone
 
 
