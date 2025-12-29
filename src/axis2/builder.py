@@ -1,3 +1,5 @@
+# axis2/builder.py
+
 import re
 from dataclasses import dataclass
 from typing import Optional, List, Dict, Any
@@ -26,8 +28,6 @@ from axis2.schema import (
     LimitRule,
     VisibilityRule,
     Axis2Characteristics,
-    StaticEffect,
-    ReplacementEffect,
 )
 from axis2.parsers.mana_cost_parser import parse_mana_cost
 from axis2.rules import targeting as targeting_rules
@@ -41,7 +41,10 @@ from axis2.rules import static_effects as static_effects_rules
 from axis2.rules import replacement_effects as replacement_rules
 from axis2.rules import etb_replacement as etb_replacement_rules
 from axis2.rules import modes as modes_rules
-from axis2.rules import activated_abilities as activated_abilities_rules
+from axis3.translate.ability_parsing.activated import derive_activated_abilities
+from axis3.effects.base import ContinuousEffect, StaticEffect, ReplacementEffect
+from axis2.rules.static_effects import derive_static_effects 
+from axis2.rules.replacement_effects import derive_replacement_effects
 
 
 # ------------------------------------------------------------
@@ -210,80 +213,76 @@ def _derive_action_modifiers(
     game_state: GameState,
     static_effects: List[StaticEffect]
 ) -> List[ActionModifier]:
-    """
-    Handle effects like:
-    - cost reduction/increase for specific card types
-    - flash granted by external effects
 
-    Driven by continuous_effects in game_state + static_effects on the card.
-    """
     modifiers: List[ActionModifier] = []
 
-    # Example: map continuous effects of type cost_reduction / cost_increase
-    for effect in static_effects:
-        if effect.kind in ("cost_reduction", "cost_increase"):
+    for eff in static_effects:
+
+        # Cost reduction / increase
+        if eff.kind in ("cost_reduction", "cost_increase"):
+            amount = eff.value.get("amount", None)
+
             modifiers.append(
                 ActionModifier(
-                    original=effect.kind,
-                    modification=effect.subject,
-                    layer=0,
+                    original=eff.kind,
+                    modification={
+                        "subject": eff.subject,
+                        "amount": amount
+                    },
+                    layer=eff.layering,
                     order=0,
                 )
             )
 
-    # You can later add more mappings here.
-
     return modifiers
 
 
-def _derive_action_replacements(axis1_card: Axis1Card, game_state: GameState, replacement_effects: List[ReplacementEffect]) -> List[ActionReplacement]:
-    """
-    Handle structured replacements of actions:
-    - "cast as though it had flash"
-    - "can't be countered" style interaction changes
-    """
+def _derive_action_replacements(
+    axis1_card: Axis1Card,
+    game_state: GameState,
+    replacement_effects: List[ReplacementEffect]
+) -> List[ActionReplacement]:
+
     replacements: List[ActionReplacement] = []
 
     for eff in replacement_effects:
         replacements.append(
             ActionReplacement(
-                type=eff.get("type", ""),
-                subject=eff.get("subject", ""),
-                event=eff.get("event", ""),
-                replacement=eff.get("replacement", ""),
+                type="replacement",
+                subject="this",
+                event=eff.event,
+                replacement=eff.replace_with,
             )
         )
 
     return replacements
 
+def _derive_action_preventions(
+    axis1_card: Axis1Card,
+    game_state: GameState,
+    static_effects: List[StaticEffect]
+) -> List[ActionPrevention]:
 
-def _derive_action_preventions(axis1_card: Axis1Card, game_state: GameState, static_effects: List[StaticEffect]) -> List[ActionPrevention]:
-    """
-    Handle prevention of actions:
-    - "can't cast more than one spell per turn"
-    - "players can't activate abilities"
-    """
     preventions: List[ActionPrevention] = []
 
-    # Example: from global restrictions or static effects
     for eff in static_effects:
         if eff.kind in ("cant_cast_spells", "one_spell_per_turn", "cant_activate_abilities"):
             preventions.append(
                 ActionPrevention(
                     type=eff.kind,
                     subject=eff.subject,
-                    value=eff.value,
+                    value=eff.value or {},   # <-- important fix
                 )
             )
 
     return preventions
 
+def _derive_mandatory_actions(
+    axis1_card: Axis1Card,
+    game_state: GameState,
+    static_effects: List[StaticEffect]
+) -> List[MandatoryAction]:
 
-def _derive_mandatory_actions(axis1_card: Axis1Card, game_state: GameState, static_effects: List[StaticEffect]) -> List[MandatoryAction]:
-    """
-    Handle mandatory actions:
-    - "must attack each combat if able"
-    """
     mandatory: List[MandatoryAction] = []
 
     for eff in static_effects:
@@ -292,7 +291,7 @@ def _derive_mandatory_actions(axis1_card: Axis1Card, game_state: GameState, stat
                 MandatoryAction(
                     type=eff.kind,
                     subject=eff.subject,
-                    value=eff.value,
+                    value=eff.value or {},   # <-- same fix
                 )
             )
 
@@ -664,6 +663,9 @@ class Axis2Builder:
         print(f"Step 2: triggers")
         # 2. Triggers (from oracle text + Axis1 tags)
         triggers: List[Trigger] = effects_rules.derive_triggers(axis1_card, game_state)
+        
+        print("Step 2.5: spell effects")
+        effects = effects_rules.derive_effects(axis1_card, game_state)
 
         print(f"Step 3: zone permissions")
         # 3. Zone permissions (where you can cast/play from)
@@ -719,7 +721,7 @@ class Axis2Builder:
 
         print(f"Step 15: activated abilities")
         # 15. Activated abilities
-        activated_abilities = activated_abilities_rules.derive_activated_abilities(axis1_card)
+        activated_abilities = derive_activated_abilities(axis1_card)
         print("Activated abilities:", activated_abilities)
 
         print(f"Step 16: returning Axis2Card")
@@ -743,4 +745,5 @@ class Axis2Builder:
             modes=modes,
             mode_choice=mode_choice,
             activated_abilities=activated_abilities,
+            effects=effects,
         )

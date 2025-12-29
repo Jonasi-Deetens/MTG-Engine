@@ -68,34 +68,46 @@ def test_axis2_debug(pg_session, game_state, card_name):
     print("\nACTIVATED ABILITIES:")
     if axis2.activated_abilities:
         for ability in axis2.activated_abilities:
-            print(f"  cost={ability.cost!r}, effect={ability.effect_text!r}")
+            print(f"  cost={ability.cost!r}")
+            print(f"    effect={ability.effect}")   # effect object
+            print(f"    effect type={type(ability.effect).__name__}")
     else:
         print("  None")
 
     print("\nZONE PERMISSIONS:")
     pprint.pprint(axis2.zone_permissions.permissions)
 
+    print("\nEFFECTS:")
+    if axis2.effects:
+        for eff in axis2.effects:
+            print(" ", eff)
+    else:
+        print("  No effects found")
+
+
     print("\nTRIGGERS:")
     for trig in axis2.triggers:
-        print(f"  {trig}")
+        print(f"  Trigger:")
+        print(f"    condition={trig.condition} ({type(trig.condition).__name__})")
+        print(f"    effect={trig.effect} ({type(trig.effect).__name__})")
+
 
     print("\nSTATIC EFFECTS:")
-    if hasattr(axis2, "static_effects"):
-        for eff in axis2.static_effects:
-            print(f"  {eff}")
+    for eff in axis2.static_effects:
+        print(f"  {eff}  (type={type(eff).__name__})")
+
     else:
         print("  No static effects found")
 
     print("\nCONTINUOUS EFFECTS:")
-    if hasattr(axis2, "continuous_effects"):
-        for eff in axis2.continuous_effects:
-            print(f"  {eff}")
-    else:
-        print("  No continuous effects found")
+    for eff in axis2.continuous_effects:
+        print(f"  {eff}  (type={type(eff).__name__})")
+
 
     print("\nREPLACEMENT EFFECTS:")
     for eff in axis2.replacement_effects:
-        print(f"  {eff}")
+        print(f"  {eff}  (type={type(eff).__name__})")
+
 
     print("\nGLOBAL RESTRICTIONS:")
     for r in axis2.global_restrictions:

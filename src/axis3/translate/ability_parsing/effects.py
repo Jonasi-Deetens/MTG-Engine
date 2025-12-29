@@ -1,45 +1,76 @@
 from axis3.engine.abilities.effects.mana import AddManaEffect
+from axis3.engine.abilities.effects.damage import DealDamageEffect
+from axis3.engine.abilities.effects.draw import DrawCardEffect
+import re
+
+MANA_SYMBOL_EFFECT_PATTERN = re.compile(
+    r"^add\s+(?P<mana>(?:\{[WUBRG]\})+)\.?$", re.IGNORECASE
+)
 
 def parse_effect_string(effect_str: str):
+    raw = effect_str
     effect_str = effect_str.strip()
-    is_mana_ability = False
-    effects = []
+    lower = effect_str.lower()
 
-    # 1. Mana abilities
-    if effect_str.lower().startswith("add"):
-        # Example: "Add {G}."
-        if "{G}" in effect_str:
-            effects.append(AddManaEffect("G"))
-            is_mana_ability = True
-        if "{R}" in effect_str:
-            effects.append(AddManaEffect("R"))
-            is_mana_ability = True
-        if "{U}" in effect_str:
-            effects.append(AddManaEffect("U"))
-            is_mana_ability = True
-        if "{B}" in effect_str:
-            effects.append(AddManaEffect("B"))
-            is_mana_ability = True
-        if "{W}" in effect_str:
-            effects.append(AddManaEffect("W"))
-            is_mana_ability = True
+    # ------------------------------------------------------------
+    # 1. Mana abilities: "Add {W}", "Add {R}{R}", etc.
+    # ------------------------------------------------------------
+    m = MANA_SYMBOL_EFFECT_PATTERN.match(effect_str)
+    if m:
+        mana_str = m.group("mana").upper()
+        effects = []
 
-        return effects, is_mana_ability
+        for sym in re.findall(r"\{([WUBRG])\}", mana_str):
+            effects.append(
+                AddManaEffect(
+                    selector="add_mana",
+                    subject="controller",
+                    params={"color": sym},
+                    raw=raw,
+                )
+            )
 
-    # 2. Damage
-    if "damage" in effect_str.lower():
-        from axis3.engine.abilities.effects.damage import DealDamageEffect
-        # naive parse: "Deal 1 damage to any target"
-        amount = int(effect_str.split()[1])
-        effects.append(DealDamageEffect(amount))
-        return effects, False
+        return effects, True
 
-    # 3. Draw cards
-    if effect_str.lower().startswith("draw"):
-        from axis3.engine.abilities.effects.draw import DrawCardEffect
-        amount = int(effect_str.split()[1])
-        effects.append(DrawCardEffect(amount))
-        return effects, False
+    # ------------------------------------------------------------
+    # 2. Damage: "Deal 1 damage to any target"
+    # ------------------------------------------------------------
+    if "damage" in lower:
+        parts = effect_str.split()
+        try:
+            amount = int(parts[1])
+        except Exception:
+            return [], False
 
+        return [
+            DealDamageEffect(
+                selector="deal_damage",
+                subject="target",
+                params={"amount": amount},
+                raw=raw,
+            )
+        ], False
+
+    # ------------------------------------------------------------
+    # 3. Draw cards: "Draw 2 cards"
+    # ------------------------------------------------------------
+    if lower.startswith("draw"):
+        parts = effect_str.split()
+        try:
+            amount = int(parts[1])
+        except Exception:
+            return [], False
+
+        return [
+            DrawCardEffect(
+                selector="draw",
+                subject="controller",
+                params={"amount": amount},
+                raw=raw,
+            )
+        ], False
+
+    # ------------------------------------------------------------
     # Default: no effect
+    # ------------------------------------------------------------
     return [], False

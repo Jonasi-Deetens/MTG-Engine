@@ -20,7 +20,7 @@ def register_runtime_activated_abilities(game_state, rt_obj):
                         gs.players[obj.controller].mana_pool[eff.color] += 1
                     else:
                         # fallback for custom effects
-                        aa.effect(gs, obj.id, obj.controller)
+                        eff(gs, obj.id, obj.controller)
             return effect
 
         raa = RuntimeActivatedAbility(

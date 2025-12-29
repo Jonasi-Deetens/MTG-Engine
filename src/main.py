@@ -6,10 +6,41 @@ from axis1.schema import Axis1Card, Axis1Face, Axis1Characteristics
 from axis3.rules.events.types import EventType
 from axis3.rules.handlers.cast_handlers import handle_cast_spell
 from axis3.rules.handlers.untap_handler import handle_untap_event
+from axis3.engine.turn.turn_manager import TurnManager
 
 def load_test_decks():
     forest = Axis1Card(
         card_id="forest-001",
+        layout="normal",
+        names=["Forest"],
+        faces=[
+            Axis1Face(
+                face_id="front",
+                name="Forest",
+                mana_cost="",
+                card_types=["Land"],
+                supertypes=["Basic"],
+                subtypes=["Forest"],
+                colors=[],
+                oracle_text="({T}: Add {G}.)",
+            )
+        ],
+        characteristics=Axis1Characteristics(
+            types=["Land"],
+            supertypes=["Basic"],
+            subtypes=["Forest"],
+            abilities=[],
+            name="Forest",
+            mana_cost="",
+            power=None,
+            toughness=None,
+            colors=[],
+            keywords=[],
+        )
+    )
+    
+    forest2 = Axis1Card(
+        card_id="forest-002",
         layout="normal",
         names=["Forest"],
         faces=[
@@ -90,7 +121,7 @@ def load_test_decks():
     )
 
 
-    return [forest, forest], [forest, bear]
+    return [forest, forest, forest2, bear, forest2, bear, forest2, bear, forest2, bear], [forest, forest2, forest, bear, forest2, bear, forest, bear, forest, bear]
 
 def main():
     deck1, deck2 = load_test_decks()
@@ -101,9 +132,8 @@ def main():
         deck2,
         axis2_builder
     )
-    game_state.event_bus.subscribe(EventType.CAST_SPELL, handle_cast_spell)
-    game_state.event_bus.subscribe(EventType.UNTAP, handle_untap_event)
 
+    game_state.turn_manager = TurnManager(game_state)
     ui = CLI()
     game_loop(game_state, ui)
 

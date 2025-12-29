@@ -98,14 +98,9 @@ class Stack:
             gs.move_card(obj_id, ZoneType.GRAVEYARD, controller=runtime_obj.controller)
             gs.add_debug_log(f"resolve_top: moved {obj_id}, new zone={gs.objects[obj_id].zone}")
 
-
-        # Non-permanent spells: try to call a card-level resolve hook, then send to graveyard
-        card_def = getattr(runtime_obj, "card_def", None)
-        if card_def is not None and hasattr(card_def, "resolve_effect"):
-            try:
-                card_def.resolve_effect(gs, runtime_obj)
-            except Exception as e:
-                gs.add_debug_log(f"resolve_top: error resolving effect for {obj_id}: {e}")
+        # Resolve spell effects
+        for effect in runtime_obj.axis2_card.effects:
+            resolve_effect(effect, gs, runtime_obj)
 
         # Default: move non-permanent spells to graveyard
         try:

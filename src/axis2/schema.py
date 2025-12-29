@@ -21,18 +21,6 @@ class ReplacementEffect:
     extra: Dict[str, Any] = None
 
 @dataclass
-class StaticEffect:
-    """
-    Represents static continuous effects, including type-changing effects.
-    Applies in the specified zones and participates in layer processing.
-    """
-    kind: str                     # e.g. "type_changer", "buff", "restriction"
-    subject: str                  # "this", "creatures_you_control", etc.
-    value: Dict[str, Any]         # effect-specific payload
-    layering: str                 # e.g. "layer_4", "layer_7b"
-    zones: List[str] = None       # ["battlefield"], ["all"], ["hand","graveyard"], etc.
-
-@dataclass
 class TimingRules:
     speed: Optional[str] = None               # "instant", "sorcery", "special"
     phases: List[str] = field(default_factory=list)
@@ -47,13 +35,6 @@ class CostRules:
     alternative: List[str] = field(default_factory=list)
     reductions: List[str] = field(default_factory=list)
     increases: List[str] = field(default_factory=list)
-
-@dataclass
-class ContinuousEffect:
-    kind: str
-    subject: str
-    value: dict
-    layering: str
 
 @dataclass
 class TargetingRestriction:
@@ -184,10 +165,11 @@ class SpecialAction:
 
 @dataclass
 class Trigger:
-    effect_text: str
     event: str
-    condition: Optional[str] = None
+    condition: Optional["Condition"]
+    effect: "Effect"   # compiled effect object
     mandatory: bool = True
+    targeting_rules: Optional["TargetingRules"] = None
 
 
 # ------------------------------------------------------------
@@ -314,7 +296,7 @@ class Axis2Card:
     limits: List[LimitRule] = field(default_factory=list)
     visibility_constraints: VisibilityRule = field(default_factory=VisibilityRule)
     keywords: List[str] = field(default_factory=list)
-    static_effects: List[StaticEffect] = field(default_factory=list)
+    static_effects: List["StaticEffect"] = field(default_factory=list)
     replacement_effects: List[ReplacementEffect] = field(default_factory=list)
     modes: List[Mode] = field(default_factory=list)
     mode_choice: Optional[str] = None
@@ -324,3 +306,6 @@ class Axis2Card:
     dynamic_limit_conditions: List[Dict[str, Any]] = field(default_factory=list)
     conditional_usage: List[Dict[str, Any]] = field(default_factory=list)
     activated_abilities: List[ActivatedAbility] = field(default_factory=list)
+    continuous_effects: List["ContinuousEffect"] = field(default_factory=list)
+    effects: List[Any] = field(default_factory=list)
+

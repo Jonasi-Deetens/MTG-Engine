@@ -77,7 +77,6 @@ def build_game_state_from_decks(
         replacement_effects=[],
         continuous_effects=[],
     )
-    dummy_state.event_bus = EventBus(dummy_state)
 
     # Prepare final objects dict
     objects: dict = {}
@@ -92,7 +91,7 @@ def build_game_state_from_decks(
             axis2,
             owner_id=0,
             zone=Zone.LIBRARY,
-            game_state=None,   # <-- FIXED
+            game_state=dummy_state,
         )
 
         objects[rt_obj.id] = rt_obj
@@ -107,7 +106,7 @@ def build_game_state_from_decks(
             axis2,
             owner_id=1,
             zone=Zone.LIBRARY,
-            game_state=None,   # <-- FIXED
+            game_state=dummy_state,
         )
 
         objects[rt_obj.id] = rt_obj
@@ -126,9 +125,6 @@ def build_game_state_from_decks(
         replacement_effects=[],
         continuous_effects=[],
     )
-
-    # Attach event bus
-    game_state.event_bus = EventBus(game_state)
 
     # Patch runtime objects so they reference the real game_state
     for obj in objects.values():

@@ -14,18 +14,19 @@ def game_loop(game_state, ui):
     - TurnManager-driven
     """
 
-    tm = TurnManager(game_state)
+    tm = game_state.turn_manager
     tm.begin_game()
 
     while True:
-        # --- 1. Render current state ---
-        ui.render(game_state, tm)
         # inside game_loop, after ui.render(game_state, tm)
         for line in game_state.debug_log:
             print("[DEBUG]", line)
         game_state.debug_log.clear()
 
-        player_id = tm.priority_player
+        player_id = tm.priority.current
+        
+        # --- 1. Render current state ---
+        ui.render(game_state, tm)
         # --- 2. Run SBAs before priority decisions ---
         run_sbas(game_state)
 

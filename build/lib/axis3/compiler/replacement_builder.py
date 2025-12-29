@@ -1,6 +1,6 @@
 # src/axis3/translate/replacement_builder.py
 
-from axis3.rules.replacement.types import ReplacementEffect
+from axis3.effects.base import ReplacementEffect
 from axis3.state.zones import ZoneType as Zone
 
 

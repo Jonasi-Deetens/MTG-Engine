@@ -14,11 +14,10 @@ class ReplacementEffect:
       - "If you would draw a card, draw two instead"
       - "Enter the battlefield tapped"
     """
-    type: str
-    subject: str
     event: str
-    replacement: str
-    extra: Dict[str, Any] = None
+    replace_with: Callable[..., None]   # or an Effect object
+    condition: Optional[Condition] = None
+
 
 @dataclass
 class StaticEffect:
@@ -50,10 +49,10 @@ class CostRules:
 
 @dataclass
 class ContinuousEffect:
-    kind: str
-    subject: str
-    value: dict
-    layering: str
+    effect_type: str
+    selector: Selector
+    params: dict
+
 
 @dataclass
 class TargetingRestriction:
@@ -268,17 +267,39 @@ class VisibilityRule:
 
 @dataclass
 class ActivatedAbility:
-    cost: str
-    effect_text: str
+    cost: List[Any]                 # parsed cost objects
+    effect: List[Any]               # parsed effect objects
+    is_mana_ability: bool = False
     restrictions: List[str] = field(default_factory=list)
-    timing: str = "instant"  # Axis2 doesn't enforce timing yet
+    timing: str = "instant"
 
 # ------------------------------------------------------------
 # AXIS 2 CARD ROOT OBJECT
 # ------------------------------------------------------------
 
 @dataclass
+class Axis2Characteristics:
+    mana_cost: Optional["ManaCost"] = None
+    mana_value: Optional[float] = None
+
+    colors: List[str] = field(default_factory=list)
+    color_identity: List[str] = field(default_factory=list)
+    color_indicator: List[str] = field(default_factory=list)
+
+    # IMPORTANT: layer system expects `.types`, not `.card_types`
+    types: List[str] = field(default_factory=list)
+    supertypes: List[str] = field(default_factory=list)
+    subtypes: List[str] = field(default_factory=list)
+
+    power: Optional[int] = None
+    toughness: Optional[int] = None
+    loyalty: Optional[int] = None
+    defense: Optional[int] = None
+
+    
+@dataclass
 class Axis2Card:
+    characteristics: Axis2Characteristics
     actions: Dict[str, Any] = field(default_factory=dict)
     triggers: List[Trigger] = field(default_factory=list)
     zone_permissions: ZonePermissions = field(default_factory=ZonePermissions)

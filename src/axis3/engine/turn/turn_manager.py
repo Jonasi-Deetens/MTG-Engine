@@ -5,7 +5,7 @@ from axis3.rules.events.event import Event
 from axis3.rules.events.types import EventType
 from axis3.rules.sba.checker import run_sbas
 from axis3.state.zones import ZoneType
-from axis3.state.game_state import Phase
+from axis3.engine.turn.phases import Phase
 
 from .steps import Step, PHASE_STEP_ORDER
 from .priority import PriorityManager
@@ -20,6 +20,20 @@ class TurnManager:
     - UI-agnostic (no input/output).
     - Rules-light: delegates real rules work via events and hooks.
     """
+    
+    def _draw_cards(self, player_id: int, count: int):
+        """
+        Draw `count` cards for `player_id` via the normal DRAW event
+        pipeline (replacement effects, triggers, etc.).
+        """
+        print(f"Drawing {count} cards for player {player_id}")
+        for _ in range(count):
+            self.gs.event_bus.publish(Event(
+                type=EventType.DRAW,
+                payload={"player_id": player_id}
+            ))
+            # If your draw implementation lives in rules handlers, they will
+            # move the card from library to hand in response to this.
 
     def __init__(self, game_state: "GameState"):
         self.gs = game_state
@@ -35,6 +49,13 @@ class TurnManager:
         Initialize the first turn: set phase/step, handle automatic actions,
         and give priority at the first step that actually has priority.
         """
+
+        # Starting hands 
+        print("Drawing starting hands")
+        for pid, player in enumerate(self.gs.players): 
+            print(f"Drawing {7} cards for player {player.id}")
+            self._draw_cards(player.id, 7)
+
         self.state.turn_number = 1
         self.state.active_player = 0
         self._set_phase_step(Phase.BEGINNING, Step.UNTAP)
@@ -90,6 +111,7 @@ class TurnManager:
             * give priority (most steps), or
             * auto-advance (UNTAP, some CLEANUP cases)
         """
+
         self.gs.event_bus.publish(Event(
             type=EventType.BEGIN_STEP,
             payload={
@@ -100,6 +122,7 @@ class TurnManager:
             }
         ))
 
+        self.priority.give_to(self.state.active_player)
         step = self.state.step
 
         # --- Automatic, no-priority steps: UNTAP, some parts of CLEANUP -----
@@ -237,8 +260,10 @@ class TurnManager:
             False otherwise.
         """
         self.gs.event_bus.publish(Event(
-            type=EventType.BEGIN_STEP,
+            type=EventType.CLEANUP,
             payload={
+                "phase": self.state.phase,
+                "step": self.state.step,
                 "active_player": self.state.active_player,
                 "turn_number": self.state.turn_number,
             }

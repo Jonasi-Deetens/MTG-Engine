@@ -1,19 +1,42 @@
-from axis3.rules.events.event import Event
-from axis3.rules.events.types import EventType
+from dataclasses import dataclass
+from typing import Optional, List
 
-class AddManaEffect:
-    def __init__(self, color):
-        self.color = color
+from axis3.effects.base import ContinuousEffect
 
-    def apply(self, game_state: "GameState", obj: "RuntimeObject"):
-        player = game_state.players[obj.controller]
-        player.mana_pool[self.color] += 1
 
-        game_state.event_bus.publish(Event(
-            type=EventType.MANA_ABILITY_RESOLVED,
-            payload={
-                "obj_id": obj.id,
-                "controller": obj.controller,
-                "color": self.color
-            }
-        ))
+@dataclass
+class AddManaEffect(ContinuousEffect):
+    """
+    Axis3 effect: Add mana to the controller's mana pool.
+
+    Examples:
+        AddManaEffect(color="G")
+        AddManaEffect(color="U", amount=2)
+    """
+
+    color: str
+    amount: int = 1
+    zones: Optional[List[str]] = None
+
+    # Mana abilities resolve immediately, not layered
+    layering: str = "resolution"
+
+    def apply(self, game_state, source, controller):
+        """
+        Runtime execution: add mana to the controller's mana pool.
+        """
+
+        player = game_state.players[controller]
+        player.mana_pool[self.color] += self.amount
+
+        # Optional event emission (Axis3-friendly)
+        if hasattr(game_state, "event_bus"):
+            game_state.event_bus.publish({
+                "type": "mana_added",
+                "source": source,
+                "controller": controller,
+                "color": self.color,
+                "amount": self.amount,
+            })
+
+        return True

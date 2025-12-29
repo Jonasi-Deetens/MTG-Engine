@@ -2,8 +2,9 @@ import re
 from typing import List
 
 from axis1.schema import Axis1Card
-from axis2.schema import ContinuousEffect, StaticEffect
+from axis3.effects.base import ContinuousEffect, StaticEffect
 from typing import TYPE_CHECKING
+from axis2.rules.keywords import derive_keyword_abilities
 
 if TYPE_CHECKING:
     from axis2.builder import GameState
@@ -500,6 +501,21 @@ def derive_static_effects(axis1_card: Axis1Card, game_state: "GameState") -> Lis
                     zones=eff.get("zones", ["battlefield"]),
                 )
             )
+
+    # ------------------------------------------------------------
+    # Keyword abilities → static continuous effects (Layer 6)
+    # ------------------------------------------------------------
+    keywords = derive_keyword_abilities(axis1_card, game_state)
+
+    for kw in keywords:
+        effects.append(
+            ContinuousEffect(
+                kind="grant_ability",
+                subject="this",
+                value={"ability": kw},
+                layering="layer_6",
+            )
+        )
 
     # Deduplicate
     unique = []

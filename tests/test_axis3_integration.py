@@ -1,6 +1,7 @@
 # tests/test_axis3_integration.py
 import pytest
 
+from axis2.schema import Axis2Characteristics
 from axis3.state.game_state import GameState, PlayerState
 from axis3.state.objects import RuntimeObject
 from axis3.state.zones import ZoneType as Zone
@@ -9,26 +10,82 @@ from axis3.rules.sba.checker import run_sbas
 from axis3.rules.events.types import EventType
 from axis3.engine.stack.resolver import resolve_stack
 from axis3.rules.events.event import Event
+
 # Dummy Axis1 and Axis2 objects for testing
 class DummyAxis1Card:
-    def __init__(self, name="TestCard", power=None, toughness=None, types=None, colors=None, card_id=None):
+    def __init__(
+        self,
+        name="TestCard",
+        power=None,
+        toughness=None,
+        types=None,
+        colors=None,
+        card_id=None,
+        mana_cost="{0}",
+        oracle_text="",
+    ):
         self.names = [name]
         self.faces = [self]
-        self.types = types or []
+
+        # Axis1 fields expected by Axis2 builder
+        self.card_id = card_id or name + "-001"
+        self.mana_cost = mana_cost
+        self.mana_value = 0
+        self.oracle_text = oracle_text
+
+        # Types and colors
+        self.card_types = types or []
         self.supertypes = []
         self.subtypes = []
+        self.colors = colors or []
+        self.color_indicator = []
+
+        # P/T
         self.power = power
         self.toughness = toughness
-        self.colors = colors or []
-        self.card_id = card_id
+
 
 class DummyAxis2Card:
-    def __init__(self, triggers=None, activated_abilities=None, continuous_effects=None, replacement_effects=None, card_id=None):
-        self.triggers = triggers or []
-        self.activated_abilities = activated_abilities or []
-        self.continuous_effects = continuous_effects or []
-        self.replacement_effects = replacement_effects or []
-        self.card_id = card_id
+    def __init__(self, axis1_card=None):
+        from axis3.rules.costs.mana import ManaCost
+
+        self.axis1_card = axis1_card
+
+        self.characteristics = Axis2Characteristics(
+            mana_cost=ManaCost(),
+            mana_value=0,
+            colors=[],
+            color_identity=[],
+            color_indicator=[],
+            types=["Creature"],
+            supertypes=[],
+            subtypes=[],
+            power=3,
+            toughness=3,
+        )
+
+        # Empty but structurally correct
+        self.actions = {}
+        self.triggers = []
+        self.zone_permissions = []
+        self.global_restrictions = []
+        self.conditions = []
+        self.action_replacements = []
+        self.action_preventions = []
+        self.action_modifiers = []
+        self.mandatory_actions = []
+        self.choice_constraints = []
+        self.limits = []
+        self.visibility_constraints = []
+        self.keywords = []
+        self.static_effects = []
+        self.replacement_effects = []
+        self.modes = []
+        self.mode_choice = None
+
+        # Must be a list of objects with .cost and .effect
+        self.activated_abilities = []
+
 
 @pytest.fixture
 def game_state():
@@ -104,7 +161,7 @@ def test_trigger_registration(game_state):
 
     # Add a dummy triggered ability that sets a flag
     triggered_flag = {"fired": False}
-    def callback(event):
+    def callback(gs, event):
         triggered_flag["fired"] = True
 
     # Manually subscribe
@@ -192,8 +249,11 @@ def test_activated_ability_registration(game_state):
     # Add dummy activated ability
     class DummyActivated:
         def __init__(self):
-            self.cost = None
-            self.effect = lambda gs_inner: setattr(gs_inner, "dummy_flag", True)
+            self.cost = [] # must be iterable            
+            self.effect = [self._effect] # list of callables 
+            
+        def _effect(self, gs_inner, source_id, controller): 
+            setattr(gs_inner, "dummy_flag", True)
 
     from axis3.engine.translate.activated_builder import register_runtime_activated_abilities
     c1.axis2_card.activated_abilities = [DummyActivated()]
@@ -210,8 +270,11 @@ def test_runtime_activated_ability_activation(game_state):
 
     class DummyActivated:
         def __init__(self):
-            self.cost = None
-            self.effect = lambda gs_inner, source_id, controller: setattr(gs_inner, "dummy_flag", True)
+            self.cost = [] # must be iterable            
+            self.effect = [self._effect] # list of callables 
+            
+        def _effect(self, gs_inner, source_id, controller): 
+            setattr(gs_inner, "dummy_flag", True)
 
     c1.axis2_card.activated_abilities = [DummyActivated()]
     from axis3.engine.translate.activated_builder import register_runtime_activated_abilities
@@ -233,8 +296,11 @@ def test_runtime_activated_ability_resolution(game_state):
 
     class DummyActivated:
         def __init__(self):
-            self.cost = None
-            self.effect = lambda gs_inner, source_id, controller: setattr(gs_inner, "dummy_flag", True)
+            self.cost = [] # must be iterable            
+            self.effect = [self._effect] # list of callables 
+            
+        def _effect(self, gs_inner, source_id, controller): 
+            setattr(gs_inner, "dummy_flag", True)
 
     c1.axis2_card.activated_abilities = [DummyActivated()]
     from axis3.engine.translate.activated_builder import register_runtime_activated_abilities

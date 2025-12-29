@@ -51,6 +51,7 @@ class EventType:
     PUT_ON_STACK = "put_on_stack"               # spell or ability
     RESOLVE_STACK_OBJECT = "resolve_stack_object"
     COUNTER_SPELL = "counter_spell"
+    MANA_SPENT = "mana_spent"
 
     # ─────────────────────────────────────────────
     # ABILITIES
@@ -75,3 +76,4 @@ class EventType:
     END_STEP = "end_step"
     BEGIN_PHASE = "begin_phase"
     END_PHASE = "end_phase"
+    CLEANUP = "cleanup"

@@ -24,7 +24,6 @@ def apply_atomic_event(game_state, event: Event):
     elif event.type == EventType.LIFE_CHANGE:
         life.apply_life_change(game_state, event)
 
-
     elif event.type == EventType.ZONE_CHANGE:
         zone_change.apply_zone_change(game_state, event)
     else:

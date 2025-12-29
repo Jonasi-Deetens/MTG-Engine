@@ -4,7 +4,10 @@ from typing import List
 
 from axis1.schema import Axis1Card
 from axis2.schema import Trigger, TargetingRules
-from axis2.schema import ReplacementEffect
+from axis3.effects.base import ReplacementEffect
+from axis3.translate.compilers.effect_compiler import compile_effect
+from axis3.translate.compilers.replacement_compiler import compile_replacement_effect
+from axis3.translate.compilers.static_compiler import compile_static_effect
 from typing import TYPE_CHECKING
 if TYPE_CHECKING: 
     from axis2.builder import GameState
@@ -55,7 +58,7 @@ def _parse_etb_triggers(text: str) -> List[Trigger]:
             Trigger(
                 event="enters_battlefield",
                 condition="When this creature enters the battlefield",
-                effect_text=effect_text,
+                effect=compile_effect(effect_text),
                 mandatory=mandatory,
             )
         )
@@ -79,7 +82,7 @@ def _parse_ltb_triggers(text: str) -> List[Trigger]:
                 Trigger(
                     event="dies",
                     condition=None,
-                    effect_text=text,
+                    effect=compile_effect(text),
                     mandatory=True
                 )
             )
@@ -102,7 +105,7 @@ def _parse_attack_triggers(text: str) -> List[Trigger]:
                 Trigger(
                     event="attacks",
                     condition=None,
-                    effect_text=text,
+                    effect=compile_effect(text),
                     mandatory=True
                 )
             )
@@ -124,7 +127,7 @@ def _parse_block_triggers(text: str) -> List[Trigger]:
                 Trigger(
                     event="blocks",
                     condition=None,
-                    effect_text=text,
+                    effect=compile_effect(text),
                     mandatory=True
                 )
             )
@@ -146,7 +149,7 @@ def _parse_upkeep_triggers(text: str) -> List[Trigger]:
             Trigger(
                 event="upkeep",
                 condition=None,
-                effect_text=text,
+                effect=compile_effect(text),
                 mandatory=True
             )
         )
@@ -163,7 +166,7 @@ def _extract_keyword_triggered_abilities(axis1_card: Axis1Card) -> List[Trigger]
                 Trigger(
                     event=data["event"],
                     condition=data["condition"],
-                    effect_text=data["effect_template"],
+                    effect=compile_effect(data["effect_template"]),
                     mandatory=False,
                 )
             )
@@ -186,7 +189,7 @@ def _parse_draw_step_triggers(text: str) -> List[Trigger]:
             Trigger(
                 event="draw_step",
                 condition=None,
-                effect_text=text,
+                effect=compile_effect(text),
                 mandatory=True
             )
         )
@@ -207,7 +210,7 @@ def _parse_end_step_triggers(text: str) -> List[Trigger]:
             Trigger(
                 event="end_step",
                 condition=None,
-                effect_text=text,
+                effect=compile_effect(text),
                 mandatory=True
             )
         )
@@ -224,7 +227,7 @@ def _parse_end_step_triggers(text: str) -> List[Trigger]:
                 Trigger( 
                     event="end_step",
                     condition="At the beginning of each player's end step", 
-                    effect_text=effect, 
+                    effect=compile_effect(effect), 
                     mandatory=(" may " not in effect.lower()), 
                 ) 
             ) 
@@ -388,7 +391,7 @@ def derive_triggers(axis1_card: Axis1Card, game_state: "GameState") -> List[Trig
             trigger = Trigger(
                 event=event_hint,
                 condition=condition,
-                effect_text=effect,
+                effect=compile_effect(effect),
                 mandatory=mandatory,
             )
 
@@ -432,48 +435,37 @@ def derive_triggers(axis1_card: Axis1Card, game_state: "GameState") -> List[Trig
     seen = set()
 
     for t in triggers:
-        key = (t.event, t.effect_text.strip().lower())
+        key = (t.event, repr(t.effect))
         if key not in seen:
             seen.add(key)
             unique.append(t)
 
     return unique
 
-
-
-def derive_replacement_effects(axis1_card: Axis1Card, game_state: "GameState") -> List[ReplacementEffect]:
+def derive_effects(axis1_card, game_state):
     """
-    Extract replacement effects from oracle text.
+    Derive spell effects for this card from oracle text.
+    Returns a list of Axis3 Effect objects (CreateDynamicTokenEffect, DealDamageEffect, etc.).
     """
+    oracle = axis1_card.faces[0].oracle_text or ""
+    effects = []
 
-    text = _oracle_text(axis1_card)
-    effects = _parse_replacement_effects(text)
+    for line in oracle.split("\n"):
+        line = line.strip()
+        if not line or (line.startswith("(") and line.endswith(")")):
+            continue
 
-    # Add global replacement effects from game state
-    for effect in game_state.replacement_effects:
-        if isinstance(effect, str):
-            effects.append(effect)
-        else:
-            kind = effect.get("type")
-            if kind:
-                effects.append(kind)
+        print("LINE:", line)
+        try:
+            eff = compile_effect(line)
+        except Exception as e:
+            print("ERROR compiling effect line:", line)
+            print("  TYPE:", type(e))
+            print("  MSG:", e)
+            eff = None
 
-    # Deduplicate
-    return list(dict.fromkeys(effects))
+        print("PARSED:", eff)
+        if eff is not None:
+            effects.append(eff)
 
-
-def derive_static_effects(axis1_card: Axis1Card, game_state: "GameState") -> List[str]:
-    """
-    Extract static continuous effects from oracle text.
-    """
-
-    text = _oracle_text(axis1_card)
-    effects = _parse_static_effects(text)
-
-    # Add continuous effects from game state
-    for effect in game_state.continuous_effects:
-        etype = effect.get("type")
-        if etype:
-            effects.append(etype)
-
-    return list(dict.fromkeys(effects))
+    return effects

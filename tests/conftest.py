@@ -8,7 +8,7 @@ from db.models import Base  # adjust if your Base is elsewhere
 from axis1.schema import Axis1Card, Axis1Face, Axis1Characteristics, Axis1ActivatedAbility
 from axis2.builder import GameState as Axis2GameState
 from axis2.builder import Axis2Builder
-from axis2.schema import ContinuousEffect, ReplacementEffect
+from axis3.effects.base import ContinuousEffect, ReplacementEffect
 from axis3.state.game_state import GameState as Axis3GameState
 from axis3.model.characteristics import PrintedCharacteristics as Characteristics
 from axis3.state.objects import RuntimeObject

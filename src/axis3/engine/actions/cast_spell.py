@@ -27,7 +27,7 @@ class CastSpellAction(Action):
             return
 
         # Must have priority
-        if gs.turn.priority_player != self.player_id:
+        if gs.turn_manager.priority.current != self.player_id:
             print("You don't have priority.")
             return
 
@@ -38,13 +38,15 @@ class CastSpellAction(Action):
                 return
 
         # 1. Check mana cost
-        if hasattr(obj, "mana_cost") and obj.mana_cost is not None:
-            if not obj.mana_cost.can_pay(player):
+        print("Checking mana cost")
+        print(obj)
+        if hasattr(obj.characteristics, "mana_cost") and obj.characteristics.mana_cost is not None:
+            if not obj.characteristics.mana_cost.can_pay(player):
                 print(f"Not enough mana to cast {obj.name}.")
                 return
 
             # 2. Pay mana cost
-            obj.mana_cost.pay(gs, player)
+            obj.characteristics.mana_cost.pay(gs, player)
 
         # 3. Publish CAST_SPELL event
         gs.event_bus.publish(Event(

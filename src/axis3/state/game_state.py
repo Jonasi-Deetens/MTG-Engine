@@ -13,9 +13,12 @@ from axis3.rules.events.types import EventType
 from axis3.engine.stack.stack import Stack
 from axis3.rules.layers.layersystem import LayerSystem
 from axis3.state.zones import ZoneType
-from axis3.engine.turn.phases import Phase
-from axis3.engine.turn.steps import Step
+from axis3.rules.handlers.register_handlers import register_all_handlers
 
+def _make_turn_state():
+    from axis3.engine.turn.turn_state import TurnState
+    return TurnState()
+    
 @dataclass
 class PlayerState:
     id: int
@@ -35,37 +38,12 @@ class PlayerState:
     max_hand_size: int = 7
 
 @dataclass
-class TurnState:
-    active_player: int = 0
-    priority_player: int = 0
-    phase: Phase = Phase.BEGINNING
-    step: Step = Step.UNTAP
-    turn_number: int = 1
-
-    stack_empty_since_last_priority: bool = True
-
-    lands_played_this_turn: dict[int, int] = field(
-        default_factory=lambda: {0: 0, 1: 0}
-    )
-
-    def is_main_phase(self) -> bool: 
-        return self.phase in (Phase.PRECOMBAT_MAIN, Phase.POSTCOMBAT_MAIN) 
-    def is_precombat_main(self) -> bool: 
-        return self.phase == Phase.PRECOMBAT_MAIN 
-    def is_postcombat_main(self) -> bool: 
-        return self.phase == Phase.POSTCOMBAT_MAIN 
-    def is_combat_phase(self) -> bool: 
-        return self.phase == Phase.COMBAT 
-    def is_end_step(self) -> bool: 
-        return self.phase == Phase.ENDING and self.step == Step.END
-
-
-@dataclass
 class GameState:
     players: List[PlayerState]
     objects: Dict[RuntimeObjectId, RuntimeObject]
 
-    turn: TurnState = field(default_factory=TurnState)
+    turn: "TurnState" = field(default_factory=lambda: _make_turn_state())  
+    turn_manager: "TurnManager" | None = None
     stack: Stack = field(default_factory=Stack)
     event_bus: EventBus = None
     debug_log: List[str] = field(default_factory=list)
@@ -128,6 +106,7 @@ class GameState:
     def __post_init__(self):
         self.event_bus = EventBus(game_state=self)
         self.layers = LayerSystem(game_state=self)
+        register_all_handlers(self)
 
     def get_object(self, obj_id: str) -> RuntimeObject | None:
         """
