@@ -1,8 +1,8 @@
 # axis3/rules/stack/item.py
 
 from typing import Optional
-from axis3.abilities.triggered import RuntimeTriggeredAbility
-from axis3.abilities.activated import RuntimeActivatedAbility
+from axis3.engine.abilities.triggered import RuntimeTriggeredAbility
+from axis3.engine.abilities.activated import RuntimeActivatedAbility
 
 class StackItem:
     """

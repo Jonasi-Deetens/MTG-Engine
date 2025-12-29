@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional, List
 from .zones import ZoneType
-from axis3.model.characteristics import PrintedCharacteristics
+from axis2.schema import Axis2Characteristics
 # ---------------------------------------------------------
 # Runtime Object ID
 # ---------------------------------------------------------
@@ -23,8 +23,8 @@ class RuntimeObject:
     This includes permanents, spells on the stack, tokens, and ability objects.
     """
     id: RuntimeObjectId
-    owner: str
-    controller: str
+    owner: int
+    controller: int
     zone: ZoneType
 
     # NEW FIELD — required by Axis3 tests
@@ -40,20 +40,35 @@ class RuntimeObject:
     counters: Dict[str, int] = field(default_factory=dict)
 
     # Characteristics (P/T, colors, types, etc.)
-    characteristics: PrintedCharacteristics = None
+    characteristics: Axis2Characteristics = None
 
     # Token flag (used by SBA rules)
     is_token: bool = False
 
-    def has_type(self, t: str) -> bool:
-        """Check if the object has a given type (Creature, Instant, etc.)."""
-        return t in self.characteristics.types if self.characteristics else False
+    def has_type(self, t: str) -> bool: 
+        """Check if the object has a given type (Creature, Land, etc.).""" 
+        print(f"Checking if {self.name} has type {t}")
+        print(f"Characteristics: {self.characteristics}")
+        print(f"Types: {self.characteristics.types}")
+        if self.characteristics and t in self.characteristics.types: 
+            return True 
+        return False
+
 
     def is_creature(self) -> bool:
         return self.has_type("Creature")
 
     def is_spell(self) -> bool:
         return self.zone == ZoneType.STACK
+    
+    def is_land(self) -> bool:
+        return self.has_type("Land")
+
+    def can_tap(self):
+        return not self.tapped
+
+    def tap(self):
+        self.tapped = True
 
 
 # ---------------------------------------------------------
@@ -66,13 +81,6 @@ class RuntimePermanent(RuntimeObject):
     A permanent on the battlefield.
     """
     summoning_sick: bool = True
-
-    def can_attack(self) -> bool:
-        return (
-            self.is_creature()
-            and not self.tapped
-            and not self.summoning_sick
-        )
 
 
 # ---------------------------------------------------------
@@ -88,9 +96,6 @@ class RuntimeSpell(RuntimeObject):
     chosen_targets: List[List[RuntimeObjectId]] = field(default_factory=list)
     chosen_modes: Optional[List[int]] = None
     mana_paid: Dict[str, int] = field(default_factory=dict)
-
-    def is_spell(self) -> bool:
-        return True
 
 
 # ---------------------------------------------------------

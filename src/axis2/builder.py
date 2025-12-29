@@ -25,9 +25,11 @@ from axis2.schema import (
     MandatoryAction,
     LimitRule,
     VisibilityRule,
+    Axis2Characteristics,
     StaticEffect,
     ReplacementEffect,
 )
+from axis2.parsers.mana_cost_parser import parse_mana_cost
 from axis2.rules import targeting as targeting_rules
 from axis2.rules import effects as effects_rules
 from axis2.rules import timing as timing_rules
@@ -623,6 +625,25 @@ class Axis2Builder:
     @staticmethod
     def build(axis1_card: Axis1Card, game_state: GameState) -> Axis2Card:
         print(f"Building Axis2Card")
+
+        print("Step 0: characteristics")
+
+        face = axis1_card.faces[0]
+
+        characteristics = Axis2Characteristics(
+            mana_cost=parse_mana_cost(face.mana_cost),
+            mana_value=getattr(face, "mana_value", None),
+            colors=list(face.colors or []),
+            color_identity=list(face.color_indicator or []),
+            types=list(face.card_types or []),
+            supertypes=list(face.supertypes or []),
+            subtypes=list(face.subtypes or []),
+            power=int(face.power) if face.power is not None else None,
+            toughness=int(face.toughness) if face.toughness is not None else None,
+            loyalty=face.loyalty,
+            defense=face.defense,
+        )
+
         # 1. Actions
         cast_spell_action = _build_cast_spell_action(axis1_card, game_state)
         play_land_action = _build_play_land_action(axis1_card, game_state)
@@ -699,9 +720,11 @@ class Axis2Builder:
         print(f"Step 15: activated abilities")
         # 15. Activated abilities
         activated_abilities = activated_abilities_rules.derive_activated_abilities(axis1_card)
+        print("Activated abilities:", activated_abilities)
 
         print(f"Step 16: returning Axis2Card")
         return Axis2Card(
+            characteristics=characteristics,
             actions=actions,
             triggers=triggers,
             zone_permissions=zone_permissions,

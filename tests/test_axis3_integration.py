@@ -4,14 +4,14 @@ import pytest
 from axis3.state.game_state import GameState, PlayerState
 from axis3.state.objects import RuntimeObject
 from axis3.state.zones import ZoneType as Zone
-from axis3.compiler.loader import create_runtime_object
+from axis3.engine.loader.loader import create_runtime_object
 from axis3.rules.sba.checker import run_sbas
 from axis3.rules.events.types import EventType
 from axis3.engine.stack.resolver import resolve_stack
 from axis3.rules.events.event import Event
 # Dummy Axis1 and Axis2 objects for testing
 class DummyAxis1Card:
-    def __init__(self, name="TestCard", power=None, toughness=None, types=None, colors=None):
+    def __init__(self, name="TestCard", power=None, toughness=None, types=None, colors=None, card_id=None):
         self.names = [name]
         self.faces = [self]
         self.types = types or []
@@ -20,13 +20,15 @@ class DummyAxis1Card:
         self.power = power
         self.toughness = toughness
         self.colors = colors or []
+        self.card_id = card_id
 
 class DummyAxis2Card:
-    def __init__(self, triggers=None, activated_abilities=None, continuous_effects=None, replacement_effects=None):
+    def __init__(self, triggers=None, activated_abilities=None, continuous_effects=None, replacement_effects=None, card_id=None):
         self.triggers = triggers or []
         self.activated_abilities = activated_abilities or []
         self.continuous_effects = continuous_effects or []
         self.replacement_effects = replacement_effects or []
+        self.card_id = card_id
 
 @pytest.fixture
 def game_state():
@@ -37,14 +39,14 @@ def game_state():
     )
 
     # Add a creature for each player
-    a1 = DummyAxis1Card(name="P1Creature", power=3, toughness=3, types=["Creature"])
+    a1 = DummyAxis1Card(name="P1Creature", power=3, toughness=3, types=["Creature"], card_id="P1Creature-001")
     a2 = DummyAxis2Card()
 
     c1 = create_runtime_object(a1, a2, owner_id=0, zone=Zone.BATTLEFIELD, game_state=gs)
     gs.objects[c1.id] = c1
     gs.players[0].battlefield.append(c1.id)
 
-    a3 = DummyAxis1Card(name="P2Creature", power=2, toughness=2, types=["Creature"])
+    a3 = DummyAxis1Card(name="P2Creature", power=2, toughness=2, types=["Creature"], card_id="P2Creature-001")
     a4 = DummyAxis2Card()
 
     c2 = create_runtime_object(a3, a4, owner_id=1, zone=Zone.BATTLEFIELD, game_state=gs)
@@ -193,7 +195,7 @@ def test_activated_ability_registration(game_state):
             self.cost = None
             self.effect = lambda gs_inner: setattr(gs_inner, "dummy_flag", True)
 
-    from axis3.compiler.activated_builder import register_runtime_activated_abilities
+    from axis3.engine.translate.activated_builder import register_runtime_activated_abilities
     c1.axis2_card.activated_abilities = [DummyActivated()]
     register_runtime_activated_abilities(gs, c1)
 
@@ -212,7 +214,7 @@ def test_runtime_activated_ability_activation(game_state):
             self.effect = lambda gs_inner, source_id, controller: setattr(gs_inner, "dummy_flag", True)
 
     c1.axis2_card.activated_abilities = [DummyActivated()]
-    from axis3.compiler.activated_builder import register_runtime_activated_abilities
+    from axis3.engine.translate.activated_builder import register_runtime_activated_abilities
     register_runtime_activated_abilities(gs, c1)
 
     raa = c1.runtime_activated_abilities[0]
@@ -235,7 +237,7 @@ def test_runtime_activated_ability_resolution(game_state):
             self.effect = lambda gs_inner, source_id, controller: setattr(gs_inner, "dummy_flag", True)
 
     c1.axis2_card.activated_abilities = [DummyActivated()]
-    from axis3.compiler.activated_builder import register_runtime_activated_abilities
+    from axis3.engine.translate.activated_builder import register_runtime_activated_abilities
     register_runtime_activated_abilities(gs, c1)
 
     raa = c1.runtime_activated_abilities[0]

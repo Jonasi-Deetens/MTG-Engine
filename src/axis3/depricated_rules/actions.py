@@ -9,7 +9,7 @@ from axis3.state.zones import ZoneType as Zone
 from axis3.state.objects import RuntimeObject
 from axis3.rules.sba import run_sbas
 from axis3.rules.events import Event
-from axis3.abilities.triggered import RuntimeTriggeredAbility
+from axis3.engine.abilities.triggered import RuntimeTriggeredAbility
 from axis3.rules.replacement import apply_replacement_effects
 from axis3.rules.zone_change import _perform_zone_change
 

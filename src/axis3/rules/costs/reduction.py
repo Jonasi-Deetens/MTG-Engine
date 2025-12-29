@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 from dataclasses import dataclass
-from axis3.rules.costs.mana import ManaCost
+from axis3.engine.abilities.costs.mana import ManaCost
 
 
 @dataclass

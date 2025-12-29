@@ -30,6 +30,8 @@ def apply_draw(game_state, event: Event):
 
         rt_obj = game_state.objects[card_id]
         rt_obj.zone = Zone.HAND
+        rt_obj.controller = player_id
+
 
         # 2️⃣ Derived event: a card was drawn
         game_state.event_bus.publish(Event(

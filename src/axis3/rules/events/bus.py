@@ -12,7 +12,7 @@ class EventBus:
     def __init__(self, game_state: "GameState"):
         self.game_state = game_state
         self.queue = EventQueue()
-        self.event_callbacks = EventCallbackRegistry()
+        self.event_callbacks = EventCallbackRegistry(game_state)
 
     def publish(self, event: Event):
         """

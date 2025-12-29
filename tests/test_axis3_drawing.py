@@ -1,5 +1,5 @@
 from axis3.rules.actions import draw_card
-from axis3.compiler.loader import build_game_state_from_decks
+from axis3.engine.loader.loader import build_game_state_from_decks
 
 def test_initial_draws(axis1_deck_p1, axis1_deck_p2, axis2_builder):
     game_state = build_game_state_from_decks(axis1_deck_p1, axis1_deck_p2, axis2_builder)

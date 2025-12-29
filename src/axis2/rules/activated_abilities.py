@@ -1,7 +1,9 @@
 import re
 
-from axis1.schema import Axis1Card, Axis1ActivatedAbility
+from axis3.translate.ability_parsing.costs import parse_cost_string
+from axis3.translate.ability_parsing.effects import parse_effect_string
 from axis2.schema import ActivatedAbility
+from axis1.schema import Axis1Card
 
 ACTIVATED_ABILITY_PATTERN = re.compile(
     r"""^
@@ -16,27 +18,37 @@ ACTIVATED_ABILITY_PATTERN = re.compile(
     re.IGNORECASE | re.VERBOSE
 )
 
-
 def derive_activated_abilities(axis1_card: Axis1Card) -> list[ActivatedAbility]:
     abilities = []
-    text = axis1_card.faces[0].oracle_text
+    text = axis1_card.faces[0].oracle_text or ""
 
     for raw in text.split("\n"):
         line = raw.replace("\u00A0", " ").strip()
+
+        # NEW: strip wrapping parentheses
+        if line.startswith("(") and line.endswith(")"):
+            line = line[1:-1].strip()
+
         if not line:
             continue
 
         match = ACTIVATED_ABILITY_PATTERN.match(line)
-        if match:
-            cost = match.group("cost").strip()
-            effect = match.group("effect").strip()
+        if not match:
+            continue
 
-            abilities.append(
-                ActivatedAbility(
-                    cost=cost,
-                    effect_text=effect,
-                    restrictions=[],
-                )
+        cost_str = match.group("cost").strip()
+        effect_str = match.group("effect").strip()
+
+        cost_objs = parse_cost_string(cost_str)
+        effect_objs, is_mana = parse_effect_string(effect_str)
+
+        abilities.append(
+            ActivatedAbility(
+                cost=cost_objs,
+                effect=effect_objs,
+                is_mana_ability=is_mana,
+                restrictions=[],
             )
+        )
 
     return abilities

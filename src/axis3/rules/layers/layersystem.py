@@ -15,6 +15,15 @@ class LayerSystem:
     def __init__(self, game_state: "GameState"):
         self.game_state = game_state
 
+    def get_land_play_bonus(self, player_id: int) -> int:
+        bonus = 0
+        for ce in getattr(self.game_state, "continuous_effects", []):
+            if not isinstance(ce, RuntimeContinuousEffect):
+                continue
+            if ce.applies_to(self.game_state, player_id):
+                bonus += ce.land_play_bonus
+        return bonus
+
     def evaluate(self, obj_id: RuntimeObjectId) -> EvaluatedCharacteristics:
         """
         Evaluate all characteristics for a permanent, applying static abilities in layer order.

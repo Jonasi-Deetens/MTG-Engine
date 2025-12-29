@@ -47,6 +47,7 @@ class EventType:
     # STACK & SPELLS
     # ─────────────────────────────────────────────
     CAST_SPELL = "cast_spell"
+    SPELL_CAST = "spell_cast"
     PUT_ON_STACK = "put_on_stack"               # spell or ability
     RESOLVE_STACK_OBJECT = "resolve_stack_object"
     COUNTER_SPELL = "counter_spell"
@@ -57,6 +58,7 @@ class EventType:
     TRIGGERED_ABILITY = "triggered_ability"     # put on stack
     ACTIVATED_ABILITY = "activated_ability"     # optional (mostly for UI/logging)
     STATIC_ABILITY_APPLIED = "static_ability_applied"
+    MANA_ABILITY_RESOLVED = "mana_ability_resolved"
 
     # ─────────────────────────────────────────────
     # COMBAT
