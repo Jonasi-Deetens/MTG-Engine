@@ -1,48 +1,123 @@
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Any, Union
-
-# ------------------------------------------------------------
-# BASIC RULE COMPONENTS
-# ------------------------------------------------------------
+from typing import List, Optional, Union, Dict, Any
 
 @dataclass
-class ReplacementEffect:
+class SymbolicValue:
+    kind: str            # "star", "variable", "formula"
+    expression: str      # "*", "X", "*+1", etc.
+
+@dataclass
+class ManaCost:
+    symbols: List[str]   # ["{R}", "{1}", "{U}"]
+
+@dataclass
+class TapCost:
+    amount: int
+    restrictions: list[str]   # e.g. ["artifact", "untapped", "you_control"]
+
+@dataclass
+class SacrificeCost:
+    subject: str         # "this", "creature", etc.
+
+@dataclass
+class LoyaltyCost:
+    amount: int          # +1, -3, 0
+
+Cost = Union[ManaCost, TapCost, SacrificeCost, LoyaltyCost]
+
+@dataclass 
+class SpecialAction: 
+    name: str 
+    cost: Optional[object] # usually ManaCost 
+    conditions: List[str] 
+    effects: List[object]
+
+@dataclass
+class DayboundEffect:
+    pass
+
+@dataclass
+class CantBeBlockedEffect:
+    subject: str              # e.g. "target_creature"
+    duration: str             # e.g. "until_end_of_turn"
+
+@dataclass
+class NightboundEffect:
+    pass
+
+@dataclass
+class EquipEffect:
     """
-    Represents replacement and prevention effects:
-      - "If X would die, do Y instead"
-      - "Prevent all damage to Z"
-      - "If you would draw a card, draw two instead"
-      - "Enter the battlefield tapped"
+    Semantic effect representing the Equip keyword ability.
+    Axis2 does not interpret this; Axis3 implements the rules.
     """
-    type: str
+    pass
+
+@dataclass
+class CounterSpellEffect:
+    """Represents: counter that spell / counter target spell."""
+    target: str  # usually "that_spell" or "target_spell"
+
+@dataclass
+class PutCounterEffect:
+    counter_type: str
+    amount: int
+
+@dataclass
+class CreateTokenEffect:
+    amount: Union[int, SymbolicValue]
+    token: dict          # { "power": 1, "toughness": 1, "colors": [...], "types": [...], "abilities": [...] }
+    controller: str      # "you", "opponent", "that_player", etc.
+
+@dataclass
+class DealDamageEffect:
+    amount: Union[int, SymbolicValue]
+    subject: str         # "any_target", "target_creature", etc.
+
+@dataclass
+class DrawCardsEffect:
+    amount: Union[int, SymbolicValue]
+
+@dataclass
+class AddManaEffect:
+    mana: List[str]      # ["{R}", "{G}", "{1}", "{X}"]
+    choice: Optional[str] = None  # "one_color", "any_color"
+
+Effect = Union[
+    DealDamageEffect,
+    DrawCardsEffect,
+    AddManaEffect,
+    CreateTokenEffect,
+]
+
+@dataclass
+class SearchEffect:
+    zones: list[str]                 # ["graveyard", "hand", "library"]
+    card_names: list[str]            # ["Magnifying Glass", "Thinking Cap"]
+    optional: bool                   # "you may"
+    put_onto_battlefield: bool       # true
+    shuffle_if_library_searched: bool
+
+@dataclass
+class GainLifeEffect:
+    amount: str
     subject: str
-    event: str
-    replacement: str
-    extra: Dict[str, Any] = None
 
 @dataclass
-class TimingRules:
-    speed: Optional[str] = None               # "instant", "sorcery", "special"
-    phases: List[str] = field(default_factory=list)
-    requires_priority: bool = True
-    stack_must_be_empty: bool = False
-
-
-@dataclass
-class CostRules:
-    mana: Optional[str] = None
-    additional: List[str] = field(default_factory=list)
-    alternative: List[str] = field(default_factory=list)
-    reductions: List[str] = field(default_factory=list)
-    increases: List[str] = field(default_factory=list)
+class PutOntoBattlefieldEffect:
+    """Represents: put a card from a zone onto the battlefield."""
+    zone_from: str
+    card_filter: dict
+    tapped: bool = False
+    attacking: bool = False
+    constraint: Optional[dict] = None
+    optional: bool = False
 
 @dataclass
 class TargetingRestriction:
     type: str
     conditions: List[Dict[str, Any]] = field(default_factory=list)
-    logic: Optional[str] = None               # "AND", "OR"
-    optional: bool = False
-
+    logic: Optional[str] = None  # "AND", "OR"
 
 @dataclass
 class TargetingRules:
@@ -51,261 +126,138 @@ class TargetingRules:
     max: int = 0
     legal_targets: List[str] = field(default_factory=list)
     restrictions: List[TargetingRestriction] = field(default_factory=list)
-    replacement_effects: List[str] = field(default_factory=list)
+
+@dataclass
+class ActivatedAbility:
+    costs: List[Cost]
+    effects: List[Effect]
+    conditions: List[Dict[str, Any]] = field(default_factory=list)
+    targeting: Optional[TargetingRules] = None
+    timing: str = "instant"   # "instant", "sorcery", etc.
+
+@dataclass
+class TriggerFilter:
+    """
+    Structured, machine-readable trigger conditions.
+    Axis3 uses this instead of parsing English.
+    """
+    spell_must_have_types: list[str] = field(default_factory=list)
+    spell_must_not_have_types: list[str] = field(default_factory=list)
+    controller_scope: str | None = None   # "any_player", "you", "opponent", etc.
+
+@dataclass
+class TriggeredAbility:
+    event: str
+    condition_text: str
+    effects: list
+    targeting: Optional[TargetingRules] = None
+    trigger_filter: Optional[TriggerFilter] = None
+
+
+@dataclass
+class StaticEffect:
+    kind: str
+    subject: str
+    value: Dict[str, Any]
+    layer: str
+    zones: List[str]
+
+@dataclass
+class ReplacementEffect:
+    kind: str                 # "as_enters", "dies_to_exile", "prevent_damage", "draw_instead", ...
+    text: str                 # original text
+    applies_to: Optional[str] = None
+    amount: Optional[str] = None          # "all", "1", "X", etc.
+    new_action: Optional[str] = None      # "exile", "draw_extra", "prevent", "redirect"
+    condition: Optional[str] = None       # "if it's your turn", "if it's a creature", etc.
+
+@dataclass
+class PTExpression:
+    power: str
+    toughness: str
+
+@dataclass
+class ColorChangeData:
+    set_colors: Optional[list[str]] = None
+    add_colors: Optional[list[str]] = None
+
+@dataclass
+class TypeChangeData:
+    set_types: Optional[list[str]] = None
+    add_types: Optional[list[str]] = None
+    remove_types: Optional[list[str]] = None
+
+@dataclass
+class ContinuousEffect:
+    kind: str                 # "pt_mod", "grant_ability", "color_set", ...
+    applies_to: str           # "equipped_creature", "creatures_you_control", ...
+    text: str                 # original sentence
+
+    # Optional semantic fields (only one is filled depending on kind)
+    condition: Optional[str] = None
+    pt_value: Optional[PTExpression] = None
+    abilities: Optional[list[str]] = None
+    type_change: Optional[TypeChangeData] = None
+    color_change: Optional[ColorChangeData] = None
+    control_change: Optional[str] = None
+    cost_change: Optional[str] = None
+    rule_change: Optional[str] = None
 
 @dataclass
 class Mode:
     text: str
-    targeting: TargetingRules
+    effects: List[Effect]
+    targeting: Optional[TargetingRules] = None
 
 @dataclass
-class PermissionRules:
-    permissions: List[str] = field(default_factory=list)
+class Axis2Face:
+    name: str
+    mana_cost: Optional[ManaCost]
+    mana_value: float
+    colors: List[str]
+    types: List[str]
+    supertypes: List[str]
+    subtypes: List[str]
 
+    power: Optional[Union[int, SymbolicValue]]
+    toughness: Optional[Union[int, SymbolicValue]]
+    loyalty: Optional[int]
+    defense: Optional[int]
 
-@dataclass
-class RestrictionRules:
-    restrictions: List[str] = field(default_factory=list)
-
-
-@dataclass
-class StateRestrictions:
-    state_restrictions: List[str] = field(default_factory=list)
-
-
-@dataclass
-class TurnPermissions:
-    controller_only: bool = False
-    opponent_only: bool = False
-
-
-@dataclass
-class VisibilityConstraints:
-    revealed: bool = False
-    randomized: bool = False
-
-
-# ------------------------------------------------------------
-# ACTIONS
-# ------------------------------------------------------------
-
-@dataclass
-class CastSpellAction:
-    allowed: bool = False
-    timing: TimingRules = field(default_factory=TimingRules)
-    zones: List[str] = field(default_factory=list)
-    costs: CostRules = field(default_factory=CostRules)
-    restrictions: List[str] = field(default_factory=list)
-    permissions: List[str] = field(default_factory=list)
-    targeting_rules: TargetingRules = field(default_factory=TargetingRules)
-    state_restrictions: List[str] = field(default_factory=list)
-    turn_permissions: TurnPermissions = field(default_factory=TurnPermissions)
-    visibility_constraints: VisibilityConstraints = field(default_factory=VisibilityConstraints)
-
-@dataclass
-class PlayLandAction:
-    allowed: bool = False
-    phases: List[str] = field(default_factory=list)
-    requires_priority: bool = False
-    limit_per_turn: int = 1
-    dynamic_limit_conditions: List[Dict[str, Any]] = field(default_factory=list)
-    zones: List[str] = field(default_factory=list)
-    restrictions: List[str] = field(default_factory=list)
-    permissions: List[str] = field(default_factory=list)
-    state_restrictions: List[str] = field(default_factory=list)
-    turn_permissions: TurnPermissions = field(default_factory=TurnPermissions)
-
-
-@dataclass
-class ActivateAbilityAction:
-    allowed: bool = False
-    effect_text: str = ""
-    ability_id: str = ""
-    source: str = "this"
-    targeting_rules: TargetingRules = field(default_factory=TargetingRules)
-    timing: TimingRules = field(default_factory=TimingRules)
-    costs: CostRules = field(default_factory=CostRules)
-    restrictions: List[str] = field(default_factory=list)
-    permissions: List[str] = field(default_factory=list)
-    state_restrictions: List[str] = field(default_factory=list)
-    turn_permissions: TurnPermissions = field(default_factory=TurnPermissions)
-    dynamic_limit_conditions: List[Dict[str, Any]] = field(default_factory=list)
-    conditional_usage: List[Dict[str, Any]] = field(default_factory=list)
-    visibility_constraints: VisibilityConstraints = field(default_factory=VisibilityConstraints)
-
-
-@dataclass
-class SpecialAction:
-    # New, what builder/tests use:
-    kind: str = ""                         # e.g. "morph", "foretell"
-    cost: Optional[str] = None             # morph/foretell/prototype cost text
-    effect: Optional[str] = None           # description of what the action does
-
-    # Existing structural fields (still available if needed):
-    zones: List[str] = field(default_factory=list)
-    costs: CostRules = field(default_factory=CostRules)
-    timing: TimingRules = field(default_factory=TimingRules)
-    state_restrictions: List[str] = field(default_factory=list)
-    turn_permissions: TurnPermissions = field(default_factory=TurnPermissions)
-    conditional_usage: List[Dict[str, Any]] = field(default_factory=list)
-
-    # Optional: backwards-compat alias if anything still references `type`
-    @property
-    def type(self) -> str:
-        return self.kind
-
-    @type.setter
-    def type(self, value: str) -> None:
-        self.kind = value
-
-
-# ------------------------------------------------------------
-# TRIGGERS
-# ------------------------------------------------------------
-
-@dataclass
-class Trigger:
-    event: str
-    condition: Optional["Condition"]
-    effect: "Effect"   # compiled effect object
-    mandatory: bool = True
-    targeting_rules: Optional["TargetingRules"] = None
-
-
-# ------------------------------------------------------------
-# GLOBAL RULES
-# ------------------------------------------------------------
-
-@dataclass
-class ZonePermissions:
-    permissions: Dict[str, List[str]] = field(default_factory=dict)
-
-
-@dataclass
-class GlobalRestriction:
-    applies_to: str
-    restriction: str
-
-
-@dataclass
-class Condition:
-    type: str
-    object: Optional[str] = None
-    count: Optional[str] = None
-    operator: Optional[str] = None
-    value: Optional[Any] = None
-
-@dataclass
-class ActionReplacement:
-    # What the builder (and likely tests) expect:
-    type: str = ""              # kind of replacement ("dies_exile_instead", etc.)
-    subject: str = ""           # who/what it applies to ("this", "you", etc.)
-    event: str = ""             # original event/action being replaced
-
-    # Older naming / structural fields, kept for compatibility:
-    original: str = ""          # can mirror `event` if needed
-    replacement: str = ""       # description/key of the replacement
-    layer: int = 0
-    order: int = 0
-
-
-@dataclass
-class ActionPrevention:
-    original: str
-    prevention_reason: str
-    layer: int
-    order: int
-
-
-@dataclass
-class ActionModifier:
-    original: str
-    modification: str
-    layer: int
-    order: int
-
-
-@dataclass
-class MandatoryAction:
-    action: str
-    condition: str
-
-
-@dataclass
-class LimitRule:
-    action: str
-    limit_type: str
-    dynamic: bool = False
-    tracking_per_player: bool = False
-    amount_per_cast: Optional[str] = None
-    max_allowed: Optional[int] = None
-    base_limit: Optional[int] = None
-
-
-@dataclass
-class VisibilityRule:
-    face_down_objects: Dict[str, Any] = field(default_factory=dict)
-    hidden_zones: List[Dict[str, Any]] = field(default_factory=list)
-    random_selection: bool = False
-
-@dataclass
-class ActivatedAbility:
-    cost: List[Any]                 # parsed cost objects
-    effect: List[Any]               # parsed effect objects
-    is_mana_ability: bool = False
-    restrictions: List[str] = field(default_factory=list)
-    timing: str = "instant"
-
-# ------------------------------------------------------------
-# AXIS 2 CARD ROOT OBJECT
-# ------------------------------------------------------------
+    special_actions: List[SpecialAction] = field(default_factory=list)
+    activated_abilities: List[ActivatedAbility] = field(default_factory=list)
+    triggered_abilities: List[TriggeredAbility] = field(default_factory=list)
+    static_effects: List[StaticEffect] = field(default_factory=list)
+    replacement_effects: List[ReplacementEffect] = field(default_factory=list)
+    continuous_effects: List[ContinuousEffect] = field(default_factory=list)
+    modes: List[Mode] = field(default_factory=list)
 
 @dataclass
 class Axis2Characteristics:
-    mana_cost: Optional["ManaCost"] = None
-    mana_value: Optional[float] = None
+    mana_cost: Optional[ManaCost]
+    mana_value: Optional[float]
 
-    colors: List[str] = field(default_factory=list)
-    color_identity: List[str] = field(default_factory=list)
-    color_indicator: List[str] = field(default_factory=list)
+    colors: List[str]
+    color_identity: List[str]
+    color_indicator: List[str]
 
-    # IMPORTANT: layer system expects `.types`, not `.card_types`
-    types: List[str] = field(default_factory=list)
-    supertypes: List[str] = field(default_factory=list)
-    subtypes: List[str] = field(default_factory=list)
+    types: List[str]
+    supertypes: List[str]
+    subtypes: List[str]
 
-    power: Optional[int] = None
-    toughness: Optional[int] = None
-    loyalty: Optional[int] = None
-    defense: Optional[int] = None
+    power: Optional[Union[int, SymbolicValue]]
+    toughness: Optional[Union[int, SymbolicValue]]
+    loyalty: Optional[int]
+    defense: Optional[int]
 
-    
 @dataclass
 class Axis2Card:
-    characteristics: Axis2Characteristics
-    actions: Dict[str, Any] = field(default_factory=dict)
-    triggers: List[Trigger] = field(default_factory=list)
-    zone_permissions: ZonePermissions = field(default_factory=ZonePermissions)
-    global_restrictions: List[GlobalRestriction] = field(default_factory=list)
-    conditions: List[Condition] = field(default_factory=list)
-    action_replacements: List[ActionReplacement] = field(default_factory=list)
-    action_preventions: List[ActionPrevention] = field(default_factory=list)
-    action_modifiers: List[ActionModifier] = field(default_factory=list)
-    mandatory_actions: List[MandatoryAction] = field(default_factory=list)
-    choice_constraints: List[str] = field(default_factory=list)
-    limits: List[LimitRule] = field(default_factory=list)
-    visibility_constraints: VisibilityRule = field(default_factory=VisibilityRule)
-    keywords: List[str] = field(default_factory=list)
-    static_effects: List["StaticEffect"] = field(default_factory=list)
-    replacement_effects: List[ReplacementEffect] = field(default_factory=list)
-    modes: List[Mode] = field(default_factory=list)
-    mode_choice: Optional[str] = None
-    targeting_rules: TargetingRules = field(default_factory=TargetingRules)
-    state_restrictions: List[str] = field(default_factory=list)
-    turn_permissions: TurnPermissions = field(default_factory=TurnPermissions)
-    dynamic_limit_conditions: List[Dict[str, Any]] = field(default_factory=list)
-    conditional_usage: List[Dict[str, Any]] = field(default_factory=list)
-    activated_abilities: List[ActivatedAbility] = field(default_factory=list)
-    continuous_effects: List["ContinuousEffect"] = field(default_factory=list)
-    effects: List[Any] = field(default_factory=list)
+    card_id: str
+    oracle_id: Optional[str]
+    set: str
+    collector_number: str
 
+    faces: List[Axis2Face]
+    characteristics: Axis2Characteristics
+
+    keywords: List[str] = field(default_factory=list)

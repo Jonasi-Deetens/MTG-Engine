@@ -5,6 +5,17 @@ from axis1.schema import Axis1Card, Axis1Face, Axis1Characteristics, Axis1Metada
 # ------------------------------------------------------------
 # Activated ability parsing from oracle text
 # ------------------------------------------------------------
+    
+REMINDER_TEXT_RE = re.compile(r"\([^)]*\)")
+
+def strip_reminder_text(line: str) -> str:
+    """
+    Removes all parenthetical reminder text from a line.
+    Example:
+        'Ninjutsu {1}{U} ({1}{U}, Return ...)' → 'Ninjutsu {1}{U}'
+    """
+    return REMINDER_TEXT_RE.sub("", line).strip()
+
 
 # Matches "COST: EFFECT"
 # Example:
@@ -136,7 +147,7 @@ def _extract_activated_abilities_from_oracle(oracle_text: str) -> list:
     abilities = []
 
     for raw_line in oracle_text.split("\n"):
-        line = raw_line.strip()
+        line = strip_reminder_text(raw_line.strip())
         # Normalize Unicode punctuation and whitespace
         line = (
             line.replace("：", ":")      # fullwidth colon → ASCII colon
@@ -147,11 +158,6 @@ def _extract_activated_abilities_from_oracle(oracle_text: str) -> list:
 
         if not line:
             continue
-
-        # Skip reminder text
-        if line.startswith("(") and line.endswith(")"):
-            inner = line[1:-1].strip()
-            line = inner
 
         # ------------------------------------------------------------
         # 1. Planeswalker loyalty abilities
@@ -308,7 +314,7 @@ def _extract_triggered_abilities_from_oracle(oracle_text: str) -> list:
     lines = oracle_text.split("\n")
 
     for raw_line in lines:
-        line = raw_line.strip()
+        line = strip_reminder_text(raw_line.strip())
         # Normalize Unicode punctuation and whitespace
         line = (
             line.replace("：", ":")      # fullwidth colon → ASCII colon
