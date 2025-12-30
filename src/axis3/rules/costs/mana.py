@@ -1,6 +1,8 @@
 # axis3/rules/costs/mana.py
 
 from __future__ import annotations
+import re
+
 from axis3.rules.events.event import Event
 from axis3.rules.events.types import EventType
 
@@ -76,3 +78,29 @@ class ManaCost:
 
                 if generic_needed <= 0:
                     break
+
+MANA_SYMBOL = re.compile(r"\{([^}]+)\}")
+
+
+def parse_mana_cost(raw_cost: str) -> ManaCost:
+    """
+    Axis3 mana cost parser.
+    Converts "{1}{G}{G}" → ManaCost(colorless=1, colored={"G": 2})
+    """
+    if not raw_cost:
+        return ManaCost()
+
+    symbols = MANA_SYMBOL.findall(raw_cost)
+
+    colorless = 0
+    colored = {}
+
+    for sym in symbols:
+        # Numeric cost
+        if sym.isdigit():
+            colorless += int(sym)
+        # Colored cost
+        else:
+            colored[sym] = colored.get(sym, 0) + 1
+
+    return ManaCost(colorless=colorless, colored=colored)

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 from typing import Set
-from axis3.state.objects import RuntimeObject
 from axis3.rules.layers.types import EvaluatedCharacteristics
 
 KEYWORDS = {
@@ -15,7 +14,7 @@ KEYWORDS = {
     "indestructible",
 }
 
-def apply_keyword_abilities(game_state: "GameState", rt_obj: RuntimeObject, ec: EvaluatedCharacteristics):
+def apply_keyword_abilities(game_state: "GameState", rt_obj: "RuntimeObject", ec: EvaluatedCharacteristics):
     """
     Applies keyword abilities from the object's characteristics or continuous effects.
     This should be called in Layer 6 (ability adding/removing layer).

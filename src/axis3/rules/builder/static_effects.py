@@ -4,10 +4,10 @@ from typing import List
 from axis1.schema import Axis1Card
 from axis3.effects.base import ContinuousEffect, StaticEffect
 from typing import TYPE_CHECKING
-from axis2.rules.keywords import derive_keyword_abilities
+from axis3.rules.builder.keywords import derive_keyword_abilities
 
 if TYPE_CHECKING:
-    from axis2.builder import GameState
+    from axis3.state.game_state import GameState
 
 
 # ------------------------------------------------------------

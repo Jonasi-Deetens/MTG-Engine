@@ -3,64 +3,54 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional, List
+
 from .zones import ZoneType
-from axis2.schema import Axis2Characteristics
-# ---------------------------------------------------------
-# Runtime Object ID
-# ---------------------------------------------------------
+from axis3.model.axis3_card import Axis3Card
+
 
 RuntimeObjectId = str
 
 
-# ---------------------------------------------------------
-# Base Runtime Object
-# ---------------------------------------------------------
-
 @dataclass
 class RuntimeObject:
     """
-    Base class for all objects that can exist in the Axis3 game state.
-    This includes permanents, spells on the stack, tokens, and ability objects.
+    Base class for all objects in Axis3.
+    Permanents, spells, tokens, abilities.
     """
     id: RuntimeObjectId
     owner: int
     controller: int
     zone: ZoneType
 
-    # NEW FIELD — required by Axis3 tests
-    name: str = ""  
+    # Card reference (Axis3 only)
+    axis3_card: Optional[Axis3Card] = None
 
-    # Axis1 + Axis2 references
+    # Optional Axis1 reference (debugging)
     axis1_card: Any = None
-    axis2_card: Any = None
 
     # Dynamic state
+    name: str = ""
     tapped: bool = False
     damage: int = 0
     counters: Dict[str, int] = field(default_factory=dict)
 
-    # Characteristics (P/T, colors, types, etc.)
-    characteristics: Axis2Characteristics = None
-
-    # Token flag (used by SBA rules)
+    # Token flag
     is_token: bool = False
 
-    def has_type(self, t: str) -> bool: 
-        """Check if the object has a given type (Creature, Land, etc.).""" 
-        print(f"Checking if {self.name} has type {t}")
-        print(f"Characteristics: {self.characteristics}")
-        print(f"Types: {self.characteristics.types}")
-        if self.characteristics and t in self.characteristics.types: 
-            return True 
-        return False
-
+    # ---------------------------------------------------------
+    # Type helpers (use Axis3Card characteristics)
+    # ---------------------------------------------------------
+    def has_type(self, t: str) -> bool:
+        if not self.axis3_card:
+            return False
+        return t in self.axis3_card.types
 
     def is_creature(self) -> bool:
         return self.has_type("Creature")
 
     def is_spell(self) -> bool:
         return self.zone == ZoneType.STACK
-    
+
     def is_land(self) -> bool:
         return self.has_type("Land")
 

@@ -1,24 +1,25 @@
-# src/axis3/state/game_state.py
+# axis3/state/game_state.py
 
 from __future__ import annotations
-
 from dataclasses import dataclass, field
-from enum import Enum, auto
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 
 from axis3.state.objects import RuntimeObject, RuntimeObjectId
-from axis3.rules.events.bus import EventBus
-from axis3.rules.events.event import Event
-from axis3.rules.events.types import EventType
+from axis3.state.registries import EffectRegistries
+from axis3.state.commander import CommanderEngine
+
+from axis3.engine.casting.permission_engine import PermissionEngine
+from axis3.engine.casting.cost_engine import CostEngine
+from axis3.engine.casting.replacement_engine import ReplacementEngine
+from axis3.engine.casting.cast_spell import CastSpellEngine
+from axis3.engine.movement.zone_movement import ZoneMovementEngine
+
 from axis3.engine.stack.stack import Stack
+from axis3.rules.events.bus import EventBus
 from axis3.rules.layers.layersystem import LayerSystem
 from axis3.state.zones import ZoneType
-from axis3.rules.handlers.register_handlers import register_all_handlers
 
-def _make_turn_state():
-    from axis3.engine.turn.turn_state import TurnState
-    return TurnState()
-    
+
 @dataclass
 class PlayerState:
     id: int
@@ -37,81 +38,188 @@ class PlayerState:
     })
     max_hand_size: int = 7
 
+
 @dataclass
 class GameState:
+    """
+    The modern Axis3 GameState.
+
+    This class is intentionally thin. It delegates:
+      - Casting to CastSpellEngine
+      - Zone movement to ZoneMovementEngine
+      - Commander logic to CommanderEngine
+      - Effect storage to EffectRegistries
+      - Layer application to LayerSystem
+      - Event dispatch to EventBus
+
+    GameState no longer contains mechanic-specific logic.
+    """
+
     players: List[PlayerState]
     objects: Dict[RuntimeObjectId, RuntimeObject]
 
-    turn: "TurnState" = field(default_factory=lambda: _make_turn_state())  
-    turn_manager: "TurnManager" | None = None
+    # Core systems
     stack: Stack = field(default_factory=Stack)
-    event_bus: EventBus = None
-    debug_log: List[str] = field(default_factory=list)
-
-    replacement_effects: List[object] = field(default_factory=list)
-    continuous_effects: list = field(default_factory=list)
-    global_restrictions: list = field(default_factory=list)
+    event_bus: EventBus = field(init=False)
     layers: LayerSystem = field(init=False)
 
-    def zone_list(self, controller_id: str, zone: ZoneType):
-        player = self.players[int(controller_id)]
-        if zone == ZoneType.LIBRARY:
+    # Effect registries (permissions, alt costs, reductions, replacements…)
+    registries: EffectRegistries = field(default_factory=EffectRegistries)
+
+    # Sub-engines
+    commander: CommanderEngine = field(init=False)
+    movement: ZoneMovementEngine = field(init=False)
+    casting: CastSpellEngine = field(init=False)
+
+    debug_log: List[str] = field(default_factory=list)
+
+    # ============================================================
+    # INITIALIZATION
+    # ============================================================
+
+    def __post_init__(self):
+        # Event bus
+        self.event_bus = EventBus(game_state=self)
+
+        # Layer system
+        self.layers = LayerSystem(game_state=self)
+
+        # Commander engine
+        self.commander = CommanderEngine(self)
+
+        # Replacement engine
+        replacement_engine = ReplacementEngine(
+            replacements=self.registries.replacement_effects
+        )
+
+        # Movement engine
+        self.movement = ZoneMovementEngine(
+            replacements=replacement_engine
+        )
+
+        # Casting engine
+        self.casting = CastSpellEngine(
+            permissions=PermissionEngine(self.registries.permissions),
+            costs=CostEngine(
+                alt_costs=self.registries.alternative_costs,
+                reductions=self.registries.cost_reductions,
+            ),
+            replacements=replacement_engine,
+        )
+
+    # ============================================================
+    # ZONE ACCESS
+    # ============================================================
+
+    def zone_list(self, controller_id: int, zone: str) -> List[str]:
+        """
+        Return the list corresponding to a player's zone.
+        """
+
+        player = self.players[controller_id]
+        zone = zone.upper()
+
+        if zone == "LIBRARY":
             return player.library
-        elif zone == ZoneType.HAND:
+        if zone == "HAND":
             return player.hand
-        elif zone == ZoneType.BATTLEFIELD:
+        if zone == "BATTLEFIELD":
             return player.battlefield
-        elif zone == ZoneType.GRAVEYARD:
+        if zone == "GRAVEYARD":
             return player.graveyard
-        elif zone == ZoneType.EXILE:
+        if zone == "EXILE":
             return player.exile
-        elif zone == ZoneType.COMMAND:
+        if zone == "COMMAND":
             return player.command
-        return []
 
-    def move_card(self, card_id: str, to_zone: str, controller: int | None = None):
+        raise ValueError(f"Unknown zone: {zone}")
+
+    # ============================================================
+    # OBJECT ACCESS
+    # ============================================================
+
+    def get_object(self, obj_id: str) -> Optional[RuntimeObject]:
+        return self.objects.get(obj_id)
+
+    # ============================================================
+    # ZONE MOVEMENT (delegated)
+    # ============================================================
+
+    def move_card(self, obj_id: str, to_zone: str,
+                  controller: Optional[int] = None,
+                  ctx: Optional[Any] = None):
         """
-        Move a card between zones in a minimal but correct way.
-        This is the central zone-movement API for the engine.
+        Delegate to ZoneMovementEngine.
         """
+        self.movement.move_card(
+            game_state=self,
+            obj_id=obj_id,
+            to_zone=to_zone,
+            controller=controller,
+            ctx=ctx,
+        )
 
-        # 1. Find the runtime object
-        obj = self.objects.get(card_id)
-        if obj is None:
-            raise ValueError(f"Runtime object {card_id} not found")
+    # ============================================================
+    # CASTING (delegated)
+    # ============================================================
 
-        # 2. Remove from old zone
-        old_zone = obj.zone
-        old_controller = obj.controller
-        self.add_debug_log(f"move_card: {card_id} from {old_zone} to {to_zone} (controller={controller})")
-        self.event_bus.publish(Event( 
-            type=EventType.ZONE_CHANGE, 
-            payload={ 
-                "obj_id": card_id, 
-                "from_zone": old_zone, 
-                "to_zone": ZoneType[to_zone] if isinstance(to_zone, str) else to_zone, 
-                "controller": controller if controller is not None else old_controller, 
-                "cause": "engine_move_card", 
-            } 
-        ))
-        
-    def max_lands_per_turn(self, player_id: int) -> int:
-        base = 1 
-        bonus = self.layers.get_land_play_bonus(player_id) 
-        return base + bonus
+    def cast_spell(self, source_id: str, controller: int,
+                   cost_choice: Optional[str] = None):
+        """
+        Delegate to CastSpellEngine.
+        """
+        return self.casting.cast_spell(
+            game_state=self,
+            source_id=source_id,
+            controller=controller,
+            cost_choice=cost_choice,
+        )
+
+    # ============================================================
+    # DEBUGGING
+    # ============================================================
 
     def add_debug_log(self, msg: str):
         self.debug_log.append(msg)
 
-    def __post_init__(self):
-        self.event_bus = EventBus(game_state=self)
-        self.layers = LayerSystem(game_state=self)
-        register_all_handlers(self)
+    # ============================================================
+    # OBJECT CREATION
+    # ============================================================
 
-    def get_object(self, obj_id: str) -> RuntimeObject | None:
-        """
-        Unified lookup for any runtime object by ID.
-        This checks the global objects dictionary, which is the authoritative
-        registry for all permanents, tokens, spells, and zone objects.
-        """
-        return self.objects.get(obj_id)
+    def allocate_id(self) -> str:
+        return f"obj_{len(self.objects) + 1}"
+
+    def create_object(self, axis3_card, owner: int, controller: int, zone: ZoneType):
+        obj_id = self.allocate_id()
+
+        obj = RuntimeObject(
+            id=obj_id,
+            owner=owner,
+            controller=controller,
+            zone=zone,
+            axis3_card=axis3_card,
+            name=axis3_card.name,
+        )
+
+        self.objects[obj_id] = obj
+        self.zone_list(controller, zone.name).append(obj_id)
+
+        return obj
+
+    def create_token(self, axis3_card, controller: int):
+        obj_id = self.allocate_id()
+
+        token = RuntimeObject(
+            id=obj_id,
+            owner=controller,
+            controller=controller,
+            zone=ZoneType.BATTLEFIELD,
+            axis3_card=axis3_card,
+            name=axis3_card.name,
+            is_token=True,
+        )
+
+        self.objects[obj_id] = token
+        self.players[controller].battlefield.append(obj_id)
+
+        return token

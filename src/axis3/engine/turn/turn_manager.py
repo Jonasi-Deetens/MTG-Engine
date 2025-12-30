@@ -1,59 +1,68 @@
+# axis3/engine/turn/turn_manager.py
+
 from __future__ import annotations
-from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from axis3.rules.events.event import Event
 from axis3.rules.events.types import EventType
+from axis3.engine.turn.priority import PriorityManager
 from axis3.rules.sba.checker import run_sbas
-from axis3.state.zones import ZoneType
-from axis3.engine.turn.phases import Phase
+from axis3.engine.turn.turn_state import Phase, Step, PHASE_STEP_ORDER
 
-from .steps import Step, PHASE_STEP_ORDER
-from .priority import PriorityManager
+if TYPE_CHECKING:
+    from axis3.state.game_state import GameState
 
 
 class TurnManager:
     """
-    Central coordinator for turn/step/priority flow.
+    Central coordinator for turn/step/priority/stack flow.
 
     Design goals:
     - Correct MTG turn/priority structure.
     - UI-agnostic (no input/output).
-    - Rules-light: delegates real rules work via events and hooks.
+    - Rules-light: delegates real rules work via events, engines, and handlers.
     """
-    
-    def _draw_cards(self, player_id: int, count: int):
-        """
-        Draw `count` cards for `player_id` via the normal DRAW event
-        pipeline (replacement effects, triggers, etc.).
-        """
-        print(f"Drawing {count} cards for player {player_id}")
-        for _ in range(count):
-            self.gs.event_bus.publish(Event(
-                type=EventType.DRAW,
-                payload={"player_id": player_id}
-            ))
-            # If your draw implementation lives in rules handlers, they will
-            # move the card from library to hand in response to this.
 
-    def __init__(self, game_state: "GameState"):
+    def __init__(self, game_state: GameState):
         self.gs = game_state
         # Use the canonical TurnState stored in GameState
         self.state = self.gs.turn
         self.priority = PriorityManager(active_player=self.state.active_player)
 
+    # -------------------------------------------------------------------------
+    # Internal helpers
+    # -------------------------------------------------------------------------
 
-    # --- Public API ---------------------------------------------------------
+    def _draw_cards(self, player_id: int, count: int):
+        """
+        Draw `count` cards for `player_id` via the normal DRAW event pipeline
+        (replacement effects, triggers, etc.).
+        """
+        self.gs.add_debug_log(f"TurnManager: drawing {count} cards for player {player_id}")
+        for _ in range(count):
+            self.gs.event_bus.publish(Event(
+                type=EventType.DRAW,
+                payload={"player_id": player_id}
+            ))
+            # Draw implementation lives in rules handlers.
+
+    def _set_phase_step(self, phase: Phase, step: Step):
+        self.state.phase = phase
+        self.state.step = step
+
+    # -------------------------------------------------------------------------
+    # Public API
+    # -------------------------------------------------------------------------
 
     def begin_game(self):
         """
-        Initialize the first turn: set phase/step, handle automatic actions,
-        and give priority at the first step that actually has priority.
+        Initialize the first turn:
+        - draw starting hands
+        - set first turn/phase/step
+        - begin the first step
         """
-
-        # Starting hands 
-        print("Drawing starting hands")
-        for pid, player in enumerate(self.gs.players): 
-            print(f"Drawing {7} cards for player {player.id}")
+        # Starting hands
+        for pid, player in enumerate(self.gs.players):
             self._draw_cards(player.id, 7)
 
         self.state.turn_number = 1
@@ -64,7 +73,11 @@ class TurnManager:
     def handle_player_pass(self, player_id: int):
         """
         Called by the engine loop/UI when the current priority player passes.
-        This may cause stack resolution or step advancement.
+
+        If both players have passed in succession:
+        - If the stack is non-empty, resolve the top item, run SBAs, and give
+          priority back to the active player.
+        - If the stack is empty, advance phase/step/turn.
         """
         if player_id != self.priority.current:
             return  # Ignore out-of-turn passes
@@ -75,36 +88,43 @@ class TurnManager:
 
         # Both players passed in succession
         if self.gs.stack.is_empty():
-            # Advance step/phase/turn
+            # No spells/abilities to resolve → advance game state
             self._advance_phase_step()
         else:
             # Resolve top of stack, run SBAs, give priority back to active player
-            self.gs.stack.resolve_top(self.gs)
+            resolved_item = self.gs.stack.resolve_top(self.gs)
+            self.gs.add_debug_log(
+                f"TurnManager: resolved stack item {resolved_item}"
+            )
             run_sbas(self.gs)
+            # After a stack item resolves, active player gets priority first
             self.priority.give_to(self.state.active_player)
 
     def after_player_action(self, player_id: int):
         """
-        Called after a player successfully takes an action that uses priority
-        (cast spell, activate ability, etc.). We give priority to the other player.
+        Called AFTER a player successfully takes an action that USES PRIORITY
+        (cast spell, activate ability, etc.).
+
+        Mana abilities and special actions that don't use the stack must NOT
+        call this; the action object should expose `uses_priority`.
         """
         if player_id != self.priority.current:
             return
 
-        # After an action, priority passes to the other player
+        # After an action that uses the stack, priority goes to the other player
         self.priority.priority_player ^= 1
         self.priority._last_passed_player = None
 
-    # --- Internal phase/step management ------------------------------------
-
-    def _set_phase_step(self, phase: Phase, step: Step):
-        self.state.phase = phase
-        self.state.step = step
+    # -------------------------------------------------------------------------
+    # Phase/step management
+    # -------------------------------------------------------------------------
 
     def _begin_step(self):
         """
         Handle the beginning of a step:
+
         - publish BEGIN_STEP event
+        - allow triggered abilities to be created/queued
         - run automatic step actions where appropriate
         - run SBAs
         - either:
@@ -112,6 +132,7 @@ class TurnManager:
             * auto-advance (UNTAP, some CLEANUP cases)
         """
 
+        # BEGIN_STEP event: triggers like "At the beginning of your upkeep..."
         self.gs.event_bus.publish(Event(
             type=EventType.BEGIN_STEP,
             payload={
@@ -122,41 +143,50 @@ class TurnManager:
             }
         ))
 
+        # Default: active player starts with priority each step (unless overridden below)
         self.priority.give_to(self.state.active_player)
+
         step = self.state.step
 
-        # --- Automatic, no-priority steps: UNTAP, some parts of CLEANUP -----
+        # --- Automatic, no-priority steps: UNTAP -----------------------------
         if step == Step.UNTAP:
             self._handle_untap_step()
-            # No priority in untap; go straight to next step
+            # If UNTAP produced triggers (e.g., "Whenever this untaps"), they go on the stack.
+            # MTG: no priority in untap; we still must handle triggers via events.
+            # By rules, those triggers actually wait until the next step's priority.
+            # So we go straight to the next step.
             self._advance_phase_step()
             return
 
-        # --- Automatic actions but with priority afterwards -----------------
+        # --- DRAW step: automatic draw, THEN priority ------------------------
         if step == Step.DRAW:
             self._handle_draw_step()
             run_sbas(self.gs)
+
+            # If the draw step (or its triggers) put items on the stack,
+            # we now enter a normal priority window.
             self.priority.reset_for_new_step(self.state.active_player)
             return
 
+        # --- COMBAT DAMAGE: automatic damage, THEN priority ------------------
         if step == Step.COMBAT_DAMAGE:
             self._handle_combat_damage_step()
             run_sbas(self.gs)
-            # Players do get priority after combat damage
             self.priority.reset_for_new_step(self.state.active_player)
             return
 
-        # --- Cleanup: automatic, but can loop if SBAs/Triggers occur -------
+        # --- CLEANUP: automatic, but can loop if SBAs/Triggers occur --------
         if step == Step.CLEANUP:
             if self._handle_cleanup_step():
-                # If state-based actions or triggers require another cleanup,
-                # we stay in cleanup. Rules layer should manage that via events.
+                # If the rules layer determined another cleanup is required,
+                # remain in CLEANUP. Rules layer manages any needed events.
                 return
             # Normally, cleanup has no priority; move to next turn
             self._advance_phase_step()
             return
 
-        # --- All other steps: just give priority after BEGIN_STEP ----------
+        # --- All other steps: normal priority window ------------------------
+        # BEGIN_STEP already fired; any triggers have had a chance to go on stack.
         run_sbas(self.gs)
         self.priority.reset_for_new_step(self.state.active_player)
 
@@ -197,44 +227,48 @@ class TurnManager:
         Increment turn, switch active player, and go to the first step.
         """
         self.state.turn_number += 1
-        self.state.active_player ^= 1  # two-player game assumption
+        self.state.active_player ^= 1  # two-player assumption
         self.state.lands_played_this_turn = {0: 0, 1: 0}
 
         first_phase, first_step = PHASE_STEP_ORDER[0]
         self._set_phase_step(first_phase, first_step)
         self._begin_step()
 
-    # --- Step-specific handlers (hooks into rules layer) -------------------
+    # -------------------------------------------------------------------------
+    # Step-specific handlers (hooks into rules layer)
+    # -------------------------------------------------------------------------
 
     def _handle_untap_step(self):
         """
         Untap step:
         - No priority.
-        - Active player's permanents untap.
-        - SBAs and triggered abilities are handled via events/other rules.
+        - Active player's permanents untap via events/handlers.
         """
         self.gs.event_bus.publish(Event(
             type=EventType.UNTAP,
             payload={"active_player": self.state.active_player}
         ))
-        # You can keep this as events-only and let rules layer untap
+        # Untap implementation should be in rules handlers.
 
     def _handle_draw_step(self):
+        """
+        Draw step:
+        - Active player draws a card (or replacement).
+        - Triggers may be created (e.g. "Whenever you draw a card").
+        """
         player = self.gs.players[self.state.active_player]
 
-        # 1. Fire DRAW (replacement window)
+        # DRAW event opens replacement window and lets rules layer perform the draw.
         self.gs.event_bus.publish(Event(
             type=EventType.DRAW,
             payload={"player_id": player.id}
         ))
 
-
     def _handle_combat_damage_step(self):
         """
         Combat damage step:
-        - Deal combat damage according to the combat state.
+        - Deal combat damage via combat engine / handlers.
         - Then players get priority.
-        Real logic should live in the combat/rules layer; here we just emit events.
         """
         self.gs.event_bus.publish(Event(
             type=EventType.COMBAT_DAMAGE,
@@ -243,15 +277,14 @@ class TurnManager:
                 "turn_number": self.state.turn_number,
             }
         ))
-        # Actual damage assignment/resolution should be in axis3.engine.combat
-        # called by a subscriber to COMBAT_DAMAGE_STEP.
+        # Actual damage assignment/resolution should be done by a combat subsystem.
 
     def _handle_cleanup_step(self) -> bool:
         """
         Cleanup step:
-        - Discard down to max hand size.
+        - Discard down to max hand size (rules layer).
         - Remove damage from creatures.
-        - Effects that last 'until end of turn' are cleared in the rules layer.
+        - Clear "until end of turn" effects in rules layer.
         - Normally, no priority. But if SBAs or triggers cause changes,
           an additional cleanup is performed.
 
@@ -269,19 +302,20 @@ class TurnManager:
             }
         ))
 
-        # Example: simple damage removal here; real logic may live elsewhere.
+        # Simple example: remove damage from creatures on battlefield.
         for obj in self.gs.objects.values():
-            if obj.zone.name == "BATTLEFIELD":
+            if getattr(obj.zone, "name", None) == "BATTLEFIELD":
                 obj.damage = 0
 
         run_sbas(self.gs)
 
-        # In a full engine, this would be coordinated with the rules layer:
-        # if any triggers fired or SBAs caused changes that require another
-        # cleanup, return True. For now, we assume no extra cleanup.
+        # In a full engine, rules layer would signal if another cleanup is needed.
+        # For now, assume no extra cleanup.
         return False
 
-    # --- Convenience accessors for UI/engine loop --------------------------
+    # -------------------------------------------------------------------------
+    # Convenience accessors for UI/engine loop
+    # -------------------------------------------------------------------------
 
     @property
     def active_player(self) -> int:

@@ -4,7 +4,7 @@ from typing import List, Dict, Any
 from axis1.schema import Axis1Card
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from axis2.builder import GameState
+    from axis3.state.game_state import GameState
 
 
 # ------------------------------------------------------------

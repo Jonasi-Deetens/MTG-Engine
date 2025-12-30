@@ -1,0 +1,94 @@
+# axis3/compiler/axis3_builder.py
+
+from typing import Any
+
+from axis1.schema import Axis1Card
+from axis3.cards.card import Axis3Card
+
+from axis3.rules.mana_cost import parse_mana_cost
+from axis3.rules.keywords import derive_keyword_abilities
+from axis3.rules.static_effects import derive_static_effects
+from axis3.rules.replacement_effects import derive_replacement_effects
+from axis3.rules.triggered import derive_triggered_abilities
+from axis3.rules.activated import derive_activated_abilities
+from axis3.rules.modes import parse_modes
+from axis3.rules.special_actions import derive_special_actions
+from axis3.rules.etb_replacements import derive_etb_replacement_effects
+
+from axis3.translate.compilers.effect_compiler import compile_effects
+
+
+class Axis3CardBuilder:
+
+    @staticmethod
+    def build(axis1_card: Axis1Card) -> Axis3Card:
+        """
+        Convert Axis1Card → Axis3Card.
+        This is the new, Axis3-native card builder.
+        """
+
+        face = axis1_card.faces[0]
+        oracle = face.oracle_text or ""
+
+        # ------------------------------------------------------------
+        # Basic characteristics
+        # ------------------------------------------------------------
+        mana_cost = parse_mana_cost(face.mana_cost)
+        mana_value = getattr(face, "mana_value", None)
+
+        colors = list(face.colors or [])
+        color_identity = list(face.color_indicator or [])
+
+        types = list(face.card_types or [])
+        supertypes = list(face.supertypes or [])
+        subtypes = list(face.subtypes or [])
+
+        power = int(face.power) if face.power is not None else None
+        toughness = int(face.toughness) if face.toughness is not None else None
+        loyalty = face.loyalty
+        defense = face.defense
+
+        # ------------------------------------------------------------
+        # Axis3 rules parsing
+        # ------------------------------------------------------------
+
+        keywords = derive_keyword_abilities(axis1_card, game_state)
+        static_effects = derive_static_effects(axis1_card, game_state)
+        replacement_effects = derive_replacement_effects(axis1_card, game_state)
+        triggered_abilities = derive_triggered_abilities(axis1_card, game_state)
+        activated_abilities = derive_activated_abilities(axis1_card, game_state)
+        effects = compile_effects(axis1_card, game_state)
+        special_actions = derive_special_actions(axis1_card, game_state)
+        etb_replacements = derive_etb_replacement_effects(oracle, game_state)
+
+        # Merge ETB replacements into replacement effects
+        replacement_effects.extend(etb_replacements)
+
+        mode_choice, modes = parse_modes(oracle, game_state)
+
+        # ------------------------------------------------------------
+        # Build Axis3Card
+        # ------------------------------------------------------------
+        return Axis3Card(
+            name=face.name,
+            mana_cost=mana_cost,
+            mana_value=mana_value,
+            colors=colors,
+            color_identity=color_identity,
+            types=types,
+            supertypes=supertypes,
+            subtypes=subtypes,
+            power=power,
+            toughness=toughness,
+            loyalty=loyalty,
+            defense=defense,
+            static_effects=static_effects,
+            replacement_effects=replacement_effects,
+            triggered_abilities=triggered_abilities,
+            activated_abilities=activated_abilities,
+            keywords=keywords,
+            effects=effects,
+            special_actions=special_actions,
+            modes=modes,
+            mode_choice=mode_choice,
+        )

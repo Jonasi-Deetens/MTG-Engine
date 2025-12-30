@@ -1,16 +1,17 @@
 import re
-from axis2.rules.keywords import KEYWORD_TRIGGER_MAP
+from axis3.rules.builder.keywords import KEYWORD_TRIGGER_MAP
 from typing import List
 
 from axis1.schema import Axis1Card
-from axis2.schema import Trigger, TargetingRules
+from axis3.abilities.triggered.trigger import Trigger
+from axis3.abilities.targeting.targeting_rules import TargetingRules
 from axis3.effects.base import ReplacementEffect
 from axis3.translate.compilers.effect_compiler import compile_effect
 from axis3.translate.compilers.replacement_compiler import compile_replacement_effect
 from axis3.translate.compilers.static_compiler import compile_static_effect
 from typing import TYPE_CHECKING
 if TYPE_CHECKING: 
-    from axis2.builder import GameState
+    from axis3.state.game_state import GameState
 
 
 # ------------------------------------------------------------

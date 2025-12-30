@@ -4,8 +4,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Callable, Optional, Set, List
 
-from axis3.state.objects import RuntimeObjectId
-
 # For type hints only:
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -17,16 +15,16 @@ class RuntimeContinuousEffect:
     Data-driven representation of a continuous effect.
     Handles P/T modification, abilities, etc.
     """
-    source_id: Optional[RuntimeObjectId]  # Which object created this effect
+    source_id: Optional["RuntimeObjectId"]  # Which object created this effect
     layer: int                             # Layer 1-7
     sublayer: Optional[str] = None         # e.g., '7b', '7c', etc.
-    applies_to: Callable[[GameState, RuntimeObjectId], bool] = lambda gs, oid: True
+    applies_to: Callable[[GameState, "RuntimeObjectId"], bool] = lambda gs, oid: True
 
     # Optional effect functions
-    modify_power: Optional[Callable[[GameState, RuntimeObjectId, int], int]] = None
-    modify_toughness: Optional[Callable[[GameState, RuntimeObjectId, int], int]] = None
-    add_abilities: Optional[Callable[[GameState, RuntimeObjectId, Set[str]], None]] = None
-    remove_abilities: Optional[Callable[[GameState, RuntimeObjectId, Set[str]], None]] = None
+    modify_power: Optional[Callable[[GameState, "RuntimeObjectId", int], int]] = None
+    modify_toughness: Optional[Callable[[GameState, "RuntimeObjectId", int], int]] = None
+    add_abilities: Optional[Callable[[GameState, "RuntimeObjectId", Set[str]], None]] = None
+    remove_abilities: Optional[Callable[[GameState, "RuntimeObjectId", Set[str]], None]] = None
 
     # Optional additions/removals for types/colors/keywords
     add_types: Set[str] = field(default_factory=set)
@@ -42,10 +40,10 @@ class RuntimeContinuousEffect:
 
 @dataclass
 class RuntimeStaticAbility:
-    source_id: RuntimeObjectId
+    source_id: "RuntimeObjectId"
     effects: List[RuntimeContinuousEffect]
 
-    def apply(self, game_state: GameState, obj_id: RuntimeObjectId, ec):
+    def apply(self, game_state: GameState, obj_id: "RuntimeObjectId", ec):
         for effect in self.effects:
             if not effect.applies_to(game_state, obj_id):
                 continue

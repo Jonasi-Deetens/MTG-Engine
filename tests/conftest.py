@@ -6,20 +6,33 @@ from sqlalchemy.orm import sessionmaker
 
 from db.models import Base  # adjust if your Base is elsewhere
 from axis1.schema import Axis1Card, Axis1Face, Axis1Characteristics, Axis1ActivatedAbility
-from axis2.builder import GameState as Axis2GameState
-from axis2.builder import Axis2Builder
+from axis3.compiler.axis3_builder import Axis3CardBuilder
 from axis3.effects.base import ContinuousEffect, ReplacementEffect
 from axis3.state.game_state import GameState as Axis3GameState
-from axis3.model.characteristics import PrintedCharacteristics as Characteristics
 from axis3.state.objects import RuntimeObject
 from axis3.state.zones import ZoneType
+from axis3.state.game_state import PlayerState
+from dataclasses import dataclass
+from typing import List, Optional
+
+@dataclass
+class Characteristics:
+    name: str
+    mana_cost: Optional[str]
+    types: List[str]
+    subtypes: List[str]
+    supertypes: List[str]
+    colors: List[str]
+    power: Optional[int]
+    toughness: Optional[int]
+    loyalty: Optional[int]
 
 def pytest_addoption(parser):
     parser.addoption(
         "--name",
         action="store",
         default=None,
-        help="Name of the card to debug in Axis2"
+        help="Name of the card to debug in Axis3"
     )
 
 @pytest.fixture
@@ -29,25 +42,30 @@ def card_name(request):
 
 @pytest.fixture
 def axis2_builder():
-    return Axis2Builder
+    return Axis3CardBuilder
 
 @pytest.fixture
 def game_state():
-    return Axis2GameState(
-        active_player_id="P1",
-        priority_player_id="P1",
-        turn_phase="main",
-        turn_step="precombat",
-        battlefield=[],
-        graveyards={"P1": [], "P2": []},
-        hands={"P1": [], "P2": []},
-        exile=[],
-        command_zone=[],
-        stack=[],
-        continuous_effects=[],
-        replacement_effects=[],
-        global_restrictions=[],
+    # Create an empty Axis3 game with two players
+    gs = Axis3GameState(
+        players=[PlayerState(id="P1"), PlayerState(id="P2")],
+        objects={}
     )
+
+    # Initialize empty zones (Axis3 uses lists of object IDs)
+    gs.battlefield = []
+    gs.graveyards = {"P1": [], "P2": []}
+    gs.hands = {"P1": [], "P2": []}
+    gs.exile = []
+    gs.command_zone = []
+
+    # Axis3 continuous/replacement effects
+    gs.continuous_effects = []
+    gs.replacement_effects = []
+    gs.global_restrictions = []
+
+    return gs
+
 
 @pytest.fixture
 def game_state_factory():

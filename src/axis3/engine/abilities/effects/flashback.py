@@ -1,23 +1,16 @@
 # axis3/engine/abilities/effects/flashback.py
 
 from dataclasses import dataclass
+from typing import Optional
 from axis3.engine.abilities.effects.base import Axis3Effect
 
 @dataclass
 class FlashbackEffect(Axis3Effect):
-    flashback_cost: str
+    flashback_cost: str = ""
     reduction_source: Optional[str] = None
     layering: str = "rules"
 
     def apply(self, game_state, source, controller):
-        """
-        Apply flashback rules to this card:
-        - Allow casting from graveyard
-        - Add alternative cost
-        - Add cost reduction
-        - Add exile-on-resolution replacement effect
-        """
-
         # 1. Allow casting from graveyard
         game_state.grant_permission(
             source=source,
