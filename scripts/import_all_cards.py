@@ -55,8 +55,11 @@ def main():
 
     for card_json in cards:
         try:
+            # print(f"Processing card: {card_json['name']}")
             axis1_card = mapper.map(card_json)
+            # print(f"Axis1 card: {axis1_card}")
             repo.save(axis1_card)
+            # print(f"Saved card: {axis1_card.card_id}")
             count += 1
 
             if count % 500 == 0:

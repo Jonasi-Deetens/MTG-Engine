@@ -183,7 +183,7 @@ def _extract_activated_abilities_from_oracle(oracle_text: str) -> list:
                     cost=cost_text,
                     effect="Attach this to target creature you control.",
                     cost_metadata=_parse_cost_metadata(cost_text),
-                    activation_conditions=["sorcery_speed"],
+                    activation_conditions=[{"type": "timing", "value": "sorcery_only"}],
                 )
             )
             continue
