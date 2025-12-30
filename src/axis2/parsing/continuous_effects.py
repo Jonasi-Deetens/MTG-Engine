@@ -79,6 +79,7 @@ def _parse_abilities(text: str) -> Optional[list[str]]:
 
     abilities = []
     for a in raw:
+        a = a.rstrip(".")
         if a.startswith("ward"):
             abilities.append("ward")
         elif a in ABILITY_KEYWORDS:
@@ -157,7 +158,6 @@ def parse_continuous_effects(text: str) -> List[ContinuousEffect]:
                 text=text,
             )
         )
-        return effects
 
     # 3. Ability granting
     abilities = _parse_abilities(text)
@@ -171,7 +171,6 @@ def parse_continuous_effects(text: str) -> List[ContinuousEffect]:
                 text=text,
             )
         )
-        return effects
 
     # 4. Color change
     color_change = _parse_color_change(text)
@@ -184,8 +183,7 @@ def parse_continuous_effects(text: str) -> List[ContinuousEffect]:
                 condition=condition,
                 text=text,
             )
-        )
-        return effects
+        )   
 
     # 5. Type change
     type_change = _parse_type_change(text)
@@ -199,8 +197,7 @@ def parse_continuous_effects(text: str) -> List[ContinuousEffect]:
                 text=text,
             )
         )
-        return effects
 
     # 6. Fallback: unknown continuous effect
-    return []
 
+    return effects

@@ -5,7 +5,9 @@ from axis2.schema import (
     DealDamageEffect, DrawCardsEffect, AddManaEffect,
     PutOntoBattlefieldEffect, SymbolicValue, 
     PutCounterEffect, CounterSpellEffect, CreateTokenEffect, EquipEffect, 
-    GainLifeEffect, SearchEffect, CantBeBlockedEffect
+    GainLifeEffect, SearchEffect, CantBeBlockedEffect, GainLifeEqualToPowerEffect, 
+    ReturnCardFromGraveyardEffect, DraftFromSpellbookEffect, PTBoostEffect,
+    ChangeZoneEffect
 )
 
 COLOR_MAP = {
@@ -97,6 +99,36 @@ def parse_effect_text(text):
         cant_be_blocked = parse_cant_be_blocked(s)
         if cant_be_blocked:
             effects.append(cant_be_blocked)
+            continue
+
+        # Return card from graveyard
+        ret = parse_return_card(s)
+        if ret:
+            effects.append(ret)
+            continue
+
+        # Gain life equal to that card's power
+        gle = parse_gain_life_equal(s)
+        if gle:
+            effects.append(gle)
+            continue
+
+        # Draft a card from a spellbook
+        spellbook = parse_spellbook_effect(s)
+        if spellbook:
+            effects.append(spellbook)
+            continue
+
+        # PT boost
+        pt_boost = parse_pt_boost(s)
+        if pt_boost:
+            effects.append(pt_boost)
+            continue
+
+        # Move to zone
+        change_zone = parse_change_zone(s)
+        if change_zone:
+            effects.append(change_zone)
             continue
 
         # 2c. Damage
@@ -226,7 +258,7 @@ def parse_put_counter(text: str):
     )
 
 COUNTER_SPELL_RE = re.compile(
-    r"counter that spell",
+    r"counter (target )?spell",
     re.IGNORECASE
 )
 
@@ -236,15 +268,16 @@ def parse_counter_spell(text: str):
       'Counter that spell.'
     """
     if COUNTER_SPELL_RE.search(text):
-        return CounterSpellEffect(target="that_spell")
+        return CounterSpellEffect(target="target_spell")
     return None
+
 GENERAL_TOKEN_RE = re.compile(
-    r"create (\w+) (\d+)/(\d+) ([a-z ]+?) creature tokens? with ([a-z ,]+)",
+    r"create (\w+) (\d+)/(\d+) ([a-z ]+? creature) tokens? with ([a-z ,]+)",
     re.IGNORECASE
 )
 
 SIMPLE_TOKEN_RE = re.compile(
-    r"create (\w+) ([a-z ]+?) tokens?",
+    r"create (\w+) ([a-z ]+? creature) tokens?",
     re.IGNORECASE
 )
 
@@ -400,4 +433,167 @@ def parse_cant_be_blocked(text: str):
             subject="target_creature",
             duration="until_end_of_turn"
         )
+    return None
+
+RETURN_CARD_RE = re.compile(
+    r"return (?:up to )?target ([a-z ]+?) card from (?:your|an opponent's|a|their) graveyard to (?:your|its owner's|their) ([a-z ]+)",
+    re.IGNORECASE
+)
+
+GAIN_LIFE_EQUAL_RE = re.compile(
+    r"gain life equal to (?:that|its) card'?s ([a-z ]+)",
+    re.IGNORECASE
+)
+
+def parse_return_card(s: str):
+    m = RETURN_CARD_RE.search(s)
+    if not m:
+        return None
+
+    subtype = m.group(1).strip()
+    dest_zone = m.group(2).strip()
+
+    # normalize destination zone
+    zone_map = {
+        "hand": "hand",
+        "battlefield": "battlefield",
+        "battlefield tapped": "battlefield_tapped",
+        "command zone": "command_zone",
+    }
+    dest_zone = zone_map.get(dest_zone, dest_zone)
+
+    return ReturnCardFromGraveyardEffect(
+        subtype=subtype,
+        controller="you",      # still correct for this card
+        destination_zone=dest_zone
+    )
+
+def parse_gain_life_equal(s: str):
+    m = GAIN_LIFE_EQUAL_RE.search(s)
+    if not m:
+        return None
+
+    stat = m.group(1).strip().lower()
+
+    # Normalize common stat names
+    stat_map = {
+        "power": "power",
+        "toughness": "toughness",
+        "mana value": "mana_value",
+        "converted mana cost": "mana_value",
+        "cmc": "mana_value",
+    }
+    stat = stat_map.get(stat, stat)
+
+    return GainLifeEqualToPowerEffect(
+        source="that_card",
+        stat=stat
+    )
+
+SPELLBOOK_RE = re.compile(
+    r"draft a card from ([a-zA-Z ]+)'s spellbook",
+    re.IGNORECASE
+)
+
+def parse_spellbook_effect(text: str):
+    m = SPELLBOOK_RE.search(text)
+    if not m:
+        return None
+    return DraftFromSpellbookEffect(source=m.group(1).strip())
+
+PT_BOOST_RE = re.compile(
+    r"target creature gets \+(\d+)/\+(\d+) until end of turn",
+    re.IGNORECASE
+)
+
+def parse_pt_boost(text: str):
+    m = PT_BOOST_RE.search(text)
+    if not m:
+        return None
+    return PTBoostEffect(
+        power=int(m.group(1)),
+        toughness=int(m.group(2)),
+        duration="until_end_of_turn"
+    )
+
+RETURN_HAND_RE = re.compile(
+    r"return\s+(.+?)\s+to\s+(?:its|their|his|her|that|the)?\s*owner'?s hand",
+    re.IGNORECASE
+)
+GRAVEYARD_RE = re.compile(
+    r"put\s+(.+?)\s+into\s+(?:its|their|your|his|her)?\s*owner'?s?\s*graveyard",
+    re.IGNORECASE
+)
+
+LIBRARY_RE = re.compile(
+    r"put\s+(.+?)\s+on\s+(top|the bottom)\s+of\s+(?:its|their|your)?\s*owner'?s library",
+    re.IGNORECASE
+)
+
+EXILE_RE = re.compile(
+    r"exile\s+(.+?)\b",
+    re.IGNORECASE
+)
+
+RETURN_BATTLEFIELD_RE = re.compile(
+    r"return\s+(.+?)\s+to\s+the battlefield",
+    re.IGNORECASE
+)
+
+ONTO_BATTLEFIELD_RE = re.compile(
+    r"put\s+(.+?)\s+onto\s+the battlefield",
+    re.IGNORECASE
+)
+
+
+def parse_change_zone(text: str):
+    # return to hand
+    m = RETURN_HAND_RE.search(text)
+    if m:
+        return ChangeZoneEffect(
+            subject=m.group(1).strip(),
+            to_zone="hand"
+        )
+
+    # graveyard
+    m = GRAVEYARD_RE.search(text)
+    if m:
+        return ChangeZoneEffect(
+            subject=m.group(1).strip(),
+            to_zone="graveyard"
+        )
+
+    # library (top/bottom)
+    m = LIBRARY_RE.search(text)
+    if m:
+        return ChangeZoneEffect(
+            subject=m.group(1).strip(),
+            to_zone="library",
+            position=m.group(2).strip()
+        )
+
+    # exile
+    m = EXILE_RE.search(text)
+    if m:
+        return ChangeZoneEffect(
+            subject=m.group(1).strip(),
+            to_zone="exile"
+        )
+
+    # return to battlefield
+    m = RETURN_BATTLEFIELD_RE.search(text)
+    if m:
+        return ChangeZoneEffect(
+            subject=m.group(1).strip(),
+            to_zone="battlefield"
+        )
+
+    # put onto battlefield
+    m = ONTO_BATTLEFIELD_RE.search(text)
+    if m:
+        return ChangeZoneEffect(
+            subject=m.group(1).strip(),
+            to_zone="battlefield"
+        )
+
     return None

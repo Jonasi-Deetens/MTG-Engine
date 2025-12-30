@@ -1,7 +1,7 @@
 # axis2/parsing/costs.py
 
 import re
-from axis2.schema import TapCost, SacrificeCost, LoyaltyCost, ManaCost
+from axis2.schema import TapCost, SacrificeCost, LoyaltyCost, ManaCost, DiscardCost
 
 def parse_cost(axis1_cost_part):
     raw = axis1_cost_part["raw"].lower()
@@ -21,7 +21,7 @@ def parse_cost(axis1_cost_part):
     return ManaCost(symbols=mana_symbols)
 
 TAP_COST_RE = re.compile(
-    r"tap (\w+) ([a-z ]+?) you control",
+    r"tap (\w+) ([a-z ]+) you control[:]?",
     re.IGNORECASE
 )
 
@@ -55,12 +55,64 @@ def parse_tap_cost(text: str):
 
     parts = restrictions_raw.split()
     for p in parts:
+        p = p.lower().strip(" ,.:;")  # normalize punctuation
+
         if p == "untapped":
             restrictions.append("untapped")
-        elif p == "artifact":
+
+        elif "artifact" in p:   # ← FIXED
             restrictions.append("artifact")
-        elif p == "creature":
+
+        elif "creature" in p:
             restrictions.append("creature")
-        # add more as needed
+
 
     return TapCost(amount=amount, restrictions=restrictions)
+
+DISCARD_COST_RE = re.compile(
+    r"discard (\w+) cards?",
+    re.IGNORECASE
+)
+
+def parse_discard_cost(text: str):
+    m = DISCARD_COST_RE.search(text)
+    if not m:
+        return None
+
+    raw = m.group(1).lower()
+
+    if raw.isdigit():
+        amount = int(raw)
+    else:
+        amount = NUMBER_WORDS.get(raw)
+
+    if amount is None:
+        return None
+
+    return DiscardCost(amount=amount)
+
+    
+SACRIFICE_RE = re.compile(
+    r"sacrifice (this|a|an|another|target)?\s*(\w+)?",
+    re.IGNORECASE
+)
+
+def parse_sacrifice_cost(text: str):
+    m = SACRIFICE_RE.search(text)
+    if not m:
+        return None
+
+    determiner = (m.group(1) or "").lower()
+    noun = (m.group(2) or "").lower()
+
+    # Normalize subject
+    if determiner == "this":
+        subject = "self"
+    elif determiner == "target":
+        subject = f"target_{noun}"
+    elif noun:
+        subject = f"controlled_{noun}"
+    else:
+        subject = "controlled_permanent"
+
+    return SacrificeCost(subject=subject)

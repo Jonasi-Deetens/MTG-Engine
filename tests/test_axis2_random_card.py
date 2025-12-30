@@ -124,7 +124,7 @@ def test_axis2_debug(pg_session, card_name):
         print("\n    TRIGGERED ABILITIES:")
         if f.triggered_abilities:
             for trig in f.triggered_abilities:
-                print(f"      event={trig.event!r}  {trig}")
+                print(f"      {trig}")
                 print("\n        EFFECTS:")
                 for eff in trig.effects:
                     print(f"        {eff}")

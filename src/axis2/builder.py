@@ -5,7 +5,7 @@ from axis2.schema import (
     DealDamageEffect, DrawCardsEffect, AddManaEffect, CreateTokenEffect,
     ActivatedAbility, TriggeredAbility, StaticEffect, Mode,
     SymbolicValue, TargetingRules, TargetingRestriction,
-    ReplacementEffect, ContinuousEffect, TapCost
+    ReplacementEffect, ContinuousEffect, TapCost, DraftFromSpellbookEffect
 )
 
 from axis2.parsing.mana import parse_mana_cost
@@ -20,6 +20,9 @@ from axis2.parsing.continuous_effects import parse_continuous_effects
 from axis2.parsing.special_actions import parse_ninjutsu
 from axis2.parsing.keywords import extract_keywords
 from axis2.parsing.sentences import split_into_sentences
+from axis2.parsing.triggers import parse_trigger_event
+from axis2.parsing.activated import parse_activated_abilities
+from axis2.helpers import cleaned_oracle_text
 
 class Axis2Builder:
 
@@ -56,44 +59,45 @@ class Axis2Builder:
             if ninjutsu:
                 special_actions.append(ninjutsu)
 
-            activated = []
-            for a in f.activated_abilities:
-                costs = [parse_cost(c) for c in a.cost_parts]
-                tap_cost = parse_tap_cost(a.cost) 
-                if tap_cost: 
-                    costs.append(tap_cost)
-                effects = parse_effect_text(a.effect)
-                targeting = parse_targeting(a.effect)
-                activated.append(
-                    ActivatedAbility(
-                        costs=costs,
-                        effects=effects,
-                        conditions=a.activation_conditions,
-                        targeting=targeting,
-                        timing="instant",  # refine later
-                    )
-                )
+            activated = parse_activated_abilities(f)
 
             triggered = []
             for t in f.triggered_abilities:
+                # 1. Recompute the trigger event (don’t trust Axis1)
+                event = parse_trigger_event(t.condition)
+                # 2. Parse effects (multi-sentence)
+                # If Axis1 failed to extract the effect text, reconstruct it from the oracle text
+                if not t.effect:
+                    cond = t.condition.lower().rstrip(".").rstrip(",")
+                    for sentence in split_into_sentences(f.oracle_text or ""):
+                        s = sentence.lower().lstrip().rstrip()
+                        s_clean = s.rstrip(".").rstrip(",")
+                        if s_clean.startswith(cond):
+                            parts = sentence.split(",", 1)
+                            if len(parts) == 2:
+                                t.effect = parts[1].strip()
+
+
                 effects = parse_effect_text(t.effect)
+                # 3. Targeting
                 targeting = parse_targeting(t.effect)
+                # 4. Trigger filter
                 trigger_filter = parse_trigger_filter(t.condition)
 
                 triggered_ability = TriggeredAbility(
-                    event=t.event_hint,
+                    event=event,
                     condition_text=t.condition,
                     effects=effects,
-                    targeting=None,
+                    targeting=targeting,
                     trigger_filter=trigger_filter,
                 )
                 triggered.append(triggered_ability)
 
-
             static_effects = parse_static_effects(f)
             mode_choice, modes = parse_modes(f.oracle_text or "")
 
-            sentences = split_into_sentences(f.oracle_text or "")
+            clean_text = cleaned_oracle_text(f)
+            sentences = split_into_sentences(clean_text)
 
             replacement_effects = []
             continuous_effects = []

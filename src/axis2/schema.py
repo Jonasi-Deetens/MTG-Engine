@@ -2,6 +2,10 @@ from dataclasses import dataclass, field
 from typing import List, Optional, Union, Dict, Any
 
 @dataclass
+class Effect:
+    pass
+
+@dataclass
 class SymbolicValue:
     kind: str            # "star", "variable", "formula"
     expression: str      # "*", "X", "*+1", etc.
@@ -16,6 +20,10 @@ class TapCost:
     restrictions: list[str]   # e.g. ["artifact", "untapped", "you_control"]
 
 @dataclass
+class DiscardCost:
+    amount: int
+
+@dataclass
 class SacrificeCost:
     subject: str         # "this", "creature", etc.
 
@@ -25,6 +33,18 @@ class LoyaltyCost:
 
 Cost = Union[ManaCost, TapCost, SacrificeCost, LoyaltyCost]
 
+@dataclass
+class DealsDamageEvent:
+    subject: str          # who dealt the damage
+    target: str           # who/what was damaged
+    damage_type: str      # "combat", "noncombat", or "any"
+
+@dataclass
+class ZoneChangeEvent:
+    subject: str
+    from_zone: str
+    to_zone: str
+
 @dataclass 
 class SpecialAction: 
     name: str 
@@ -33,20 +53,31 @@ class SpecialAction:
     effects: List[object]
 
 @dataclass
-class DayboundEffect:
+class DayboundEffect(Effect):
     pass
 
 @dataclass
-class CantBeBlockedEffect:
+class CantBeBlockedEffect(Effect):
     subject: str              # e.g. "target_creature"
     duration: str             # e.g. "until_end_of_turn"
 
 @dataclass
-class NightboundEffect:
+class NightboundEffect(Effect):
     pass
 
 @dataclass
-class EquipEffect:
+class ChangeZoneEffect(Effect):
+    subject: str
+    from_zone: str | None = None
+    to_zone: str | None = None
+    owner: str | None = None
+    position: str | None = None   # Only used for library
+    face_down: bool = False
+    tapped: bool = False
+    counters: dict[str, int] | None = None
+
+@dataclass
+class EquipEffect(Effect):
     """
     Semantic effect representing the Equip keyword ability.
     Axis2 does not interpret this; Axis3 implements the rules.
@@ -54,44 +85,59 @@ class EquipEffect:
     pass
 
 @dataclass
-class CounterSpellEffect:
+class CounterSpellEffect(Effect):
     """Represents: counter that spell / counter target spell."""
     target: str  # usually "that_spell" or "target_spell"
 
 @dataclass
-class PutCounterEffect:
+class ReturnCardFromGraveyardEffect(Effect):
+    subtype: str
+    controller: str = "you"
+    destination_zone: str = "hand"
+
+@dataclass
+class GainLifeEqualToPowerEffect(Effect):
+    source: str = "that_card"
+    stat: str = "power"         # which stat to read
+
+
+@dataclass
+class PTBoostEffect(Effect):
+    power: int
+    toughness: int
+    duration: str = "until_end_of_turn"
+
+@dataclass
+class PutCounterEffect(Effect):
     counter_type: str
     amount: int
 
 @dataclass
-class CreateTokenEffect:
+class DraftFromSpellbookEffect(Effect):
+    source: str
+
+@dataclass
+class CreateTokenEffect(Effect):
     amount: Union[int, SymbolicValue]
     token: dict          # { "power": 1, "toughness": 1, "colors": [...], "types": [...], "abilities": [...] }
     controller: str      # "you", "opponent", "that_player", etc.
 
 @dataclass
-class DealDamageEffect:
+class DealDamageEffect(Effect):
     amount: Union[int, SymbolicValue]
     subject: str         # "any_target", "target_creature", etc.
 
 @dataclass
-class DrawCardsEffect:
+class DrawCardsEffect(Effect):
     amount: Union[int, SymbolicValue]
 
 @dataclass
-class AddManaEffect:
+class AddManaEffect(Effect):
     mana: List[str]      # ["{R}", "{G}", "{1}", "{X}"]
     choice: Optional[str] = None  # "one_color", "any_color"
 
-Effect = Union[
-    DealDamageEffect,
-    DrawCardsEffect,
-    AddManaEffect,
-    CreateTokenEffect,
-]
-
 @dataclass
-class SearchEffect:
+class SearchEffect(Effect):
     zones: list[str]                 # ["graveyard", "hand", "library"]
     card_names: list[str]            # ["Magnifying Glass", "Thinking Cap"]
     optional: bool                   # "you may"
@@ -99,12 +145,12 @@ class SearchEffect:
     shuffle_if_library_searched: bool
 
 @dataclass
-class GainLifeEffect:
+class GainLifeEffect(Effect):
     amount: str
     subject: str
 
 @dataclass
-class PutOntoBattlefieldEffect:
+class PutOntoBattlefieldEffect(Effect):
     """Represents: put a card from a zone onto the battlefield."""
     zone_from: str
     card_filter: dict
@@ -155,7 +201,7 @@ class TriggeredAbility:
 
 
 @dataclass
-class StaticEffect:
+class StaticEffect(Effect):
     kind: str
     subject: str
     value: Dict[str, Any]
@@ -163,7 +209,7 @@ class StaticEffect:
     zones: List[str]
 
 @dataclass
-class ReplacementEffect:
+class ReplacementEffect(Effect):
     kind: str                 # "as_enters", "dies_to_exile", "prevent_damage", "draw_instead", ...
     text: str                 # original text
     applies_to: Optional[str] = None
@@ -188,7 +234,7 @@ class TypeChangeData:
     remove_types: Optional[list[str]] = None
 
 @dataclass
-class ContinuousEffect:
+class ContinuousEffect(Effect):
     kind: str                 # "pt_mod", "grant_ability", "color_set", ...
     applies_to: str           # "equipped_creature", "creatures_you_control", ...
     text: str                 # original sentence
@@ -204,7 +250,7 @@ class ContinuousEffect:
     rule_change: Optional[str] = None
 
 @dataclass
-class Mode:
+class Mode(Effect):
     text: str
     effects: List[Effect]
     targeting: Optional[TargetingRules] = None
