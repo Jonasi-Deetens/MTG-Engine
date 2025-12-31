@@ -1,7 +1,7 @@
 # axis2/parsing/static_effects.py
 
 import re
-from axis2.schema import StaticEffect, DayboundEffect, NightboundEffect
+from axis2.schema import StaticEffect, DayboundEffect, NightboundEffect, Subject
 from axis2.helpers import cleaned_oracle_text
 
 NUMBER_WORDS = {
@@ -77,6 +77,11 @@ def parse_static_effects(axis1_face):
     if zone_addition:
         effects.append(zone_addition)
 
+    # Protection from
+    protection = parse_protection(text)
+    if protection:
+        effects.append(protection)
+
     return effects
 
 BLOCKING_RESTRICTION_RE = re.compile(
@@ -101,7 +106,11 @@ def parse_blocking_restriction(text: str):
 
     return StaticEffect(
         kind="blocking_restriction",
-        subject="your_creatures",
+        subject=Subject( 
+            scope="each", 
+            controller="you", 
+            types=["creature"] 
+        ),
         value={"max_blockers": max_blockers},
         layer="rules",
         zones=["battlefield"]
@@ -128,7 +137,7 @@ def parse_crew_power_bonus(text: str):
 
     return StaticEffect(
         kind="as_though",
-        subject="this_creature",
+        subject=Subject(scope="self"),
         value={
             "action": "crew",
             "parameter": "power",
@@ -137,6 +146,7 @@ def parse_crew_power_bonus(text: str):
         layer="rules",
         zones=["battlefield"]
     )
+
 
 HASTE_GRANT_RE = re.compile(
     r"all creatures have haste",
@@ -147,12 +157,16 @@ def parse_grant_haste(text):
     if HASTE_GRANT_RE.search(text):
         return StaticEffect(
             kind="grant_keyword",
-            subject="all_creatures",
+            subject=Subject(
+                scope="each",
+                types=["creature"]
+            ),
             value={"keyword": "haste"},
             layer="abilities",
             zones=["battlefield"]
         )
     return None
+
 
 TOP_REVEAL_RE = re.compile(
     r"play with the top card of their libraries revealed",
@@ -163,7 +177,10 @@ def parse_top_reveal(text):
     if TOP_REVEAL_RE.search(text):
         return StaticEffect(
             kind="as_though",
-            subject="players",
+            subject=Subject(
+                scope="each",
+                types=["player"]
+            ),
             value={
                 "action": "reveal",
                 "parameter": "top_of_library",
@@ -183,9 +200,50 @@ def parse_zone_addition(text):
     if ZONE_ADD_RE.search(text):
         return StaticEffect(
             kind="zone_addition",
-            subject="top_of_library_noninstant_nonsorcery",
+            subject=Subject(
+                scope="each",
+                types=["card"],
+                filters={
+                    "location": "top_of_library",
+                    "noninstant": True,
+                    "nonsorcery": True
+                }
+            ),
             value={"additional_zone": "battlefield"},
             layer="rules",
             zones=["library"]
         )
     return None
+
+PROT_RE = re.compile(
+    r"protection from ([^\n\.]+)",   # stop at newline or period
+    re.I
+)
+
+def parse_protection(text: str):
+    m = PROT_RE.search(text)
+    if not m:
+        return None
+
+    raw = m.group(1).lower()
+
+    # split on commas and "and"
+    parts = re.split(r",|and", raw)
+
+    colors = []
+    for p in parts:
+        clean = p.strip()
+        if clean.startswith("from "):
+            clean = clean[5:]
+        if clean:
+            colors.append(clean)
+
+    return StaticEffect(
+        kind="protection",
+        subject=Subject(scope="self"),
+        value={},
+        layer="abilities",
+        zones=["battlefield"],
+        protection_from=colors
+    )
+

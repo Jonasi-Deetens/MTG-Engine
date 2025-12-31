@@ -7,7 +7,7 @@ from axis2.schema import (
     PutCounterEffect, CounterSpellEffect, CreateTokenEffect, EquipEffect, 
     GainLifeEffect, SearchEffect, CantBeBlockedEffect, GainLifeEqualToPowerEffect, 
     ReturnCardFromGraveyardEffect, DraftFromSpellbookEffect, PTBoostEffect,
-    ChangeZoneEffect, ScryEffect, SurveilEffect
+    ChangeZoneEffect, ScryEffect, SurveilEffect, Subject
 )
 from axis2.parsing.subject import parse_subject
 from axis2.parsing.spell_continuous_effects import parse_spell_continuous_effect
@@ -21,6 +21,36 @@ COLOR_MAP = {
 }
 
 SENTENCE_SPLIT_RE = re.compile(r"\.\s+")
+
+def _subject_from_text(raw: str) -> Subject:
+    t = raw.lower().strip()
+
+    # Linked exiled card (Oblivion Ring, Banishing Light, etc.)
+    if "the exiled card" in t:
+        return Subject(
+            scope="linked_exiled_card",
+            controller=None,
+            types=None,
+            filters={"source": "self"}
+        )
+
+    # Another target nonland permanent
+    if "another" in t or "target" in t:
+        return Subject(
+            scope="target",
+            controller=None,
+            types=["permanent"],
+            filters={"nonland": True, "not_self": "self"}
+        )
+
+    # Fallback: treat as a generic target
+    return Subject(
+        scope="target",
+        controller=None,
+        types=None,
+        filters={"raw": raw}
+    )
+
 
 def split_effect_sentences(text: str):
     """
@@ -568,7 +598,7 @@ def parse_change_zone(text: str):
     m = RETURN_HAND_RE.search(text)
     if m:
         return ChangeZoneEffect(
-            subject=m.group(1).strip(),
+            subject=_subject_from_text(m.group(1).strip()),
             to_zone="hand"
         )
 
@@ -576,7 +606,7 @@ def parse_change_zone(text: str):
     m = GRAVEYARD_RE.search(text)
     if m:
         return ChangeZoneEffect(
-            subject=m.group(1).strip(),
+            subject=_subject_from_text(m.group(1).strip()),
             to_zone="graveyard"
         )
 
@@ -584,7 +614,7 @@ def parse_change_zone(text: str):
     m = LIBRARY_RE.search(text)
     if m:
         return ChangeZoneEffect(
-            subject=m.group(1).strip(),
+            subject=_subject_from_text(m.group(1).strip()),
             to_zone="library",
             position=m.group(2).strip()
         )
@@ -593,7 +623,7 @@ def parse_change_zone(text: str):
     m = EXILE_RE.search(text)
     if m:
         return ChangeZoneEffect(
-            subject=m.group(1).strip(),
+            subject=_subject_from_text(m.group(1).strip()),
             to_zone="exile"
         )
 
@@ -601,7 +631,7 @@ def parse_change_zone(text: str):
     m = RETURN_BATTLEFIELD_RE.search(text)
     if m:
         return ChangeZoneEffect(
-            subject=m.group(1).strip(),
+            subject=_subject_from_text(m.group(1).strip()),
             to_zone="battlefield"
         )
 
@@ -609,7 +639,7 @@ def parse_change_zone(text: str):
     m = ONTO_BATTLEFIELD_RE.search(text)
     if m:
         return ChangeZoneEffect(
-            subject=m.group(1).strip(),
+            subject=_subject_from_text(m.group(1).strip()),
             to_zone="battlefield"
         )
 

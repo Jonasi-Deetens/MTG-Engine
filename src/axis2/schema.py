@@ -108,7 +108,7 @@ class NightboundEffect(Effect):
 
 @dataclass
 class ChangeZoneEffect(Effect):
-    subject: str
+    subject: Subject
     from_zone: str | None = None
     to_zone: str | None = None
     owner: str | None = None
@@ -244,10 +244,11 @@ class TriggeredAbility:
 @dataclass
 class StaticEffect(Effect):
     kind: str
-    subject: str
+    subject: Subject
     value: Dict[str, Any]
     layer: str
     zones: List[str]
+    protection_from: Optional[list[str]] = None
 
 @dataclass
 class ReplacementEffect(Effect):
