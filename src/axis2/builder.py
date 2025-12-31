@@ -5,11 +5,11 @@ from axis2.schema import (
     DealDamageEffect, DrawCardsEffect, AddManaEffect, CreateTokenEffect,
     ActivatedAbility, TriggeredAbility, StaticEffect, Mode,
     SymbolicValue, TargetingRules, TargetingRestriction,
-    ReplacementEffect, ContinuousEffect, TapCost, DraftFromSpellbookEffect
+    ReplacementEffect, ContinuousEffect, TapCost, DraftFromSpellbookEffect,
+    ParseContext
 )
-
+from axis2.expanding.keyword_expansion import expand_treasure_keyword
 from axis2.parsing.mana import parse_mana_cost
-from axis2.parsing.costs import parse_cost, parse_tap_cost
 from axis2.parsing.effects import parse_effect_text
 from axis2.parsing.targeting import parse_targeting
 from axis2.parsing.static_effects import parse_static_effects
@@ -53,13 +53,20 @@ class Axis2Builder:
         # ------------------------------------------------------------
         faces = []
         for f in axis1_card.faces:
+            ctx = ParseContext(
+                card_name=axis1_card.names[0],
+                primary_type=f.card_types[0].lower(),
+                face_name=f.name,
+                face_types=[t.lower() for t in f.card_types],
+            )
+
             special_actions = []
             # Ninjutsu
             ninjutsu = parse_ninjutsu(f.oracle_text or "")
             if ninjutsu:
                 special_actions.append(ninjutsu)
 
-            activated = parse_activated_abilities(f)
+            activated = parse_activated_abilities(f, ctx)
             print(f"Triggered abilities: {f.triggered_abilities}")
             triggered = []
             for t in f.triggered_abilities:
@@ -77,8 +84,7 @@ class Axis2Builder:
                             if len(parts) == 2:
                                 t.effect = parts[1].strip()
 
-
-                effects = parse_effect_text(t.effect)
+                effects = parse_effect_text(t.effect, ctx)
                 # 3. Targeting
                 targeting = parse_targeting(t.effect)
                 # 4. Trigger filter
@@ -106,33 +112,33 @@ class Axis2Builder:
                 replacement_effects.extend(parse_replacement_effects(s))
 
                 # Use the generic effect parser for everything else
-                for eff in parse_effect_text(s):
+                for eff in parse_effect_text(s, ctx):
                     if isinstance(eff, ContinuousEffect):
                         continuous_effects.append(eff)
                     # you can later route other spell effects somewhere else if you want
 
-            faces.append(
-                Axis2Face(
-                    name=f.name,
-                    mana_cost=parse_mana_cost(f.mana_cost),
-                    mana_value=f.mana_value,
-                    colors=list(f.colors),
-                    types=list(f.card_types),
-                    supertypes=list(f.supertypes),
-                    subtypes=list(f.subtypes),
-                    power=f.power,
-                    toughness=f.toughness,
-                    loyalty=f.loyalty,
-                    defense=f.defense,
-                    special_actions=special_actions,
-                    activated_abilities=activated,
-                    triggered_abilities=triggered,
-                    static_effects=static_effects,
-                    replacement_effects=replacement_effects,
-                    continuous_effects=continuous_effects,
-                    modes=modes,
-                )
+            face = Axis2Face(
+                name=f.name,
+                mana_cost=parse_mana_cost(f.mana_cost),
+                mana_value=f.mana_value,
+                colors=list(f.colors),
+                types=list(f.card_types),
+                supertypes=list(f.supertypes),
+                subtypes=list(f.subtypes),
+                power=f.power,
+                toughness=f.toughness,
+                loyalty=f.loyalty,
+                defense=f.defense,
+                special_actions=special_actions,
+                activated_abilities=activated,
+                triggered_abilities=triggered,
+                static_effects=static_effects,
+                replacement_effects=replacement_effects,
+                continuous_effects=continuous_effects,
+                modes=modes,
             )
+            expand_treasure_keyword(face)
+            faces.append(face)
 
         # ------------------------------------------------------------
         # 3. Keywords (simple extraction)

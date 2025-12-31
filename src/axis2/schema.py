@@ -4,7 +4,14 @@ from typing import List, Optional, Union, Dict, Any
 @dataclass
 class Effect:
     pass
-    
+
+@dataclass
+class ParseContext:
+    card_name: str
+    primary_type: str
+    face_name: str
+    face_types: list[str]
+
 @dataclass
 class Subject:
     scope: str | None = None          # "target", "each", "any_number", "up_to_n", "all"
@@ -36,8 +43,10 @@ class ManaCost:
 
 @dataclass
 class TapCost:
-    amount: int
-    restrictions: list[str]   # e.g. ["artifact", "untapped", "you_control"]
+    amount: int = 1
+    subject: Subject = field(default_factory=lambda: Subject(scope="self"))
+    restrictions: list[str] = field(default_factory=list)
+
 
 @dataclass
 class DiscardCost:
@@ -45,7 +54,7 @@ class DiscardCost:
 
 @dataclass
 class SacrificeCost:
-    subject: str         # "this", "creature", etc.
+    subject: Subject
 
 @dataclass
 class LoyaltyCost:
@@ -105,6 +114,23 @@ class DayboundEffect(Effect):
 @dataclass
 class NightboundEffect(Effect):
     pass
+
+@dataclass
+class LookAndPickEffect(Effect):
+    # How many cards to look at
+    look_at: int
+    # Reveal up to N cards (optional)
+    reveal_up_to: int | None = None
+    # Types of cards allowed to be revealed (e.g. ["creature"])
+    reveal_types: list[str] | None = None
+    # Where revealed cards go (e.g. "hand", "battlefield", "graveyard")
+    put_revealed_into: str | None = None
+    # Where the rest go (e.g. "bottom", "graveyard", "exile")
+    put_rest_into: str | None = None
+    # Ordering of the rest ("random", "ordered", None)
+    rest_order: str | None = None
+    # Whether the reveal is optional ("you may reveal…")
+    optional: bool = False
 
 @dataclass
 class ChangeZoneEffect(Effect):
@@ -252,12 +278,12 @@ class StaticEffect(Effect):
 
 @dataclass
 class ReplacementEffect(Effect):
-    kind: str                 # "as_enters", "dies_to_exile", "prevent_damage", "draw_instead", ...
-    text: str                 # original text
-    applies_to: Optional[str] = None
-    amount: Optional[str] = None          # "all", "1", "X", etc.
-    new_action: Optional[str] = None      # "exile", "draw_extra", "prevent", "redirect"
-    condition: Optional[str] = None       # "if it's your turn", "if it's a creature", etc.
+    kind: str                     # semantic category: "zone_change_replacement", "prevent_damage", etc.
+    event: str                    # the event being replaced: "move_to_graveyard", "would_die", "damage", "draw", etc.
+    subject: Subject              # who the replacement applies to
+    value: Dict[str, Any]         # structured payload: {"instead": [...]} or {"amount": N} etc.
+    zones: List[str]              # where the effect applies ("battlefield", "anywhere", etc.)
+    text: Optional[str] = None    # original oracle text (optional but useful)
 
 @dataclass
 class PTExpression:

@@ -1,79 +1,39 @@
 # axis2/parsing/costs.py
 
 import re
-from axis2.schema import TapCost, SacrificeCost, LoyaltyCost, ManaCost, DiscardCost
-from axis2.parsing.subject import parse_subject
-
-def parse_cost(axis1_cost_part):
-    raw = axis1_cost_part["raw"].lower()
-
-    if raw == "{t}":
-        return TapCost()
-
-    if raw.startswith("sacrifice"):
-        return SacrificeCost(subject=parse_subject(raw))
-
-    if raw.startswith("+") or raw.startswith("−") or raw.startswith("-"):
-        # loyalty ability
-        return LoyaltyCost(amount=int(raw.replace("−", "-")))
-
-    # fallback: treat as mana cost
-    mana_symbols = axis1_cost_part["metadata"]["mana_cost_symbols"]
-    return ManaCost(symbols=mana_symbols)
-
-TAP_COST_RE = re.compile(
-    r"tap (\w+) ([a-z ]+) you control[:]?",
-    re.IGNORECASE
+from typing import List
+from axis2.schema import (
+    TapCost,
+    SacrificeCost,
+    LoyaltyCost,
+    ManaCost,
+    DiscardCost,
 )
+from axis2.schema import Subject
+
+
+# ------------------------------------------------------------
+# Regex helpers
+# ------------------------------------------------------------
+
+# Match ANY mana/tap/hybrid/phyrexian/snow symbol
+MANA_SYMBOL_RE = re.compile(r"\{[^}]+\}")
+
+# Split multi-part costs like "{1}{R}, {T}, Sacrifice this artifact"
+COST_SPLIT_RE = re.compile(r",\s*")
+
+
+# ------------------------------------------------------------
+# Discard cost
+# ------------------------------------------------------------
+
+DISCARD_COST_RE = re.compile(r"discard (\w+) cards?", re.IGNORECASE)
 
 NUMBER_WORDS = {
     "one": 1, "two": 2, "three": 3, "four": 4,
     "five": 5, "six": 6, "seven": 7, "eight": 8,
     "nine": 9, "ten": 10,
 }
-
-def parse_number(word: str):
-    word = word.lower()
-    if word.isdigit():
-        return int(word)
-    if word in NUMBER_WORDS:
-        return NUMBER_WORDS[word]
-    if word == "a" or word == "an":
-        return 1
-    return 1
-
-def parse_tap_cost(text: str):
-    m = TAP_COST_RE.search(text)
-    if not m:
-        return None
-
-    amount_word = m.group(1)
-    restrictions_raw = m.group(2).strip().lower()
-
-    amount = parse_number(amount_word)
-
-    restrictions = ["you_control"]
-
-    parts = restrictions_raw.split()
-    for p in parts:
-        p = p.lower().strip(" ,.:;")  # normalize punctuation
-
-        if p == "untapped":
-            restrictions.append("untapped")
-
-        elif "artifact" in p:   # ← FIXED
-            restrictions.append("artifact")
-
-        elif "creature" in p:
-            restrictions.append("creature")
-
-
-    return TapCost(amount=amount, restrictions=restrictions)
-
-DISCARD_COST_RE = re.compile(
-    r"discard (\w+) cards?",
-    re.IGNORECASE
-)
 
 def parse_discard_cost(text: str):
     m = DISCARD_COST_RE.search(text)
@@ -92,21 +52,78 @@ def parse_discard_cost(text: str):
 
     return DiscardCost(amount=amount)
 
-    
-SACRIFICE_RE = re.compile(
-    r"sacrifice (this|a|an|another|target)?\s*(\w+)?",
-    re.IGNORECASE
-)
 
-def parse_sacrifice_cost(text: str):
-    m = SACRIFICE_RE.search(text)
-    if not m:
-        return None
+# ------------------------------------------------------------
+# Main multi-part cost parser
+# ------------------------------------------------------------
 
-    determiner = (m.group(1) or "").lower()
-    noun = (m.group(2) or "").lower()
+def parse_cost_string(cost_text: str) -> List:
+    """
+    Parses cost text like:
+        "{1}{R}, {T}, Sacrifice this artifact"
+    into a list of Cost objects.
+    """
+    parts = [p.strip() for p in COST_SPLIT_RE.split(cost_text) if p.strip()]
+    costs = []
+    mana_symbols = []
 
-    # Normalize subject
-    subject = parse_subject(text)
-    return SacrificeCost(subject=subject)
+    for part in parts:
+        lower = part.lower()
 
+        # --------------------------------------------------------
+        # 1. Mana symbols (including hybrid, phyrexian, snow, etc.)
+        # --------------------------------------------------------
+        if part.startswith("{"):
+            syms = MANA_SYMBOL_RE.findall(part)
+            for sym in syms:
+                if sym.upper() == "{T}":
+                    # Tap is not mana
+                    costs.append(TapCost(subject=Subject(scope="self")))
+                else:
+                    mana_symbols.append(sym)
+            continue
+
+        # --------------------------------------------------------
+        # 2. Tap cost ("{T}" or "Tap this creature")
+        # --------------------------------------------------------
+        if "{t}" in lower or lower.startswith("tap "):
+            costs.append(TapCost(subject=Subject(scope="self")))
+            continue
+
+        # --------------------------------------------------------
+        # 3. Sacrifice cost
+        # --------------------------------------------------------
+        if lower.startswith("sacrifice"):
+            # "Sacrifice this artifact" → Subject(scope="self", types=["artifact"])
+            subject = Subject(scope="self")
+            if "artifact" in lower:
+                subject.types = ["artifact"]
+            costs.append(SacrificeCost(subject=subject))
+            continue
+
+        # --------------------------------------------------------
+        # 4. Discard cost
+        # --------------------------------------------------------
+        disc = parse_discard_cost(part)
+        if disc:
+            costs.append(disc)
+            continue
+
+        # --------------------------------------------------------
+        # 5. Loyalty cost
+        # --------------------------------------------------------
+        if lower.startswith("+") or lower.startswith("−") or lower.startswith("-"):
+            amount = int(lower.replace("−", "-"))
+            costs.append(LoyaltyCost(amount=amount))
+            continue
+
+        # --------------------------------------------------------
+        # 6. Unknown cost type (future extension)
+        # --------------------------------------------------------
+        pass
+
+    # Insert mana cost at the front
+    if mana_symbols:
+        costs.insert(0, ManaCost(symbols=mana_symbols))
+
+    return costs

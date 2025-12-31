@@ -1,59 +1,85 @@
 # axis2/parsing/activated.py
 
 import re
-
 from axis1.schema import Axis1Face
-from axis2.schema import ActivatedAbility, ManaCost, DiscardCost
-from axis2.parsing.costs import parse_cost, parse_tap_cost, parse_discard_cost, parse_sacrifice_cost
+from axis2.schema import ActivatedAbility, ParseContext
+from axis2.parsing.costs import parse_cost_string
 from axis2.parsing.effects import parse_effect_text
 from axis2.parsing.targeting import parse_targeting
 
-def parse_activated_abilities(axis1_face: Axis1Face) -> list[ActivatedAbility]:
+def strip_parenthetical(text: str) -> str:
+    out = []
+    depth = 0
+    for ch in text:
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth = max(depth - 1, 0)
+        elif depth == 0:
+            out.append(ch)
+    return "".join(out)
+
+ABILITY_SPLIT_RE = re.compile(r"^(.*?):\s*(.*)$")
+
+def split_full_ability(text: str):
+    """
+    Splits "COST: EFFECT" into ("COST", "EFFECT").
+    """
+    m = ABILITY_SPLIT_RE.match(text)
+    if not m:
+        return None, None
+    return m.group(1).strip(), m.group(2).strip()
+
+
+def parse_activated_abilities(axis1_face: Axis1Face, ctx: ParseContext) -> list[ActivatedAbility]:
+    """
+    Modern, clean activated-ability parser.
+
+    Axis1Face.activated_abilities contains objects with:
+        - cost (raw string)
+        - effect (raw string)
+        - text (fallback)
+        - cost_parts (legacy)
+    """
+
     activated = []
+    print(f"Activated abilities: {axis1_face.activated_abilities}")
 
     for a in getattr(axis1_face, "activated_abilities", []):
-        costs = [parse_cost(c) for c in getattr(a, "cost_parts", [])]
+        raw_cost = getattr(a, "cost", "") or ""
+        raw_effect = getattr(a, "effect", "") or ""
+        raw_text = getattr(a, "text", "") or ""
+        raw_effect = strip_parenthetical(raw_effect)
+        # ------------------------------------------------------------
+        # 1. Parse costs using the new multi-part cost parser
+        # ------------------------------------------------------------
+        costs = []
+        if raw_cost:
+            costs = parse_cost_string(raw_cost)
 
-        tap_cost = parse_tap_cost(getattr(a, "cost", None))
-        if tap_cost:
-            costs.append(tap_cost)
+        # ------------------------------------------------------------
+        # 2. Parse effects
+        # ------------------------------------------------------------
+        effects = parse_effect_text(raw_effect, ctx)
+        targeting = parse_targeting(raw_effect)
 
-        sacrifice_cost = parse_sacrifice_cost(getattr(a, "cost", "") or getattr(a, "text", ""))
-        if sacrifice_cost:
-            costs.append(sacrifice_cost)
+        # ------------------------------------------------------------
+        # 3. Fallback: Axis1 failed to split cost/effect
+        # ------------------------------------------------------------
+        if (not costs and not effects) and raw_text:
+            cost_text, effect_text = split_full_ability(raw_text)
+            effect_text = strip_parenthetical(effect_text)
 
-        # Mana cost inside {}
-        mana_symbols = re.findall(r"\{[^}]+\}", getattr(a, "cost", "") or getattr(a, "text", ""))
-        if mana_symbols:
-            costs.append(ManaCost(symbols=mana_symbols))
+            if cost_text:
+                costs = parse_cost_string(cost_text)
 
-        discard_cost = parse_discard_cost(getattr(a, "cost", "") or getattr(a, "text", ""))
-        if discard_cost:
-            costs.append(discard_cost)
+            if effect_text:
+                effects = parse_effect_text(effect_text, ctx)
+                targeting = parse_targeting(effect_text)
 
-        effects = parse_effect_text(getattr(a, "effect", ""))
-        targeting = parse_targeting(getattr(a, "effect", ""))
-
-        # Fallback: Axis1 failed to split cost/effect
-        cost_text, effect_text = None, None
-        if (not costs and not effects) and hasattr(a, "text"):
-            cost_text, effect_text = split_full_ability(getattr(a, "text", ""))
-
-        if cost_text:
-            # Mana cost inside {}
-            mana_symbols = re.findall(r"\{[^}]+\}", cost_text)
-            if mana_symbols:
-                costs.append(ManaCost(symbols=mana_symbols))
-
-            # Discard cost
-            discard_cost = parse_discard_cost(cost_text)
-            if discard_cost:
-                costs.append(discard_cost)
-
-            # Parse effects
-            effects = parse_effect_text(effect_text)
-            targeting = parse_targeting(effect_text)
-
+        # ------------------------------------------------------------
+        # 4. Build the ActivatedAbility
+        # ------------------------------------------------------------
         activated.append(
             ActivatedAbility(
                 costs=costs,
@@ -65,12 +91,3 @@ def parse_activated_abilities(axis1_face: Axis1Face) -> list[ActivatedAbility]:
         )
 
     return activated
-
-
-ABILITY_SPLIT_RE = re.compile(r"^(.*?):\s*(.*)$")
-
-def split_full_ability(text: str):
-    m = ABILITY_SPLIT_RE.match(text)
-    if not m:
-        return None, None
-    return m.group(1).strip(), m.group(2).strip()

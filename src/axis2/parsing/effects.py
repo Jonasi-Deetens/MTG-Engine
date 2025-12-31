@@ -7,9 +7,10 @@ from axis2.schema import (
     PutCounterEffect, CounterSpellEffect, CreateTokenEffect, EquipEffect, 
     GainLifeEffect, SearchEffect, CantBeBlockedEffect, GainLifeEqualToPowerEffect, 
     ReturnCardFromGraveyardEffect, DraftFromSpellbookEffect, PTBoostEffect,
-    ChangeZoneEffect, ScryEffect, SurveilEffect, Subject
+    ChangeZoneEffect, ScryEffect, SurveilEffect, Subject, LookAndPickEffect,
+    ParseContext
 )
-from axis2.parsing.subject import parse_subject
+from axis2.parsing.subject import parse_subject, subject_from_text
 from axis2.parsing.spell_continuous_effects import parse_spell_continuous_effect
 
 COLOR_MAP = {
@@ -21,35 +22,6 @@ COLOR_MAP = {
 }
 
 SENTENCE_SPLIT_RE = re.compile(r"\.\s+")
-
-def _subject_from_text(raw: str) -> Subject:
-    t = raw.lower().strip()
-
-    # Linked exiled card (Oblivion Ring, Banishing Light, etc.)
-    if "the exiled card" in t:
-        return Subject(
-            scope="linked_exiled_card",
-            controller=None,
-            types=None,
-            filters={"source": "self"}
-        )
-
-    # Another target nonland permanent
-    if "another" in t or "target" in t:
-        return Subject(
-            scope="target",
-            controller=None,
-            types=["permanent"],
-            filters={"nonland": True, "not_self": "self"}
-        )
-
-    # Fallback: treat as a generic target
-    return Subject(
-        scope="target",
-        controller=None,
-        types=None,
-        filters={"raw": raw}
-    )
 
 
 def split_effect_sentences(text: str):
@@ -71,7 +43,7 @@ def split_effect_sentences(text: str):
     return [p.strip() for p in parts if p.strip()]
 
 
-def parse_effect_text(text):
+def parse_effect_text(text, ctx: ParseContext):
     """
     Convert raw English effect text into semantic Effect objects.
     Now supports multi-sentence effects.
@@ -85,10 +57,17 @@ def parse_effect_text(text):
     # ------------------------------------------------------------
     sentences = split_effect_sentences(text)
 
-
     search = parse_search_effect(text)
     if search:
         effects.append(search)
+
+    
+    print(f"Parsing look and pick: {text}")
+    # Look and pick
+    look_pick = parse_look_and_pick(text)
+    print(f"Look and pick: {look_pick}")
+    if look_pick:
+        effects.append(look_pick)
     # ------------------------------------------------------------
     # 2. Parse each sentence independently
     # ------------------------------------------------------------
@@ -153,13 +132,6 @@ def parse_effect_text(text):
             effects.append(spellbook)
             continue
 
-        print(f"Parsing spell continuous effect: {s}")
-        # Spell continuous effect
-        spell_continuous = parse_spell_continuous_effect(s)
-        if spell_continuous:
-            effects.append(spell_continuous)
-            continue
-
         # PT boost
         pt_boost = parse_pt_boost(s)
         if pt_boost:
@@ -167,7 +139,7 @@ def parse_effect_text(text):
             continue
 
         # Move to zone
-        change_zone = parse_change_zone(s)
+        change_zone = parse_change_zone(s, ctx)
         if change_zone:
             effects.append(change_zone)
             continue
@@ -183,7 +155,13 @@ def parse_effect_text(text):
         if surveil:
             effects.append(surveil)
             continue
-
+            
+        print(f"Parsing spell continuous effect: {s}")
+        # Spell continuous effect
+        spell_continuous = parse_spell_continuous_effect(s)
+        if spell_continuous:
+            effects.append(spell_continuous)
+            continue
 
         # 2c. Damage
         if "deals" in s.lower() and "damage" in s.lower():
@@ -328,6 +306,12 @@ SIMPLE_TOKEN_RE = re.compile(
     re.IGNORECASE
 )
 
+SIMPLE_ARTIFACT_TOKEN_RE = re.compile(
+    r"create (?:a|an|one)?\s*(treasure|food|clue|blood|gold)\s+token",
+    re.IGNORECASE
+)
+
+
 NUMBER_WORDS = {
     "one": 1,
     "two": 2,
@@ -407,7 +391,29 @@ def parse_create_token(text: str):
         )
 
     # ------------------------------------------------------------
-    # Pattern 2: Simple tokens (Treasure, Food, Clue)
+    # Pattern 2: Simple artifact tokens (Treasure, Food, Clue, Blood, Gold)
+    # ------------------------------------------------------------
+    m = SIMPLE_ARTIFACT_TOKEN_RE.search(t)
+    if m:
+        token_name = m.group(1).strip().capitalize()
+
+        return CreateTokenEffect(
+            amount=1,
+            token={
+                "name": token_name,
+                "power": None,
+                "toughness": None,
+                "colors": [],
+                "types": ["Artifact"],
+                "subtypes": [token_name],
+                "abilities": [],
+            },
+            controller="you",
+        )
+
+
+    # ------------------------------------------------------------
+    # Pattern 3: Simple creature tokens
     # ------------------------------------------------------------
     m = SIMPLE_TOKEN_RE.search(t)
     if m:
@@ -563,87 +569,158 @@ def parse_pt_boost(text: str):
         duration="until_end_of_turn"
     )
 
+RETURN_FROM_GRAVEYARD_TO_HAND_RE = re.compile(
+    r"return\s+(?P<subject>.+?)\s+from\s+(?P<from_zone>your graveyard|the graveyard|a graveyard)\s+to\s+(?:its|their|his|her|the)?\s*owner'?s hand",
+    re.IGNORECASE
+)
+
 RETURN_HAND_RE = re.compile(
-    r"return\s+(.+?)\s+to\s+(?:its|their|his|her|that|the)?\s*owner'?s hand",
-    re.IGNORECASE
-)
-GRAVEYARD_RE = re.compile(
-    r"put\s+(.+?)\s+into\s+(?:its|their|your|his|her)?\s*owner'?s?\s*graveyard",
+    r"return\s+(?P<subject>.+?)\s+(?:from\s+your\s+graveyard\s+)?to\s+your\s+hand",
     re.IGNORECASE
 )
 
-LIBRARY_RE = re.compile(
-    r"put\s+(.+?)\s+on\s+(top|the bottom)\s+of\s+(?:its|their|your)?\s*owner'?s library",
-    re.IGNORECASE
-)
-
-EXILE_RE = re.compile(
-    r"exile\s+(.+?)\b",
-    re.IGNORECASE
-)
 
 RETURN_BATTLEFIELD_RE = re.compile(
-    r"return\s+(.+?)\s+to\s+the battlefield",
+    r"return\s+(?P<subject>.+?)\s+to\s+the battlefield",
     re.IGNORECASE
 )
 
 ONTO_BATTLEFIELD_RE = re.compile(
-    r"put\s+(.+?)\s+onto\s+the battlefield",
+    r"put\s+(?P<subject>.+?)\s+onto\s+the battlefield",
     re.IGNORECASE
 )
 
+EXILE_RE = re.compile(
+    r"exile\s+(?P<subject>.+?)(?:$|\.|,)",
+    re.IGNORECASE
+)
 
-def parse_change_zone(text: str):
-    # return to hand
-    m = RETURN_HAND_RE.search(text)
+GRAVEYARD_RE = re.compile(
+    r"put\s+(?P<subject>.+?)\s+into\s+(?:its|their|your|his|her)?\s*owner'?s?\s*graveyard",
+    re.IGNORECASE
+)
+
+LIBRARY_RE = re.compile(
+    r"put\s+(?P<subject>.+?)\s+on\s+(?P<position>top|the bottom)\s+of\s+(?:its|their|your)?\s*owner'?s library",
+    re.IGNORECASE
+)
+
+def _extract_restrictions(subject_text: str):
+    """
+    Extracts clauses like:
+      - "that isn't a God"
+      - "that is not legendary"
+      - "that is a creature"
+    Returns (clean_subject, filters_dict)
+    """
+    filters = {}
+
+    # match "that isn't a God"
+    m = re.search(r"that\s+(?:is|isn't|is not)\s+([a-z ]+)", subject_text, re.IGNORECASE)
     if m:
+        raw = m.group(1).strip()
+
+        # remove leading articles
+        raw = re.sub(r"^(a|an|the)\s+", "", raw)
+
+        # detect negation
+        if "isn't" in subject_text or "is not" in subject_text:
+            filters["not_subtype"] = raw
+        else:
+            filters["subtype"] = raw
+
+        # remove the clause from subject text
+        subject_text = re.sub(r"that\s+(?:is|isn't|is not)\s+[a-z ]+", "", subject_text, flags=re.IGNORECASE).strip()
+
+    return subject_text, filters
+
+def parse_change_zone(text: str, ctx: ParseContext):
+    t = text.strip()
+    print("TEXT BEFORE PARSE:", repr(t))
+
+    # 1. Return from graveyard → hand
+    m = RETURN_FROM_GRAVEYARD_TO_HAND_RE.search(t)
+    if m:
+        subject_text = m.group("subject").strip()
+        subject_text, filters = _extract_restrictions(subject_text)
+        print("SUBJECT BEFORE PARSE:", repr(subject_text))
+
         return ChangeZoneEffect(
-            subject=_subject_from_text(m.group(1).strip()),
+            subject=subject_from_text(subject_text, ctx.card_name, extra_filters=filters),
+            from_zone="graveyard",
             to_zone="hand"
         )
 
-    # graveyard
-    m = GRAVEYARD_RE.search(text)
+    # 2. Return → hand (no from-zone clause)
+    m = RETURN_HAND_RE.search(t)
     if m:
+        subject_text = m.group("subject").strip()
+        subject_text, filters = _extract_restrictions(subject_text)
+        print("SUBJECT BEFORE PARSE:", repr(subject_text))
         return ChangeZoneEffect(
-            subject=_subject_from_text(m.group(1).strip()),
-            to_zone="graveyard"
+            subject=subject_from_text(subject_text, ctx.card_name, extra_filters=filters),
+            to_zone="hand"
         )
 
-    # library (top/bottom)
-    m = LIBRARY_RE.search(text)
+    # 3. Return → battlefield
+    m = RETURN_BATTLEFIELD_RE.search(t)
     if m:
+        subject_text = m.group("subject").strip()
+        subject_text, filters = _extract_restrictions(subject_text)
+        print("SUBJECT BEFORE PARSE:", repr(subject_text))
         return ChangeZoneEffect(
-            subject=_subject_from_text(m.group(1).strip()),
-            to_zone="library",
-            position=m.group(2).strip()
+            subject=subject_from_text(subject_text, ctx.card_name, extra_filters=filters),
+            to_zone="battlefield"
         )
 
-    # exile
-    m = EXILE_RE.search(text)
+    # 4. Put onto battlefield
+    m = ONTO_BATTLEFIELD_RE.search(t)
     if m:
+        subject_text = m.group("subject").strip()
+        subject_text, filters = _extract_restrictions(subject_text)
+        print("SUBJECT BEFORE PARSE:", repr(subject_text))
         return ChangeZoneEffect(
-            subject=_subject_from_text(m.group(1).strip()),
+            subject=subject_from_text(subject_text, ctx.card_name, extra_filters=filters),
+            to_zone="battlefield"
+        )
+
+    # 5. Exile
+    m = EXILE_RE.search(t)
+    if m:
+        subject_text = m.group("subject").strip()
+        subject_text, filters = _extract_restrictions(subject_text)
+        print("SUBJECT BEFORE PARSE:", repr(subject_text))
+        return ChangeZoneEffect(
+            subject=subject_from_text(subject_text, ctx.card_name, extra_filters=filters),
             to_zone="exile"
         )
 
-    # return to battlefield
-    m = RETURN_BATTLEFIELD_RE.search(text)
+    # 6. Put into graveyard
+    m = GRAVEYARD_RE.search(t)
     if m:
+        subject_text = m.group("subject").strip()
+        subject_text, filters = _extract_restrictions(subject_text)
+        print("SUBJECT BEFORE PARSE:", repr(subject_text))
         return ChangeZoneEffect(
-            subject=_subject_from_text(m.group(1).strip()),
-            to_zone="battlefield"
+            subject=subject_from_text(subject_text, ctx.card_name, extra_filters=filters),
+            to_zone="graveyard"
         )
 
-    # put onto battlefield
-    m = ONTO_BATTLEFIELD_RE.search(text)
+    # 7. Put on top/bottom of library
+    m = LIBRARY_RE.search(t)
     if m:
+        subject_text = m.group("subject").strip()
+        subject_text, filters = _extract_restrictions(subject_text)
+        print("SUBJECT BEFORE PARSE:", repr(subject_text))
+        position = m.group("position").strip()
         return ChangeZoneEffect(
-            subject=_subject_from_text(m.group(1).strip()),
-            to_zone="battlefield"
+            subject=subject_from_text(subject_text, ctx.card_name, extra_filters=filters),
+            to_zone="library",
+            position=position
         )
 
     return None
+
 
 SCRY_RE = re.compile(r"\bscry\s+(\d+)\b", re.IGNORECASE)
 def parse_scry(text: str):
@@ -658,3 +735,70 @@ def parse_surveil(text: str):
     if not m:
         return None
     return SurveilEffect(amount=int(m.group(1)))
+
+LOOK_RE = re.compile(
+    r"look at the top (\d+|one|two|three|four|five|six|seven|eight|nine|ten) cards? of your library",
+    re.IGNORECASE
+)
+
+REVEAL_RE = re.compile(
+    r"reveal up to (\d+|one|two|three|four|five|six|seven|eight|nine|ten) ([a-z ]+) cards? from among them",
+    re.IGNORECASE
+)
+ 
+PUT_REVEALED_RE = re.compile(
+    r"put (?:them|the revealed cards?) into your hand",
+    re.IGNORECASE
+)
+
+PUT_REST_RE = re.compile(
+    r"put the rest on the bottom of your library(?: in a (random) order)?",
+    re.IGNORECASE
+)
+
+def parse_look_and_pick(text: str):
+    t = text.lower()
+    optional = "you may" in t
+
+    # 1. Look at top N
+    m = LOOK_RE.search(t)
+    if not m:
+        return None
+
+    raw = m.group(1)
+    look_at = int(raw) if raw.isdigit() else NUMBER_WORDS[raw]
+
+    # Defaults
+    reveal_up_to = None
+    reveal_types = None
+    put_revealed_into = None
+    put_rest_into = None
+    rest_order = None
+
+    # 2. Reveal up to N of type X
+    m = REVEAL_RE.search(t)
+    if m:
+        raw = m.group(1)
+        reveal_up_to = int(raw) if raw.isdigit() else NUMBER_WORDS[raw]
+        reveal_types = [m.group(2).strip()]  # e.g. "creature"
+
+    # 3. Put revealed into hand
+    m = PUT_REVEALED_RE.search(t)
+    if m:
+        put_revealed_into = "hand"
+
+    # 4. Put rest on bottom (maybe random)
+    m = PUT_REST_RE.search(t)
+    if m:
+        put_rest_into = "bottom"
+        rest_order = "random" if m.group(1) else "ordered"
+
+    return LookAndPickEffect(
+        look_at=look_at,
+        reveal_up_to=reveal_up_to,
+        reveal_types=reveal_types,
+        put_revealed_into=put_revealed_into,
+        put_rest_into=put_rest_into,
+        rest_order=rest_order,
+        optional=optional,
+    )
