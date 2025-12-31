@@ -3,7 +3,8 @@ from typing import List, Optional
 
 from axis2.schema import (
     ContinuousEffect, PTExpression,
-    ColorChangeData, TypeChangeData
+    ColorChangeData, TypeChangeData, 
+    CardTypeCountCondition
 )
 
 # -----------------------------
@@ -16,6 +17,19 @@ GAINS_ABILITY_RE = re.compile(r"gains?\s+(.+)", re.IGNORECASE)
 IS_COLOR_RE = re.compile(r"is\s+([a-z\s,]+)", re.IGNORECASE)
 IS_TYPE_RE = re.compile(r"is\s+(a\s+)?([a-z\s]+)", re.IGNORECASE)
 AS_LONG_AS_RE = re.compile(r"as long as (.+?),", re.IGNORECASE)
+
+NUMBER_WORDS = {
+    "one": 1,
+    "two": 2,
+    "three": 3,
+    "four": 4,
+    "five": 5,
+    "six": 6,
+    "seven": 7,
+    "eight": 8,
+    "nine": 9,
+    "ten": 10,
+}
 
 COLOR_WORD_TO_SYMBOL = {
     "white": "W",
@@ -30,6 +44,7 @@ ABILITY_KEYWORDS = {
     "trample", "deathtouch", "haste", "reach", "menace", "hexproof",
     "indestructible", "ward"
 }
+
 
 # -----------------------------
 # Helpers
@@ -53,6 +68,31 @@ def _guess_applies_to(text: str) -> str:
         return "this_permanent"
     return "unknown"
 
+
+CARD_TYPE_COUNT_RE = re.compile(
+    r"(?P<num>\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+"
+    r"(?:or more|or fewer|or less|or greater|or less than|or at least|or at most|or equal to)?"
+    r"\s*card types?\s+among\s+cards\s+in\s+your\s+graveyard",
+    re.IGNORECASE
+)
+
+def parse_card_type_count_condition(text: str):
+    m = CARD_TYPE_COUNT_RE.search(text)
+    if not m:
+        return None
+
+    raw = m.group("num").lower()
+
+    # Convert number word or digit
+    if raw.isdigit():
+        n = int(raw)
+    else:
+        n = NUMBER_WORDS.get(raw, None)
+
+    return CardTypeCountCondition(
+        zone="your_graveyard",
+        min_types=n
+    )
 
 def _parse_pt_mod(text: str) -> Optional[PTExpression]:
     m = PT_GETS_RE.search(text)
@@ -145,6 +185,11 @@ def parse_continuous_effects(text: str) -> List[ContinuousEffect]:
         condition = m.group(1).strip()
         # remove the condition prefix from the text
         text = text[m.end():].strip()
+
+    # Try to parse structured card-type-count conditions (Delirium-like)
+    structured = parse_card_type_count_condition(condition) if condition else None
+    if structured:
+        condition = structured
 
     # 2. P/T modification
     pt = _parse_pt_mod(text)

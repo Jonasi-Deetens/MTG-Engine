@@ -29,7 +29,7 @@ class Axis2Builder:
     @staticmethod
     def build(axis1_card: Axis1Card) -> Axis2Card:
         face1: Axis1Face = axis1_card.faces[0]
-
+        print(f"Building Axis2Card: {axis1_card.names[0]}")
         # ------------------------------------------------------------
         # 1. Characteristics
         # ------------------------------------------------------------
@@ -60,7 +60,7 @@ class Axis2Builder:
                 special_actions.append(ninjutsu)
 
             activated = parse_activated_abilities(f)
-
+            print(f"Triggered abilities: {f.triggered_abilities}")
             triggered = []
             for t in f.triggered_abilities:
                 # 1. Recompute the trigger event (don’t trust Axis1)
@@ -104,7 +104,12 @@ class Axis2Builder:
 
             for s in sentences:
                 replacement_effects.extend(parse_replacement_effects(s))
-                continuous_effects.extend(parse_continuous_effects(s))
+
+                # Use the generic effect parser for everything else
+                for eff in parse_effect_text(s):
+                    if isinstance(eff, ContinuousEffect):
+                        continuous_effects.append(eff)
+                    # you can later route other spell effects somewhere else if you want
 
             faces.append(
                 Axis2Face(

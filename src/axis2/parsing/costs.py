@@ -2,6 +2,7 @@
 
 import re
 from axis2.schema import TapCost, SacrificeCost, LoyaltyCost, ManaCost, DiscardCost
+from axis2.parsing.subject import parse_subject
 
 def parse_cost(axis1_cost_part):
     raw = axis1_cost_part["raw"].lower()
@@ -10,7 +11,7 @@ def parse_cost(axis1_cost_part):
         return TapCost()
 
     if raw.startswith("sacrifice"):
-        return SacrificeCost(subject="this")
+        return SacrificeCost(subject=parse_subject(raw))
 
     if raw.startswith("+") or raw.startswith("−") or raw.startswith("-"):
         # loyalty ability
@@ -106,13 +107,6 @@ def parse_sacrifice_cost(text: str):
     noun = (m.group(2) or "").lower()
 
     # Normalize subject
-    if determiner == "this":
-        subject = "self"
-    elif determiner == "target":
-        subject = f"target_{noun}"
-    elif noun:
-        subject = f"controlled_{noun}"
-    else:
-        subject = "controlled_permanent"
-
+    subject = parse_subject(text)
     return SacrificeCost(subject=subject)
+

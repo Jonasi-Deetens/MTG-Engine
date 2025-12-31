@@ -4,6 +4,26 @@ from typing import List, Optional, Union, Dict, Any
 @dataclass
 class Effect:
     pass
+    
+@dataclass
+class Subject:
+    scope: str | None = None          # "target", "each", "any_number", "up_to_n", "all"
+    controller: str | None = None     # "you", "opponent", "any", "opponents", "controller"
+    types: list[str] | None = None    # ["creature"], ["creature", "planeswalker"], etc.
+    filters: dict | None = None       # {"keyword": "flying"}, {"power": ">3"}, etc.
+    max_targets: int | None = None    # for "up to N targets"
+
+@dataclass
+class SpellFilter:
+    must_have_types: list[str] = field(default_factory=list)
+    must_not_have_types: list[str] = field(default_factory=list)
+    controller_scope: str | None = None   # "you", "opponent", "any"
+
+@dataclass
+class CardTypeCountCondition:
+    zone: str                     # "graveyard", "library", etc.
+    min_types: int | None = None  # e.g. 4
+    max_types: int | None = None  # rarely used
 
 @dataclass
 class SymbolicValue:
@@ -40,10 +60,23 @@ class DealsDamageEvent:
     damage_type: str      # "combat", "noncombat", or "any"
 
 @dataclass
+class EntersBattlefieldEvent:
+    subject: str
+
+@dataclass
+class LeavesBattlefieldEvent:
+    subject: str
+
+@dataclass
 class ZoneChangeEvent:
     subject: str
     from_zone: str
     to_zone: str
+
+@dataclass
+class CastSpellEvent:
+    subject: str
+    spell_filter: "SpellFilter"
 
 @dataclass 
 class SpecialAction: 
@@ -53,14 +86,22 @@ class SpecialAction:
     effects: List[object]
 
 @dataclass
-class DayboundEffect(Effect):
-    pass
+class ScryEffect(Effect):
+    amount: int
+
+@dataclass
+class SurveilEffect(Effect):
+    amount: int
 
 @dataclass
 class CantBeBlockedEffect(Effect):
     subject: str              # e.g. "target_creature"
-    duration: str             # e.g. "until_end_of_turn"
+    duration: str       
 
+@dataclass
+class DayboundEffect(Effect):
+    pass
+      # e.g. "until_end_of_turn"
 @dataclass
 class NightboundEffect(Effect):
     pass
@@ -238,6 +279,7 @@ class ContinuousEffect(Effect):
     kind: str                 # "pt_mod", "grant_ability", "color_set", ...
     applies_to: str           # "equipped_creature", "creatures_you_control", ...
     text: str                 # original sentence
+    duration: Optional[str] = None
 
     # Optional semantic fields (only one is filled depending on kind)
     condition: Optional[str] = None

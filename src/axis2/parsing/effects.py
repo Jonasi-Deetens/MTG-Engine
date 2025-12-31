@@ -7,8 +7,10 @@ from axis2.schema import (
     PutCounterEffect, CounterSpellEffect, CreateTokenEffect, EquipEffect, 
     GainLifeEffect, SearchEffect, CantBeBlockedEffect, GainLifeEqualToPowerEffect, 
     ReturnCardFromGraveyardEffect, DraftFromSpellbookEffect, PTBoostEffect,
-    ChangeZoneEffect
+    ChangeZoneEffect, ScryEffect, SurveilEffect
 )
+from axis2.parsing.subject import parse_subject
+from axis2.parsing.spell_continuous_effects import parse_spell_continuous_effect
 
 COLOR_MAP = {
     "white": "W",
@@ -65,6 +67,8 @@ def parse_effect_text(text):
         if not s:
             continue
 
+        print(f"Parsing effect: {s}")
+
         # Detect Equip keyword ability
         if s.strip().lower().startswith("equip"):
             effects.append(EquipEffect())
@@ -119,6 +123,13 @@ def parse_effect_text(text):
             effects.append(spellbook)
             continue
 
+        print(f"Parsing spell continuous effect: {s}")
+        # Spell continuous effect
+        spell_continuous = parse_spell_continuous_effect(s)
+        if spell_continuous:
+            effects.append(spell_continuous)
+            continue
+
         # PT boost
         pt_boost = parse_pt_boost(s)
         if pt_boost:
@@ -131,19 +142,25 @@ def parse_effect_text(text):
             effects.append(change_zone)
             continue
 
+        # Scry
+        scry = parse_scry(s)
+        if scry:
+            effects.append(scry)
+            continue
+
+        # Surveil
+        surveil = parse_surveil(s)
+        if surveil:
+            effects.append(surveil)
+            continue
+
+
         # 2c. Damage
         if "deals" in s.lower() and "damage" in s.lower():
             words = s.lower().split()
             m = re.search(r"deals\s+(\w+)\s+damage", s, re.I)
             amount = m.group(1)
-            if "player or planeswalker" in s.lower():
-                subject = "player_or_planeswalker"
-            elif "target player" in s.lower():
-                subject = "player"
-            elif "target creature" in s.lower():
-                subject = "creature"
-            elif "any target" in s.lower():
-                subject = "any_target"
+            subject = parse_subject(s.lower())
 
             effects.append(DealDamageEffect(amount=amount, subject=subject))
             continue
@@ -597,3 +614,17 @@ def parse_change_zone(text: str):
         )
 
     return None
+
+SCRY_RE = re.compile(r"\bscry\s+(\d+)\b", re.IGNORECASE)
+def parse_scry(text: str):
+    m = SCRY_RE.search(text)
+    if not m:
+        return None
+    return ScryEffect(amount=int(m.group(1)))
+
+SURVEIL_RE = re.compile(r"\bsurveil\s+(\d+)\b", re.IGNORECASE)
+def parse_surveil(text: str):
+    m = SURVEIL_RE.search(text)
+    if not m:
+        return None
+    return SurveilEffect(amount=int(m.group(1)))
