@@ -93,10 +93,17 @@ class SpecialAction:
     cost: Optional[object] # usually ManaCost 
     conditions: List[str] 
     effects: List[object]
+    kind: str | None = None
 
 @dataclass
 class ScryEffect(Effect):
     amount: int
+
+@dataclass
+class AddCountersEffect:
+    counter_type: str
+    count: str | int  # "times_paid" or a number
+    subject: Subject
 
 @dataclass
 class SurveilEffect(Effect):
@@ -210,6 +217,12 @@ class SearchEffect(Effect):
     optional: bool                   # "you may"
     put_onto_battlefield: bool       # true
     shuffle_if_library_searched: bool
+
+@dataclass
+class TransformEffect(Effect):
+    subject: Subject
+    # optionally, later:
+    # mode: Literal["toggle", "to_front", "to_back"] | None = None
 
 @dataclass
 class GainLifeEffect(Effect):

@@ -1,7 +1,7 @@
 # axis2/parsing/static_effects.py
 
 import re
-from axis2.schema import StaticEffect, DayboundEffect, NightboundEffect, Subject
+from axis2.schema import StaticEffect, DayboundEffect, NightboundEffect, Subject, ParseContext
 from axis2.helpers import cleaned_oracle_text
 
 NUMBER_WORDS = {
@@ -18,7 +18,7 @@ NUMBER_WORDS = {
     "ten": 10,
 }
 
-def parse_static_effects(axis1_face):
+def parse_static_effects(axis1_face, ctx: ParseContext):
     """
     Combine Axis1 static effects (if any) with Axis2-detected static effects
     like Daybound/Nightbound and blocking restrictions.
@@ -81,6 +81,61 @@ def parse_static_effects(axis1_face):
     protection = parse_protection(text)
     if protection:
         effects.append(protection)
+
+    # ------------------------------------------------------------ 
+    # 3. General static effects (NEW) 
+    # ------------------------------------------------------------ 
+    ctx = ParseContext( 
+        card_name=axis1_face.name, 
+        primary_type=axis1_face.card_types[0].lower(), 
+        face_name=axis1_face.name, 
+        face_types=[t.lower() for t in axis1_face.card_types], 
+    ) 
+    effects.extend(parse_general_static_effects(text, ctx))
+
+    return effects
+
+def parse_general_static_effects(text: str, ctx: ParseContext) -> list[StaticEffect]:
+    effects = []
+    t = text.lower()
+
+    # ------------------------------------------------------------
+    # 1. "You may cast spells as though they had flash."
+    # ------------------------------------------------------------
+    if "as though they had flash" in t or "as though it had flash" in t:
+        effects.append(
+            StaticEffect(
+                kind="timing_override",
+                subject=Subject(
+                    scope="self",
+                    controller="you",
+                    types=["spell"],
+                    filters={}
+                ),
+                value={"as_flash": True},
+                layer="rules",
+                zones=["hand", "stack"],
+            )
+        )
+
+    # ------------------------------------------------------------
+    # 2. "Spells you cast cost {1} less to cast..."
+    # ------------------------------------------------------------
+    if "spells you cast cost" in t and "less to cast" in t:
+        effects.append(
+            StaticEffect(
+                kind="cost_modification",
+                subject=Subject(
+                    scope="self",
+                    controller="you",
+                    types=["spell"],
+                    filters={}
+                ),
+                value={"per_opponent_draw": 1},
+                layer="cost_modification",
+                zones=["stack"],
+            )
+        )
 
     return effects
 

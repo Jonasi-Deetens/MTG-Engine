@@ -8,7 +8,7 @@ from axis2.schema import (
     GainLifeEffect, SearchEffect, CantBeBlockedEffect, GainLifeEqualToPowerEffect, 
     ReturnCardFromGraveyardEffect, DraftFromSpellbookEffect, PTBoostEffect,
     ChangeZoneEffect, ScryEffect, SurveilEffect, Subject, LookAndPickEffect,
-    ParseContext
+    ParseContext, TransformEffect
 )
 from axis2.parsing.subject import parse_subject, subject_from_text
 from axis2.parsing.spell_continuous_effects import parse_spell_continuous_effect
@@ -154,6 +154,12 @@ def parse_effect_text(text, ctx: ParseContext):
         surveil = parse_surveil(s)
         if surveil:
             effects.append(surveil)
+            continue
+
+        # Transform
+        transform = parse_transform(s, ctx)
+        if transform:
+            effects.append(transform)
             continue
             
         print(f"Parsing spell continuous effect: {s}")
@@ -646,7 +652,7 @@ def parse_change_zone(text: str, ctx: ParseContext):
         print("SUBJECT BEFORE PARSE:", repr(subject_text))
 
         return ChangeZoneEffect(
-            subject=subject_from_text(subject_text, ctx.card_name, extra_filters=filters),
+            subject=subject_from_text(subject_text, ctx, extra_filters=filters),
             from_zone="graveyard",
             to_zone="hand"
         )
@@ -658,7 +664,7 @@ def parse_change_zone(text: str, ctx: ParseContext):
         subject_text, filters = _extract_restrictions(subject_text)
         print("SUBJECT BEFORE PARSE:", repr(subject_text))
         return ChangeZoneEffect(
-            subject=subject_from_text(subject_text, ctx.card_name, extra_filters=filters),
+            subject=subject_from_text(subject_text, ctx, extra_filters=filters),
             to_zone="hand"
         )
 
@@ -669,7 +675,7 @@ def parse_change_zone(text: str, ctx: ParseContext):
         subject_text, filters = _extract_restrictions(subject_text)
         print("SUBJECT BEFORE PARSE:", repr(subject_text))
         return ChangeZoneEffect(
-            subject=subject_from_text(subject_text, ctx.card_name, extra_filters=filters),
+            subject=subject_from_text(subject_text, ctx, extra_filters=filters),
             to_zone="battlefield"
         )
 
@@ -680,7 +686,7 @@ def parse_change_zone(text: str, ctx: ParseContext):
         subject_text, filters = _extract_restrictions(subject_text)
         print("SUBJECT BEFORE PARSE:", repr(subject_text))
         return ChangeZoneEffect(
-            subject=subject_from_text(subject_text, ctx.card_name, extra_filters=filters),
+            subject=subject_from_text(subject_text, ctx, extra_filters=filters),
             to_zone="battlefield"
         )
 
@@ -691,7 +697,7 @@ def parse_change_zone(text: str, ctx: ParseContext):
         subject_text, filters = _extract_restrictions(subject_text)
         print("SUBJECT BEFORE PARSE:", repr(subject_text))
         return ChangeZoneEffect(
-            subject=subject_from_text(subject_text, ctx.card_name, extra_filters=filters),
+            subject=subject_from_text(subject_text, ctx, extra_filters=filters),
             to_zone="exile"
         )
 
@@ -702,7 +708,7 @@ def parse_change_zone(text: str, ctx: ParseContext):
         subject_text, filters = _extract_restrictions(subject_text)
         print("SUBJECT BEFORE PARSE:", repr(subject_text))
         return ChangeZoneEffect(
-            subject=subject_from_text(subject_text, ctx.card_name, extra_filters=filters),
+            subject=subject_from_text(subject_text, ctx, extra_filters=filters),
             to_zone="graveyard"
         )
 
@@ -714,7 +720,7 @@ def parse_change_zone(text: str, ctx: ParseContext):
         print("SUBJECT BEFORE PARSE:", repr(subject_text))
         position = m.group("position").strip()
         return ChangeZoneEffect(
-            subject=subject_from_text(subject_text, ctx.card_name, extra_filters=filters),
+            subject=subject_from_text(subject_text, ctx, extra_filters=filters),
             to_zone="library",
             position=position
         )
@@ -802,3 +808,18 @@ def parse_look_and_pick(text: str):
         rest_order=rest_order,
         optional=optional,
     )
+
+TRANSFORM_RE = re.compile(
+    r"\btransform\s+(?P<subject>.+?)(?:\.|,|;|$)",
+    re.IGNORECASE,
+)
+
+def parse_transform(text: str, ctx: ParseContext):
+    t = text.lower()
+    m = TRANSFORM_RE.search(t)
+    if not m:
+        return None
+
+    subject_text = m.group("subject").strip()
+    subject = subject_from_text(subject_text, ctx)
+    return TransformEffect(subject=subject)

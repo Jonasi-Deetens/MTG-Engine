@@ -1,7 +1,7 @@
 import re
 
 from typing import Optional, Dict, List
-from axis2.schema import Subject
+from axis2.schema import Subject, ParseContext
 
 TYPE_WORDS = ["creature", "enchantment", "artifact", "planeswalker", "land", "permanent", "spell"]
 CARD_TYPE_WORDS = ["creature", "enchantment", "artifact", "planeswalker", "instant", "sorcery"]
@@ -143,7 +143,7 @@ def _detect_basic_filters(t: str) -> Dict[str, object]:
     return filters
 
 
-def subject_from_text(raw: str, card_name: str, extra_filters: Optional[Dict[str, object]] = None) -> Subject:
+def subject_from_text(raw: str, ctx: ParseContext, extra_filters: Optional[Dict[str, object]] = None) -> Subject:
     """
     Full working subject parser for Axis2.
     Handles:
@@ -163,6 +163,9 @@ def subject_from_text(raw: str, card_name: str, extra_filters: Optional[Dict[str
     if extra_filters:
         filters.update(extra_filters)
 
+    card_name = ctx.card_name
+    card_primary_type = ctx.primary_type
+    print(f"Card name: {card_name}, Card primary type: {card_primary_type}")
     # 1. Linked exiled card (Oblivion Ring, Banishing Light, etc.)
     if "the exiled card" in t:
         return Subject(
@@ -172,8 +175,25 @@ def subject_from_text(raw: str, card_name: str, extra_filters: Optional[Dict[str
             filters={"source": "self"},
         )
 
+    # 1a. Explicit "this X" references
+    if "this creature" in t:
+        return Subject(scope="self", controller=None, types=["creature"], filters={})
+
+    if "this permanent" in t:
+        return Subject(scope="self", controller=None, types=["permanent"], filters={})
+
+    if "this enchantment" in t:
+        return Subject(scope="self", controller=None, types=["enchantment"], filters={})
+
+    if "this artifact" in t:
+        return Subject(scope="self", controller=None, types=["artifact"], filters={})
+
+    if "this spell" in t:
+        return Subject(scope="self", controller=None, types=["spell"], filters={})
+
     # 1b. Self-reference by card name
-    if card_name.lower() in t:
+    normalized_name = card_name.lower().split(",")[0].strip()
+    if normalized_name in t:
         return Subject(
             scope="self",
             controller=None,

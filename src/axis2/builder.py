@@ -17,7 +17,7 @@ from axis2.parsing.modes import parse_modes
 from axis2.parsing.trigger_filters import parse_trigger_filter
 from axis2.parsing.replacement_effects import parse_replacement_effects
 from axis2.parsing.continuous_effects import parse_continuous_effects
-from axis2.parsing.special_actions import parse_ninjutsu
+from axis2.parsing.special_actions import parse_ninjutsu, parse_repeatable_payment
 from axis2.parsing.keywords import extract_keywords
 from axis2.parsing.sentences import split_into_sentences
 from axis2.parsing.triggers import parse_trigger_event
@@ -53,9 +53,10 @@ class Axis2Builder:
         # ------------------------------------------------------------
         faces = []
         for f in axis1_card.faces:
+            clean_card_types = [t for t in f.card_types if t not in f.supertypes]
             ctx = ParseContext(
                 card_name=axis1_card.names[0],
-                primary_type=f.card_types[0].lower(),
+                primary_type=clean_card_types[0].lower(),
                 face_name=f.name,
                 face_types=[t.lower() for t in f.card_types],
             )
@@ -65,6 +66,11 @@ class Axis2Builder:
             ninjutsu = parse_ninjutsu(f.oracle_text or "")
             if ninjutsu:
                 special_actions.append(ninjutsu)
+
+            # Repeatable payment (Adversary cycle) 
+            repeatable = parse_repeatable_payment(f.oracle_text or "", ctx) 
+            if repeatable: 
+                special_actions.append(repeatable)
 
             activated = parse_activated_abilities(f, ctx)
             print(f"Triggered abilities: {f.triggered_abilities}")
@@ -99,7 +105,7 @@ class Axis2Builder:
                 )
                 triggered.append(triggered_ability)
 
-            static_effects = parse_static_effects(f)
+            static_effects = parse_static_effects(f, ctx)
             mode_choice, modes = parse_modes(f.oracle_text or "")
 
             clean_text = cleaned_oracle_text(f)
