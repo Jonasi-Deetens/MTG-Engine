@@ -8,6 +8,10 @@ from axis2.schema import (
     ReplacementEffect, ContinuousEffect, TapCost, DraftFromSpellbookEffect,
     ParseContext
 )
+from axis2.parsing.delayed_triggers import (
+    has_until_leaves_clause,
+    build_linked_return_trigger,
+)
 from axis2.expanding.keyword_expansion import expand_treasure_keyword
 from axis2.parsing.mana import parse_mana_cost
 from axis2.parsing.effects import parse_effect_text
@@ -74,12 +78,11 @@ class Axis2Builder:
 
             activated = parse_activated_abilities(f, ctx)
             print(f"Triggered abilities: {f.triggered_abilities}")
+
             triggered = []
             for t in f.triggered_abilities:
-                # 1. Recompute the trigger event (don’t trust Axis1)
                 event = parse_trigger_event(t.condition)
-                # 2. Parse effects (multi-sentence)
-                # If Axis1 failed to extract the effect text, reconstruct it from the oracle text
+
                 if not t.effect:
                     cond = t.condition.lower().rstrip(".").rstrip(",")
                     for sentence in split_into_sentences(f.oracle_text or ""):
@@ -91,9 +94,7 @@ class Axis2Builder:
                                 t.effect = parts[1].strip()
 
                 effects = parse_effect_text(t.effect, ctx)
-                # 3. Targeting
                 targeting = parse_targeting(t.effect)
-                # 4. Trigger filter
                 trigger_filter = parse_trigger_filter(t.condition)
 
                 triggered_ability = TriggeredAbility(
@@ -105,19 +106,43 @@ class Axis2Builder:
                 )
                 triggered.append(triggered_ability)
 
+                # NEW: synthesize delayed triggers like "until this creature leaves the battlefield"
+                if has_until_leaves_clause(t.effect or ""):
+                    delayed = build_linked_return_trigger(triggered_ability)
+                    if delayed is not None:
+                        triggered.append(delayed)
+
             static_effects = parse_static_effects(f, ctx)
             mode_choice, modes = parse_modes(f.oracle_text or "")
 
             clean_text = cleaned_oracle_text(f)
+            print(f"---- Before Clean text: {clean_text}")
+            # Remove standalone keyword lines (Flying, Lifelink, Vigilance, etc.)
+            clean_text = "\n".join(
+                line for line in clean_text.splitlines()
+                if line.strip().lower() not in extract_keywords(f.oracle_text or "")
+            )
+            print(f"---- Clean text: {clean_text}")
             sentences = split_into_sentences(clean_text)
 
             replacement_effects = []
             continuous_effects = []
 
+            spell_effects = []
+            spell_targeting = None
+
+            types_lower = [t.lower() for t in f.card_types]
+
+            if "instant" in types_lower or "sorcery" in types_lower:
+                spell_effects = parse_effect_text(clean_text, ctx)
+                spell_targeting = parse_targeting(clean_text)
+
             for s in sentences:
                 replacement_effects.extend(parse_replacement_effects(s))
+                # NEW: static continuous effects
+                continuous_effects.extend(parse_continuous_effects(s, ctx))
 
-                # Use the generic effect parser for everything else
+                # Spell-like continuous effects (from parse_effect_text)
                 for eff in parse_effect_text(s, ctx):
                     if isinstance(eff, ContinuousEffect):
                         continuous_effects.append(eff)
@@ -142,6 +167,8 @@ class Axis2Builder:
                 replacement_effects=replacement_effects,
                 continuous_effects=continuous_effects,
                 modes=modes,
+                spell_effects=spell_effects,
+                spell_targeting=spell_targeting,
             )
             expand_treasure_keyword(face)
             faces.append(face)

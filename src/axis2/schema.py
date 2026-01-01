@@ -21,6 +21,12 @@ class Subject:
     max_targets: int | None = None    # for "up to N targets"
 
 @dataclass
+class DynamicValue:
+    kind: str  # e.g. "counter_count"
+    counter_type: str | None = None
+    subject: Subject | None = None
+
+@dataclass
 class SpellFilter:
     must_have_types: list[str] = field(default_factory=list)
     must_not_have_types: list[str] = field(default_factory=list)
@@ -100,10 +106,15 @@ class ScryEffect(Effect):
     amount: int
 
 @dataclass
-class AddCountersEffect:
+class AddCountersEffect(Effect):
     counter_type: str
     count: str | int  # "times_paid" or a number
     subject: Subject
+
+@dataclass 
+class DestroyEffect(Effect): 
+    subject: Subject 
+    regenerate: bool = False # default: cannot regenerate unless card says so
 
 @dataclass
 class SurveilEffect(Effect):
@@ -112,7 +123,12 @@ class SurveilEffect(Effect):
 @dataclass
 class CantBeBlockedEffect(Effect):
     subject: str              # e.g. "target_creature"
-    duration: str       
+    duration: str      
+
+@dataclass
+class ConditionalEffect(Effect):
+    condition: str          # e.g. "exiled_this_way", "if_you_do"
+    effects: List[object]           # list of Effect objects to run if condition is true 
 
 @dataclass
 class DayboundEffect(Effect):
@@ -126,6 +142,7 @@ class NightboundEffect(Effect):
 class LookAndPickEffect(Effect):
     # How many cards to look at
     look_at: int
+    source_zone: str | None = None
     # Reveal up to N cards (optional)
     reveal_up_to: int | None = None
     # Types of cards allowed to be revealed (e.g. ["creature"])
@@ -324,6 +341,7 @@ class ContinuousEffect(Effect):
     # Optional semantic fields (only one is filled depending on kind)
     condition: Optional[str] = None
     pt_value: Optional[PTExpression] = None
+    dynamic: DynamicValue | None = None #
     abilities: Optional[list[str]] = None
     type_change: Optional[TypeChangeData] = None
     color_change: Optional[ColorChangeData] = None
@@ -352,6 +370,8 @@ class Axis2Face:
     loyalty: Optional[int]
     defense: Optional[int]
 
+    spell_effects: List[Any] = field(default_factory=list)
+    spell_targeting: Optional[TargetingRules] = None
     special_actions: List[SpecialAction] = field(default_factory=list)
     activated_abilities: List[ActivatedAbility] = field(default_factory=list)
     triggered_abilities: List[TriggeredAbility] = field(default_factory=list)

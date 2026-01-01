@@ -96,21 +96,53 @@ def _detect_player_subject(t: str, scope: str, controller: Optional[str]):
 
 def _detect_types(t: str) -> Optional[List[str]]:
     """
-    Infer the type list: ['creature'], ['permanent'], etc.
-    Handles plural and singular, and 'X card' forms.
+    Infer the type list: ['creature'], ['artifact','enchantment'], etc.
+    Handles:
+      - plural forms
+      - 'X card'
+      - 'artifact or enchantment'
+      - 'creature, artifact, or enchantment'
     """
-    # plural forms first
+
+    # 1. Handle multi-type lists: "artifact or enchantment", "creature, artifact, or enchantment"
+    # Normalize commas to " or "
+    normalized = t.replace(",", " or ")
+
+    # Split on "or" or commas
+    parts = re.split(r"\bor\b|,", normalized)
+
+    types = []
+    for p in parts:
+        p = p.strip()
+        # plural
+        for plural, singular in PLURAL_TYPES.items():
+            if re.search(rf"\b{plural}\b", p):
+                types.append(singular)
+        # card forms
+        for type_word in CARD_TYPE_WORDS:
+            if re.search(rf"\b{type_word}\s+card\b", p):
+                types.append(type_word)
+        # singular
+        for type_word in TYPE_WORDS:
+            if re.search(rf"\b{type_word}\b", p):
+                types.append(type_word)
+
+    if types:
+        return list(dict.fromkeys(types))
+    # dedupe, preserve order
+
+    # 2. Plural forms
     for plural, singular in PLURAL_TYPES.items():
         if re.search(rf"\b{plural}\b", t):
             return [singular]
 
-    # card forms: "creature card", "enchantment card", etc.
+    # 3. Card forms: "creature card", "artifact card"
     if "card" in t:
         for type_word in CARD_TYPE_WORDS:
             if re.search(rf"\b{type_word}\s+card\b", t):
                 return [type_word]
 
-    # singular type words
+    # 4. Singular type words
     for type_word in TYPE_WORDS:
         if re.search(rf"\b{type_word}\b", t):
             return [type_word]

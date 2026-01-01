@@ -4,9 +4,11 @@ from typing import List, Optional
 from axis2.schema import (
     ContinuousEffect, PTExpression,
     ColorChangeData, TypeChangeData, 
-    CardTypeCountCondition
+    CardTypeCountCondition,
+    ParseContext,
+    DynamicValue 
 )
-
+from axis2.parsing.subject import subject_from_text
 # -----------------------------
 # Regex patterns
 # -----------------------------
@@ -167,11 +169,34 @@ def _parse_type_change(text: str) -> Optional[TypeChangeData]:
     return TypeChangeData(set_types=types + subtypes)
 
 
+FOR_EACH_COUNTER_RE = re.compile(
+    r"for each (?P<counter>[\w\+\-\/]+) counter on (?P<subject>[^\.]+)",
+    re.IGNORECASE
+)
+
+def parse_dynamic_counter_clause(text: str, ctx: ParseContext):
+    m = FOR_EACH_COUNTER_RE.search(text)
+    if not m:
+        return None
+
+    counter_type = m.group("counter").lower().strip()
+    subj_text = m.group("subject").strip()
+
+    # Convert subject text ("this creature") into a Subject object
+    subject = subject_from_text(subj_text, ctx)
+
+    return DynamicValue(
+        kind="counter_count",
+        counter_type=counter_type,
+        subject=subject
+    )
+
 # -----------------------------
 # Main parser
 # -----------------------------
 
-def parse_continuous_effects(text: str) -> List[ContinuousEffect]:
+
+def parse_continuous_effects(text: str, ctx: ParseContext) -> List[ContinuousEffect]:
     effects = []
     if not text:
         return effects
@@ -194,15 +219,20 @@ def parse_continuous_effects(text: str) -> List[ContinuousEffect]:
     # 2. P/T modification
     pt = _parse_pt_mod(text)
     if pt:
-        effects.append(
-            ContinuousEffect(
-                kind="pt_mod",
-                applies_to=applies_to,
-                pt_value=pt,
-                condition=condition,
-                text=text,
-            )
+        effect = ContinuousEffect(
+            kind="pt_mod",
+            applies_to=applies_to,
+            pt_value=pt,
+            condition=condition,
+            text=text,
         )
+
+        # NEW: detect dynamic scaling like "for each valor counter on this creature"
+        dynamic = parse_dynamic_counter_clause(text, ctx)
+        if dynamic:
+            effect.dynamic = dynamic
+
+        effects.append(effect)
 
     # 3. Ability granting
     abilities = _parse_abilities(text)

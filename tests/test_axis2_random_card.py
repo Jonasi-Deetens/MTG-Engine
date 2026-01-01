@@ -163,6 +163,21 @@ def test_axis2_debug(pg_session, card_name):
         else:
             print("      None")
 
+        # Spell effects
+        print("\n    SPELL EFFECTS:")
+        if f.spell_effects:
+            for eff in f.spell_effects:
+                print(f"      {eff}")
+        else:
+            print("      None")
+
+        # Spell targeting
+        print("\n    SPELL TARGETING:")
+        if f.spell_targeting:
+            print(f"      {f.spell_targeting}")
+        else:
+            print("      None")
+
         # Modes
         print("\n    MODES:")
         if f.modes:

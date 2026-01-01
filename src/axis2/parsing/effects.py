@@ -8,7 +8,7 @@ from axis2.schema import (
     GainLifeEffect, SearchEffect, CantBeBlockedEffect, GainLifeEqualToPowerEffect, 
     ReturnCardFromGraveyardEffect, DraftFromSpellbookEffect, PTBoostEffect,
     ChangeZoneEffect, ScryEffect, SurveilEffect, Subject, LookAndPickEffect,
-    ParseContext, TransformEffect
+    ParseContext, TransformEffect, ConditionalEffect, DestroyEffect
 )
 from axis2.parsing.subject import parse_subject, subject_from_text
 from axis2.parsing.spell_continuous_effects import parse_spell_continuous_effect
@@ -22,7 +22,6 @@ COLOR_MAP = {
 }
 
 SENTENCE_SPLIT_RE = re.compile(r"\.\s+")
-
 
 def split_effect_sentences(text: str):
     """
@@ -42,6 +41,11 @@ def split_effect_sentences(text: str):
     parts = SENTENCE_SPLIT_RE.split(text)
     return [p.strip() for p in parts if p.strip()]
 
+
+IF_THIS_WAY_RE = re.compile(
+    r"if\s+a\s+card\s+is\s+put\s+into\s+exile\s+this\s+way,\s*(?P<effect>.+)",
+    re.IGNORECASE
+)
 
 def parse_effect_text(text, ctx: ParseContext):
     """
@@ -64,10 +68,12 @@ def parse_effect_text(text, ctx: ParseContext):
     
     print(f"Parsing look and pick: {text}")
     # Look and pick
-    look_pick = parse_look_and_pick(text)
-    print(f"Look and pick: {look_pick}")
-    if look_pick:
-        effects.append(look_pick)
+    # Global look-and-pick only if no conditional clause is present
+    if "this way" not in text.lower():
+        look_pick = parse_look_and_pick(text)
+        if look_pick:
+            effects.append(look_pick)
+
     # ------------------------------------------------------------
     # 2. Parse each sentence independently
     # ------------------------------------------------------------
@@ -77,6 +83,24 @@ def parse_effect_text(text, ctx: ParseContext):
             continue
 
         print(f"Parsing effect: {s}")
+
+        # ------------------------------------------------------------
+        # CONDITIONAL: "If a card is put into exile this way, ..."
+        # ------------------------------------------------------------
+        m = IF_THIS_WAY_RE.search(s)
+        if m:
+            inner_text = m.group("effect").strip()
+
+            # Recursively parse the inner effect(s)
+            inner_effects = parse_effect_text(inner_text, ctx)
+
+            effects.append(
+                ConditionalEffect(
+                    condition="exiled_this_way",
+                    effects=inner_effects
+                )
+            )
+            continue
 
         # Detect Equip keyword ability
         if s.strip().lower().startswith("equip"):
@@ -161,22 +185,24 @@ def parse_effect_text(text, ctx: ParseContext):
         if transform:
             effects.append(transform)
             continue
+
+        # Destroy
+        destroy = parse_destroy(s, ctx)
+        if destroy:
+            effects.append(destroy)
+            continue
             
         print(f"Parsing spell continuous effect: {s}")
         # Spell continuous effect
-        spell_continuous = parse_spell_continuous_effect(s)
+        spell_continuous = parse_spell_continuous_effect(s, ctx)
         if spell_continuous:
             effects.append(spell_continuous)
             continue
 
         # 2c. Damage
-        if "deals" in s.lower() and "damage" in s.lower():
-            words = s.lower().split()
-            m = re.search(r"deals\s+(\w+)\s+damage", s, re.I)
-            amount = m.group(1)
-            subject = parse_subject(s.lower())
-
-            effects.append(DealDamageEffect(amount=amount, subject=subject))
+        damage = parse_damage(s, ctx)
+        if damage:
+            effects.append(damage)
             continue
 
         # 2d. Draw cards
@@ -611,6 +637,11 @@ LIBRARY_RE = re.compile(
     re.IGNORECASE
 )
 
+ZONE_FROM_RE = re.compile( 
+    r"from\s+(?:a|any|the|your|their|its)\s+(graveyard|hand|library|battlefield|exile)", 
+    re.IGNORECASE 
+)
+
 def _extract_restrictions(subject_text: str):
     """
     Extracts clauses like:
@@ -638,7 +669,16 @@ def _extract_restrictions(subject_text: str):
         # remove the clause from subject text
         subject_text = re.sub(r"that\s+(?:is|isn't|is not)\s+[a-z ]+", "", subject_text, flags=re.IGNORECASE).strip()
 
+    m = ZONE_FROM_RE.search(subject_text)
+    if m:
+        zone = m.group(1).lower()
+        filters["zone"] = zone
+
+        # Remove the zone clause from the subject text
+        subject_text = ZONE_FROM_RE.sub("", subject_text).strip()
+
     return subject_text, filters
+
 
 def parse_change_zone(text: str, ctx: ParseContext):
     t = text.strip()
@@ -696,10 +736,32 @@ def parse_change_zone(text: str, ctx: ParseContext):
         subject_text = m.group("subject").strip()
         subject_text, filters = _extract_restrictions(subject_text)
         print("SUBJECT BEFORE PARSE:", repr(subject_text))
+
+        if subject_text.lower().startswith("target"):
+            # Extract the type after "target"
+            words = subject_text.split()
+            if len(words) >= 2:
+                type_word = words[1]  # "creature"
+                # Build filters from the rest of the phrase
+                extra_filters = filters.copy()
+                if "opponent controls" in subject_text.lower():
+                    extra_filters["opponent_controls"] = True
+
+                return ChangeZoneEffect(
+                    subject=Subject(
+                        scope="target",
+                        types=[type_word],
+                        filters=extra_filters
+                    ),
+                    to_zone="exile"
+                )
+
+        # FALLBACK: normal subject parsing
         return ChangeZoneEffect(
             subject=subject_from_text(subject_text, ctx, extra_filters=filters),
             to_zone="exile"
         )
+
 
     # 6. Put into graveyard
     m = GRAVEYARD_RE.search(t)
@@ -751,7 +813,12 @@ REVEAL_RE = re.compile(
     r"reveal up to (\d+|one|two|three|four|five|six|seven|eight|nine|ten) ([a-z ]+) cards? from among them",
     re.IGNORECASE
 )
- 
+
+PUT_ONE_INTO_HAND_RE = re.compile(
+    r"put (?:one|a|that) (?:of those )?cards? into your hand",
+    re.IGNORECASE
+)
+
 PUT_REVEALED_RE = re.compile(
     r"put (?:them|the revealed cards?) into your hand",
     re.IGNORECASE
@@ -759,6 +826,42 @@ PUT_REVEALED_RE = re.compile(
 
 PUT_REST_RE = re.compile(
     r"put the rest on the bottom of your library(?: in a (random) order)?",
+    re.IGNORECASE
+)
+
+PUT_CHOSEN_GRAVE_RE = re.compile(
+    r"put (?:one|a|that) card into your graveyard",
+    re.IGNORECASE
+)
+
+PUT_REST_GRAVE_RE = re.compile(
+    r"(?:put )?the rest into your graveyard",
+    re.IGNORECASE
+)
+
+PUT_REST_EXILE_RE = re.compile(
+    r"exile the rest",
+    re.IGNORECASE
+)
+
+
+PUT_CHOSEN_EXILE_RE = re.compile(
+    r"exile (?:one|a|that) card",
+    re.IGNORECASE
+)
+
+PUT_CHOSEN_TOP_RE = re.compile(
+    r"put (?:one|a|that) card on top of your library",
+    re.IGNORECASE
+)
+
+PUT_REST_TOP_RE = re.compile(
+    r"put the rest on top of your library(?: in any order)?",
+    re.IGNORECASE
+)
+
+SOURCE_ZONE_RE = re.compile(
+    r"look at the top \d+ cards? of (?:target|that|your|an opponent's) (\w+)",
     re.IGNORECASE
 )
 
@@ -780,27 +883,45 @@ def parse_look_and_pick(text: str):
     put_revealed_into = None
     put_rest_into = None
     rest_order = None
+    source_zone = "library"
+
+    # Chosen card destinations
+    if PUT_CHOSEN_GRAVE_RE.search(t):
+        put_revealed_into = "graveyard"
+    if PUT_CHOSEN_EXILE_RE.search(t):
+        put_revealed_into = "exile"
+    if PUT_CHOSEN_TOP_RE.search(t):
+        put_revealed_into = "top"
+    if PUT_ONE_INTO_HAND_RE.search(t):
+        put_revealed_into = "hand"
 
     # 2. Reveal up to N of type X
     m = REVEAL_RE.search(t)
     if m:
         raw = m.group(1)
         reveal_up_to = int(raw) if raw.isdigit() else NUMBER_WORDS[raw]
-        reveal_types = [m.group(2).strip()]  # e.g. "creature"
+        reveal_types = [m.group(2).strip()]
 
     # 3. Put revealed into hand
-    m = PUT_REVEALED_RE.search(t)
-    if m:
+    if PUT_REVEALED_RE.search(t):
         put_revealed_into = "hand"
 
-    # 4. Put rest on bottom (maybe random)
-    m = PUT_REST_RE.search(t)
-    if m:
-        put_rest_into = "bottom"
-        rest_order = "random" if m.group(1) else "ordered"
+    # 4. Put rest — PRIORITIZED ORDER
+    if PUT_REST_GRAVE_RE.search(t):
+        put_rest_into = "graveyard"
+    elif PUT_REST_EXILE_RE.search(t):
+        put_rest_into = "exile"
+    elif PUT_REST_TOP_RE.search(t):
+        put_rest_into = "top"
+    else:
+        m = PUT_REST_RE.search(t)
+        if m:
+            put_rest_into = "bottom"
+            rest_order = "random" if m.group(1) else "ordered"
 
     return LookAndPickEffect(
         look_at=look_at,
+        source_zone=source_zone,
         reveal_up_to=reveal_up_to,
         reveal_types=reveal_types,
         put_revealed_into=put_revealed_into,
@@ -808,6 +929,7 @@ def parse_look_and_pick(text: str):
         rest_order=rest_order,
         optional=optional,
     )
+
 
 TRANSFORM_RE = re.compile(
     r"\btransform\s+(?P<subject>.+?)(?:\.|,|;|$)",
@@ -823,3 +945,36 @@ def parse_transform(text: str, ctx: ParseContext):
     subject_text = m.group("subject").strip()
     subject = subject_from_text(subject_text, ctx)
     return TransformEffect(subject=subject)
+
+DESTROY_RE = re.compile(
+    r"\bdestroy\s+(?P<subject>[^.;]+)",
+    re.IGNORECASE,
+)
+
+def parse_destroy(text: str, ctx: ParseContext):
+    t = text.lower()
+    m = DESTROY_RE.search(t)
+    if not m:
+        return None
+
+    subject_text = m.group("subject").strip()
+    subject = subject_from_text(subject_text, ctx)
+
+    return DestroyEffect(subject=subject)
+
+DAMAGE_RE = re.compile(
+    r"deals?\s+(?P<amount>\d+)\s+damage\s+to\s+(?P<subject>.+?)(?:\.|,|;|$)",
+    re.IGNORECASE,
+)
+
+def parse_damage(text: str, ctx: ParseContext):
+    t = text.lower()
+    m = DAMAGE_RE.search(t)
+    if not m:
+        return None
+
+    amount = int(m.group("amount"))
+    subject_text = m.group("subject").strip()
+    subject = subject_from_text(subject_text, ctx)
+
+    return DealDamageEffect(amount=amount, subject=subject)

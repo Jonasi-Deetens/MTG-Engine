@@ -6,7 +6,7 @@ from typing import Callable, Dict, Any, Optional
 
 
 @dataclass
-class ReplacementEffect:
+class ReplacementEffect(Axis3Effect):
     """
     A runtime replacement effect derived from Axis2.
     """

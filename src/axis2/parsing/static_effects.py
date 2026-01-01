@@ -119,25 +119,14 @@ def parse_general_static_effects(text: str, ctx: ParseContext) -> list[StaticEff
         )
 
     # ------------------------------------------------------------
-    # 2. "Spells you cast cost {1} less to cast..."
+    # 2. General cost modification ("artifact spells you cast cost {1} less")
     # ------------------------------------------------------------
-    if "spells you cast cost" in t and "less to cast" in t:
-        effects.append(
-            StaticEffect(
-                kind="cost_modification",
-                subject=Subject(
-                    scope="self",
-                    controller="you",
-                    types=["spell"],
-                    filters={}
-                ),
-                value={"per_opponent_draw": 1},
-                layer="cost_modification",
-                zones=["stack"],
-            )
-        )
+    cost_mod = parse_cost_modification(text, ctx)
+    if cost_mod:
+        effects.append(cost_mod)
 
     return effects
+
 
 BLOCKING_RESTRICTION_RE = re.compile(
     r"each creature you control can\s*'?t?\s*be blocked by more than (\w+)",
@@ -302,3 +291,50 @@ def parse_protection(text: str):
         protection_from=colors
     )
 
+COST_MOD_RE = re.compile(
+    r"(?P<types>[a-zA-Z ,]+?) spells? (?P<controller>you|your opponents?|opponents?) cast cost \{(?P<amount>\d+)\} (?P<direction>less|more) to cast",
+    re.IGNORECASE
+)
+
+def parse_cost_modification(text: str, ctx: ParseContext):
+    m = COST_MOD_RE.search(text)
+    if not m:
+        return None
+
+    raw_types = m.group("types").strip()
+    controller_word = m.group("controller")
+    amount = int(m.group("amount"))
+    direction = m.group("direction")
+
+    # Determine controller
+    controller = "you" if "you" in controller_word else "opponent"
+
+    # Determine sign
+    delta = -amount if direction == "less" else amount
+
+    # Parse types (artifact, creature, instant and sorcery, etc.)
+    types = []
+    for part in re.split(r",|and", raw_types):
+        p = part.strip()
+        if p in ["artifact", "creature", "enchantment", "planeswalker", "instant", "sorcery", "noncreature"]:
+            types.append(p)
+        elif p == "instant and sorcery":
+            types.extend(["instant", "sorcery"])
+        elif p == "noncreature":
+            types.append("noncreature")
+
+    # Build subject
+    subject = Subject(
+        scope="each",
+        controller=controller,
+        types=types + ["spell"],  # always spells
+        filters={}
+    )
+
+    return StaticEffect(
+        kind="cost_modification",
+        subject=subject,
+        value={"generic": delta},
+        layer="cost_modification",
+        zones=None
+    )

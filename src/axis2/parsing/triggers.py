@@ -81,7 +81,7 @@ ATTACKS_RE = re.compile(
 )
 
 ZONE_CHANGE_TRIGGER_RE = re.compile(
-    r"(?:when|whenever)\s+(.*?)\s+is\s+put\s+into\s+a?\s*(\w+)\s+from\s+the\s+(\w+)",
+    r"(?:when|whenever)\s+(.*?)\s+is\s+put\s+into\s+(?:an?\s+)?(\w+)\s+from\s+(?:the\s+)?(\w+)",
     re.IGNORECASE
 )
 
@@ -94,6 +94,7 @@ CAST_SPELL_RE = re.compile(
     r"(?:when|whenever)\s+(you|an opponent|a player|any player)\s+cast[s]?\s+(.*)",
     re.IGNORECASE
 )
+
 
 def parse_trigger_event(condition_text: str):
     text = condition_text.lower()

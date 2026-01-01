@@ -36,6 +36,20 @@ TYPE_KEYWORDS = {
 
 # Ordered patterns so we match more specific phrases first.
 TYPE_PATTERNS = [
+    # Multi-type lists: artifact, enchantment, or land
+    (re.compile(
+        r"\btarget\s+(?:an?\s+)?"
+        r"(?P<t1>artifact|enchantment|land)"
+        r"(?:\s*,\s*(?P<t2>artifact|enchantment|land))*"
+        r"(?:\s*,?\s*or\s+(?P<t3>artifact|enchantment|land))?",
+        re.IGNORECASE),
+    ["artifact", "enchantment", "land"],
+    []),
+
+    # Artifact or enchantment
+    (re.compile(r"\btarget artifact or enchantment\b", re.IGNORECASE),
+    ["artifact", "enchantment"], []),
+
     # Compound types
     (re.compile(r"\btarget player or planeswalker\b", re.IGNORECASE),
      ["player", "planeswalker"], []),
