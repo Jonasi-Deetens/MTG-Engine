@@ -9,11 +9,12 @@ from axis2.schema import (
     GainLifeEffect, SearchEffect, CantBeBlockedEffect, GainLifeEqualToPowerEffect, 
     ReturnCardFromGraveyardEffect, DraftFromSpellbookEffect, PTBoostEffect,
     ChangeZoneEffect, ScryEffect, SurveilEffect, Subject, LookAndPickEffect,
-    ParseContext, TransformEffect, ConditionalEffect, DestroyEffect, ShuffleEffect, 
-    RevealEffect
+    ParseContext, TransformEffect, DestroyEffect, ShuffleEffect, 
+    RevealEffect, ContinuousEffect, DynamicValue
 )
 from axis2.parsing.subject import parse_subject, subject_from_text
 from axis2.parsing.spell_continuous_effects import parse_spell_continuous_effect
+from axis2.parsing.conditional_effects import parse_conditional
 
 COLOR_MAP = {
     "white": "W",
@@ -77,24 +78,10 @@ def parse_effect_text(text, ctx: ParseContext):
         s = sentence.strip()
         if not s:
             continue
-        # ------------------------------------------------------------
         # CONDITIONAL: "If a card is put into exile this way, ..."
-        # ------------------------------------------------------------
-        m = IF_THIS_WAY_RE.search(s)
-        if m:
-            # Collect all sentences AFTER this one as the conditional body
-            # Remove the conditional prefix from the same sentence
-            inner_text = IF_THIS_WAY_RE.sub("", s).strip()
-
-
-            inner_effects = parse_effect_text(inner_text, ctx)
-
-            effects.append(
-                ConditionalEffect(
-                    condition="exiled_this_way",
-                    effects=inner_effects
-                )
-            )
+        cond = parse_conditional(s, ctx)
+        if cond:
+            effects.append(cond)
             continue
 
         print(f"Parsing effect: {s}")
@@ -218,6 +205,29 @@ def parse_effect_text(text, ctx: ParseContext):
         shuffle = parse_shuffle(s)
         if shuffle:
             effects.append(shuffle)
+            continue
+
+        # Lightpaws search
+        lp_search = parse_lightpaws_search(s)
+        if lp_search:
+            effects.append(lp_search)
+            # remove the matched part and parse the remainder
+            remainder = AURA_SEARCH_RE.sub("", s).strip().lstrip(",").strip()
+            if remainder:
+                effects.extend(parse_effect_text(remainder, ctx))
+            continue
+        
+        put_attached = parse_put_that_card_attached(s)
+        if put_attached:
+            effects.append(put_attached)
+            remainder = PUT_THAT_CARD_ATTACHED_RE.sub("", s).strip().lstrip(",").strip()
+            if remainder:
+                effects.extend(parse_effect_text(remainder, ctx))
+            continue
+
+        prot_choice = parse_gain_protection_choice(s)
+        if prot_choice:
+            effects.append(prot_choice)
             continue
 
         # Move to zone
@@ -1095,6 +1105,57 @@ def parse_look_and_pick(text: str):
         optional=optional,
     )
 
+PUT_THAT_CARD_ATTACHED_RE = re.compile(
+    r"put\s+that\s+card\s+onto\s+the\s+battlefield\s+attached\s+to\s+(?P<target>[\w\-’']+)",
+    re.I
+)
+
+def parse_put_that_card_attached(s):
+    m = PUT_THAT_CARD_ATTACHED_RE.search(s)
+    if not m:
+        return None
+
+    target = m.group("target").lower()
+
+    # Light-Paws always attaches to itself
+    attach_to = "self"
+
+    return ChangeZoneEffect(
+        subject=Subject(scope="searched_card"),
+        to_zone="battlefield",
+        attach_to=attach_to
+    )
+
+
+AURA_SEARCH_RE = re.compile(
+    r"""
+    you\s+may\s+search\s+your\s+library\s+for\s+an?\s+
+    aura\s+card
+    \s+with\s+mana\s+value\s+less\s+than\s+or\s+equal\s+to\s+that\s+aura
+    \s+and\s+with\s+a\s+different\s+name\s+than\s+each\s+aura\s+you\s+control
+    """,
+    re.I | re.X,
+)
+
+def parse_lightpaws_search(s):
+    m = AURA_SEARCH_RE.search(s)
+    if not m:
+        return None
+
+    return SearchEffect(
+        zones=["library"],
+        card_filter={
+            "types": ["aura"],
+            "mana_value_lte": "that_aura",
+            "different_name_than_each_aura_you_control": True,
+        },
+        optional=True,
+        max_results=1,
+        card_names=None,
+        put_onto_battlefield=False,
+        shuffle_if_library_searched=False,
+    )
+
 
 TRANSFORM_RE = re.compile(
     r"\btransform\s+(?P<subject>.+?)(?:\.|,|;|$)",
@@ -1143,3 +1204,54 @@ def parse_damage(text: str, ctx: ParseContext):
     subject = subject_from_text(subject_text, ctx)
 
     return DealDamageEffect(amount=amount, subject=subject)
+
+UNTIL_LEAVES_RE = re.compile(
+    r"until\s+this\s+(?:enchantment|aura|permanent|creature|artifact|card)\s+leaves\s+the\s+battlefield",
+    re.I
+)
+
+def parse_until_leaves_trigger(card_face, ctx):
+    """
+    Detects O-Ring templating:
+      '... until this <type> leaves the battlefield.'
+    and generates a linked LTB trigger.
+    """
+    text = card_face.oracle_text.lower()
+
+    if not UNTIL_LEAVES_RE.search(text):
+        return None
+
+    # Build the LTB trigger
+    return TriggeredAbility(
+        event=LeavesBattlefieldEvent(subject="this " + card_face.types[0].lower()),
+        condition_text="When this {} leaves the battlefield".format(card_face.types[0].lower()),
+        effects=[
+            ChangeZoneEffect(
+                subject=Subject(
+                    scope="linked_exiled_card",
+                    filters={"source": "self"}
+                ),
+                to_zone="battlefield"
+            )
+        ],
+        targeting=None
+    )
+
+PROT_CHOICE_RE = re.compile(
+    r"gains?\s+protection\s+from\s+the\s+color\s+of\s+your\s+choice",
+    re.I
+)
+def parse_gain_protection_choice(s):
+    m = PROT_CHOICE_RE.search(s)
+    if not m:
+        return None
+
+    return ContinuousEffect(
+        kind="grant_protection",
+        applies_to="target",
+        text=s,
+        protection_from=[
+            DynamicValue(kind="chosen_color", subject=Subject(scope="this_ability"))
+        ],
+        duration="until_end_of_turn"
+    )

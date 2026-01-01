@@ -140,12 +140,15 @@ class Axis2Builder:
             for s in sentences:
                 replacement_effects.extend(parse_replacement_effects(s))
                 # NEW: static continuous effects
+                # Static continuous effects only
                 continuous_effects.extend(parse_continuous_effects(s, ctx))
 
-                # Spell-like continuous effects (from parse_effect_text)
-                for eff in parse_effect_text(s, ctx):
-                    if isinstance(eff, ContinuousEffect):
-                        continuous_effects.append(eff)
+                # Only run spell-like continuous effects if this is NOT a static ability
+                if not ("enchantment" in types_lower or "artifact" in types_lower):
+                    for eff in parse_effect_text(s, ctx):
+                        if isinstance(eff, ContinuousEffect):
+                            continuous_effects.append(eff)
+
                     # you can later route other spell effects somewhere else if you want
 
             face = Axis2Face(

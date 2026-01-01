@@ -167,6 +167,7 @@ class ChangeZoneEffect(Effect):
     face_down: bool = False
     tapped: bool = False
     counters: dict[str, int] | None = None
+    attach_to: str | None = None
 
 @dataclass
 class EquipEffect(Effect):
@@ -341,11 +342,21 @@ class TypeChangeData:
     set_types: Optional[list[str]] = None
     add_types: Optional[list[str]] = None
     remove_types: Optional[list[str]] = None
+    
+@dataclass
+class RestrictionData:
+    colors: Optional[List[str]] = None
+    types: Optional[List[str]] = None
+    power_lte: Optional[int] = None
+    power_gte: Optional[int] = None
+    toughness_lte: Optional[int] = None
+    toughness_gte: Optional[int] = None
+    keyword: Optional[str] = None
 
 @dataclass
 class ContinuousEffect(Effect):
     kind: str                 # "pt_mod", "grant_ability", "color_set", ...
-    applies_to: str           # "equipped_creature", "creatures_you_control", ...
+    applies_to: Subject | str         # "equipped_creature", "creatures_you_control", ...
     text: str                 # original sentence
     duration: Optional[str] = None
 
@@ -359,6 +370,8 @@ class ContinuousEffect(Effect):
     control_change: Optional[str] = None
     cost_change: Optional[str] = None
     rule_change: Optional[str] = None
+    protection_from: Optional[list[str]] = None
+    restriction: Optional[RestrictionData] = None
 
 @dataclass
 class Mode(Effect):

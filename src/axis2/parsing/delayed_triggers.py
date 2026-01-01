@@ -1,34 +1,19 @@
 import re
 from typing import Optional
-from axis2.schema import (
-    TriggeredAbility,
-    ChangeZoneEffect,
-    Subject,
-)
-from axis2.parsing.sentences import split_into_sentences
-from axis2.parsing.triggers import LeavesBattlefieldEvent  # adjust import to your actual location
-
+from axis2.schema import TriggeredAbility, ChangeZoneEffect, Subject
+from axis2.parsing.triggers import LeavesBattlefieldEvent
 
 UNTIL_LEAVES_RE = re.compile(
-    r"until\s+(this creature|this permanent|it|that creature|that permanent)\s+leaves the battlefield",
-    re.IGNORECASE,
+    r"until\s+(?:this|that|the)\s+(?:[a-zA-Z ]+?)?\s*leaves\s+the\s+battlefield",
+    re.I
 )
 
-def has_until_leaves_clause(effect_text: str) -> bool:
-    if not effect_text:
-        return False
-    text = effect_text.lower()
-    return UNTIL_LEAVES_RE.search(text) is not None
-
+def has_until_leaves_clause(oracle_text: str) -> bool:
+    return bool(UNTIL_LEAVES_RE.search(oracle_text.lower()))
 
 def build_linked_return_trigger(etb_trigger: TriggeredAbility) -> Optional[TriggeredAbility]:
-    """
-    If the given ETB trigger exiles a target, synthesize a linked LTB trigger:
-      'When this leaves the battlefield, return the exiled card to the battlefield.'
-    Returns a new TriggeredAbility or None if not applicable.
-    """
-    exile_effect: Optional[ChangeZoneEffect] = None
-
+    # Find the exile effect
+    exile_effect = None
     for eff in etb_trigger.effects:
         if isinstance(eff, ChangeZoneEffect) and eff.to_zone == "exile":
             exile_effect = eff
@@ -37,11 +22,13 @@ def build_linked_return_trigger(etb_trigger: TriggeredAbility) -> Optional[Trigg
     if exile_effect is None:
         return None
 
-    # This is the linked-return pattern: we don't target again,
-    # we reference "the card exiled with this".
+    # Infer card type from ETB subject ("this enchantment", "this aura", etc.)
+    subject_words = etb_trigger.event.subject.split()
+    card_type = subject_words[-1] if subject_words else "permanent"
+
     return TriggeredAbility(
-        event=LeavesBattlefieldEvent(subject="this permanent"),
-        condition_text="When this permanent leaves the battlefield",
+        event=LeavesBattlefieldEvent(subject=f"this {card_type}"),
+        condition_text=f"When this {card_type} leaves the battlefield",
         effects=[
             ChangeZoneEffect(
                 subject=Subject(

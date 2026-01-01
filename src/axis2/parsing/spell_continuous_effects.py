@@ -1,3 +1,5 @@
+# axis2/parsing/spell_continuous_effects.py
+
 import re
 from axis2.schema import ContinuousEffect, PTExpression
 from axis2.parsing.subject import parse_subject
