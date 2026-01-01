@@ -127,7 +127,10 @@ def _detect_types(t: str) -> Optional[List[str]]:
             if re.search(rf"\b{type_word}\b", p):
                 types.append(type_word)
 
-    if types:
+    if types: 
+        # Returning None forces the effect to use Subject(scope='target')
+        if len(types) > 1: 
+            return None
         return list(dict.fromkeys(types))
     # dedupe, preserve order
 

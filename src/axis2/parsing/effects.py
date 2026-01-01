@@ -1,6 +1,7 @@
 # axis2/parsing/effects.py
 
 import re
+from typing import List
 from axis2.schema import (
     DealDamageEffect, DrawCardsEffect, AddManaEffect,
     PutOntoBattlefieldEffect, SymbolicValue, 
@@ -8,7 +9,8 @@ from axis2.schema import (
     GainLifeEffect, SearchEffect, CantBeBlockedEffect, GainLifeEqualToPowerEffect, 
     ReturnCardFromGraveyardEffect, DraftFromSpellbookEffect, PTBoostEffect,
     ChangeZoneEffect, ScryEffect, SurveilEffect, Subject, LookAndPickEffect,
-    ParseContext, TransformEffect, ConditionalEffect, DestroyEffect
+    ParseContext, TransformEffect, ConditionalEffect, DestroyEffect, ShuffleEffect, 
+    RevealEffect
 )
 from axis2.parsing.subject import parse_subject, subject_from_text
 from axis2.parsing.spell_continuous_effects import parse_spell_continuous_effect
@@ -21,31 +23,30 @@ COLOR_MAP = {
     "green": "G",
 }
 
-SENTENCE_SPLIT_RE = re.compile(r"\.\s+")
+def split_effect_sentences(text: str) -> List[str]:
+    print(f"[split_effect_sentences] Raw input: {repr(text)}")
+    # DO NOT split on commas — they appear inside OR-lists.
+    text = text.replace("\n", " ")
 
-def split_effect_sentences(text: str):
-    """
-    Splits effect text into sentences.
-    Example:
-      'Counter that spell. That player creates X tokens.'
-    -> ['Counter that spell', 'That player creates X tokens']
-    """
-    text = text.strip()
-    if not text:
-        return []
+    # Normalize "then" into a sentence boundary
+    text = re.sub(r"(?<!this way,)\s+then\b", ". then", text, flags=re.I)
+    print(f"[split_effect_sentences] After re.sub: {repr(text)}")
 
-    # Remove trailing period if present
-    if text.endswith("."):
-        text = text[:-1]
+    parts = re.split(r"[.;]", text)
+    print(f"[split_effect_sentences] After splitting on [.;]: {parts}")
 
-    parts = SENTENCE_SPLIT_RE.split(text)
-    return [p.strip() for p in parts if p.strip()]
+    # Remove empty or whitespace-only parts BEFORE returning
+    cleaned = []
+    for p in parts:
+        s = p.strip()
+        print(f"[split_effect_sentences] Checking part: {repr(p)} -> stripped: {repr(s)}")
+        if s:
+            cleaned.append(s)
 
+    print(f"[split_effect_sentences] Cleaned parts: {cleaned}")
+    return cleaned
 
-IF_THIS_WAY_RE = re.compile(
-    r"if\s+a\s+card\s+is\s+put\s+into\s+exile\s+this\s+way,\s*(?P<effect>.+)",
-    re.IGNORECASE
-)
+IF_THIS_WAY_RE = re.compile(r"if .* this way", re.I)
 
 def parse_effect_text(text, ctx: ParseContext):
     """
@@ -60,11 +61,6 @@ def parse_effect_text(text, ctx: ParseContext):
     # 1. Split into sentences
     # ------------------------------------------------------------
     sentences = split_effect_sentences(text)
-
-    search = parse_search_effect(text)
-    if search:
-        effects.append(search)
-
     
     print(f"Parsing look and pick: {text}")
     # Look and pick
@@ -81,17 +77,16 @@ def parse_effect_text(text, ctx: ParseContext):
         s = sentence.strip()
         if not s:
             continue
-
-        print(f"Parsing effect: {s}")
-
         # ------------------------------------------------------------
         # CONDITIONAL: "If a card is put into exile this way, ..."
         # ------------------------------------------------------------
         m = IF_THIS_WAY_RE.search(s)
         if m:
-            inner_text = m.group("effect").strip()
+            # Collect all sentences AFTER this one as the conditional body
+            # Remove the conditional prefix from the same sentence
+            inner_text = IF_THIS_WAY_RE.sub("", s).strip()
 
-            # Recursively parse the inner effect(s)
+
             inner_effects = parse_effect_text(inner_text, ctx)
 
             effects.append(
@@ -101,6 +96,16 @@ def parse_effect_text(text, ctx: ParseContext):
                 )
             )
             continue
+
+        print(f"Parsing effect: {s}")
+
+        search = parse_search_effect(s)
+        if search:
+            effects.append(search)
+
+        basic_land_search = parse_basic_land_search(s)
+        if basic_land_search:
+            effects.extend(basic_land_search)
 
         # Detect Equip keyword ability
         if s.strip().lower().startswith("equip"):
@@ -162,12 +167,6 @@ def parse_effect_text(text, ctx: ParseContext):
             effects.append(pt_boost)
             continue
 
-        # Move to zone
-        change_zone = parse_change_zone(s, ctx)
-        if change_zone:
-            effects.append(change_zone)
-            continue
-
         # Scry
         scry = parse_scry(s)
         if scry:
@@ -190,6 +189,42 @@ def parse_effect_text(text, ctx: ParseContext):
         destroy = parse_destroy(s, ctx)
         if destroy:
             effects.append(destroy)
+            continue
+
+        # Basic land search plural
+        plural_search = parse_basic_land_search_plural(s)
+        if plural_search:
+            effects.extend(plural_search)
+            continue
+
+        # Reveal those cards
+        reveal = parse_reveal_those(s)
+        if reveal:
+            effects.append(reveal)
+            continue
+
+        # Put one onto the battlefield tapped
+        put_one = parse_put_one_battlefield_tapped(s)
+        if put_one:
+            effects.append(put_one)
+
+        # Put the other into your hand
+        put_other = parse_put_other_into_hand(s)
+        if put_other:
+            effects.append(put_other)
+            continue
+
+        # Shuffle
+        shuffle = parse_shuffle(s)
+        if shuffle:
+            effects.append(shuffle)
+            continue
+
+        # Move to zone
+        print(f"Parsing change zone: {s}")
+        change_zone = parse_change_zone(s, ctx)
+        if change_zone:
+            effects.append(change_zone)
             continue
             
         print(f"Parsing spell continuous effect: {s}")
@@ -470,6 +505,124 @@ def parse_create_token(text: str):
 
     return None
 
+REVEAL_THOSE_RE = re.compile(
+    r"reveal those cards",
+    re.IGNORECASE
+)
+
+def parse_reveal_those(text: str):
+    if REVEAL_THOSE_RE.search(text):
+        return RevealEffect(subject=Subject(scope="searched_cards"))
+    return None
+
+SEARCH_BASIC_LAND_RE = re.compile(
+    r"^(its controller|that player|you)\s+may\s+search\s+their\s+library\s+for\s+a\s+basic\s+land\s+card\b",
+    re.IGNORECASE
+)
+
+PUT_ONE_BF_TAPPED_RE = re.compile(
+    r"put one onto the battlefield tapped",
+    re.IGNORECASE
+)
+
+def parse_put_one_battlefield_tapped(text: str):
+    if PUT_ONE_BF_TAPPED_RE.search(text):
+        return ChangeZoneEffect(
+            subject=Subject(scope="searched_card", index=0),
+            to_zone="battlefield",
+            tapped=True
+        )
+    return None
+
+PUT_OTHER_HAND_RE = re.compile(
+    r"the other into your hand",
+    re.IGNORECASE
+)
+
+def parse_put_other_into_hand(text: str):
+    if PUT_OTHER_HAND_RE.search(text):
+        return ChangeZoneEffect(
+            subject=Subject(scope="searched_card", index=1),
+            to_zone="hand"
+        )
+    return None
+
+SHUFFLE_RE = re.compile(r"shuffle", re.IGNORECASE)
+
+def parse_shuffle(text: str):
+    if SHUFFLE_RE.search(text):
+        return ShuffleEffect(subject=Subject(scope="you"))
+    return None
+
+
+def parse_basic_land_search(text: str):
+    """
+    Handles effects like:
+      'Its controller may search their library for a basic land card,
+       put it onto the battlefield, then shuffle.'
+    This is general enough to be reused for any similar templating.
+    """
+    t = text.lower()
+
+    if not SEARCH_BASIC_LAND_RE.search(t):
+        return None
+
+    # Detect whether the effect includes a battlefield placement
+    put_on_battlefield = "put it onto the battlefield" in t or \
+                         "put that card onto the battlefield" in t or \
+                         "put them onto the battlefield" in t
+
+    effects = []
+
+    # 1. Search effect
+    effects.append(
+        SearchEffect(
+            zones=["library"],
+            card_names=None,
+            card_filter={"types": ["land"], "subtypes": ["basic"]},
+            optional=True,
+            put_onto_battlefield=put_on_battlefield,
+            shuffle_if_library_searched=True,
+            max_results=1
+        )
+    )
+
+    # 2. If the card is put onto the battlefield, add the zone-change effect
+    if put_on_battlefield:
+        effects.append(
+            ChangeZoneEffect(
+                subject=Subject(scope="searched_card"),
+                to_zone="battlefield"
+            )
+        )
+
+    return effects
+
+SEARCH_BASIC_LANDS_PLURAL_RE = re.compile(
+    r"search your library for up to (one|two|three|\d+) basic land cards",
+    re.IGNORECASE
+)
+
+def parse_basic_land_search_plural(text: str):
+    m = SEARCH_BASIC_LANDS_PLURAL_RE.search(text)
+    if not m:
+        return None
+
+    raw = m.group(1).lower()
+    max_n = int(raw) if raw.isdigit() else NUMBER_WORDS[raw]
+
+    return [
+        SearchEffect(
+            zones=["library"],
+            card_names=None,
+            card_filter={"types":["land"], "subtypes":["basic"]},
+            optional=False,
+            max_results=max_n,
+            put_onto_battlefield=False,
+            shuffle_if_library_searched=True
+        )
+    ]
+
 
 SEARCH_RE = re.compile(
     r"you may search your ([a-z ,/and]+) for a card named ([A-Za-z ]+?)"
@@ -504,7 +657,9 @@ def parse_search_effect(text: str):
         card_names=card_names,
         optional=True,
         put_onto_battlefield="put" in text.lower(),
-        shuffle_if_library_searched="shuffle" in text.lower()
+        shuffle_if_library_searched="shuffle" in text.lower(),
+        max_results=len(card_names),
+        card_filter=None
     )
 
 CANT_BE_BLOCKED_RE = re.compile(
@@ -681,6 +836,16 @@ def _extract_restrictions(subject_text: str):
 
 
 def parse_change_zone(text: str, ctx: ParseContext):
+    # Do not parse "put it onto the battlefield" generically
+    # when the sentence contains a search effect.
+    if "put it onto the battlefield" in text.lower():
+        return None
+
+    # Prevent mis-parsing conditional clauses like "exiled this way"
+    lower = text.lower()
+    if "exiled this way" in lower:
+        return None
+
     t = text.strip()
     print("TEXT BEFORE PARSE:", repr(t))
 

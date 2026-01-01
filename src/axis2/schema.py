@@ -19,6 +19,7 @@ class Subject:
     types: list[str] | None = None    # ["creature"], ["creature", "planeswalker"], etc.
     filters: dict | None = None       # {"keyword": "flying"}, {"power": ">3"}, etc.
     max_targets: int | None = None    # for "up to N targets"
+    index: int | None = None          # for "up to N targets"
 
 @dataclass
 class DynamicValue:
@@ -231,9 +232,19 @@ class AddManaEffect(Effect):
 class SearchEffect(Effect):
     zones: list[str]                 # ["graveyard", "hand", "library"]
     card_names: list[str]            # ["Magnifying Glass", "Thinking Cap"]
+    card_filter: dict | None # {"types": ["land"], "subtypes": ["basic"]}, or None
     optional: bool                   # "you may"
     put_onto_battlefield: bool       # true
     shuffle_if_library_searched: bool
+    max_results: int | None # 1, 2, X, or None for unlimited
+
+@dataclass
+class ShuffleEffect(Effect):
+    subject: Subject   # usually Subject(scope="you")
+
+@dataclass
+class RevealEffect(Effect):
+    subject: Subject   # usually "searched_cards"
 
 @dataclass
 class TransformEffect(Effect):
