@@ -33,6 +33,11 @@ RE_DRAW_REPLACEMENT = re.compile(
     re.IGNORECASE
 )
 
+RE_DELAYED_REPLACEMENT = re.compile(
+    r"the next time (.*?) would (.*?) this turn",
+    re.IGNORECASE | re.DOTALL
+)
+
 
 # ------------------------------------------------------------
 # Subject parsing helper
@@ -71,6 +76,15 @@ def parse_instead_actions(text: str):
 
     return actions
 
+def parse_delayed_subject(raw: str) -> Subject:
+    raw = raw.lower().strip()
+    if "source of your choice" in raw:
+        return Subject(scope="chosen_source")
+    if "a source" in raw:
+        return Subject(scope="source")
+    return Subject(scope="self")
+
+
 
 # ------------------------------------------------------------
 # Main replacement-effect parser
@@ -82,6 +96,27 @@ def parse_replacement_effects(text: str) -> List[ReplacementEffect]:
         return effects
 
     lower = text.lower()
+    m = RE_DELAYED_REPLACEMENT.search(text)
+    if m:
+        event_subject_raw = m.group(1)
+        event_action_raw = m.group(2)
+
+        # Example: "a source of your choice" → Subject(scope="chosen_source")
+        subject = parse_delayed_subject(event_subject_raw)
+
+        effects.append(
+            ReplacementEffect(
+                kind="delayed_prevent_damage",
+                event="damage",
+                subject=subject,
+                value={"amount": "all"},
+                zones=["anywhere"],
+                next_event_only=True,
+                duration="until_end_of_turn"
+            )
+        )
+
+        return effects
 
     # --------------------------------------------------------
     # 1. Progenitus / Darksteel Colossus / Worldspine Wurm

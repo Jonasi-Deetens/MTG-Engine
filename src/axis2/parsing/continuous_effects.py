@@ -13,6 +13,7 @@ from axis2.schema import (
     RuleChangeData
 )
 from axis2.parsing.subject import subject_from_text
+from axis2.parsing.conditions import parse_condition, extract_condition_text
 # -----------------------------
 # Regex patterns
 # -----------------------------
@@ -21,11 +22,6 @@ PT_GETS_RE = re.compile(r"gets\s+([+\-]?\w+)\/([+\-]?\w+)", re.IGNORECASE)
 HAS_ABILITY_RE = re.compile(r"has\s+(.+)", re.IGNORECASE)
 GAINS_ABILITY_RE = re.compile(r"gains?\s+(.+)", re.IGNORECASE)
 IS_COLOR_RE = re.compile(r"is\s+([a-z\s,]+)", re.IGNORECASE)
-IS_TYPE_RE = re.compile(r"is\s+(a\s+)?([a-z\s]+)", re.IGNORECASE)
-AS_LONG_AS_RE = re.compile(
-    r"as long as (?:a|an|the|you|your|an opponent|opponents?)\s+([^,\.]+)",
-    re.I
-)
 
 NUMBER_WORDS = {
     "one": 1,
@@ -139,32 +135,6 @@ def _guess_applies_to(text: str) -> str:
         return "this_permanent"
 
     return None
-
-
-CARD_TYPE_COUNT_RE = re.compile(
-    r"(?P<num>\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+"
-    r"(?:or more|or fewer|or less|or greater|or less than|or at least|or at most|or equal to)?"
-    r"\s*card types?\s+among\s+cards\s+in\s+your\s+graveyard",
-    re.IGNORECASE
-)
-
-def parse_card_type_count_condition(text: str):
-    m = CARD_TYPE_COUNT_RE.search(text)
-    if not m:
-        return None
-
-    raw = m.group("num").lower()
-
-    # Convert number word or digit
-    if raw.isdigit():
-        n = int(raw)
-    else:
-        n = NUMBER_WORDS.get(raw, None)
-
-    return CardTypeCountCondition(
-        zone="your_graveyard",
-        min_types=n
-    )
 
 def _parse_pt_mod(text: str) -> Optional[PTExpression]:
     m = PT_GETS_RE.search(text)
@@ -426,19 +396,14 @@ def parse_continuous_effects(text: str, ctx: ParseContext) -> List[ContinuousEff
     for clause in clauses:
         # 1. Conditional wrapper
         condition = None
-        m = AS_LONG_AS_RE.search(clause)
-        if m:
-            condition = m.group(1).strip()
-            # remove the condition prefix from the text
-            clause = clause[:m.start()].strip()
-
+        condition, clause = extract_condition_text(clause)
         # Try to parse structured card-type-count conditions (Delirium-like)
-        structured = parse_card_type_count_condition(condition) if condition else None
+        structured = parse_condition(condition) if condition else None
+        print(f"Structured condition: {structured}")
         if structured:
             condition = structured
 
         applies_to = _guess_applies_to(clause)
-        print(f"Condition: {condition} for clause: {clause} with subject: {current_subject} / applies_to: {applies_to}")
 
         if applies_to is None:
             applies_to = current_subject

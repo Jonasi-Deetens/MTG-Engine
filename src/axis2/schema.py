@@ -6,11 +6,24 @@ class Effect:
     pass
 
 @dataclass
+class Condition:
+    kind: str
+    zone: Optional[str] = None
+    subject: Optional[str] = None
+    min_value: Optional[int] = None
+    max_value: Optional[int] = None
+    extra: Dict = field(default_factory=dict)
+
+@dataclass
 class ParseContext:
     card_name: str
     primary_type: str
     face_name: str
     face_types: list[str]
+    is_spell_text: bool = False
+    is_static_ability: bool = False
+    is_triggered_ability: bool = False
+
 
 @dataclass
 class Subject:
@@ -330,12 +343,17 @@ class StaticEffect(Effect):
 
 @dataclass
 class ReplacementEffect(Effect):
-    kind: str                     # semantic category: "zone_change_replacement", "prevent_damage", etc.
-    event: str                    # the event being replaced: "move_to_graveyard", "would_die", "damage", "draw", etc.
-    subject: Subject              # who the replacement applies to
-    value: Dict[str, Any]         # structured payload: {"instead": [...]} or {"amount": N} etc.
-    zones: List[str]              # where the effect applies ("battlefield", "anywhere", etc.)
-    text: Optional[str] = None    # original oracle text (optional but useful)
+    kind: str
+    event: str
+    subject: Subject
+    value: Dict[str, Any]
+    zones: List[str]
+
+    # NEW FIELDS FOR DELAYED REPLACEMENT EFFECTS
+    next_event_only: bool = False          # "the next time"
+    duration: Optional[str] = None         # "until_end_of_turn", "this_turn", etc.
+    linked_to: Optional[str] = None        # ID or tag for linked effects
+    text: Optional[str] = None
 
 @dataclass
 class PTExpression:

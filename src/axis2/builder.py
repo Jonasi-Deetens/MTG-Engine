@@ -93,7 +93,9 @@ class Axis2Builder:
                             if len(parts) == 2:
                                 t.effect = parts[1].strip()
 
+                ctx.is_triggered_ability = True
                 effects = parse_effect_text(t.effect, ctx)
+                ctx.is_triggered_ability = False
                 targeting = parse_targeting(t.effect)
                 trigger_filter = parse_trigger_filter(t.condition)
 
@@ -112,7 +114,10 @@ class Axis2Builder:
                     if delayed is not None:
                         triggered.append(delayed)
 
+            ctx.is_static_ability = True
             static_effects = parse_static_effects(f, ctx)
+            ctx.is_static_ability = False
+
             mode_choice, modes = parse_modes(f.oracle_text or "")
 
             clean_text = cleaned_oracle_text(f)
@@ -132,8 +137,10 @@ class Axis2Builder:
             types_lower = [t.lower() for t in f.card_types]
 
             if "instant" in types_lower or "sorcery" in types_lower:
+                ctx.is_spell_text = True
                 spell_effects = parse_effect_text(clean_text, ctx)
                 spell_targeting = parse_targeting(clean_text)
+                ctx.is_spell_text = False
 
             for s in sentences:
                 replacement_effects.extend(parse_replacement_effects(s))

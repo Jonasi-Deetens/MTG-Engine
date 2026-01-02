@@ -13,8 +13,10 @@ src/axis2/expanding/keyword_expansion.py
 src/axis2/parsers/__init__.py
 src/axis2/parsers/mana_cost_parser.py
 src/axis2/parsing/activated.py
+src/axis2/parsing/conditional_effects.py
 src/axis2/parsing/continuous_effects.py
 src/axis2/parsing/costs.py
+src/axis2/parsing/delayed_triggers.py
 src/axis2/parsing/effects.py
 src/axis2/parsing/keywords.py
 src/axis2/parsing/mana.py
@@ -28,15 +30,6 @@ src/axis2/parsing/subject.py
 src/axis2/parsing/targeting.py
 src/axis2/parsing/trigger_filters.py
 src/axis2/parsing/triggers.py
-src/axis2/rules/__init__.py
-src/axis2/rules/activated_abilities.py
-src/axis2/rules/costs.py
-src/axis2/rules/layers.py
-src/axis2/rules/modes.py
-src/axis2/rules/permissions.py
-src/axis2/rules/restrictions.py
-src/axis2/rules/targeting.py
-src/axis2/rules/timing.py
 src/axis3/__init__.py
 src/axis3/abilities/__init__.py
 src/axis3/abilities/keyword.py

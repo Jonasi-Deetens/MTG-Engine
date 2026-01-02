@@ -49,6 +49,12 @@ def parse_effect_text(text, ctx: ParseContext):
     Convert raw English effect text into semantic Effect objects.
     Now supports multi-sentence effects.
     """
+
+    if ctx.is_static_ability or ctx.is_triggered_ability:
+        skip_spell_continuous = True
+    else:
+        skip_spell_continuous = not ctx.is_spell_text
+
     effects = []
     if not text:
         return effects
@@ -238,7 +244,7 @@ def parse_effect_text(text, ctx: ParseContext):
         print(f"Parsing spell continuous effect: {s}")
         # Spell continuous effect
         spell_continuous = parse_spell_continuous_effect(s, ctx)
-        if spell_continuous:
+        if spell_continuous and not skip_spell_continuous:
             effects.append(spell_continuous)
             continue
 
@@ -1240,6 +1246,10 @@ def parse_gain_protection_choice(s):
         duration="until_end_of_turn"
     )
 
+ADD_MANA_OR_RE = re.compile(
+    r"add\s+(\{[^}]+\})\s+or\s+(\{[^}]+\})",
+    re.IGNORECASE
+)
 # 1. Fixed mana symbols: "Add {R}{G}", "Add {C}", "Add {2}"
 ADD_MANA_FIXED_RE = re.compile(r"add ((\{[^}]+\})+)", re.IGNORECASE)
 
@@ -1262,6 +1272,12 @@ NUMBER_WORDS = {
 
 def parse_add_mana_effect(text: str):
     t = text.lower()
+
+    # NEW: Choice between fixed symbols: "Add {U} or {R}"
+    m = ADD_MANA_OR_RE.search(text)
+    if m:
+        sym1, sym2 = m.group(1), m.group(2)
+        return AddManaEffect(mana=[sym1, sym2], choice="one_color")
 
     # 1. Fixed mana symbols
     m = ADD_MANA_FIXED_RE.search(text)
@@ -1288,3 +1304,4 @@ def parse_add_mana_effect(text: str):
             return AddManaEffect(mana=[], choice=f"combo_colors_{amount}")
 
     return None
+
