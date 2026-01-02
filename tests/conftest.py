@@ -6,6 +6,7 @@ from axis2.builder import Axis2Builder
 from axis2.schema import Axis2Card
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from db.models import Base, Axis1CardModel, Axis2TestCard
 
 
 def pytest_addoption(parser):
@@ -15,12 +16,22 @@ def pytest_addoption(parser):
         default=None,
         help="Name of the card to debug in Axis2"
     )
+    parser.addoption("--save", action="store_true")
+    parser.addoption("--test", action="store_true")
 
 
 @pytest.fixture
 def card_name(request):
     return request.config.getoption("--name")
 
+
+@pytest.fixture
+def save_card(request):
+    return request.config.getoption("--save")
+
+@pytest.fixture
+def test(request):
+    return request.config.getoption("--test")
 
 @pytest.fixture
 def axis2_builder():
@@ -239,13 +250,18 @@ def db_session():
     finally:
         session.close()
 
-
 @pytest.fixture(scope="session")
 def pg_engine():
-    return create_engine("postgresql+psycopg2://postgres:postgres@localhost:5433/mtg")
+    engine = create_engine("postgresql+psycopg2://postgres:postgres@localhost:5433/mtg")
+    Base.metadata.create_all(engine)  # <-- creates axis1_cards AND axis2_test_cards
+    return engine
 
 
 @pytest.fixture
 def pg_session(pg_engine):
-    with pg_engine.connect() as conn:
-        yield conn
+    SessionLocal = sessionmaker(bind=pg_engine)
+    session = SessionLocal()
+    try:
+        yield session
+    finally:
+        session.close()

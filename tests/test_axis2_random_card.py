@@ -1,9 +1,34 @@
 import pprint
+import json
 from sqlalchemy import text
 
 from axis1.schema import Axis1Card
 from axis2.builder import Axis2Builder
+from deepdiff import DeepDiff 
+from db.repository import Axis2TestRepository
 
+def diff_json(a, b):
+    return DeepDiff(a, b, ignore_order=True)
+
+def axis2_to_json(axis2_card):
+    # Pydantic v2
+    if hasattr(axis2_card, "model_dump"):
+        return axis2_card.model_dump()
+
+    # Pydantic v1
+    if hasattr(axis2_card, "dict"):
+        return axis2_card.dict()
+
+    # Dataclass
+    from dataclasses import is_dataclass, asdict
+    if is_dataclass(axis2_card):
+        return asdict(axis2_card)
+
+    # Fallback: try __dict__
+    if hasattr(axis2_card, "__dict__"):
+        return axis2_card.__dict__
+
+    raise TypeError("Axis2Card cannot be serialized")
 
 def load_axis1_card(pg_session, name: str | None = None) -> Axis1Card:
     """
@@ -54,7 +79,7 @@ def load_axis1_card(pg_session, name: str | None = None) -> Axis1Card:
     return Axis1Card(**row.axis1_json)
 
 
-def test_axis2_debug(pg_session, card_name):
+def test_axis2_debug(pg_session, card_name, save_card, test):
     """
     Debug Axis2 for a specific card OR a random card.
     Run with: pytest -s
@@ -209,3 +234,30 @@ def test_axis2_debug(pg_session, card_name):
     print("\n===========================================")
 
     assert axis2_card is not None
+    
+    if save_card:
+        from db.repository import Axis2TestRepository
+        repo = Axis2TestRepository(pg_session)
+        repo.save(axis1_card.faces[0].name, axis2_to_json(axis2_card))
+        print(f"\nSaved Axis2 for {axis1_card.faces[0].name} to axis2_test_cards")
+
+    # ============================================================
+    # TEST MODE
+    # ============================================================
+    if test:
+        from db.repository import Axis2TestRepository
+        repo = Axis2TestRepository(pg_session)
+
+        saved = repo.load(axis1_card.faces[0].name)
+        if not saved:
+            raise AssertionError(f"No saved Axis2 data for {card_name}")
+
+        current = axis2_to_json(axis2_card)
+        diff = diff_json(saved.axis2_json, current)
+
+        if diff:
+            print("\n=== AXIS2 REGRESSION DETECTED ===")
+            print(json.dumps(diff, indent=2))
+            raise AssertionError("Axis2 output differs from saved version")
+
+        print("\nAxis2 matches saved version — OK")

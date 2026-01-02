@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from axis1.schema import Axis1Card
-from .models import Axis1CardModel
+from .models import Axis1CardModel, Axis2TestCard
 
 
 class Axis1Repository:
@@ -25,3 +25,19 @@ class Axis1Repository:
 
     def get_by_id(self, card_id: str) -> Axis1CardModel:
         return self.db.query(Axis1CardModel).filter_by(card_id=card_id).first()
+
+class Axis2TestRepository:
+    def __init__(self, session):
+        self.session = session
+
+    def save(self, name: str, axis2_json: dict):
+        obj = Axis2TestCard(name=name, axis2_json=axis2_json)
+        self.session.merge(obj)
+        self.session.commit()
+
+    def load(self, name: str):
+        return (
+            self.session.query(Axis2TestCard)
+            .filter_by(name=name)
+            .first()
+        )

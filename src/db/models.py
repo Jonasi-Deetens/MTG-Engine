@@ -1,5 +1,6 @@
 from sqlalchemy import Column, String, JSON
 from sqlalchemy.orm import declarative_base
+from sqlalchemy import Integer
 
 Base = declarative_base()
 
@@ -14,3 +15,10 @@ class Axis1CardModel(Base):
     name = Column(String, index=True)
     lang = Column(String)
     axis1_json = Column(JSON)  # store full Axis1Card dict
+
+class Axis2TestCard(Base):
+    __tablename__ = "axis2_test_cards"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String, index=True, unique=True)
+    axis2_json = Column(JSON, nullable=False)
