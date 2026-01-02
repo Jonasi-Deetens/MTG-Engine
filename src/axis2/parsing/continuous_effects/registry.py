@@ -3,17 +3,10 @@
 from typing import List, Optional
 from .base import ContinuousEffectParser, ParseResult
 from axis2.schema import ParseContext
+from axis2.parsing.base_registry import BaseParserRegistry
 
-class ParserRegistry:
+class ParserRegistry(BaseParserRegistry):
     """Manages all continuous effect parsers with priority ordering"""
-    
-    def __init__(self):
-        self._parsers: List[ContinuousEffectParser] = []
-    
-    def register(self, parser: ContinuousEffectParser):
-        """Register a parser (automatically sorted by priority)"""
-        self._parsers.append(parser)
-        self._parsers.sort(key=lambda p: p.priority, reverse=True)
     
     def parse(self, text: str, ctx: ParseContext, applies_to: Optional[str] = None,
               condition=None, duration: Optional[str] = None) -> ParseResult:
@@ -30,26 +23,27 @@ class ParserRegistry:
         if not text:
             return ParseResult()
         
-        # Quick filter: only try parsers that might match
-        candidates = [p for p in self._parsers if p.can_parse(text, ctx)]
+        # Find candidates using base class method
+        candidates = self._find_candidates(text, ctx)
         
-        # Keep track of best match (currently = first success)
-        # Future: could track multiple matches, partial matches, etc.
-        best = None
-        for parser in candidates:
-            result = parser.parse(text, ctx, applies_to, condition, duration)
-            if result.is_success:
-                best = result
-                break  # Current behavior: return first success
-                # Future: could continue to find better matches or composite parsers
+        # Try parsers using base class method
+        best = self._try_parsers(
+            candidates, 
+            lambda p: p.parse(text, ctx, applies_to, condition, duration)
+        )
         
         if best:
             return best
         
-        # No parser matched
+        # No parser matched - include parser names in error for better diagnostics
+        parser_names = [type(p).__name__ for p in candidates[:3]]  # Show first 3 attempted
+        error_msg = self._get_error_message(text)
+        if parser_names:
+            error_msg += f" (tried: {', '.join(parser_names)})"
+        
         return ParseResult(
             matched=False,
-            errors=[f"No parser matched: {text[:50]}..."]
+            errors=[error_msg]
         )
     
     def parse_all(self, texts: List[str], ctx: ParseContext, 

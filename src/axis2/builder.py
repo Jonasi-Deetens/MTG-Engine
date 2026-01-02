@@ -10,7 +10,7 @@ from axis2.schema import (
     ActivatedAbility, TriggeredAbility, StaticEffect, Mode,
     SymbolicValue, TargetingRules, TargetingRestriction,
     ReplacementEffect, ContinuousEffect, TapCost, DraftFromSpellbookEffect,
-    ParseContext
+    ParseContext, Effect
 )
 from axis2.parsing.delayed_triggers import (
     has_until_leaves_clause,
@@ -32,7 +32,6 @@ from axis2.parsing.keywords import extract_keywords
 from axis2.parsing.sentences import split_into_sentences
 from axis2.parsing.triggers import parse_trigger_event
 from axis2.parsing.activated import parse_activated_abilities
-from axis2.helpers import cleaned_oracle_text
 from axis2.parsing.text_extraction import get_remaining_text_for_parsing
 from axis2.parsing.mana_abilities import mark_mana_abilities
 
@@ -80,23 +79,68 @@ def _parse_axis1_triggered(face: Axis1Face, ctx: ParseContext) -> list[Triggered
         # Fallback: extract effect from oracle text if Axis1 didn't provide it
         if not t.effect:
             cond = t.condition.lower().rstrip(".").rstrip(",")
+            # Also try matching without "this" prefix for old templating (e.g., "When Oblivion Ring leaves...")
+            cond_variants = [cond]
+            if "this " in cond:
+                # Replace "this X" with card name for old templating
+                card_name_lower = ctx.card_name.lower()
+                cond_variants.append(cond.replace("this ", f"{card_name_lower} "))
+                # Also try just the card name
+                cond_variants.append(f"when {card_name_lower} leaves")
+            
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.debug(f"[LTB] Trying to extract effect for condition: {t.condition}")
+            logger.debug(f"[LTB] Condition variants: {cond_variants}")
+            
             for sentence in split_into_sentences(face.oracle_text or ""):
                 s = sentence.lower().lstrip().rstrip()
                 s_clean = s.rstrip(".").rstrip(",")
-                if s_clean.startswith(cond):
-                    parts = sentence.split(",", 1)
-                    if len(parts) == 2:
-                        t.effect = parts[1].strip()
+                # Try all variants
+                for variant in cond_variants:
+                    if s_clean.startswith(variant):
+                        parts = sentence.split(",", 1)
+                        if len(parts) == 2:
+                            t.effect = parts[1].strip()
+                            logger.debug(f"[LTB] Extracted effect from sentence: {sentence} -> {t.effect}")
+                            break
+                if t.effect:
+                    break
 
         # Create context for triggered ability parsing
-        triggered_ctx = ParseContext(
-            card_name=ctx.card_name,
-            primary_type=ctx.primary_type,
-            face_name=ctx.face_name,
-            face_types=ctx.face_types,
-            is_triggered_ability=True,
-        )
-        effects = parse_effect_text(t.effect, triggered_ctx)
+        triggered_ctx = ctx.with_flag("is_triggered_ability", True)
+        # Ensure we have effect text - if still empty, try to extract from full oracle text
+        effect_text = t.effect or ""
+        
+        # DEBUG: Print what we have
+        if "leaves the battlefield" in t.condition.lower():
+            print(f"[DEBUG LTB] Condition: '{t.condition}'")
+            print(f"[DEBUG LTB] Initial effect_text from Axis1: '{effect_text}'")
+            print(f"[DEBUG LTB] Full oracle text: '{face.oracle_text}'")
+        
+        if not effect_text and "leaves the battlefield" in t.condition.lower():
+            # For LTB triggers, try to find the return effect in the oracle text
+            # Look for patterns like "return the exiled card" or "return that card"
+            print(f"[DEBUG LTB] Effect text empty, searching oracle text for return pattern")
+            for sentence in split_into_sentences(face.oracle_text or ""):
+                print(f"[DEBUG LTB] Checking sentence: '{sentence}'")
+                if "return" in sentence.lower() and ("exiled" in sentence.lower() or "that card" in sentence.lower()):
+                    # Check if this sentence is related to the LTB trigger
+                    if "leaves" in sentence.lower() or any(variant in sentence.lower() for variant in ["when " + ctx.card_name.lower(), "when this"]):
+                        effect_text = sentence
+                        # Extract just the return part if it's a compound sentence
+                        if "," in sentence and "return" in sentence:
+                            parts = sentence.split(",", 1)
+                            for part in parts:
+                                if "return" in part.lower():
+                                    effect_text = part.strip()
+                                    break
+                        print(f"[DEBUG LTB] Found return pattern in sentence: '{sentence}' -> extracted: '{effect_text}'")
+                        break
+        
+        print(f"[DEBUG LTB] Final effect_text being parsed: '{effect_text}'")
+        effects = parse_effect_text(effect_text, triggered_ctx)
+        print(f"[DEBUG LTB] Parsed {len(effects)} effects: {effects}")
         targeting = parse_targeting(t.effect)
         trigger_filter = parse_trigger_filter(t.condition)
 
@@ -138,13 +182,7 @@ def _parse_special_actions(face: Axis1Face, ctx: ParseContext) -> list:
 def _parse_static_abilities(face: Axis1Face, ctx: ParseContext) -> list[StaticEffect]:
     """Parse static abilities (they create continuous effects)."""
     # Create context for static ability parsing
-    static_ctx = ParseContext(
-        card_name=ctx.card_name,
-        primary_type=ctx.primary_type,
-        face_name=ctx.face_name,
-        face_types=ctx.face_types,
-        is_static_ability=True,
-    )
+    static_ctx = ctx.with_flag("is_static_ability", True)
     static_effects = parse_static_effects(face, static_ctx)
     return static_effects
 
@@ -166,26 +204,26 @@ def _parse_continuous_effects(text: str, ctx: ParseContext, is_permanent: bool) 
     return continuous_effects
 
 
-def _parse_spell_effects(text: str, ctx: ParseContext, is_spell: bool) -> tuple[list, Optional[TargetingRules]]:
-    """Parse spell effects for instants/sorceries."""
-    spell_effects = []
+def _parse_spell_effects(text: str, ctx: ParseContext, is_spell: bool) -> tuple[list[Effect], Optional[TargetingRules], list[ContinuousEffect]]:
+    """
+    Parse spell effects for instants/sorceries.
+    
+    Returns:
+        Tuple of (spell_effects, spell_targeting, continuous_effects)
+        where continuous_effects are spell-based continuous effects
+    """
+    spell_effects: list[Effect] = []
+    continuous_effects: list[ContinuousEffect] = []
     spell_targeting = None
     
     if is_spell:
         # Create context for spell text parsing
-        spell_ctx = ParseContext(
-            card_name=ctx.card_name,
-            primary_type=ctx.primary_type,
-            face_name=ctx.face_name,
-            face_types=ctx.face_types,
-            is_spell_text=True,
-        )
+        spell_ctx = ctx.with_flag("is_spell_text", True)
         for sentence in split_into_sentences(text):
             for eff in parse_effect_text(sentence, spell_ctx):
                 if isinstance(eff, ContinuousEffect):
                     # Spell-based continuous effects (e.g., "gets +3/+3 until end of turn")
-                    # These will be added to continuous_effects separately
-                    pass
+                    continuous_effects.append(eff)
                 else:
                     # One-shot spell effects
                     spell_effects.append(eff)
@@ -194,7 +232,7 @@ def _parse_spell_effects(text: str, ctx: ParseContext, is_spell: bool) -> tuple[
             if spell_targeting is None:
                 spell_targeting = parse_targeting(sentence)
     
-    return spell_effects, spell_targeting
+    return spell_effects, spell_targeting, continuous_effects
 
 
 def _parse_face(face: Axis1Face, ctx: ParseContext) -> Axis2Face:
@@ -228,20 +266,10 @@ def _parse_face(face: Axis1Face, ctx: ParseContext) -> Axis2Face:
     
     continuous_effects = _parse_continuous_effects(remaining_text, ctx, is_permanent)
     
-    spell_effects, spell_targeting = _parse_spell_effects(remaining_text, ctx, is_spell)
+    spell_effects, spell_targeting, spell_continuous_effects = _parse_spell_effects(remaining_text, ctx, is_spell)
     
-    if is_spell:
-        spell_ctx = ParseContext(
-            card_name=ctx.card_name,
-            primary_type=ctx.primary_type,
-            face_name=ctx.face_name,
-            face_types=ctx.face_types,
-            is_spell_text=True,
-        )
-        for sentence in split_into_sentences(remaining_text):
-            for eff in parse_effect_text(sentence, spell_ctx):
-                if isinstance(eff, ContinuousEffect):
-                    continuous_effects.append(eff)
+    # Add spell-based continuous effects to continuous_effects
+    continuous_effects.extend(spell_continuous_effects)
     
     mode_choice, modes = parse_modes(face.oracle_text or "", ctx)
     
@@ -314,7 +342,7 @@ class Axis2Builder:
 
         keywords = list(face1.keywords) + extract_keywords(face1.oracle_text or "")
 
-        return Axis2Card(
+        card = Axis2Card(
             card_id=axis1_card.card_id,
             oracle_id=axis1_card.oracle_id,
             set=axis1_card.set,
@@ -323,3 +351,14 @@ class Axis2Builder:
             characteristics=characteristics,
             keywords=keywords,
         )
+        
+        # Validate the card before returning
+        from axis2.validation import validate_axis2_card
+        validation_errors = validate_axis2_card(card)
+        if validation_errors:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Validation errors for card {card.card_id}: {validation_errors}")
+            # Continue anyway - validation errors are warnings, not fatal
+        
+        return card

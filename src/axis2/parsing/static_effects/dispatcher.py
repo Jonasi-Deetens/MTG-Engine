@@ -4,7 +4,7 @@ from typing import List
 from .base import ParseResult
 from .registry import get_registry
 from axis2.schema import StaticEffect, ParseContext, DayboundEffect, NightboundEffect
-from axis2.helpers import cleaned_oracle_text
+from axis2.parsing.text_extraction import get_remaining_text_for_parsing
 from axis2.parsing.layers import parse_static_layer
 import logging
 
@@ -37,6 +37,8 @@ def parse_static_effects(axis1_face, ctx: ParseContext) -> List[StaticEffect]:
     # ------------------------------------------------------------
     # 2. Axis2-detected static effects from oracle text
     # ------------------------------------------------------------
+    # Use cleaned_oracle_text which now delegates to get_remaining_text_for_parsing
+    from axis2.helpers import cleaned_oracle_text
     text = cleaned_oracle_text(axis1_face)
 
     # Daybound / Nightbound (special cases)

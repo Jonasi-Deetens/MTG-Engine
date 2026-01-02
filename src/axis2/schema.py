@@ -1,8 +1,19 @@
 from dataclasses import dataclass, field
 from typing import List, Optional, Union, Dict, Any
 
+# Type aliases for common patterns
+EffectList = List['Effect']
+CostList = List['Cost']
+SubjectFilter = Dict[str, Any]
+
 @dataclass
 class Effect:
+    """
+    Base class for all effects in Axis2.
+    
+    Effects represent actions or modifications that can be applied to the game state.
+    All specific effect types inherit from this base class.
+    """
     pass
 
 @dataclass
@@ -12,7 +23,7 @@ class Condition:
     subject: Optional[str] = None
     min_value: Optional[int] = None
     max_value: Optional[int] = None
-    extra: Dict = field(default_factory=dict)
+    extra: Dict[str, Any] = field(default_factory=dict)
 
 @dataclass
 class ParseContext:
@@ -23,16 +34,66 @@ class ParseContext:
     is_spell_text: bool = False
     is_static_ability: bool = False
     is_triggered_ability: bool = False
+    
+    def with_flag(self, flag_name: str, value: bool) -> 'ParseContext':
+        """
+        Create a new ParseContext with a flag set to the given value.
+        Useful for creating context variants without duplicating base data.
+        
+        Args:
+            flag_name: Name of the flag to set ("is_spell_text", "is_static_ability", "is_triggered_ability")
+            value: Value to set the flag to
+            
+        Returns:
+            New ParseContext instance with the flag set
+        """
+        kwargs = {
+            'card_name': self.card_name,
+            'primary_type': self.primary_type,
+            'face_name': self.face_name,
+            'face_types': self.face_types,
+            'is_spell_text': self.is_spell_text,
+            'is_static_ability': self.is_static_ability,
+            'is_triggered_ability': self.is_triggered_ability,
+        }
+        kwargs[flag_name] = value
+        return ParseContext(**kwargs)
 
 
 @dataclass
 class Subject:
-    scope: str | None = None          # "target", "each", "any_number", "up_to_n", "all"
-    controller: str | None = None     # "you", "opponent", "any", "opponents", "controller"
-    types: list[str] | None = None    # ["creature"], ["creature", "planeswalker"], etc.
-    filters: dict | None = None       # {"keyword": "flying"}, {"power": ">3"}, etc.
-    max_targets: int | None = None    # for "up to N targets"
-    index: int | None = None          # for "up to N targets"
+    """
+    Represents the target or scope of an effect.
+    
+    Fields:
+        scope: How many objects are affected. Valid values:
+            - "target": Single target (must be specified)
+            - "each": All matching objects
+            - "any_number": Player chooses any number
+            - "up_to_n": Up to N objects
+            - "all": All matching objects (synonym for "each")
+            - None: Scope not specified (uses default)
+        controller: Who controls the affected objects. Valid values:
+            - "you": Objects you control
+            - "opponent": Objects opponent controls
+            - "any": Any player's objects
+            - "opponents": Objects any opponent controls
+            - "controller": The controller of the source object
+            - None: Controller not specified
+        types: List of card types to filter by (e.g., ["creature"], ["creature", "planeswalker"])
+        filters: Additional filters as key-value pairs:
+            - {"keyword": "flying"}: Has keyword
+            - {"power": ">3"}: Power comparison
+            - {"toughness": "<=2"}: Toughness comparison
+        max_targets: Maximum number of targets (for "up_to_n" scope)
+        index: Index for "up to N targets" selection
+    """
+    scope: str | None = None
+    controller: str | None = None
+    types: list[str] | None = None
+    filters: Dict[str, Any] | None = None
+    max_targets: int | None = None
+    index: int | None = None
 
 @dataclass
 class DynamicValue:
@@ -115,9 +176,9 @@ class CastSpellEvent:
 @dataclass 
 class SpecialAction: 
     name: str 
-    cost: Optional[object] # usually ManaCost 
+    cost: Optional['Cost']  # Union of all cost types (ManaCost, TapCost, etc.)
     conditions: List[str] 
-    effects: List[object]
+    effects: List['Effect']  # List of Effect objects
     kind: str | None = None
 
 @dataclass
@@ -147,7 +208,7 @@ class CantBeBlockedEffect(Effect):
 @dataclass
 class ConditionalEffect(Effect):
     condition: str          # e.g. "exiled_this_way", "if_you_do"
-    effects: List[object]           # list of Effect objects to run if condition is true 
+    effects: List[Effect]  # list of Effect objects to run if condition is true 
 
 @dataclass
 class DayboundEffect(Effect):
@@ -184,7 +245,7 @@ class ChangeZoneEffect(Effect):
     position: str | None = None   # Only used for library
     face_down: bool = False
     tapped: bool = False
-    counters: dict[str, int] | None = None
+    counters: Dict[str, int] | None = None
     attach_to: str | None = None
 
 @dataclass
@@ -230,7 +291,7 @@ class DraftFromSpellbookEffect(Effect):
 @dataclass
 class CreateTokenEffect(Effect):
     amount: Union[int, SymbolicValue]
-    token: dict          # { "power": 1, "toughness": 1, "colors": [...], "types": [...], "abilities": [...] }
+    token: Dict[str, Any]  # { "power": 1, "toughness": 1, "colors": [...], "types": [...], "abilities": [...] }
     controller: str      # "you", "opponent", "that_player", etc.
 
 @dataclass
@@ -254,7 +315,7 @@ class SearchEffect(Effect):
     optional: bool                   # "you may"
     put_onto_battlefield: bool       # true
     shuffle_if_library_searched: bool
-    card_filter: dict | None = None  # {"types": ["land"], "subtypes": ["basic"]}, or None
+    card_filter: Dict[str, Any] | None = None  # {"types": ["land"], "subtypes": ["basic"]}, or None
     max_results: int | None = None  # 1, 2, X, or None for unlimited
 
 @dataclass
@@ -280,11 +341,11 @@ class GainLifeEffect(Effect):
 class PutOntoBattlefieldEffect(Effect):
     """Represents: put a card from a zone onto the battlefield."""
     zone_from: str
-    card_filter: dict
+    card_filter: Dict[str, Any]
     tapped: bool = False
     attacking: bool = False
     optional: bool = False
-    constraint: Optional[dict] = None
+    constraint: Optional[Dict[str, Any]] = None
 
 @dataclass
 class TargetingRestriction:
@@ -302,12 +363,30 @@ class TargetingRules:
 
 @dataclass
 class ActivatedAbility:
+    """
+    Represents an activated ability (cost: effect).
+    
+    Fields:
+        costs: List of costs to activate. Can include:
+            - ManaCost: Mana payment
+            - TapCost: Tapping requirement
+            - SacrificeCost: Sacrifice requirement
+            - LoyaltyCost: Planeswalker loyalty change
+        effects: List of effects that happen when activated
+        conditions: Additional conditions (e.g., "only as a sorcery")
+        targeting: Targeting rules if the ability targets
+        timing: When the ability can be activated. Valid values:
+            - "instant": Any time you have priority
+            - "sorcery": Only during your main phase when stack is empty
+        is_mana_ability: True if this is a mana ability (doesn't use stack, can't be countered)
+            Mana abilities must: produce mana, not target, have no non-mana effects
+    """
     costs: List[Cost]
     effects: List[Effect]
     conditions: List[Dict[str, Any]] = field(default_factory=list)
     targeting: Optional[TargetingRules] = None
-    timing: str = "instant"   # "instant", "sorcery", etc.
-    is_mana_ability: bool = False  # True if this is a mana ability (doesn't use stack)
+    timing: str = "instant"
+    is_mana_ability: bool = False
 
 @dataclass
 class GrantedAbility:
@@ -327,7 +406,7 @@ class TriggerFilter:
 @dataclass
 class TriggeredAbility:
     condition_text: str
-    effects: list
+    effects: List[Effect]
     event: Optional[Union[ZoneChangeEvent, DealsDamageEvent, EntersBattlefieldEvent, 
                          LeavesBattlefieldEvent, CastSpellEvent, str]] = None
     targeting: Optional[TargetingRules] = None
@@ -336,12 +415,36 @@ class TriggeredAbility:
 
 @dataclass
 class StaticEffect(Effect):
+    """
+    Represents a static effect that is always active while the object is in relevant zones.
+    
+    Static effects create continuous effects but are themselves always "on" while
+    the source object is in the specified zones.
+    
+    Fields:
+        kind: Type of static effect. Common values:
+            - "blocking_restriction": Limits how many creatures can block
+            - "haste": Grants haste
+            - "cost_modification": Modifies costs
+            - "timing_override": Changes timing rules (e.g., "as though it had flash")
+        subject: What this effect applies to
+        value: Effect-specific value dictionary (varies by kind)
+        layer: MTG layer number (1-7) where this effect is applied
+        zones: List of zones where this effect is active. Valid zones:
+            - "battlefield": While on the battlefield
+            - "hand": While in hand
+            - "graveyard": While in graveyard
+            - "exile": While exiled
+            - "stack": While on the stack
+        sublayer: Sublayer for layer 7 effects ("7a", "7b", "7c", "7d", "7e")
+        protection_from: List of things the subject has protection from
+    """
     kind: str
     subject: Subject
     value: Dict[str, Any]
-    layer: int  # Changed from str to int (MTG layers 1-7)
+    layer: int  # MTG layers 1-7
     zones: List[str]
-    sublayer: Optional[str] = None  # e.g., "7a", "7b", "7c", "7d", "7e" for layer 7
+    sublayer: Optional[str] = None
     protection_from: Optional[list[str]] = None
 
 @dataclass
@@ -394,8 +497,55 @@ class RuleChangeData:
 
 @dataclass
 class ContinuousEffect(Effect):
-    kind: str                 # "pt_mod", "grant_ability", "color_set", ...
-    text: str                 # original sentence
+    """
+    Represents a continuous effect that modifies game rules or object characteristics.
+    
+    Continuous effects are applied in MTG layer order (1-7) with sublayers for layer 7.
+    They persist for a duration (e.g., "until end of turn", "as long as...").
+    
+    Fields:
+        kind: Type of continuous effect. Common values:
+            - "pt_mod": Power/toughness modification (+X/+Y)
+            - "pt_set": Power/toughness setting (becomes X/Y)
+            - "grant_ability": Grants an ability (flying, trample, etc.)
+            - "color_set": Sets colors
+            - "color_add": Adds colors
+            - "type_set": Sets types
+            - "type_add": Adds types
+            - "type_remove": Removes types
+            - "grant_protection": Grants protection from X
+            - "rule_change": Changes game rules
+        text: Original oracle text sentence that created this effect
+        layer: MTG layer number (1-7) where this effect is applied. Required.
+            - Layer 1: Copy effects
+            - Layer 2: Control-changing effects
+            - Layer 3: Text-changing effects
+            - Layer 4: Type-changing effects
+            - Layer 5: Color-changing effects
+            - Layer 6: Ability-adding/removing effects
+            - Layer 7: Power/toughness effects (with sublayers 7a-7e)
+        applies_to: What this effect applies to (Subject or string like "equipped_creature")
+        duration: How long the effect lasts (e.g., "until_end_of_turn", "as_long_as_controlled")
+        sublayer: Sublayer for layer 7 effects. Valid values: "7a", "7b", "7c", "7d", "7e"
+        source_kind: What created this effect ("static_ability", "spell", "ability")
+        source_id: Reference to the source ability/effect
+        source_object_id: Which object created this effect
+        timestamp: When created (for dependency ordering)
+        depends_on: List of effect IDs this depends on
+        condition: Optional condition for the effect
+        pt_value: Power/toughness expression (for pt_mod/pt_set)
+        dynamic: Dynamic value calculation
+        abilities: List of granted abilities (for grant_ability)
+        type_change: Type change data (for type effects)
+        color_change: Color change data (for color effects)
+        control_change: Control change data
+        cost_change: Cost modification
+        rule_change: Rule change data
+        protection_from: List of things to protect from
+        restriction: Restriction data
+    """
+    kind: str
+    text: str
     layer: int  # 1-7 (MTG layers) - REQUIRED, must come before optional fields
     applies_to: Optional[Union[Subject, str]] = None  # "equipped_creature", "creatures_you_control", ...
     duration: Optional[str] = None
@@ -431,7 +581,7 @@ class Mode(Effect):
 class CastingOption:
     kind: str  # "escape", "flashback", "overload", etc.
     mana_cost: Optional[ManaCost]
-    additional_costs: List[Any] = field(default_factory=list)
+    additional_costs: List[Dict[str, Any]] = field(default_factory=list)  # e.g., [{"time_counters": 3}, {"power": 2, "toughness": 3}]
 
 @dataclass
 class Axis2Face:
@@ -449,7 +599,7 @@ class Axis2Face:
     defense: Optional[int]
 
     casting_options: List[CastingOption] = field(default_factory=list)
-    spell_effects: List[Any] = field(default_factory=list)
+    spell_effects: List[Effect] = field(default_factory=list)
     spell_targeting: Optional[TargetingRules] = None
     special_actions: List[SpecialAction] = field(default_factory=list)
     activated_abilities: List[ActivatedAbility] = field(default_factory=list)

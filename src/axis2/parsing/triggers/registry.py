@@ -2,17 +2,10 @@
 
 from typing import List
 from .base import TriggerParser, ParseResult
+from axis2.parsing.base_registry import BaseParserRegistry
 
-class ParserRegistry:
+class ParserRegistry(BaseParserRegistry):
     """Manages all trigger parsers with priority ordering"""
-    
-    def __init__(self):
-        self._parsers: List[TriggerParser] = []
-    
-    def register(self, parser: TriggerParser):
-        """Register a parser (automatically sorted by priority)"""
-        self._parsers.append(parser)
-        self._parsers.sort(key=lambda p: p.priority, reverse=True)
     
     def parse(self, text: str) -> ParseResult:
         """Try all parsers in priority order, return the best match."""
@@ -20,22 +13,24 @@ class ParserRegistry:
         if not text:
             return ParseResult()
         
-        # Quick filter: only try parsers that might match
-        candidates = [p for p in self._parsers if p.can_parse(text)]
+        # Find candidates using base class method (no ctx for triggers)
+        candidates = self._find_candidates(text, None)
         
-        best = None
-        for parser in candidates:
-            result = parser.parse(text)
-            if result.is_success:
-                best = result
-                break
+        # Try parsers using base class method
+        best = self._try_parsers(candidates, lambda p: p.parse(text))
         
         if best:
             return best
         
+        # No parser matched - include parser names in error for better diagnostics
+        parser_names = [type(p).__name__ for p in candidates[:3]]  # Show first 3 attempted
+        error_msg = self._get_error_message(text)
+        if parser_names:
+            error_msg += f" (tried: {', '.join(parser_names)})"
+        
         return ParseResult(
             matched=False,
-            errors=[f"No parser matched: {text[:50]}..."]
+            errors=[error_msg]
         )
 
 # Global registry instance

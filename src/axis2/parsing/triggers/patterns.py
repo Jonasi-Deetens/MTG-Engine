@@ -14,7 +14,7 @@ ETB_RE = re.compile(
 )
 
 LTB_RE = re.compile(
-    r"(?:when|whenever)\s+(.*?)\s+leaves\s+the battlefield",
+    r"(?:when|whenever)\s+(.*?)\s+leaves\s+the\s+battlefield",
     re.IGNORECASE
 )
 
