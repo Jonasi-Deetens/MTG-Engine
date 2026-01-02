@@ -25,26 +25,21 @@ COLOR_MAP = {
 }
 
 def split_effect_sentences(text: str) -> List[str]:
-    print(f"[split_effect_sentences] Raw input: {repr(text)}")
     # DO NOT split on commas — they appear inside OR-lists.
     text = text.replace("\n", " ")
 
     # Normalize "then" into a sentence boundary
     text = re.sub(r"(?<!this way,)\s+then\b", ". then", text, flags=re.I)
-    print(f"[split_effect_sentences] After re.sub: {repr(text)}")
 
     parts = re.split(r"[.;]", text)
-    print(f"[split_effect_sentences] After splitting on [.;]: {parts}")
 
     # Remove empty or whitespace-only parts BEFORE returning
     cleaned = []
     for p in parts:
         s = p.strip()
-        print(f"[split_effect_sentences] Checking part: {repr(p)} -> stripped: {repr(s)}")
         if s:
             cleaned.append(s)
 
-    print(f"[split_effect_sentences] Cleaned parts: {cleaned}")
     return cleaned
 
 IF_THIS_WAY_RE = re.compile(r"if .* this way", re.I)
@@ -58,15 +53,19 @@ def parse_effect_text(text, ctx: ParseContext):
     if not text:
         return effects
 
+    
+    # CONDITIONAL: "If a card is put into exile this way, ..."
+    cond = parse_conditional(text, ctx)
+    if cond:
+        return [cond]
     # ------------------------------------------------------------
     # 1. Split into sentences
     # ------------------------------------------------------------
     sentences = split_effect_sentences(text)
     
-    print(f"Parsing look and pick: {text}")
     # Look and pick
     # Global look-and-pick only if no conditional clause is present
-    if "this way" not in text.lower():
+    if "look at" in text.lower():
         look_pick = parse_look_and_pick(text)
         if look_pick:
             effects.append(look_pick)
@@ -78,13 +77,47 @@ def parse_effect_text(text, ctx: ParseContext):
         s = sentence.strip()
         if not s:
             continue
+
         # CONDITIONAL: "If a card is put into exile this way, ..."
         cond = parse_conditional(s, ctx)
         if cond:
             effects.append(cond)
             continue
-
         print(f"Parsing effect: {s}")
+        # Put one onto the battlefield tapped
+        put_one = parse_put_one_battlefield_tapped(s)
+        if put_one:
+            effects.append(put_one)
+
+        # Put the other into your hand
+        put_other = parse_put_other_into_hand(s)
+        if put_other:
+            effects.append(put_other)
+            continue
+
+        # Shuffle
+        shuffle = parse_shuffle(s)
+        if shuffle:
+            effects.append(shuffle)
+            continue
+
+        # Lightpaws search
+        lp_search = parse_lightpaws_search(s)
+        if lp_search:
+            effects.append(lp_search)
+            # remove the matched part and parse the remainder
+            remainder = AURA_SEARCH_RE.sub("", s).strip().lstrip(",").strip()
+            if remainder:
+                effects.extend(parse_effect_text(remainder, ctx))
+            continue
+        
+        put_attached = parse_put_that_card_attached(s)
+        if put_attached:
+            effects.append(put_attached)
+            remainder = PUT_THAT_CARD_ATTACHED_RE.sub("", s).strip().lstrip(",").strip()
+            if remainder:
+                effects.extend(parse_effect_text(remainder, ctx))
+            continue
 
         search = parse_search_effect(s)
         if search:
@@ -190,41 +223,6 @@ def parse_effect_text(text, ctx: ParseContext):
             effects.append(reveal)
             continue
 
-        # Put one onto the battlefield tapped
-        put_one = parse_put_one_battlefield_tapped(s)
-        if put_one:
-            effects.append(put_one)
-
-        # Put the other into your hand
-        put_other = parse_put_other_into_hand(s)
-        if put_other:
-            effects.append(put_other)
-            continue
-
-        # Shuffle
-        shuffle = parse_shuffle(s)
-        if shuffle:
-            effects.append(shuffle)
-            continue
-
-        # Lightpaws search
-        lp_search = parse_lightpaws_search(s)
-        if lp_search:
-            effects.append(lp_search)
-            # remove the matched part and parse the remainder
-            remainder = AURA_SEARCH_RE.sub("", s).strip().lstrip(",").strip()
-            if remainder:
-                effects.extend(parse_effect_text(remainder, ctx))
-            continue
-        
-        put_attached = parse_put_that_card_attached(s)
-        if put_attached:
-            effects.append(put_attached)
-            remainder = PUT_THAT_CARD_ATTACHED_RE.sub("", s).strip().lstrip(",").strip()
-            if remainder:
-                effects.extend(parse_effect_text(remainder, ctx))
-            continue
-
         prot_choice = parse_gain_protection_choice(s)
         if prot_choice:
             effects.append(prot_choice)
@@ -261,23 +259,9 @@ def parse_effect_text(text, ctx: ParseContext):
             effects.append(DrawCardsEffect(amount=amount))
             continue
 
-        # 2e. Add mana
-        if "add" in s.lower() and "{" in s:
-            mana = []
-            buf = ""
-            inside = False
-            for ch in s:
-                if ch == "{":
-                    inside = True
-                    buf = "{"
-                elif ch == "}":
-                    inside = False
-                    buf += "}"
-                    mana.append(buf)
-                    buf = ""
-                elif inside:
-                    buf += ch
-            effects.append(AddManaEffect(mana=mana))
+        add_mana_any = parse_add_mana_effect(s)
+        if add_mana_any:
+            effects.append(add_mana_any)
             continue
 
         # --------------------------------------------------------
@@ -1255,3 +1239,52 @@ def parse_gain_protection_choice(s):
         ],
         duration="until_end_of_turn"
     )
+
+# 1. Fixed mana symbols: "Add {R}{G}", "Add {C}", "Add {2}"
+ADD_MANA_FIXED_RE = re.compile(r"add ((\{[^}]+\})+)", re.IGNORECASE)
+
+# 2. Any color: "Add one mana of any color"
+ADD_MANA_ANY_COLOR_RE = re.compile(r"add (one|1) mana of any color", re.IGNORECASE)
+
+# 3. Any type: "Add one mana of any type"
+ADD_MANA_ANY_TYPE_RE = re.compile(r"add (one|1) mana of any type", re.IGNORECASE)
+
+# 4. Combination: "Add two mana in any combination of colors"
+ADD_MANA_COMBO_RE = re.compile(
+    r"add (\w+) mana in any combination of colors", re.IGNORECASE
+)
+
+NUMBER_WORDS = {
+    "one": 1, "two": 2, "three": 3, "four": 4,
+    "five": 5, "six": 6, "seven": 7, "eight": 8,
+}
+
+
+def parse_add_mana_effect(text: str):
+    t = text.lower()
+
+    # 1. Fixed mana symbols
+    m = ADD_MANA_FIXED_RE.search(text)
+    if m:
+        symbols = re.findall(r"\{[^}]+\}", m.group(1))
+        return AddManaEffect(mana=symbols, choice=None)
+
+    # 2. Any color
+    m = ADD_MANA_ANY_COLOR_RE.search(t)
+    if m:
+        return AddManaEffect(mana=[], choice="any_color")
+
+    # 3. Any type
+    m = ADD_MANA_ANY_TYPE_RE.search(t)
+    if m:
+        return AddManaEffect(mana=[], choice="any_type")
+
+    # 4. Combination of colors
+    m = ADD_MANA_COMBO_RE.search(t)
+    if m:
+        raw = m.group(1)
+        amount = NUMBER_WORDS.get(raw, None)
+        if amount:
+            return AddManaEffect(mana=[], choice=f"combo_colors_{amount}")
+
+    return None

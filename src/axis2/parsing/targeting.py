@@ -37,6 +37,10 @@ TYPE_KEYWORDS = {
 # Ordered patterns so we match more specific phrases first.
 TYPE_PATTERNS = [
     # Multi-type lists: artifact, enchantment, or land
+    # Artifact or creature
+    (re.compile(r"\btarget artifact or creature\b", re.IGNORECASE),
+    ["artifact", "creature"], []),
+
     (re.compile(
         r"\btarget\s+(?:an?\s+)?"
         r"(?P<t1>artifact|enchantment|land)"
@@ -164,7 +168,7 @@ def parse_targeting(text: str) -> TargetingRules | None:
     t = text.lower()
     if not TARGET_WORD_RE.search(t):
         return None
-
+    print(f"Parsing targeting: {text}")
     # Default: single required target
     rules = TargetingRules(required=True, min=1, max=1)
     rules.legal_targets = []

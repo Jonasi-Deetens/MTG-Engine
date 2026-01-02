@@ -23,6 +23,7 @@ def extract_keywords(oracle_text: str):
         "double strike",
         "hexproof",
         "ward",
+        "indestructible",
     }
 
     for line in lines:

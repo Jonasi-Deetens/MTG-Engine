@@ -8,7 +8,9 @@ from axis2.schema import (
     ColorChangeData, TypeChangeData, 
     CardTypeCountCondition,
     ParseContext,
-    DynamicValue 
+    DynamicValue,
+    GrantedAbility,
+    RuleChangeData
 )
 from axis2.parsing.subject import subject_from_text
 # -----------------------------
@@ -113,10 +115,13 @@ def split_continuous_clauses(text: str) -> list[str]:
 
     return final_clauses
 
-
 def _guess_applies_to(text: str) -> str:
     lower = text.lower().strip()
     lower = lower.rstrip(".,;:")
+    lower = " ".join(lower.split())
+
+    if lower.startswith("target "):
+        return "target"
 
     if lower.startswith("enchanted creature"):
         return "enchanted_creature"
@@ -134,7 +139,6 @@ def _guess_applies_to(text: str) -> str:
         return "this_permanent"
 
     return None
-
 
 
 CARD_TYPE_COUNT_RE = re.compile(
@@ -171,29 +175,47 @@ def _parse_pt_mod(text: str) -> Optional[PTExpression]:
     return PTExpression(power=p, toughness=t)
 
 
-def _parse_abilities(text: str) -> Optional[list[str]]:
+def _parse_abilities(text: str) -> Optional[list[GrantedAbility]]:
     lower = text.lower()
+
+    # Extract the part after "has ..." or "gains ..."
     if "has " in lower:
-        ability_part = HAS_ABILITY_RE.search(lower).group(1)
+        m = HAS_ABILITY_RE.search(lower)
+        if not m:
+            return None
+        ability_part = m.group(1)
     elif "gains " in lower or "gain " in lower:
-        ability_part = GAINS_ABILITY_RE.search(lower).group(1)
+        m = GAINS_ABILITY_RE.search(lower)
+        if not m:
+            return None
+        ability_part = m.group(1)
     else:
         return None
 
-    # Split on "and" or commas
+    # Normalize separators
     ability_part = ability_part.replace(", and ", ", ")
     ability_part = ability_part.replace(" and ", ", ")
-    raw = [a.strip() for a in ability_part.split(",")]
+    raw = [a.strip().rstrip(".") for a in ability_part.split(",")]
 
-    abilities = []
+    abilities: list[GrantedAbility] = []
+
     for a in raw:
-        a = a.rstrip(".")
-        if a.startswith("ward"):
-            abilities.append("ward")
-        elif a in ABILITY_KEYWORDS:
-            abilities.append(a)
-    return abilities or None
+        a = re.sub(r"\s+until.*$", "", a)
 
+        # Ward {N}
+        print(f"Parsing ability RAW A: {a}")
+        m = re.match(r"ward\s*\{(\d+)\}", a)
+        if m:
+            value = int(m.group(1))
+            abilities.append(GrantedAbility(kind="ward", value=value))
+            continue
+
+        # Simple keyword abilities
+        if a in ABILITY_KEYWORDS:
+            abilities.append(GrantedAbility(kind=a))
+            continue
+
+    return abilities or None
 
 def _parse_color_change(text: str) -> Optional[ColorChangeData]:
     lower = text.lower()
@@ -331,6 +353,62 @@ def _parse_cant_be_blocked_by(clause: str):
         return {"colors": [color]}
     return None
 
+PROT_RE = re.compile(
+    r"protection from ([^\n\.]+)",   # stop at newline or period
+    re.I
+)
+
+def _parse_protection(text: str, applies_to: str, duration: str):
+    m = PROT_RE.search(text)
+    if not m:
+        return None
+
+    raw = m.group(1).lower()
+    parts = re.split(r",|and", raw)
+
+    colors = []
+    for p in parts:
+        clean = p.strip()
+        if clean.startswith("from "):
+            clean = clean[5:]
+        if clean:
+            colors.append(clean)
+
+    return ContinuousEffect(
+        kind="grant_protection",
+        applies_to=applies_to,
+        protection_from=colors,
+        duration=duration,
+        text=text,
+    )
+
+def _parse_rule_change(text: str) -> Optional[RuleChangeData]:
+    lower = text.lower()
+
+    # Coalition Flag / Flagbearer pattern
+    if "must choose at least one flagbearer" in lower:
+        return RuleChangeData(
+            kind="targeting_requirement",
+            requires_flagbearer=True,
+            controller="opponent"
+        )
+
+    # Generalized "must choose this creature if able"
+    if "must choose" in lower and "if able" in lower:
+        return RuleChangeData(
+            kind="targeting_requirement",
+            requires_this=True
+        )
+
+    # Generalized "must choose a creature with X"
+    m = re.search(r"must choose .* (creature.*) if able", lower)
+    if m:
+        return RuleChangeData(
+            kind="targeting_requirement",
+            requires_filter=m.group(1)
+        )
+
+    return None
 
 # -----------------------------
 # Main parser
@@ -354,18 +432,29 @@ def parse_continuous_effects(text: str, ctx: ParseContext) -> List[ContinuousEff
             # remove the condition prefix from the text
             clause = clause[:m.start()].strip()
 
-        print(f"Condition: {condition} for clause: {clause} with subject: {current_subject}")
         # Try to parse structured card-type-count conditions (Delirium-like)
         structured = parse_card_type_count_condition(condition) if condition else None
         if structured:
             condition = structured
 
         applies_to = _guess_applies_to(clause)
+        print(f"Condition: {condition} for clause: {clause} with subject: {current_subject} / applies_to: {applies_to}")
 
         if applies_to is None:
             applies_to = current_subject
         else:
             current_subject = applies_to
+
+        # Detect duration
+        duration = None
+        if "until end of turn" in clause.lower():
+            duration = "until_end_of_turn"
+        elif "this turn" in clause.lower():
+            duration = "this_turn"
+        elif "until your next turn" in clause.lower():
+            duration = "until_your_next_turn"
+        elif "until your next upkeep" in clause.lower():
+            duration = "until_your_next_upkeep"
 
         # 2. P/T modification
         pt = _parse_pt_mod(clause)
@@ -376,6 +465,7 @@ def parse_continuous_effects(text: str, ctx: ParseContext) -> List[ContinuousEff
                 pt_value=pt,
                 condition=condition,
                 text=clause,
+                duration=duration,
             )
 
             # NEW: detect dynamic scaling like "for each valor counter on this creature"
@@ -394,6 +484,7 @@ def parse_continuous_effects(text: str, ctx: ParseContext) -> List[ContinuousEff
                 pt_value=base_pt, 
                 condition=condition, 
                 text=clause, 
+                duration=duration,
             ) 
         )
         # 3. Ability granting
@@ -406,6 +497,7 @@ def parse_continuous_effects(text: str, ctx: ParseContext) -> List[ContinuousEff
                     abilities=abilities,
                     condition=condition,
                     text=clause,
+                    duration=duration,
                 )
             )
 
@@ -423,8 +515,25 @@ def parse_continuous_effects(text: str, ctx: ParseContext) -> List[ContinuousEff
                     color_change=color_change,
                     condition=condition,
                     text=clause,
+                    duration=duration,
                 )
-            )   
+            ) 
+
+        # 4.5 Rule‑changing continuous effects (NEW)
+        rule_change = _parse_rule_change(clause)
+        if rule_change:
+            effects.append(
+                ContinuousEffect(
+                    kind="rule_change",
+                    applies_to=None,
+                    rule_change=rule_change,
+                    condition=condition,
+                    text=clause,
+                    duration=duration,
+                )
+            )
+            continue  # IMPORTANT: prevent misclassification as type_change
+
 
         # 5. Type change
         type_change = _parse_type_change(clause)
@@ -436,6 +545,7 @@ def parse_continuous_effects(text: str, ctx: ParseContext) -> List[ContinuousEff
                     type_change=type_change,
                     condition=condition,
                     text=clause,
+                    duration=duration,
                 )
             )
 
@@ -458,9 +568,15 @@ def parse_continuous_effects(text: str, ctx: ParseContext) -> List[ContinuousEff
                     cost_change=None,
                     rule_change=None,
                     # store the restriction
-                    restriction=restriction
+                    restriction=restriction,
+                    duration=duration,
                 )
             )
+
+        # 7. Protection from
+        protection = _parse_protection(clause, applies_to=applies_to, duration=duration)
+        if protection:
+            effects.append(protection)
 
 
     # 6. Fallback: unknown continuous effect

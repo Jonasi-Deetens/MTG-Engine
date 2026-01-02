@@ -77,11 +77,6 @@ def parse_static_effects(axis1_face, ctx: ParseContext):
     if zone_addition:
         effects.append(zone_addition)
 
-    # Protection from
-    protection = parse_protection(text)
-    if protection:
-        effects.append(protection)
-
     # ------------------------------------------------------------ 
     # 3. General static effects (NEW) 
     # ------------------------------------------------------------ 
@@ -258,38 +253,6 @@ def parse_zone_addition(text):
             zones=["library"]
         )
     return None
-
-PROT_RE = re.compile(
-    r"protection from ([^\n\.]+)",   # stop at newline or period
-    re.I
-)
-
-def parse_protection(text: str):
-    m = PROT_RE.search(text)
-    if not m:
-        return None
-
-    raw = m.group(1).lower()
-
-    # split on commas and "and"
-    parts = re.split(r",|and", raw)
-
-    colors = []
-    for p in parts:
-        clean = p.strip()
-        if clean.startswith("from "):
-            clean = clean[5:]
-        if clean:
-            colors.append(clean)
-
-    return StaticEffect(
-        kind="protection",
-        subject=Subject(scope="self"),
-        value={},
-        layer="abilities",
-        zones=["battlefield"],
-        protection_from=colors
-    )
 
 COST_MOD_RE = re.compile(
     r"(?P<types>[a-zA-Z ,]+?) spells? (?P<controller>you|your opponents?|opponents?) cast cost \{(?P<amount>\d+)\} (?P<direction>less|more) to cast",

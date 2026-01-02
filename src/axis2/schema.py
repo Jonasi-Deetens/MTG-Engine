@@ -54,6 +54,11 @@ class TapCost:
     subject: Subject = field(default_factory=lambda: Subject(scope="self"))
     restrictions: list[str] = field(default_factory=list)
 
+@dataclass
+class EscapeCost:
+    mana_cost: ManaCost
+    exile_count: int
+    restriction: Optional[str] = None
 
 @dataclass
 class DiscardCost:
@@ -291,6 +296,11 @@ class ActivatedAbility:
     timing: str = "instant"   # "instant", "sorcery", etc.
 
 @dataclass
+class GrantedAbility:
+    kind: str                  # e.g. "ward", "flying", "first_strike"
+    value: Optional[int] = None  # ward value, or None for abilities without parameters
+
+@dataclass
 class TriggerFilter:
     """
     Structured, machine-readable trigger conditions.
@@ -342,7 +352,7 @@ class TypeChangeData:
     set_types: Optional[list[str]] = None
     add_types: Optional[list[str]] = None
     remove_types: Optional[list[str]] = None
-    
+
 @dataclass
 class RestrictionData:
     colors: Optional[List[str]] = None
@@ -352,6 +362,14 @@ class RestrictionData:
     toughness_lte: Optional[int] = None
     toughness_gte: Optional[int] = None
     keyword: Optional[str] = None
+
+@dataclass
+class RuleChangeData:
+    kind: str                       # e.g. "targeting_requirement"
+    requires_flagbearer: bool = False
+    requires_this: bool = False     # for "must choose this creature if able"
+    requires_filter: Optional[str] = None  # generalized pattern
+    controller: Optional[str] = None       # "opponent", "you", etc.
 
 @dataclass
 class ContinuousEffect(Effect):
@@ -371,6 +389,7 @@ class ContinuousEffect(Effect):
     cost_change: Optional[str] = None
     rule_change: Optional[str] = None
     protection_from: Optional[list[str]] = None
+    rule_change: Optional[RuleChangeData] = None
     restriction: Optional[RestrictionData] = None
 
 @dataclass
@@ -378,6 +397,12 @@ class Mode(Effect):
     text: str
     effects: List[Effect]
     targeting: Optional[TargetingRules] = None
+
+@dataclass
+class CastingOption:
+    kind: str  # "escape", "flashback", "overload", etc.
+    mana_cost: Optional[ManaCost]
+    additional_costs: List[Any] = field(default_factory=list)
 
 @dataclass
 class Axis2Face:
@@ -394,6 +419,7 @@ class Axis2Face:
     loyalty: Optional[int]
     defense: Optional[int]
 
+    casting_options: List[CastingOption] = field(default_factory=list)
     spell_effects: List[Any] = field(default_factory=list)
     spell_targeting: Optional[TargetingRules] = None
     special_actions: List[SpecialAction] = field(default_factory=list)

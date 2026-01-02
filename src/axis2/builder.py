@@ -22,6 +22,7 @@ from axis2.parsing.trigger_filters import parse_trigger_filter
 from axis2.parsing.replacement_effects import parse_replacement_effects
 from axis2.parsing.continuous_effects import parse_continuous_effects
 from axis2.parsing.special_actions import parse_ninjutsu, parse_repeatable_payment
+from axis2.parsing.costs import parse_escape_cost
 from axis2.parsing.keywords import extract_keywords
 from axis2.parsing.sentences import split_into_sentences
 from axis2.parsing.triggers import parse_trigger_event
@@ -77,7 +78,6 @@ class Axis2Builder:
                 special_actions.append(repeatable)
 
             activated = parse_activated_abilities(f, ctx)
-            print(f"Triggered abilities: {f.triggered_abilities}")
 
             triggered = []
             for t in f.triggered_abilities:
@@ -116,13 +116,11 @@ class Axis2Builder:
             mode_choice, modes = parse_modes(f.oracle_text or "")
 
             clean_text = cleaned_oracle_text(f)
-            print(f"---- Before Clean text: {clean_text}")
             # Remove standalone keyword lines (Flying, Lifelink, Vigilance, etc.)
             clean_text = "\n".join(
                 line for line in clean_text.splitlines()
                 if line.strip().lower() not in extract_keywords(f.oracle_text or "")
             )
-            print(f"---- Clean text: {clean_text}")
             sentences = split_into_sentences(clean_text)
 
             replacement_effects = []
@@ -139,7 +137,6 @@ class Axis2Builder:
 
             for s in sentences:
                 replacement_effects.extend(parse_replacement_effects(s))
-                # NEW: static continuous effects
                 # Static continuous effects only
                 continuous_effects.extend(parse_continuous_effects(s, ctx))
 
@@ -180,6 +177,13 @@ class Axis2Builder:
         # 3. Keywords (simple extraction)
         # ------------------------------------------------------------
         keywords = list(face1.keywords) + extract_keywords(face1.oracle_text or "")
+        # 3b. Parse Escape (alternate casting cost)
+        for f, face in zip(axis1_card.faces, faces):
+            if "escape" in (kw.lower() for kw in keywords):
+                escape_cost = parse_escape_cost(f.oracle_text)
+                if escape_cost:
+                    face.casting_options.append(escape_cost)
+
 
         # ------------------------------------------------------------
         # 4. Build Axis2Card

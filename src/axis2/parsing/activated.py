@@ -43,7 +43,6 @@ def parse_activated_abilities(axis1_face: Axis1Face, ctx: ParseContext) -> list[
     """
 
     activated = []
-    print(f"Activated abilities: {axis1_face.activated_abilities}")
 
     for a in getattr(axis1_face, "activated_abilities", []):
         raw_cost = getattr(a, "cost", "") or ""

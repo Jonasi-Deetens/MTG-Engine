@@ -186,6 +186,15 @@ def test_axis2_debug(pg_session, card_name):
         else:
             print("      None")
 
+        # Casting options
+        print("\n    CASTING OPTIONS:")
+        if f.casting_options:
+            for co in f.casting_options:
+                print(f"      {co}")
+        else:
+            print("      None")
+            
+
     # ============================================================
     # KEYWORDS
     # ============================================================
