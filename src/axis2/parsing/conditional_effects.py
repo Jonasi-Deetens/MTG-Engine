@@ -36,39 +36,26 @@ def parse_conditional(sentence: str, ctx):
         if "you may search your library" in lower: 
             return None
 
-    print(f"[parse_conditional] Starting parse: {repr(sentence)}")
-
     # --- PHASE A: Extract comma-delimited conditional clause
     m = COND_CLAUSE_RE.search(sentence)
     if m:
         cond_text = m.group(1).strip()          # e.g. "if you cast it"
         remainder = COND_CLAUSE_RE.sub(" ", sentence).strip()
 
-        print(f"[parse_conditional] Found comma-delimited conditional")
-        print(f"    cond_text: {repr(cond_text)}")
-        print(f"    remainder: {repr(remainder)}")
-
         # Match the extracted condition against known patterns
         for name, regex in CONDITIONAL_PATTERNS:
             if regex.search(cond_text):
-                print(f"    Matched pattern: {name} ({regex.pattern}) in {repr(cond_text)}")
                 inner_effects = parse_effect_text(remainder, ctx)
-                print(f"    Inner effects: {inner_effects}")
                 return ConditionalEffect(condition=name, effects=inner_effects)
 
-        print(f"    No conditional pattern matched for cond_text: {repr(cond_text)}")
         return None
 
     # --- PHASE B: Fallback — standalone conditional at sentence start
     for name, regex in CONDITIONAL_PATTERNS:
         m = regex.search(sentence)
         if m:
-            print(f"[parse_conditional] Found standalone conditional - pattern {name} ({regex.pattern}) in {repr(sentence)}")
             inner = regex.sub("", sentence).strip().lstrip(",").strip()
-            print(f"    Inner sentence after removing conditional: {repr(inner)}")
             inner_effects = parse_effect_text(inner, ctx)
-            print(f"    Inner effects: {inner_effects}")
             return ConditionalEffect(condition=name, effects=inner_effects)
 
-    print(f"[parse_conditional] No conditional found in: {repr(sentence)}")
     return None

@@ -118,7 +118,7 @@ class Axis2Builder:
             static_effects = parse_static_effects(f, ctx)
             ctx.is_static_ability = False
 
-            mode_choice, modes = parse_modes(f.oracle_text or "")
+            mode_choice, modes = parse_modes(f.oracle_text or "", ctx)
 
             clean_text = cleaned_oracle_text(f)
             # Remove standalone keyword lines (Flying, Lifelink, Vigilance, etc.)

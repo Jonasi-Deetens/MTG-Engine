@@ -1,7 +1,6 @@
 import re
 from axis2.schema import SpecialAction, ManaCost, AddCountersEffect, Subject, ParseContext
 from axis2.parsing.subject import subject_from_text
-from axis2.parsing.continuous_effects import NUMBER_WORDS
 
 # ------------------------------------------------------------
 # HELPERS

@@ -275,9 +275,10 @@ def parse_effect_text(text, ctx: ParseContext):
         # --------------------------------------------------------
 
         if "gains" in s.lower() and "life" in s.lower():
-            m = re.search(r"gains\s+(\w+)\s+life", s, re.I)
-            amount = m.group(1)
-            effects.append(GainLifeEffect(amount=amount, subject="player"))
+            m = re.search(r"gains\s+(\d+)\s+life", s, re.I)
+            if m:
+                amount = int(m.group(1))
+                effects.append(GainLifeEffect(amount=amount, subject="player"))
             continue
 
 

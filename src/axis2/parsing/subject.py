@@ -200,7 +200,6 @@ def subject_from_text(raw: str, ctx: ParseContext, extra_filters: Optional[Dict[
 
     card_name = ctx.card_name
     card_primary_type = ctx.primary_type
-    print(f"Card name: {card_name}, Card primary type: {card_primary_type}")
     # 1. Linked exiled card (Oblivion Ring, Banishing Light, etc.)
     if "the exiled card" in t:
         return Subject(
@@ -280,7 +279,6 @@ def parse_subject(text: str) -> Subject | None:
     # ----------------------------------------
     # 1. Scope detection
     # ----------------------------------------
-    print(f"Parsing subject: {t}")
     # Plural subjects imply "each"
     if re.search(r"\bcreatures\b", t):
         scope = "each"

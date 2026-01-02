@@ -236,7 +236,7 @@ class CreateTokenEffect(Effect):
 @dataclass
 class DealDamageEffect(Effect):
     amount: Union[int, SymbolicValue]
-    subject: str         # "any_target", "target_creature", etc.
+    subject: Subject     # Changed from str to Subject for consistency
 
 @dataclass
 class DrawCardsEffect(Effect):
@@ -273,7 +273,7 @@ class TransformEffect(Effect):
 
 @dataclass
 class GainLifeEffect(Effect):
-    amount: str
+    amount: Union[int, SymbolicValue]  # Changed from str for consistency
     subject: str
 
 @dataclass
@@ -325,9 +325,10 @@ class TriggerFilter:
 
 @dataclass
 class TriggeredAbility:
-    event: str
     condition_text: str
     effects: list
+    event: Optional[Union[ZoneChangeEvent, DealsDamageEvent, EntersBattlefieldEvent, 
+                         LeavesBattlefieldEvent, CastSpellEvent, str]] = None
     targeting: Optional[TargetingRules] = None
     trigger_filter: Optional[TriggerFilter] = None
 
@@ -392,22 +393,21 @@ class RuleChangeData:
 @dataclass
 class ContinuousEffect(Effect):
     kind: str                 # "pt_mod", "grant_ability", "color_set", ...
-    applies_to: Subject | str         # "equipped_creature", "creatures_you_control", ...
     text: str                 # original sentence
+    applies_to: Optional[Union[Subject, str]] = None  # "equipped_creature", "creatures_you_control", ...
     duration: Optional[str] = None
 
     # Optional semantic fields (only one is filled depending on kind)
     condition: Optional[str] = None
     pt_value: Optional[PTExpression] = None
     dynamic: DynamicValue | None = None #
-    abilities: Optional[list[str]] = None
+    abilities: Optional[List[GrantedAbility]] = None
     type_change: Optional[TypeChangeData] = None
     color_change: Optional[ColorChangeData] = None
     control_change: Optional[str] = None
     cost_change: Optional[str] = None
-    rule_change: Optional[str] = None
-    protection_from: Optional[list[str]] = None
-    rule_change: Optional[RuleChangeData] = None
+    rule_change: Optional[RuleChangeData] = None  # Fixed: removed duplicate, kept RuleChangeData
+    protection_from: Optional[List[str]] = None
     restriction: Optional[RestrictionData] = None
 
 @dataclass

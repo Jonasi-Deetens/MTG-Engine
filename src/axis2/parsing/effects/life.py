@@ -44,11 +44,22 @@ class LifeParser(EffectParser):
                 consumed_text=text
             )
         
-        # Check for simple "gains N life"
+        # Check for simple "gains N life" or "you gain N life"
         if "gains" in s and "life" in s:
-            m = re.search(r"gains\s+(\w+)\s+life", text, re.I)
+            m = re.search(r"(?:you\s+)?gains?\s+(\d+)\s+life", text, re.I)
             if m:
-                amount = m.group(1)
+                amount = int(m.group(1))
+                return ParseResult(
+                    matched=True,
+                    effect=GainLifeEffect(amount=amount, subject="player"),
+                    consumed_text=text
+                )
+        
+        # Check for "you gain N life"
+        if "you gain" in s and "life" in s:
+            m = re.search(r"you\s+gain\s+(\d+)\s+life", text, re.I)
+            if m:
+                amount = int(m.group(1))
                 return ParseResult(
                     matched=True,
                     effect=GainLifeEffect(amount=amount, subject="player"),

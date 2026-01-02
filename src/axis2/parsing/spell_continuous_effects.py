@@ -3,7 +3,7 @@
 import re
 from axis2.schema import ContinuousEffect, PTExpression
 from axis2.parsing.subject import parse_subject
-from axis2.parsing.continuous_effects import parse_dynamic_counter_clause
+from axis2.parsing.continuous_effects.pt_mod import parse_dynamic_counter_clause
 from axis2.schema import ParseContext
 
 PT_RE = re.compile(r"get[s]?\s+([+\-]?\d+)\/([+\-]?\d+)", re.I)
@@ -11,7 +11,6 @@ DURATION_RE = re.compile(r"until end of turn|this turn|until your next turn", re
 
 def parse_spell_continuous_effect(text: str, ctx: ParseContext):
     t = text.lower()
-    print(f"Parsing spell continuous effect: {t}")
 
     m = PT_RE.search(t)
     if not m:

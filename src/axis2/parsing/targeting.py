@@ -168,7 +168,6 @@ def parse_targeting(text: str) -> TargetingRules | None:
     t = text.lower()
     if not TARGET_WORD_RE.search(t):
         return None
-    print(f"Parsing targeting: {text}")
     # Default: single required target
     rules = TargetingRules(required=True, min=1, max=1)
     rules.legal_targets = []
