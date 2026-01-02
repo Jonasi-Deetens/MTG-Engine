@@ -3,6 +3,7 @@
 from typing import Optional
 from .base import ContinuousEffectParser, ParseResult
 from axis2.schema import ContinuousEffect, TypeChangeData, ParseContext
+from axis2.parsing.layers import assign_layer_to_effect
 
 class TypeChangeParser(ContinuousEffectParser):
     """Parses type change effects: 'is a creature', 'is an artifact creature'"""
@@ -54,7 +55,11 @@ class TypeChangeParser(ContinuousEffectParser):
             condition=condition,
             text=text,
             duration=duration,
+            layer=4,  # Will be overridden by assign_layer_to_effect, but set default
         )
+
+        # Assign layer and sublayer
+        assign_layer_to_effect(effect)
 
         return ParseResult(
             matched=True,

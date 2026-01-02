@@ -17,6 +17,8 @@ class TopRevealParser(StaticEffectParser):
         if not TOP_REVEAL_RE.search(text):
             return ParseResult(matched=False)
 
+        from axis2.parsing.layers import parse_static_layer
+        layer, sublayer = parse_static_layer("rules")
         effect = StaticEffect(
             kind="as_though",
             subject=Subject(
@@ -28,7 +30,8 @@ class TopRevealParser(StaticEffectParser):
                 "parameter": "top_of_library",
                 "state": True
             },
-            layer="rules",
+            layer=layer,
+            sublayer=sublayer,
             zones=["library"]
         )
 

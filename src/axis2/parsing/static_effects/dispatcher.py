@@ -5,6 +5,7 @@ from .base import ParseResult
 from .registry import get_registry
 from axis2.schema import StaticEffect, ParseContext, DayboundEffect, NightboundEffect
 from axis2.helpers import cleaned_oracle_text
+from axis2.parsing.layers import parse_static_layer
 import logging
 
 logger = logging.getLogger(__name__)
@@ -20,12 +21,15 @@ def parse_static_effects(axis1_face, ctx: ParseContext) -> List[StaticEffect]:
     # ------------------------------------------------------------
     raw_effects = getattr(axis1_face, "static_effects", [])
     for raw in raw_effects:
+        layer_str = raw.get("layering", "rules")
+        layer, sublayer = parse_static_layer(layer_str)
         effects.append(
             StaticEffect(
                 kind=raw["kind"],
                 subject=raw["subject"],
                 value=raw["value"],
-                layer=raw["layering"],
+                layer=layer,
+                sublayer=sublayer,
                 zones=raw["zones"],
             )
         )
@@ -61,6 +65,7 @@ def parse_general_static_effects(text: str, ctx: ParseContext) -> List[StaticEff
     t = text.lower()
     if "as though they had flash" in t or "as though it had flash" in t:
         from axis2.schema import Subject
+        layer, sublayer = parse_static_layer("rules")
         effects.append(
             StaticEffect(
                 kind="timing_override",
@@ -71,7 +76,8 @@ def parse_general_static_effects(text: str, ctx: ParseContext) -> List[StaticEff
                     filters={}
                 ),
                 value={"as_flash": True},
-                layer="rules",
+                layer=layer,
+                sublayer=sublayer,
                 zones=["hand", "stack"],
             )
         )

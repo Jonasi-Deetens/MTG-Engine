@@ -6,6 +6,7 @@ from .registry import get_registry
 from .utils import split_continuous_clauses, guess_applies_to, detect_duration
 from axis2.schema import ContinuousEffect, ParseContext
 from axis2.parsing.conditions import parse_condition, extract_condition_text
+from axis2.parsing.layers import assign_layer_to_effect
 import logging
 
 logger = logging.getLogger(__name__)
@@ -47,7 +48,11 @@ def parse_continuous_effects(text: str, ctx: ParseContext) -> List[ContinuousEff
         # Use registry to find matching parser
         result = registry.parse(clause, ctx, applies_to, condition, duration)
         if result.is_success:
-            effects.extend(result.all_effects)
+            for effect in result.all_effects:
+                if isinstance(effect, ContinuousEffect):
+                    # Assign layer and sublayer automatically
+                    assign_layer_to_effect(effect)
+                effects.append(effect)
         else:
             logger.warning(f"Failed to parse continuous effect: {clause[:50]}...")
             if result.errors:

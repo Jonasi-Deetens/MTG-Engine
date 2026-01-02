@@ -29,6 +29,8 @@ class BlockingParser(StaticEffectParser):
             else:
                 return ParseResult(matched=False)
 
+            from axis2.parsing.layers import parse_static_layer
+            layer, sublayer = parse_static_layer("rules")
             effect = StaticEffect(
                 kind="blocking_restriction",
                 subject=Subject(
@@ -37,7 +39,8 @@ class BlockingParser(StaticEffectParser):
                     types=["creature"]
                 ),
                 value={"max_blockers": max_blockers},
-                layer="rules",
+                layer=layer,
+                sublayer=sublayer,
                 zones=["battlefield"]
             )
 

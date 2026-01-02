@@ -3,6 +3,7 @@
 from typing import Optional
 from .base import ContinuousEffectParser, ParseResult
 from axis2.schema import ContinuousEffect, RuleChangeData, ParseContext
+from axis2.parsing.layers import assign_layer_to_effect
 import re
 
 class RuleChangeParser(ContinuousEffectParser):
@@ -49,7 +50,11 @@ class RuleChangeParser(ContinuousEffectParser):
             condition=condition,
             text=text,
             duration=duration,
+            layer=6,  # Will be overridden by assign_layer_to_effect, but set default
         )
+
+        # Assign layer and sublayer
+        assign_layer_to_effect(effect)
 
         return ParseResult(
             matched=True,

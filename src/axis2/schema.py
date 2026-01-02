@@ -251,11 +251,11 @@ class AddManaEffect(Effect):
 class SearchEffect(Effect):
     zones: list[str]                 # ["graveyard", "hand", "library"]
     card_names: list[str]            # ["Magnifying Glass", "Thinking Cap"]
-    card_filter: dict | None # {"types": ["land"], "subtypes": ["basic"]}, or None
     optional: bool                   # "you may"
     put_onto_battlefield: bool       # true
     shuffle_if_library_searched: bool
-    max_results: int | None # 1, 2, X, or None for unlimited
+    card_filter: dict | None = None  # {"types": ["land"], "subtypes": ["basic"]}, or None
+    max_results: int | None = None  # 1, 2, X, or None for unlimited
 
 @dataclass
 class ShuffleEffect(Effect):
@@ -283,8 +283,8 @@ class PutOntoBattlefieldEffect(Effect):
     card_filter: dict
     tapped: bool = False
     attacking: bool = False
-    constraint: Optional[dict] = None
     optional: bool = False
+    constraint: Optional[dict] = None
 
 @dataclass
 class TargetingRestriction:
@@ -307,6 +307,7 @@ class ActivatedAbility:
     conditions: List[Dict[str, Any]] = field(default_factory=list)
     targeting: Optional[TargetingRules] = None
     timing: str = "instant"   # "instant", "sorcery", etc.
+    is_mana_ability: bool = False  # True if this is a mana ability (doesn't use stack)
 
 @dataclass
 class GrantedAbility:
@@ -338,8 +339,9 @@ class StaticEffect(Effect):
     kind: str
     subject: Subject
     value: Dict[str, Any]
-    layer: str
+    layer: int  # Changed from str to int (MTG layers 1-7)
     zones: List[str]
+    sublayer: Optional[str] = None  # e.g., "7a", "7b", "7c", "7d", "7e" for layer 7
     protection_from: Optional[list[str]] = None
 
 @dataclass
@@ -394,8 +396,17 @@ class RuleChangeData:
 class ContinuousEffect(Effect):
     kind: str                 # "pt_mod", "grant_ability", "color_set", ...
     text: str                 # original sentence
+    layer: int  # 1-7 (MTG layers) - REQUIRED, must come before optional fields
     applies_to: Optional[Union[Subject, str]] = None  # "equipped_creature", "creatures_you_control", ...
     duration: Optional[str] = None
+    sublayer: Optional[str] = None  # "7a", "7b", "7c", "7d", "7e" for layer 7
+    
+    # Source tracking (for dependency ordering)
+    source_kind: str = "static_ability"  # "static_ability", "spell", "ability"
+    source_id: Optional[str] = None  # Reference to source ability/effect
+    source_object_id: Optional[str] = None  # Which object created this effect
+    timestamp: Optional[int] = None  # When created (for dependency ordering)
+    depends_on: Optional[List[str]] = None  # IDs of effects this depends on
 
     # Optional semantic fields (only one is filled depending on kind)
     condition: Optional[str] = None

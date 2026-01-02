@@ -17,6 +17,8 @@ class ZoneAdditionParser(StaticEffectParser):
         if not ZONE_ADD_RE.search(text):
             return ParseResult(matched=False)
 
+        from axis2.parsing.layers import parse_static_layer
+        layer, sublayer = parse_static_layer("rules")
         effect = StaticEffect(
             kind="zone_addition",
             subject=Subject(
@@ -29,7 +31,8 @@ class ZoneAdditionParser(StaticEffectParser):
                 }
             ),
             value={"additional_zone": "battlefield"},
-            layer="rules",
+            layer=layer,
+            sublayer=sublayer,
             zones=["library"]
         )
 

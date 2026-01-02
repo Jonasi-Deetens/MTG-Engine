@@ -4,6 +4,7 @@ from typing import Optional
 from .base import ContinuousEffectParser, ParseResult
 from .patterns import HAS_ABILITY_RE, GAINS_ABILITY_RE, ABILITY_KEYWORDS
 from axis2.schema import ContinuousEffect, GrantedAbility, ParseContext
+from axis2.parsing.layers import assign_layer_to_effect
 import re
 
 class AbilitiesParser(ContinuousEffectParser):
@@ -65,7 +66,11 @@ class AbilitiesParser(ContinuousEffectParser):
             condition=condition,
             text=text,
             duration=duration,
+            layer=6,  # Will be overridden by assign_layer_to_effect, but set default
         )
+
+        # Assign layer and sublayer
+        assign_layer_to_effect(effect)
 
         return ParseResult(
             matched=True,

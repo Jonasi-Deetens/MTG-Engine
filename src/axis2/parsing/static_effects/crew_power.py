@@ -28,6 +28,8 @@ class CrewPowerParser(StaticEffectParser):
                 if bonus is None:
                     return ParseResult(matched=False)
 
+            from axis2.parsing.layers import parse_static_layer
+            layer, sublayer = parse_static_layer("rules")
             effect = StaticEffect(
                 kind="as_though",
                 subject=Subject(scope="self"),
@@ -36,7 +38,8 @@ class CrewPowerParser(StaticEffectParser):
                     "parameter": "power",
                     "modifier": bonus
                 },
-                layer="rules",
+                layer=layer,
+                sublayer=sublayer,
                 zones=["battlefield"]
             )
 

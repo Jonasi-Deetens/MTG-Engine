@@ -50,11 +50,14 @@ class CostModificationParser(StaticEffectParser):
                 filters={}
             )
 
+            from axis2.parsing.layers import parse_static_layer
+            layer, sublayer = parse_static_layer("cost_modification")
             effect = StaticEffect(
                 kind="cost_modification",
                 subject=subject,
                 value={"generic": delta},
-                layer="cost_modification",
+                layer=layer,
+                sublayer=sublayer,
                 zones=None
             )
 

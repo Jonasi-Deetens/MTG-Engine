@@ -5,6 +5,7 @@ from .base import ContinuousEffectParser, ParseResult
 from .patterns import PT_GETS_RE, BASE_PT_RE, FOR_EACH_COUNTER_RE
 from axis2.schema import ContinuousEffect, PTExpression, ParseContext, DynamicValue
 from axis2.parsing.subject import subject_from_text
+from axis2.parsing.layers import assign_layer_to_effect
 
 def parse_dynamic_counter_clause(text: str, ctx: ParseContext):
     """Parse dynamic counter clause like 'for each valor counter on this creature'"""
@@ -50,12 +51,17 @@ class PTParser(ContinuousEffectParser):
                 condition=condition,
                 text=text,
                 duration=duration,
+                layer=7,  # Will be overridden by assign_layer_to_effect, but set default
+                sublayer="7c",
             )
 
             # Detect dynamic scaling like "for each valor counter on this creature"
             dynamic = parse_dynamic_counter_clause(text, ctx)
             if dynamic:
                 effect.dynamic = dynamic
+
+            # Assign layer and sublayer
+            assign_layer_to_effect(effect)
 
             return ParseResult(
                 matched=True,
@@ -93,7 +99,12 @@ class BasePTParser(ContinuousEffectParser):
                 condition=condition,
                 text=text,
                 duration=duration,
+                layer=7,  # Will be overridden by assign_layer_to_effect, but set default
+                sublayer="7b",
             )
+
+            # Assign layer and sublayer
+            assign_layer_to_effect(effect)
 
             return ParseResult(
                 matched=True,

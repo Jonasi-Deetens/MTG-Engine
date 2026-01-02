@@ -3,6 +3,7 @@
 import re
 from .base import EffectParser, ParseResult
 from axis2.schema import CantBeBlockedEffect, ContinuousEffect, DynamicValue, Subject, ParseContext
+from axis2.parsing.layers import assign_layer_to_effect
 
 CANT_BE_BLOCKED_RE = re.compile(
     r"target creature can'?t be blocked",
@@ -38,17 +39,20 @@ class ProtectionParser(EffectParser):
         # Protection from color of choice
         m = PROT_CHOICE_RE.search(text)
         if m:
+            effect = ContinuousEffect(
+                kind="grant_protection",
+                applies_to="target",
+                text=text,
+                protection_from=[
+                    DynamicValue(kind="chosen_color", subject=Subject(scope="this_ability"))
+                ],
+                duration="until_end_of_turn",
+                layer=6,  # Will be overridden by assign_layer_to_effect, but set default
+            )
+            assign_layer_to_effect(effect)
             return ParseResult(
                 matched=True,
-                effect=ContinuousEffect(
-                    kind="grant_protection",
-                    applies_to="target",
-                    text=text,
-                    protection_from=[
-                        DynamicValue(kind="chosen_color", subject=Subject(scope="this_ability"))
-                    ],
-                    duration="until_end_of_turn"
-                ),
+                effect=effect,
                 consumed_text=text
             )
         

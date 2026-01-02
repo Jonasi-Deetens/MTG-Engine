@@ -17,6 +17,8 @@ class HasteParser(StaticEffectParser):
         if not HASTE_GRANT_RE.search(text):
             return ParseResult(matched=False)
 
+        from axis2.parsing.layers import parse_static_layer
+        layer, sublayer = parse_static_layer("abilities")
         effect = StaticEffect(
             kind="grant_keyword",
             subject=Subject(
@@ -24,7 +26,8 @@ class HasteParser(StaticEffectParser):
                 types=["creature"]
             ),
             value={"keyword": "haste"},
-            layer="abilities",
+            layer=layer,
+            sublayer=sublayer,
             zones=["battlefield"]
         )
 
