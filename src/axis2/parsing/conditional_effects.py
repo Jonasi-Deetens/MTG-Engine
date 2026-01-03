@@ -2,12 +2,15 @@ import re
 from axis2.schema import ConditionalEffect
 
 # All conditional patterns your engine supports
+# Order matters: more specific patterns should come first
 CONDITIONAL_PATTERNS = [
-    ("exiled_this_way", re.compile(r"\bif [^.,;]* this way\b", re.I)),
+    ("discarded_this_way", re.compile(r"\bif [^.,;]* (?:is|are) discarded this way\b", re.I)),
+    ("exiled_this_way", re.compile(r"\bif [^.,;]* (?:is|are) exiled this way\b", re.I)),
     ("cast_it",         re.compile(r"\bif you cast it\b", re.I)),   # strict
     ("if_you_do",       re.compile(r"\bif you do\b", re.I)),
     ("kicked",          re.compile(r"\bif (it|this spell) was kicked\b", re.I)),
     ("modified_creature", re.compile(r"\bif you control a modified creature\b", re.I)),
+    ("havent_cast_spell", re.compile(r"\bif you haven'?t\s+cast\s+a\s+spell\s+from\s+your\s+hand\s+this\s+turn\b", re.I)),
 ]
 
 COND_CLAUSE_RE = re.compile(

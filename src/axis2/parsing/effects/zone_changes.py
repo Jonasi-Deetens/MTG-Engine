@@ -137,7 +137,7 @@ class ZoneChangeParser(EffectParser):
         # ⚠️ CHEAP CHECK ONLY
         lower = text.lower()
         return any(keyword in lower for keyword in [
-            "return", "exile", "put", "destroy", "transform"
+            "return", "exile", "put", "destroy", "transform", "attach"
         ])
     
     def parse(self, text: str, ctx: ParseContext) -> ParseResult:
@@ -152,6 +152,25 @@ class ZoneChangeParser(EffectParser):
             return ParseResult(matched=False)
 
         t = text.strip()
+
+        # 0. Attach this to target creature (Equip ability)
+        # Pattern: "Attach this to target creature you control."
+        ATTACH_TO_TARGET_RE = re.compile(
+            r"attach\s+this\s+to\s+target\s+[^\.]+",
+            re.IGNORECASE
+        )
+        m = ATTACH_TO_TARGET_RE.search(t)
+        if m:
+            # For Equip, attach_to is "target" (the targeting is handled by ActivatedAbility.targeting)
+            return ParseResult(
+                matched=True,
+                effect=ChangeZoneEffect(
+                    subject=Subject(scope="self"),
+                    to_zone="battlefield",  # Equipment stays on battlefield, just attaches
+                    attach_to="target"  # String identifier - targeting rules are in ActivatedAbility
+                ),
+                consumed_text=text
+            )
 
         # 1. Return from graveyard → hand
         m = RETURN_FROM_GRAVEYARD_TO_HAND_RE.search(t)
@@ -169,7 +188,39 @@ class ZoneChangeParser(EffectParser):
                 consumed_text=text
             )
 
-        # 2. Return → hand (no from-zone clause)
+        # 2a. Return [card name] to its owner's hand (specific card name pattern - check BEFORE generic)
+        # Pattern: "return [Card Name] to its owner's hand"
+        RETURN_CARD_NAME_TO_HAND_RE = re.compile(
+            r"return\s+(.+?)\s+to\s+its\s+owner'?s?\s+hand",
+            re.IGNORECASE
+        )
+        m = RETURN_CARD_NAME_TO_HAND_RE.search(t)
+        if m:
+            subject_text = m.group(1).strip()
+            # Check if it's the card's own name (self-reference)
+            if subject_text.lower() == ctx.card_name.lower():
+                return ParseResult(
+                    matched=True,
+                    effect=ChangeZoneEffect(
+                        subject=Subject(scope="self"),
+                        to_zone="hand",
+                        owner="owner"
+                    ),
+                    consumed_text=text
+                )
+            # Otherwise, try to parse as a general subject
+            subject_text, filters = _extract_restrictions(subject_text)
+            return ParseResult(
+                matched=True,
+                effect=ChangeZoneEffect(
+                    subject=subject_from_text(subject_text, ctx, extra_filters=filters),
+                    to_zone="hand",
+                    owner="owner"
+                ),
+                consumed_text=text
+            )
+        
+        # 2b. Return → hand (no from-zone clause, generic)
         m = RETURN_HAND_RE.search(t)
         if m:
             subject_text = m.group("subject").strip()

@@ -15,9 +15,10 @@ def _register_all_parsers():
     Explicitly register all parsers in priority order.
     This gives us full control over registration and makes dependencies clear.
     """
-    from . import zone_change, damage, etb, ltb, cast_spell, attacks
+    from . import zone_change, damage, etb, ltb, cast_spell, attacks, step_triggers
     
     # Register in priority order (high to low)
+    register_parser(step_triggers.StepTriggerParser())  # priority 60 - must come before others
     register_parser(zone_change.ZoneChangeParser())  # priority 50
     register_parser(damage.DamageParser())            # priority 45
     register_parser(etb.ETBParser())                  # priority 40

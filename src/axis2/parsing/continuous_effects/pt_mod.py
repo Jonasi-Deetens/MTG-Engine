@@ -31,7 +31,11 @@ class PTParser(ContinuousEffectParser):
 
     def can_parse(self, text: str, ctx: ParseContext) -> bool:
         # ⚠️ CHEAP CHECK ONLY - no regex, no parsing
-        return "gets" in text.lower() and "/" in text
+        # Reject trigger text - continuous effects don't start with "when" or "whenever"
+        text_lower = text.strip().lower()
+        if text_lower.startswith(("when ", "whenever ", "at ")):
+            return False
+        return "gets" in text_lower and "/" in text
 
     def parse(self, text: str, ctx: ParseContext, applies_to: Optional[str] = None,
               condition=None, duration: Optional[str] = None) -> ParseResult:

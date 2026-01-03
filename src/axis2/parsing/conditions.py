@@ -274,3 +274,102 @@ def extract_condition_text(clause: str) -> tuple[str | None, str]:
 
     # No condition found
     return None, clause.strip()
+
+# ============================================================
+# 5. Control Condition Parsing (for structured conditions)
+# ============================================================
+
+from axis2.schema import ControlCondition, PermanentCondition
+
+def parse_permanent_condition(text: str) -> PermanentCondition:
+    """
+    Parse a permanent description into a PermanentCondition.
+    
+    Examples:
+    - "Urza's Power-Plant" -> PermanentCondition(name="Urza's Power-Plant")
+    - "an Urza's Power-Plant" -> PermanentCondition(name="Urza's Power-Plant")
+    - "a creature" -> PermanentCondition(types=["creature"])
+    """
+    text = text.strip()
+    
+    # Remove leading article
+    text = re.sub(r"^(an?|the)\s+", "", text, flags=re.IGNORECASE).strip()
+    
+    # Check if it's a known card name pattern (contains apostrophe or specific formatting)
+    # For now, treat it as a name
+    # TODO: Could enhance to detect types vs names more intelligently
+    
+    # If it contains "Urza's" or similar patterns, it's likely a card name
+    if "'" in text or any(word in text.lower() for word in ["power-plant", "tower", "mine"]):
+        return PermanentCondition(name=text)
+    
+    # Otherwise, try to parse as types/subtypes
+    # This is a simplified parser - could be enhanced
+    return PermanentCondition(name=text)  # Default to name for now
+
+# Pattern for "you control X and Y"
+# Use a more specific pattern that captures full names including apostrophes
+# The key is to match everything up to " and " for first, then everything after " and " for second
+CONTROL_AND_RE = re.compile(
+    r"you\s+control\s+(?:an?\s+)?(.+?)\s+and\s+(?:an?\s+)?(.+?)(?:\s*$|\s*[,\.]|$)",
+    re.IGNORECASE
+)
+
+# Pattern for "you control X"
+CONTROL_SINGLE_RE = re.compile(
+    r"you\s+control\s+(?:an?\s+)?(.+?)(?:\s|$|,|\.)",
+    re.IGNORECASE
+)
+
+def parse_control_condition(text: str) -> Optional[ControlCondition]:
+    """
+    Parse a control condition string into a structured ControlCondition.
+    
+    Examples:
+    - "you control an Urza's Power-Plant and an Urza's Tower"
+      -> ControlCondition(all_of=[PermanentCondition(name="Urza's Power-Plant"), 
+                                         PermanentCondition(name="Urza's Tower")])
+    - "you control a creature"
+      -> ControlCondition(all_of=[PermanentCondition(types=["creature"])])
+    """
+    text = text.strip()
+    
+    # Try "X and Y" pattern first
+    # Use a more robust approach: split on " and " and then parse each part
+    # This avoids regex issues with apostrophes and special characters
+    if " and " in text.lower():
+        # Find " and " (case-insensitive)
+        and_pos = text.lower().find(" and ")
+        if and_pos != -1:
+            # Split at " and "
+            first_part = text[:and_pos].strip()
+            second_part = text[and_pos + 5:].strip()  # 5 = len(" and ")
+            
+            # Remove "you control" and optional article from first part
+            first_part = re.sub(r"^you\s+control\s+(?:an?\s+)?", "", first_part, flags=re.IGNORECASE).strip()
+            
+            # Remove optional article from second part
+            second_part = re.sub(r"^(?:an?\s+)?", "", second_part, flags=re.IGNORECASE).strip()
+            
+            # Remove trailing punctuation
+            first_part = first_part.rstrip(".,;")
+            second_part = second_part.rstrip(".,;")
+            
+            return ControlCondition(
+                all_of=[
+                    parse_permanent_condition(first_part),
+                    parse_permanent_condition(second_part)
+                ],
+                controller="you"
+            )
+    
+    # Try single permanent
+    m = CONTROL_SINGLE_RE.search(text)
+    if m:
+        permanent_text = m.group(1).strip().rstrip(".,;")
+        return ControlCondition(
+            all_of=[parse_permanent_condition(permanent_text)],
+            controller="you"
+        )
+    
+    return None

@@ -47,6 +47,17 @@ def _detect_scope(t: str) -> str:
     if re.search(r"\beach (player|opponent)\b", t):
         return "each"
 
+    # "a X you control" or "an X you control" - applies to any matching X, not self
+    # This is common in replacement effects like "if you would put counters on a creature you control"
+    # Match: "a creature you control", "an artifact you control", etc.
+    if re.search(r"\b(an?|one)\s+\w+\s+you\s+control\b", t, re.IGNORECASE):
+        return "each"
+
+    # plural subjects without "each" or "target" (e.g., "creatures you control")
+    # Check for plural type words followed by "you control" or similar
+    if re.search(r"\b(creatures?|enchantments?|artifacts?|permanents?|lands?|spells?)\s+(you|an?\s+opponent|your\s+opponents?)\s+control\b", t):
+        return "each"
+
     # targeted things
     if "target" in t:
         return "target"

@@ -25,6 +25,27 @@ class Condition:
     max_value: Optional[int] = None
     extra: Dict[str, Any] = field(default_factory=dict)
 
+# Structured condition classes for semantic representation
+@dataclass
+class PermanentCondition:
+    """Represents a condition about controlling a permanent with specific characteristics."""
+    name: Optional[str] = None  # Exact card name (e.g., "Urza's Power-Plant")
+    subtypes: Optional[List[str]] = None  # Subtypes (e.g., ["Urza's", "Power-Plant"])
+    types: Optional[List[str]] = None  # Types (e.g., ["Land"])
+    controller: str = "you"  # "you", "opponent", "any_player"
+    
+@dataclass
+class ControlCondition:
+    """Represents a condition about controlling permanents."""
+    all_of: Optional[List[PermanentCondition]] = None  # All conditions must be true (AND)
+    any_of: Optional[List[PermanentCondition]] = None  # Any condition must be true (OR)
+    controller: str = "you"  # "you", "opponent", "any_player"
+    
+    def __post_init__(self):
+        """Ensure at least one of all_of or any_of is set."""
+        if not self.all_of and not self.any_of:
+            raise ValueError("ControlCondition must have either all_of or any_of")
+
 @dataclass
 class ParseContext:
     card_name: str
@@ -304,9 +325,24 @@ class DrawCardsEffect(Effect):
     amount: Union[int, SymbolicValue]
 
 @dataclass
+class DiscardEffect(Effect):
+    """
+    Represents a discard effect: "target player discards a card"
+    """
+    subject: Subject  # Usually Subject(scope="target", types=["player"])
+    amount: Union[int, SymbolicValue] = 1  # Number of cards to discard
+
+@dataclass
 class AddManaEffect(Effect):
     mana: List[str]      # ["{R}", "{G}", "{1}", "{X}"]
     choice: Optional[str] = None  # "one_color", "any_color"
+    # Conditional replacement: if condition is met, use replacement_mana instead
+    condition: Optional[str] = None  # Condition text (for backward compatibility / DSL interpreter)
+    condition_obj: Optional['ControlCondition'] = None  # Structured condition object (semantic)
+    replacement_mana: Optional[List[str]] = None  # Replacement mana if condition is met
+    # Conditional replacement: if condition is met, use replacement_mana instead
+    condition: Optional[str] = None  # Condition text, e.g., "you control an Urza's Power-Plant and an Urza's Tower"
+    replacement_mana: Optional[List[str]] = None  # Replacement mana if condition is met
 
 @dataclass
 class SearchEffect(Effect):
@@ -346,6 +382,29 @@ class PutOntoBattlefieldEffect(Effect):
     attacking: bool = False
     optional: bool = False
     constraint: Optional[Dict[str, Any]] = None
+
+@dataclass
+class GrantCastingPermissionEffect(Effect):
+    """
+    Grants permission to cast spells from a specific zone.
+    
+    Examples:
+    - "you may cast a creature spell from that player's graveyard this turn"
+    - "you may cast spells from your graveyard"
+    
+    Fields:
+        from_zone: Zone to cast from ("graveyard", "exile", "library", "hand")
+        spell_filter: Filter for which spells can be cast (types, controller, etc.)
+        duration: How long the permission lasts ("this_turn", "until_end_of_turn", "permanent")
+        mana_modification: Optional mana cost modification
+            - "any_color": Spend mana as though it were mana of any color
+            - "colorless": Can pay with any color
+            - None: No modification
+    """
+    from_zone: str
+    spell_filter: Dict[str, Any]  # e.g., {"types": ["creature"], "controller": "that_player"}
+    duration: str = "this_turn"  # "this_turn", "until_end_of_turn", "permanent"
+    mana_modification: Optional[str] = None  # "any_color", "colorless", None
 
 @dataclass
 class TargetingRestriction:

@@ -15,9 +15,20 @@ def parse_continuous_effects(text: str, ctx: ParseContext) -> List[ContinuousEff
     """
     Main entry point - replaces the old parse_continuous_effects.
     Now uses registry pattern instead of hardcoded chain.
+    
+    IMPORTANT: This should NOT parse triggered ability text.
+    Text starting with "when", "whenever", or "at" should be rejected
+    as it's likely a triggered ability, not a continuous effect.
     """
     effects = []
     if not text:
+        return effects
+
+    # Reject text that starts with trigger words - this is a triggered ability, not a continuous effect
+    text_lower = text.strip().lower()
+    trigger_starters = ("when ", "whenever ", "at the beginning", "at the end")
+    if any(text_lower.startswith(starter) for starter in trigger_starters):
+        logger.debug(f"Skipping continuous effect parsing for trigger text: {text[:50]}...")
         return effects
 
     # Split into semantic clauses
@@ -27,6 +38,11 @@ def parse_continuous_effects(text: str, ctx: ParseContext) -> List[ContinuousEff
     registry = get_registry()
 
     for clause in clauses:
+        # Also check each clause for trigger starters
+        clause_lower = clause.strip().lower()
+        if any(clause_lower.startswith(starter) for starter in trigger_starters):
+            logger.debug(f"Skipping clause that looks like a trigger: {clause[:50]}...")
+            continue
         # 1. Conditional wrapper
         condition = None
         condition, clause = extract_condition_text(clause)

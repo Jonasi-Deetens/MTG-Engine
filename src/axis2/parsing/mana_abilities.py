@@ -37,13 +37,18 @@ def is_mana_producing_ability(ability: ActivatedAbility) -> bool:
     # This is a simplified check - in reality, we'd need to examine
     # the effect objects more carefully
     for effect in ability.effects:
+        # Skip replacement effects - they don't produce mana
+        from axis2.schema import ReplacementEffect
+        if isinstance(effect, ReplacementEffect):
+            continue
+        
         # Check if effect is AddManaEffect or similar
         from axis2.schema import AddManaEffect
         if isinstance(effect, AddManaEffect):
             return True
         
         # Check effect text if available
-        if hasattr(effect, 'text'):
+        if hasattr(effect, 'text') and effect.text is not None:
             from axis2.parsing.ability_detection import is_mana_ability
             if is_mana_ability(effect.text):
                 return True

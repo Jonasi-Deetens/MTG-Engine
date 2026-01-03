@@ -28,7 +28,7 @@ COLOR_WORD_TO_SYMBOL = {
 
 # Ability keywords
 ABILITY_KEYWORDS = {
-    "flying", "first strike", "double strike", "vigilance", "lifelink",
+    "defender", "flying", "first strike", "double strike", "vigilance", "lifelink",
     "trample", "deathtouch", "haste", "reach", "menace", "hexproof",
     "indestructible", "ward"
 }

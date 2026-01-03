@@ -29,7 +29,9 @@ class ManaParser(EffectParser):
     
     def can_parse(self, text: str, ctx: ParseContext) -> bool:
         # ⚠️ CHEAP CHECK ONLY
-        return "add" in text.lower() and "mana" in text.lower()
+        # Match "Add {X}" patterns (doesn't need "mana" word) or "add mana" patterns
+        text_lower = text.lower()
+        return "add" in text_lower and ("mana" in text_lower or "{" in text)
     
     def parse(self, text: str, ctx: ParseContext) -> ParseResult:
         t = text.lower()

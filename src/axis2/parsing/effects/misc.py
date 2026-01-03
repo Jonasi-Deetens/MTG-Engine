@@ -32,8 +32,16 @@ SPELLBOOK_RE = re.compile(
     re.IGNORECASE
 )
 
+# Pattern for P/T modifications: "gets +3/+3", "gets -X/-X", etc.
+# Matches: "gets +3/+3", "gets -X/-X", "gets +1/+1"
 PT_BOOST_RE = re.compile(
-    r"target creature gets \+(\d+)/\+(\d+) until end of turn",
+    r"gets\s+([+\-]?\w+)\/([+\-]?\w+)",
+    re.IGNORECASE
+)
+
+# Pattern for dynamic value clauses: "where X is the number of..."
+DYNAMIC_VALUE_RE = re.compile(
+    r"where\s+(\w+)\s+is\s+(?:the\s+number\s+of|equal\s+to)\s+(.+?)(?:\.|$)",
     re.IGNORECASE
 )
 
@@ -157,25 +165,102 @@ class SpellbookParser(EffectParser):
         )
 
 class PTBoostParser(EffectParser):
-    """Parses power/toughness boost effects"""
+    """
+    Parses P/T modification effects: 
+    - 'target creature gets +3/+3 until end of turn'
+    - 'target creature an opponent controls gets -X/-X until end of turn, where X is...'
+    """
     priority = 50
     
     def can_parse(self, text: str, ctx: ParseContext) -> bool:
-        return "gets" in text.lower() and ("+" in text or "power" in text.lower() or "toughness" in text.lower())
+        text_lower = text.lower()
+        return "gets" in text_lower and "/" in text_lower
     
     def parse(self, text: str, ctx: ParseContext) -> ParseResult:
+        from axis2.schema import ContinuousEffect, PTExpression, DynamicValue
+        from axis2.parsing.subject import subject_from_text
+        from axis2.parsing.layers import assign_layer_to_effect
+        
         m = PT_BOOST_RE.search(text)
         if not m:
             return ParseResult(matched=False)
-        return ParseResult(
-            matched=True,
-            effect=PTBoostEffect(
-                power=int(m.group(1)),
-                toughness=int(m.group(2)),
-                duration="until_end_of_turn"
-            ),
-            consumed_text=text
-        )
+        
+        try:
+            power_str = m.group(1).strip()
+            toughness_str = m.group(2).strip()
+            
+            # Check if this is a numeric value or a variable (X, *, etc.)
+            try:
+                power = int(power_str)
+                toughness = int(toughness_str)
+                # Simple numeric boost - use PTBoostEffect
+                return ParseResult(
+                    matched=True,
+                    effect=PTBoostEffect(power=power, toughness=toughness),
+                    consumed_text=text
+                )
+            except ValueError:
+                # Variable or expression (X, *, etc.) - use ContinuousEffect
+                pt = PTExpression(power=power_str, toughness=toughness_str)
+                
+                # Extract subject from text
+                subject = None
+                if "target creature" in text.lower():
+                    # Try to extract the full subject phrase
+                    subject_text = "target creature"
+                    if "an opponent controls" in text.lower() or "a player controls" in text.lower():
+                        subject_text = "target creature an opponent controls"
+                    subject = subject_from_text(subject_text, ctx)
+                
+                # Detect duration
+                duration = None
+                if "until end of turn" in text.lower():
+                    duration = "until_end_of_turn"
+                elif "this turn" in text.lower():
+                    duration = "this_turn"
+                
+                # Detect dynamic value clause
+                dynamic = None
+                dynamic_m = DYNAMIC_VALUE_RE.search(text)
+                if dynamic_m:
+                    var_name = dynamic_m.group(1)  # e.g., "X"
+                    description = dynamic_m.group(2).strip()  # e.g., "the number of permanent cards in your graveyard"
+                    
+                    # Parse the description to create a DynamicValue
+                    # For "the number of permanent cards in your graveyard"
+                    if "permanent" in description.lower() and "graveyard" in description.lower():
+                        dynamic = DynamicValue(
+                            kind="graveyard_count",
+                            counter_type=None,
+                            subject=Subject(scope="you", types=["permanent"], filters={"zone": "graveyard"})
+                        )
+                    # TODO: Parse more complex descriptions
+                
+                effect = ContinuousEffect(
+                    kind="pt_mod",
+                    text=text,
+                    layer=7,
+                    sublayer="7c",
+                    applies_to=subject,
+                    pt_value=pt,
+                    duration=duration,
+                    dynamic=dynamic,
+                    source_kind="triggered_ability"
+                )
+                
+                # Assign layer and sublayer
+                assign_layer_to_effect(effect)
+                
+                return ParseResult(
+                    matched=True,
+                    effect=effect,
+                    consumed_text=text
+                )
+        except (ValueError, AttributeError) as e:
+            return ParseResult(
+                matched=False,
+                errors=[f"Failed to parse P/T modification: {e}"]
+            )
 
 class ShuffleParser(EffectParser):
     """Parses shuffle effects"""

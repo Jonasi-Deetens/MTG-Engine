@@ -4,7 +4,7 @@ from typing import List
 from .base import ParseResult
 from .registry import get_registry
 from .utils import split_effect_sentences
-from axis2.schema import Effect, ParseContext
+from axis2.schema import Effect, ParseContext, AddManaEffect
 from axis2.parsing.conditional_effects import parse_conditional
 from axis2.parsing.spell_continuous_effects import parse_spell_continuous_effect
 import logging
@@ -37,6 +37,20 @@ def parse_effect_text(text: str, ctx: ParseContext) -> List[Effect]:
     if cond:
         return [cond]
     
+    # Get registry once
+    registry = get_registry()
+    
+    # Check for conditional mana replacement before splitting
+    # This handles patterns like "Add {C}. If condition, add {C}{C} instead"
+    conditional_mana_result = registry.parse(text, ctx)
+    if conditional_mana_result.is_success:
+        effects = conditional_mana_result.all_effects
+        if effects:
+            effect = effects[0]
+            # Check if it's a conditional mana effect with both base and replacement
+            if isinstance(effect, AddManaEffect) and effect.condition and effect.replacement_mana and effect.mana:
+                return [effect]  # Return the combined effect
+    
     # Split into sentences
     sentences = split_effect_sentences(text)
     
@@ -44,7 +58,6 @@ def parse_effect_text(text: str, ctx: ParseContext) -> List[Effect]:
     # TODO: This should eventually become a parser-level concern.
     # For now, we handle look-and-pick effects that need the full text
     # before sentence splitting. This is technical debt, not architecture.
-    registry = get_registry()
     look_pick_result = registry.parse(text, ctx)
     if look_pick_result.is_success and "look at" in text.lower():
         effects = look_pick_result.all_effects

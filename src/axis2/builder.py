@@ -70,6 +70,128 @@ def _parse_axis1_activated(face: Axis1Face, ctx: ParseContext) -> list[Activated
     return parse_activated_abilities(face, ctx)
 
 
+def _detect_equip_abilities_from_text(oracle_text: str, ctx: ParseContext) -> list[ActivatedAbility]:
+    """
+    Fallback: Detect Equip abilities directly from oracle text.
+    Used when Axis1 doesn't extract them.
+    """
+    import re
+    from axis2.parsing.costs import parse_cost_string
+    from axis2.parsing.effects.dispatcher import parse_effect_text
+    from axis2.parsing.targeting import parse_targeting
+    from axis2.schema import ActivatedAbility
+    
+    equip_abilities = []
+    
+    if not oracle_text:
+        return equip_abilities
+    
+    # Pattern: "Equip {2}" or "Equip {1}{R}"
+    equip_pattern = re.compile(r"equip\s+(\{[^}]+\}(?:\s*\{[^}]+\})*)", re.IGNORECASE)
+    
+    for line in oracle_text.split("\n"):
+        line = line.strip()
+        if not line:
+            continue
+        
+        m = equip_pattern.match(line)
+        if m:
+            cost_text = m.group(1).strip()
+            effect_text = "Attach this to target creature you control."
+            
+            # Parse cost
+            costs = parse_cost_string(cost_text)
+            
+            # Parse effect
+            effects = parse_effect_text(effect_text, ctx)
+            targeting = parse_targeting(effect_text)
+            
+            # Equip is always sorcery timing
+            equip_abilities.append(
+                ActivatedAbility(
+                    costs=costs,
+                    effects=effects,
+                    conditions=[{"type": "timing", "value": "sorcery_only"}],
+                    targeting=targeting,
+                    timing="sorcery",
+                )
+            )
+    
+    return equip_abilities
+
+
+def _detect_triggered_abilities_from_text(oracle_text: str, ctx: ParseContext) -> list[TriggeredAbility]:
+    """
+    Fallback: Detect triggered abilities directly from oracle text.
+    Used when Axis1 doesn't extract them (e.g., "enters" vs "enters the battlefield").
+    """
+    from axis2.parsing.sentences import split_into_sentences
+    from axis2.parsing.triggers.dispatcher import parse_trigger_event
+    from axis2.parsing.effects.dispatcher import parse_effect_text
+    from axis2.parsing.targeting import parse_targeting
+    from axis2.parsing.trigger_filters import parse_trigger_filter
+    from axis2.schema import TriggeredAbility
+    
+    triggered = []
+    
+    if not oracle_text:
+        return triggered
+    
+    # Check each sentence for trigger patterns
+    for sentence in split_into_sentences(oracle_text):
+        sentence_lower = sentence.strip().lower()
+        
+        # Check if this sentence starts with a trigger word
+        trigger_starters = ("when ", "whenever ", "at the beginning", "at the end")
+        if not any(sentence_lower.startswith(starter) for starter in trigger_starters):
+            continue
+        
+        # Try to split into condition and effect
+        if "," in sentence:
+            parts = sentence.split(",", 1)
+            condition_text = parts[0].strip()
+            effect_text = parts[1].strip()
+        else:
+            # No comma - might be a simple trigger without effect, or effect is in next sentence
+            condition_text = sentence.strip()
+            effect_text = ""
+        
+        # Parse the trigger event
+        event = parse_trigger_event(condition_text)
+        if event is None:
+            # Not a recognized trigger pattern, skip
+            continue
+        
+        # If no effect text, try to find it in the next sentence or look for common patterns
+        if not effect_text:
+            # For now, skip triggers without clear effect text
+            # In the future, we could look ahead to the next sentence
+            continue
+        
+        # Parse the effect
+        triggered_ctx = ctx.with_flag("is_triggered_ability", True)
+        effects = parse_effect_text(effect_text, triggered_ctx)
+        
+        if not effects:
+            # Couldn't parse effects, skip this trigger
+            continue
+        
+        # Parse targeting and trigger filter
+        targeting = parse_targeting(effect_text)
+        trigger_filter = parse_trigger_filter(condition_text)
+        
+        triggered_ability = TriggeredAbility(
+            event=event,
+            condition_text=condition_text,
+            effects=effects,
+            targeting=targeting,
+            trigger_filter=trigger_filter,
+        )
+        triggered.append(triggered_ability)
+    
+    return triggered
+
+
 def _parse_axis1_triggered(face: Axis1Face, ctx: ParseContext) -> list[TriggeredAbility]:
     """Parse triggered abilities from Axis1 structured data."""
     triggered = []
@@ -87,6 +209,13 @@ def _parse_axis1_triggered(face: Axis1Face, ctx: ParseContext) -> list[Triggered
                 cond_variants.append(cond.replace("this ", f"{card_name_lower} "))
                 # Also try just the card name
                 cond_variants.append(f"when {card_name_lower} leaves")
+            # Also handle "enters" vs "enters the battlefield" variations
+            if "enters" in cond and "enters the battlefield" not in cond:
+                # Add variant with "enters the battlefield"
+                cond_variants.append(cond.replace("enters", "enters the battlefield"))
+            elif "enters the battlefield" in cond:
+                # Add variant with just "enters"
+                cond_variants.append(cond.replace("enters the battlefield", "enters"))
             
             import logging
             logger = logging.getLogger(__name__)
@@ -139,7 +268,17 @@ def _parse_axis1_triggered(face: Axis1Face, ctx: ParseContext) -> list[Triggered
                         break
         
         print(f"[DEBUG LTB] Final effect_text being parsed: '{effect_text}'")
-        effects = parse_effect_text(effect_text, triggered_ctx)
+        
+        # Check for conditional clauses in the effect text
+        from axis2.parsing.conditional_effects import parse_conditional
+        conditional_effect = parse_conditional(effect_text, triggered_ctx)
+        if conditional_effect:
+            # Effect has a conditional clause, use it
+            effects = [conditional_effect]
+        else:
+            # No conditional clause, parse as normal effects
+            effects = parse_effect_text(effect_text, triggered_ctx)
+        
         print(f"[DEBUG LTB] Parsed {len(effects)} effects: {effects}")
         targeting = parse_targeting(t.effect)
         trigger_filter = parse_trigger_filter(t.condition)
@@ -187,11 +326,79 @@ def _parse_static_abilities(face: Axis1Face, ctx: ParseContext) -> list[StaticEf
     return static_effects
 
 
-def _parse_replacement_effects_from_text(text: str, ctx: ParseContext) -> list[ReplacementEffect]:
-    """Parse replacement effects from remaining text."""
+def _parse_replacement_effects_from_text(text: str, ctx: ParseContext, skip_duration_effects: bool = False) -> list[ReplacementEffect]:
+    """
+    Parse replacement effects from text.
+    
+    Args:
+        text: Text to parse replacement effects from
+        ctx: Parse context
+        skip_duration_effects: If True, skip replacement effects with duration prefixes
+            (e.g., "Until end of turn"). Use True when parsing from static text,
+            False when parsing from activated/triggered ability text.
+    """
+    import re
     replacement_effects = []
+    
+    # Pattern to detect duration prefixes
+    duration_prefix_pattern = re.compile(
+        r"^(until\s+end\s+of\s+turn|this\s+turn|until\s+your\s+next\s+turn)[,\s]+",
+        re.IGNORECASE
+    )
+    
+    # Pattern to detect if text contains duration prefix anywhere
+    duration_anywhere_pattern = re.compile(
+        r"(until\s+end\s+of\s+turn|this\s+turn|until\s+your\s+next\s+turn)[,\s]+",
+        re.IGNORECASE
+    )
+    
+    # Check if the full text contains a duration prefix (for context tracking)
+    full_text_has_duration = duration_anywhere_pattern.search(text) is not None
+    
     for sentence in split_into_sentences(text):
-        replacement_effects.extend(parse_replacement_effects(sentence))
+        sentence_stripped = sentence.strip()
+        
+        # Skip replacement effects with duration prefixes when parsing from static text
+        # These are temporary effects that should only come from activated/triggered abilities
+        if skip_duration_effects:
+            # Check if sentence starts with duration prefix
+            if duration_prefix_pattern.match(sentence_stripped):
+                continue
+            
+            # Also check if the sentence contains a duration prefix anywhere (defensive check)
+            # This catches cases where sentence splitting might have separated the prefix
+            if duration_anywhere_pattern.search(sentence_stripped):
+                continue
+            
+            # CRITICAL: If the full text had a duration prefix but this sentence doesn't,
+            # and this sentence looks like it could be part of a replacement effect with duration,
+            # skip it. This handles cases where sentence splitting separated the duration from the effect.
+            if full_text_has_duration and not duration_anywhere_pattern.search(sentence_stripped):
+                # Check if this sentence looks like a replacement effect that would have duration
+                # (contains "would" and "instead" - key markers of replacement effects)
+                if "would" in sentence_stripped.lower() and "instead" in sentence_stripped.lower():
+                    # This is likely part of a duration-prefixed replacement effect that was split
+                    continue
+        
+        # Parse replacement effects from this sentence
+        parsed_effects = parse_replacement_effects(sentence_stripped)
+        
+        # Additional safety check: if we're skipping duration effects and a parsed effect
+        # has no duration but the original text had a duration prefix, skip it
+        if skip_duration_effects and parsed_effects:
+            # Check if original sentence had duration prefix
+            has_duration_prefix = duration_anywhere_pattern.search(sentence_stripped)
+            for effect in parsed_effects:
+                # If effect has no duration but text had duration prefix, skip it
+                if has_duration_prefix and not effect.duration:
+                    continue
+                # Also skip if full text had duration but effect doesn't (defensive)
+                if full_text_has_duration and not effect.duration:
+                    continue
+                replacement_effects.append(effect)
+        else:
+            replacement_effects.extend(parsed_effects)
+    
     return replacement_effects
 
 
@@ -250,6 +457,23 @@ def _parse_face(face: Axis1Face, ctx: ParseContext) -> Axis2Face:
     activated = _parse_axis1_activated(face, ctx)
     triggered = _parse_axis1_triggered(face, ctx)
     
+    # Fallback: detect triggered abilities from oracle text if Axis1 didn't extract them
+    # This handles cases where Axis1 misses triggers (e.g., "enters" vs "enters the battlefield")
+    # We check the full oracle text to catch any missed triggers
+    detected_triggered = _detect_triggered_abilities_from_text(face.oracle_text or "", ctx)
+    # Only add triggers that weren't already parsed by Axis1
+    # Simple check: if condition_text doesn't match any existing trigger
+    existing_conditions = {t.condition_text.lower() for t in triggered}
+    for new_trigger in detected_triggered:
+        if new_trigger.condition_text.lower() not in existing_conditions:
+            triggered.append(new_trigger)
+    
+    # Fallback: detect Equip abilities from oracle text if Axis1 didn't extract them
+    detected_equip = _detect_equip_abilities_from_text(face.oracle_text or "", ctx)
+    # Add detected Equip abilities (they won't duplicate since Axis1 would have extracted them if present)
+    if detected_equip:
+        activated.extend(detected_equip)
+    
     mark_mana_abilities(activated)
     
     special_actions = _parse_special_actions(face, ctx)
@@ -258,7 +482,10 @@ def _parse_face(face: Axis1Face, ctx: ParseContext) -> Axis2Face:
     
     remaining_text = get_remaining_text_for_parsing(face, activated, triggered)
     
-    replacement_effects = _parse_replacement_effects_from_text(remaining_text, ctx)
+    # Parse replacement effects from static text (skip those with duration prefixes)
+    # NOTE: Replacement effects from activated abilities are now attached directly to those abilities
+    # in parse_activated_abilities, so we don't parse them here anymore
+    replacement_effects = _parse_replacement_effects_from_text(remaining_text, ctx, skip_duration_effects=True)
     
     types_lower = [t.lower() for t in face.card_types]
     is_spell = "instant" in types_lower or "sorcery" in types_lower

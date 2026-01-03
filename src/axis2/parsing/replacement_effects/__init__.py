@@ -14,10 +14,12 @@ def _register_all_parsers():
     Explicitly register all parsers in priority order.
     This gives us full control over registration and makes dependencies clear.
     """
-    from . import delayed, zone_change, dies, enter_tapped, damage, draw
+    from . import delayed, zone_change, dies, enter_tapped, damage, draw, mana_replacement, counter_modification
     
     # Register in priority order (high to low)
+    register_parser(mana_replacement.ManaReplacementParser())  # priority 60
     register_parser(delayed.DelayedParser())          # priority 55
+    register_parser(counter_modification.CounterModificationParser())  # priority 50
     register_parser(zone_change.ZoneChangeParser())   # priority 50
     register_parser(dies.DiesParser())                 # priority 45
     register_parser(enter_tapped.EnterTappedParser())  # priority 40
