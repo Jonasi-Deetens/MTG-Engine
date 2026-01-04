@@ -67,3 +67,68 @@ class TypeChangeParser(ContinuousEffectParser):
             consumed_text=text
         )
 
+
+class TypeRemovalParser(ContinuousEffectParser):
+    """Parses type removal effects: 'isn't a creature until...' (Impending)"""
+    priority = 45  # Higher than TypeChangeParser to catch "isn't" before "is"
+    
+    def can_parse(self, text: str, ctx: ParseContext) -> bool:
+        # ⚠️ CHEAP CHECK ONLY
+        lower = text.lower()
+        return ("isn't" in lower or "is not" in lower) and "creature" in lower
+    
+    def parse(self, text: str, ctx: ParseContext, applies_to: Optional[str] = None,
+              condition=None, duration: Optional[str] = None) -> ParseResult:
+        lower = text.lower()
+        
+        # Pattern: "isn't a creature until..." or "is not a creature until..."
+        if "isn't" in lower:
+            after = lower.split("isn't", 1)[1]
+        elif "is not" in lower:
+            after = lower.split("is not", 1)[1]
+        else:
+            return ParseResult(matched=False)
+        
+        # Extract the type being removed (usually "creature")
+        types_to_remove = []
+        if "creature" in after:
+            types_to_remove.append("creature")
+        # Could add more types here if needed
+        
+        if not types_to_remove:
+            return ParseResult(matched=False)
+        
+        # Extract condition from "until..." clause
+        # Use passed condition if available, otherwise parse from text
+        condition_text = condition
+        if not condition_text and "until" in after:
+            until_part = after.split("until", 1)[1].strip()
+            # For Impending: "until the last is removed" means "while time counters > 0"
+            if "last is removed" in until_part or "last time counter is removed" in until_part:
+                condition_text = "time_counters > 0"
+            # Could add more condition parsing here
+        
+        type_change = TypeChangeData(
+            set_types=None,
+            add_types=None,
+            remove_types=types_to_remove
+        )
+        
+        effect = ContinuousEffect(
+            kind="type_remove",
+            applies_to=applies_to or "self",
+            type_change=type_change,
+            condition=condition_text,
+            text=text,
+            duration=duration,
+            layer=4,  # Type changes are layer 4
+        )
+        
+        # Assign layer and sublayer
+        assign_layer_to_effect(effect)
+        
+        return ParseResult(
+            matched=True,
+            effect=effect,
+            consumed_text=text
+        )

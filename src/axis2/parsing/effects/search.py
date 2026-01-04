@@ -22,14 +22,10 @@ SEARCH_RE = re.compile(
     re.IGNORECASE
 )
 
+# More flexible regex that allows continuation text after the search clause
 AURA_SEARCH_RE = re.compile(
-    r"""
-    you\s+may\s+search\s+your\s+library\s+for\s+an?\s+
-    aura\s+card
-    \s+with\s+mana\s+value\s+less\s+than\s+or\s+equal\s+to\s+that\s+aura
-    \s+and\s+with\s+a\s+different\s+name\s+than\s+each\s+aura\s+you\s+control
-    """,
-    re.I | re.X,
+    r"you\s+may\s+search\s+your\s+library\s+for\s+an?\s+aura\s+card\s+with\s+mana\s+value\s+less\s+than\s+or\s+equal\s+to\s+that\s+aura\s+and\s+with\s+a\s+different\s+name\s+than\s+each\s+aura\s+you\s+control",
+    re.I
 )
 
 class SearchParser(EffectParser):
@@ -140,15 +136,36 @@ class LightpawsSearchParser(EffectParser):
     
     def can_parse(self, text: str, ctx: ParseContext) -> bool:
         # ⚠️ CHEAP CHECK ONLY
-        return "search" in text.lower() and "aura" in text.lower() and "mana value" in text.lower()
+        t = text.lower()
+        result = "search" in t and "aura" in t and "mana value" in t
+        if result:
+            print(f"[DEBUG LightpawsSearchParser] can_parse=True for: {text[:80]}...")
+        return result
     
     def parse(self, text: str, ctx: ParseContext) -> ParseResult:
+        print(f"[DEBUG LightpawsSearchParser] parse called with: {text[:100]}...")
         m = AURA_SEARCH_RE.search(text)
         if not m:
+            print(f"[DEBUG LightpawsSearchParser] Regex did not match")
             return ParseResult(matched=False)
+        print(f"[DEBUG LightpawsSearchParser] Regex matched!")
         
-        # Remove the matched part and parse the remainder
-        remainder = AURA_SEARCH_RE.sub("", text).strip().lstrip(",").strip()
+        t = text.lower()
+        
+        # Check if the card is put onto the battlefield
+        put_onto_battlefield = "put that card onto the battlefield" in t or \
+                               "put it onto the battlefield" in t or \
+                               "put onto the battlefield" in t
+        
+        # Check if attached to something (Light-Paws in this case)
+        attach_to = None
+        if "attached to" in t:
+            # Check if it says "attached to [card name]" - for Light-Paws, it's "attached to Light-Paws"
+            # We'll use "self" since this is the source of the ability
+            attach_to = "self"
+        
+        # Check if shuffle is mentioned
+        shuffle_if_searched = "shuffle" in t or "then shuffle" in t
         
         effects = [
             SearchEffect(
@@ -161,16 +178,20 @@ class LightpawsSearchParser(EffectParser):
                 optional=True,
                 max_results=1,
                 card_names=None,
-                put_onto_battlefield=False,
-                shuffle_if_library_searched=False,
+                put_onto_battlefield=put_onto_battlefield,
+                shuffle_if_library_searched=shuffle_if_searched,
             )
         ]
         
-        # ⚠️ If this parser needs to parse remainder text,
-        # it can call registry.parse() internally with bounded depth:
-        # For Lightpaws, the remainder ("put that card attached...") will be
-        # handled by ZoneChangeParser when the full text is parsed
-        # This avoids recursion in the dispatcher
+        # If the card is put onto the battlefield, add a ChangeZoneEffect
+        if put_onto_battlefield:
+            effects.append(
+                ChangeZoneEffect(
+                    subject=Subject(scope="searched_card"),
+                    to_zone="battlefield",
+                    attach_to=attach_to  # "self" for Light-Paws
+                )
+            )
         
         return ParseResult(
             matched=True,

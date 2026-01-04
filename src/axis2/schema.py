@@ -180,7 +180,15 @@ class EntersBattlefieldEvent:
     subject: str
 
 @dataclass
+class AttacksEvent:
+    subject: str
+
+@dataclass
 class LeavesBattlefieldEvent:
+    subject: str
+
+@dataclass
+class DiesEvent:
     subject: str
 
 @dataclass
@@ -304,6 +312,12 @@ class PTBoostEffect(Effect):
 class PutCounterEffect(Effect):
     counter_type: str
     amount: int
+
+@dataclass
+class RemoveCounterEffect(Effect):
+    counter_type: str
+    amount: int = 1  # Default to 1 if not specified
+    subject: Subject | None = None  # "it", "this permanent", etc.
 
 @dataclass
 class DraftFromSpellbookEffect(Effect):
@@ -466,8 +480,8 @@ class TriggerFilter:
 class TriggeredAbility:
     condition_text: str
     effects: List[Effect]
-    event: Optional[Union[ZoneChangeEvent, DealsDamageEvent, EntersBattlefieldEvent, 
-                         LeavesBattlefieldEvent, CastSpellEvent, str]] = None
+    event: Optional[Union[ZoneChangeEvent, DealsDamageEvent, EntersBattlefieldEvent, AttacksEvent,
+                         LeavesBattlefieldEvent, CastSpellEvent, DiesEvent, str]] = None
     targeting: Optional[TargetingRules] = None
     trigger_filter: Optional[TriggerFilter] = None
 

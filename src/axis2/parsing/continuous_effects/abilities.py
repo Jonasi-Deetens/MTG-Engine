@@ -42,19 +42,25 @@ class AbilitiesParser(ContinuousEffectParser):
         abilities: list[GrantedAbility] = []
 
         for a in raw:
-            a = re.sub(r"\s+until.*$", "", a)
+            a_clean = re.sub(r"\s+until.*$", "", a).strip().lower()
 
             # Ward {N}
-            m = re.match(r"ward\s*\{(\d+)\}", a)
+            m = re.match(r"ward\s*\{(\d+)\}", a_clean)
             if m:
                 value = int(m.group(1))
                 abilities.append(GrantedAbility(kind="ward", value=value))
                 continue
 
-            # Simple keyword abilities
-            if a in ABILITY_KEYWORDS:
-                abilities.append(GrantedAbility(kind=a))
+            # Simple keyword abilities - check exact match
+            if a_clean in ABILITY_KEYWORDS:
+                abilities.append(GrantedAbility(kind=a_clean))
                 continue
+            
+            # Try matching against keywords - check if ability text contains or matches keyword
+            for keyword in ABILITY_KEYWORDS:
+                if a_clean == keyword or a_clean.strip() == keyword:
+                    abilities.append(GrantedAbility(kind=keyword))
+                    break
 
         if not abilities:
             return ParseResult(matched=False)

@@ -5,15 +5,15 @@ from .base import ParseResult
 from .registry import get_registry
 from axis2.schema import (
     ZoneChangeEvent, DealsDamageEvent, EntersBattlefieldEvent,
-    LeavesBattlefieldEvent, CastSpellEvent
+    AttacksEvent, LeavesBattlefieldEvent, CastSpellEvent, DiesEvent
 )
 import logging
 
 logger = logging.getLogger(__name__)
 
 def parse_trigger_event(condition_text: str) -> Optional[Union[ZoneChangeEvent, DealsDamageEvent, 
-                                                               EntersBattlefieldEvent, LeavesBattlefieldEvent, 
-                                                               CastSpellEvent, str]]:
+                                                               EntersBattlefieldEvent, AttacksEvent,
+                                                               LeavesBattlefieldEvent, CastSpellEvent, DiesEvent, str]]:
     """
     Main entry point - replaces the old parse_trigger_event.
     Now uses registry pattern instead of hardcoded chain.

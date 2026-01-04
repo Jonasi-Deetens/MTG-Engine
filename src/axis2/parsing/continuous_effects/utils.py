@@ -37,11 +37,11 @@ def split_continuous_clauses(text: str) -> list[str]:
                 )
         clauses = new_clauses
 
-    # SECOND PASS: split on "and ..." verb phrases
+    # SECOND PASS: split on "and ..." verb phrases and comma-separated clauses
     final_clauses = []
     for orig, low in clauses:
         parts = re.split(
-            r'\b(?:and|, and)\b(?=\s+(has|have|is|are|loses|gains|gets|becomes))',
+            r'\b(?:and|, and|,)\b(?=\s+(has|have|is|are|loses|gains|gets|becomes))',
             orig,
             flags=re.I
         )

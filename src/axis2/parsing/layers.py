@@ -51,7 +51,7 @@ def assign_layer(effect: ContinuousEffect) -> tuple[int, Optional[str]]:
         return (5, None)
     
     # Layer 6: Ability-adding/removing effects
-    if kind in ("grant_ability", "ability_remove_all", "grant_protection", "cant_be_blocked_by"):
+    if kind in ("grant_ability", "ability_remove_all", "grant_protection", "cant_be_blocked_by", "activation_restriction"):
         return (6, None)
     
     # Layer 7: Power/toughness effects

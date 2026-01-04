@@ -12,7 +12,7 @@ def _register_all_parsers():
     Explicitly register all parsers in priority order.
     This gives us full control over registration and makes dependencies clear.
     """
-    from . import damage, search, tokens, zone_changes, counters, life, draw, mana, look_pick, protection, misc, casting_permission, discard, conditional_mana
+    from . import damage, search, tokens, zone_changes, counters, life, draw, mana, look_pick, protection, misc, casting_permission, discard, conditional_mana, continuous_wrapper
     
     # Register in priority order (high to low)
     # Very specific patterns first
@@ -26,10 +26,12 @@ def _register_all_parsers():
     register_parser(tokens.TokenParser())             # priority 60
     register_parser(damage.DamageParser())            # priority 50
     register_parser(counters.CounterParser())         # priority 50
+    register_parser(counters.RemoveCounterParser())    # priority 50
     register_parser(life.LifeParser())                # priority 50
     register_parser(misc.CounterSpellParser())        # priority 50
     register_parser(misc.PTBoostParser())             # priority 50
     register_parser(discard.DiscardParser())          # priority 50
+    register_parser(continuous_wrapper.ContinuousEffectWrapperParser())  # priority 45
     
     # Generic effects
     register_parser(zone_changes.ZoneChangeParser())  # priority 40

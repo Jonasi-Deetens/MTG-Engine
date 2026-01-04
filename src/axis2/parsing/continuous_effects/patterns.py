@@ -37,8 +37,12 @@ ABILITY_KEYWORDS = {
 CLAUSE_BOUNDARIES = [
     " with base power and toughness ",
     " with base power & toughness ",
+    ", has ",
+    ", have ",
     " and has ",
     " and have ",
+    ", gains ",
+    ", gain ",
     " and gains ",
     " and gain ",
     " and it loses ",

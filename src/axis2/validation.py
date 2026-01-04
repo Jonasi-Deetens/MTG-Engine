@@ -22,7 +22,7 @@ VALID_ZONES = {
 
 # Valid subject scopes
 VALID_SCOPES = {
-    "target", "each", "any_number", "up_to_n", "all", "self", "linked_exiled_card"
+    "target", "each", "any_number", "up_to_n", "all", "self", "linked_exiled_card", "searched_card"
 }
 
 # Valid controller values

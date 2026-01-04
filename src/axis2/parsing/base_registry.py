@@ -49,10 +49,25 @@ class BaseParserRegistry:
         
         # Quick filter: only try parsers that might match
         # Different parser types have different can_parse signatures
+        candidates = []
         if ctx is not None:
-            candidates = [p for p in self._parsers if p.can_parse(text, ctx)]
+            for p in self._parsers:
+                try:
+                    if p.can_parse(text, ctx):
+                        candidates.append(p)
+                except Exception as e:
+                    # Log but don't fail - some parsers might have bugs in can_parse
+                    import logging
+                    logging.getLogger(__name__).debug(f"Exception in {type(p).__name__}.can_parse: {e}")
         else:
-            candidates = [p for p in self._parsers if p.can_parse(text)]
+            for p in self._parsers:
+                try:
+                    if p.can_parse(text):
+                        candidates.append(p)
+                except Exception as e:
+                    # Log but don't fail - some parsers might have bugs in can_parse
+                    import logging
+                    logging.getLogger(__name__).debug(f"Exception in {type(p).__name__}.can_parse: {e}")
         
         return candidates
     

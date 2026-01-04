@@ -18,6 +18,11 @@ LTB_RE = re.compile(
     re.IGNORECASE
 )
 
+DIES_RE = re.compile(
+    r"(?:when|whenever)\s+(.*?)\s+dies",
+    re.IGNORECASE
+)
+
 ATTACKS_RE = re.compile(
     r"\bwhenever\b.*\battacks\b",
     re.IGNORECASE

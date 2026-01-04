@@ -33,3 +33,8 @@ RE_DELAYED_REPLACEMENT = re.compile(
     re.IGNORECASE | re.DOTALL
 )
 
+RE_WOULD_BE_DESTROYED = re.compile(
+    r"if (.*?) would be destroyed, (.*) instead",
+    re.IGNORECASE | re.DOTALL
+)
+

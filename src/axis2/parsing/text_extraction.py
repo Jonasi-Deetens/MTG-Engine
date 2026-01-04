@@ -6,11 +6,14 @@ structured abilities have been parsed from Axis1.
 """
 
 import re
+import logging
 from typing import List
 from axis1.schema import Axis1Face
 from axis2.schema import ActivatedAbility, TriggeredAbility
 from axis2.parsing.keywords import extract_keywords
 from axis2.parsing.sentences import split_into_sentences
+
+logger = logging.getLogger(__name__)
 
 
 def get_remaining_text_for_parsing(
@@ -57,14 +60,46 @@ def get_remaining_text_for_parsing(
         eff = (t.effect or "").strip()
         text = _remove_ability_text(text, cond, eff)
     
-    # Remove standalone keyword lines
-    keywords = extract_keywords(text)
+    # Extract parenthetical text from lines before removing keywords
+    # This preserves replacement effects and other abilities in parenthetical text
+    # e.g., "Umbra armor (If enchanted creature would be destroyed...)" 
+    parenthetical_text = []
     lines = text.split("\n")
+    cleaned_lines = []
+    
+    logger.debug(f"[TEXT_EXTRACT] Original text: {text[:200]}")
+    
+    for line in lines:
+        stripped = line.strip()
+        # Extract parenthetical text (e.g., "(If X would be destroyed...)")
+        paren_match = re.search(r"\(([^)]+)\)", stripped)
+        if paren_match:
+            extracted = paren_match.group(1)
+            logger.debug(f"[TEXT_EXTRACT] Found parenthetical text: {extracted[:100]}")
+            parenthetical_text.append(extracted)
+            # Remove the parenthetical part from the line for keyword checking
+            line_without_paren = re.sub(r"\([^)]+\)", "", stripped).strip()
+            # If line still has content after removing parenthetical, keep it
+            if line_without_paren:
+                cleaned_lines.append(line_without_paren)
+        else:
+            cleaned_lines.append(stripped)
+    
+    # Remove standalone keyword lines (without parenthetical text)
+    keywords = extract_keywords("\n".join(cleaned_lines))
+    logger.debug(f"[TEXT_EXTRACT] Extracted keywords: {keywords}")
     cleaned_lines = [
-        line for line in lines
-        if line.strip().lower() not in [kw.lower() for kw in keywords]
+        line for line in cleaned_lines
+        if line.lower() not in [kw.lower() for kw in keywords]
     ]
+    
+    # Add back parenthetical text as separate lines
+    if parenthetical_text:
+        logger.debug(f"[TEXT_EXTRACT] Adding {len(parenthetical_text)} parenthetical text lines back")
+        cleaned_lines.extend(parenthetical_text)
+    
     text = "\n".join(cleaned_lines)
+    logger.debug(f"[TEXT_EXTRACT] Final remaining text: {text[:200]}")
     
     return text.strip()
 
