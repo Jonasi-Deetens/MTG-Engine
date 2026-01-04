@@ -14,15 +14,16 @@ def _register_all_parsers():
     Explicitly register all parsers in priority order.
     This gives us full control over registration and makes dependencies clear.
     """
-    from . import pt_mod, abilities, color_change, type_change, protection, rule_change, loss_effects, cant_be_blocked, activation_restriction
+    from . import pt_mod, abilities, ability_grant, color_change, type_change, protection, rule_change, loss_effects, cant_be_blocked, activation_restriction
     
     # Register in priority order (high to low)
     # P/T modifications first (most common)
     register_parser(pt_mod.PTParser())              # priority 60
     register_parser(pt_mod.BasePTParser())           # priority 55
     
-    # Ability granting
-    register_parser(abilities.AbilitiesParser())     # priority 50
+    # Ability granting - comprehensive parser first (more specific patterns)
+    register_parser(ability_grant.AbilityGrantParser())  # priority 50
+    register_parser(abilities.AbilitiesParser())     # priority 50 (fallback)
     
     # Color changes
     register_parser(color_change.ColorChangeParser()) # priority 45

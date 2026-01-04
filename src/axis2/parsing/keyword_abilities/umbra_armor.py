@@ -26,11 +26,12 @@ class UmbraArmorParser:
     
     def parse_reminder(self, reminder_text: str, ctx: ParseContext) -> List[Effect]:
         """Parse Umbra armor reminder text into ReplacementEffect"""
-        logger.debug(f"[UmbraArmorParser] Parsing reminder text: {reminder_text[:100]}")
+        logger.debug(f"[UmbraArmorParser] Parsing reminder text: {reminder_text}")
         
         m = RE_WOULD_BE_DESTROYED.search(reminder_text)
         if not m:
-            logger.debug(f"[UmbraArmorParser] Regex did not match reminder text")
+            logger.warning(f"[UmbraArmorParser] Regex did not match reminder text: '{reminder_text}'")
+            logger.warning(f"[UmbraArmorParser] Pattern: {RE_WOULD_BE_DESTROYED.pattern}")
             return []
         
         try:
@@ -47,7 +48,8 @@ class UmbraArmorParser:
                 event="would_be_destroyed",
                 subject=subject,
                 value={"instead": actions},
-                zones=["battlefield"]
+                zones=["battlefield"],
+                text=reminder_text
             )
             
             logger.debug(f"[UmbraArmorParser] Created ReplacementEffect: {effect.kind}")

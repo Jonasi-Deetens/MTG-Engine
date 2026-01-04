@@ -22,7 +22,10 @@ def parse_continuous_effects(text: str, ctx: ParseContext) -> List[ContinuousEff
     """
     effects = []
     if not text:
+        logger.debug(f"[CONTINUOUS_DISPATCHER] Empty text, returning empty list")
         return effects
+
+    logger.warning(f"[CONTINUOUS_DISPATCHER] Parsing continuous effects from: {text[:200]}")
 
     # Reject text that starts with trigger words - this is a triggered ability, not a continuous effect
     text_lower = text.strip().lower()
@@ -33,6 +36,7 @@ def parse_continuous_effects(text: str, ctx: ParseContext) -> List[ContinuousEff
 
     # Split into semantic clauses
     clauses = split_continuous_clauses(text)
+    logger.debug(f"[CONTINUOUS_DISPATCHER] Split text into {len(clauses)} clauses: {clauses}")
     current_subject = None
 
     registry = get_registry()
@@ -52,6 +56,7 @@ def parse_continuous_effects(text: str, ctx: ParseContext) -> List[ContinuousEff
             condition = structured
 
         applies_to = guess_applies_to(clause)
+        logger.debug(f"[CONTINUOUS_DISPATCHER] Clause: '{clause}', applies_to={applies_to}")
 
         if applies_to is None:
             applies_to = current_subject
@@ -62,7 +67,9 @@ def parse_continuous_effects(text: str, ctx: ParseContext) -> List[ContinuousEff
         duration = detect_duration(clause)
 
         # Use registry to find matching parser
+        logger.debug(f"[CONTINUOUS_DISPATCHER] Calling registry.parse for clause: '{clause[:100]}'")
         result = registry.parse(clause, ctx, applies_to, condition, duration)
+        logger.debug(f"[CONTINUOUS_DISPATCHER] Registry result: matched={result.matched}, is_success={result.is_success}, effects={len(result.all_effects)}")
         if result.is_success:
             for effect in result.all_effects:
                 if isinstance(effect, ContinuousEffect):

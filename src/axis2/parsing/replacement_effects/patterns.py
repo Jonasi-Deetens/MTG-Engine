@@ -34,7 +34,7 @@ RE_DELAYED_REPLACEMENT = re.compile(
 )
 
 RE_WOULD_BE_DESTROYED = re.compile(
-    r"if (.*?) would be destroyed, (.*) instead",
+    r"if (.*?) would be destroyed(?:,)?\s+instead\s+(.*)",
     re.IGNORECASE | re.DOTALL
 )
 

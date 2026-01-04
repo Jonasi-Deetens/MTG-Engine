@@ -7,9 +7,9 @@ structured abilities have been parsed from Axis1.
 
 import re
 import logging
-from typing import List
+from typing import List, Tuple, Optional
 from axis1.schema import Axis1Face
-from axis2.schema import ActivatedAbility, TriggeredAbility
+from axis2.schema import ActivatedAbility, TriggeredAbility, Effect, ParseContext
 from axis2.parsing.keywords import extract_keywords
 from axis2.parsing.sentences import split_into_sentences
 
@@ -19,15 +19,16 @@ logger = logging.getLogger(__name__)
 def get_remaining_text_for_parsing(
     face: Axis1Face,
     activated: List[ActivatedAbility],
-    triggered: List[TriggeredAbility]
-) -> str:
+    triggered: List[TriggeredAbility],
+    ctx: Optional[ParseContext] = None
+) -> Tuple[str, List[str], List[Effect]]:
     """
     Get text that hasn't been parsed yet.
     
     Removes:
     - Activated abilities (from Axis1 or detected)
     - Triggered abilities (from Axis1 or detected)
-    - Keywords (handled separately)
+    - Keyword abilities (parsed and removed)
     
     Leaves:
     - Static abilities
@@ -40,9 +41,13 @@ def get_remaining_text_for_parsing(
         face: The Axis1Face to extract text from
         activated: Already parsed activated abilities
         triggered: Already parsed triggered abilities
+        ctx: ParseContext for keyword parsing
         
     Returns:
-        Cleaned text ready for further parsing
+        Tuple of (cleaned_text, keyword_names, keyword_effects):
+        - cleaned_text: Text ready for further parsing
+        - keyword_names: List of keyword names found
+        - keyword_effects: List of Effect objects from keyword abilities
     """
     text = (face.oracle_text or "").strip()
     if not text:
@@ -60,40 +65,75 @@ def get_remaining_text_for_parsing(
         eff = (t.effect or "").strip()
         text = _remove_ability_text(text, cond, eff)
     
-    # Extract parenthetical text from lines before removing keywords
-    # This preserves replacement effects and other abilities in parenthetical text
-    # e.g., "Umbra armor (If enchanted creature would be destroyed...)" 
+    # Parse keyword abilities FIRST and remove their lines from text
+    keyword_names = []
+    keyword_effects = []
+    keyword_lines_to_remove = []
+    
+    if ctx is not None:
+        from axis2.parsing.keyword_abilities import get_registry
+        registry = get_registry()
+        
+        lines = text.split("\n")
+        cleaned_lines = []
+        
+        logger.debug(f"[TEXT_EXTRACT] Original text: {text[:200]}")
+        
+        for line in lines:
+            stripped = line.strip()
+            if not stripped:
+                cleaned_lines.append(line)
+                continue
+            
+            # Check if this line is a keyword
+            keyword_result = registry.detect_keyword(stripped)
+            if keyword_result:
+                keyword_name, reminder_text, cost_text = keyword_result
+                print(f"[TEXT_EXTRACT PRINT] Line '{stripped}' detected as keyword: {keyword_name}")
+                logger.debug(f"[TEXT_EXTRACT] Found keyword: {keyword_name}, reminder: {reminder_text[:50] if reminder_text else None}")
+                
+                # Parse the keyword ability
+                parsed_effects = registry.parse_keyword(
+                    keyword_name, reminder_text, cost_text, stripped, ctx
+                )
+                
+                keyword_names.append(keyword_name)
+                keyword_effects.extend(parsed_effects)
+                keyword_lines_to_remove.append(stripped)
+                
+                # Don't add this line to cleaned_lines (it's been parsed)
+                continue
+            
+            # Keep non-keyword lines
+            cleaned_lines.append(stripped)
+        
+        text = "\n".join(cleaned_lines)
+        print(f"[TEXT_EXTRACT PRINT] Removed {len(keyword_lines_to_remove)} keyword lines")
+        print(f"[TEXT_EXTRACT PRINT] Parsed {len(keyword_effects)} keyword effects")
+        print(f"[TEXT_EXTRACT PRINT] Remaining text after keyword removal: {text[:300]}")
+        logger.debug(f"[TEXT_EXTRACT] Removed {len(keyword_lines_to_remove)} keyword lines")
+        logger.debug(f"[TEXT_EXTRACT] Parsed {len(keyword_effects)} keyword effects")
+        logger.debug(f"[TEXT_EXTRACT] Remaining text after keyword removal: {text[:300]}")
+    
+    # Extract parenthetical text (for non-keyword parentheticals)
     parenthetical_text = []
-    keyword_lines = []
     lines = text.split("\n")
     cleaned_lines = []
     
-    logger.debug(f"[TEXT_EXTRACT] Original text: {text[:200]}")
-    
-    from axis2.parsing.keyword_abilities import get_registry
-    registry = get_registry()
-    
     for line in lines:
         stripped = line.strip()
-        # Check if this line is a keyword with reminder text
-        keyword_result = registry.detect_keyword(stripped)
-        if keyword_result:
-            keyword_name, reminder_text, cost_text = keyword_result
-            logger.debug(f"[TEXT_EXTRACT] Found keyword: {keyword_name}, reminder: {reminder_text[:50] if reminder_text else None}")
-            keyword_lines.append(stripped)
-            # If there's reminder text, extract it for parsing
-            if reminder_text:
-                parenthetical_text.append(reminder_text)
-            # Don't add keyword line to cleaned_lines (it will be handled by keyword registry)
+        if not stripped:
+            cleaned_lines.append(line)
             continue
         
         # Extract parenthetical text (e.g., "(If X would be destroyed...)")
+        # But skip if it's part of a keyword line (already handled above)
         paren_match = re.search(r"\(([^)]+)\)", stripped)
         if paren_match:
             extracted = paren_match.group(1)
             logger.debug(f"[TEXT_EXTRACT] Found parenthetical text: {extracted[:100]}")
             parenthetical_text.append(extracted)
-            # Remove the parenthetical part from the line for keyword checking
+            # Remove the parenthetical part from the line
             line_without_paren = re.sub(r"\([^)]+\)", "", stripped).strip()
             # If line still has content after removing parenthetical, keep it
             if line_without_paren:
@@ -101,15 +141,17 @@ def get_remaining_text_for_parsing(
         else:
             cleaned_lines.append(stripped)
     
-    # Remove standalone keyword lines (without parenthetical text)
+    # Remove standalone keyword lines (simple keywords without reminder text)
     keywords = extract_keywords("\n".join(cleaned_lines))
-    logger.debug(f"[TEXT_EXTRACT] Extracted keywords: {keywords}")
+    logger.debug(f"[TEXT_EXTRACT] Extracted simple keywords: {keywords}")
+    logger.debug(f"[TEXT_EXTRACT] Lines before keyword removal: {cleaned_lines}")
     cleaned_lines = [
         line for line in cleaned_lines
         if line.lower() not in [kw.lower() for kw in keywords]
     ]
+    logger.debug(f"[TEXT_EXTRACT] Lines after keyword removal: {cleaned_lines}")
     
-    # Add back parenthetical text as separate lines
+    # Add back parenthetical text as separate lines (for non-keyword parentheticals)
     if parenthetical_text:
         logger.debug(f"[TEXT_EXTRACT] Adding {len(parenthetical_text)} parenthetical text lines back")
         cleaned_lines.extend(parenthetical_text)
@@ -117,7 +159,7 @@ def get_remaining_text_for_parsing(
     text = "\n".join(cleaned_lines)
     logger.debug(f"[TEXT_EXTRACT] Final remaining text: {text[:200]}")
     
-    return text.strip()
+    return text.strip(), keyword_names, keyword_effects
 
 
 def _remove_ability_text(text: str, part1: str, part2: str) -> str:

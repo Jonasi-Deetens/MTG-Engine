@@ -102,6 +102,11 @@ class KeywordAbilityRegistry:
         from .undying import UndyingParser
         from .miracle import MiracleParser
         from .soulbond import SoulbondParser
+        from .overload import OverloadParser
+        from .scavenge import ScavengeParser
+        from .unleash import UnleashParser
+        from .cipher import CipherParser
+        from .evolve import EvolveParser
         from .extort import ExtortParser
         from .fuse import FuseParser
         from .bestow import BestowParser
@@ -380,6 +385,16 @@ class KeywordAbilityRegistry:
         """
         Detect keyword in text and extract keyword name, reminder text, and cost.
         
+        IMPORTANT: Only matches lines that START with a keyword, not sentences containing keywords.
+        Examples of valid matches:
+        - "Ward {2} (Whenever...)"
+        - "Flying"
+        - "Umbra armor (If...)"
+        
+        Examples of invalid matches (should NOT match):
+        - "Enchanted creature has ward {2}. (Whenever...)"  <- sentence, not keyword line
+        - "Creatures you control have flying."  <- sentence, not keyword line
+        
         Returns:
             Tuple of (keyword_name, reminder_text, cost_text) or None
         """
@@ -387,6 +402,43 @@ class KeywordAbilityRegistry:
         if not text:
             return None
         
+        # IMPORTANT: Only match lines that START with a known keyword
+        # First, check if the line starts with a keyword name from our registry
+        text_lower = text.lower()
+        
+        # Check if line starts with any registered keyword
+        starts_with_keyword = False
+        for keyword in self._parsers.keys():
+            # Check if text starts with the keyword (with optional cost/reminder)
+            if text_lower.startswith(keyword):
+                # Make sure it's a word boundary (not just a substring)
+                # e.g., "ward" should match "ward {2}" but not "award"
+                if len(text_lower) == len(keyword) or text_lower[len(keyword)] in " \t({":
+                    starts_with_keyword = True
+                    break
+        
+        # Also check common keyword patterns that might not be in registry
+        common_keyword_patterns = [
+            r"^(flying|haste|trample|vigilance|deathtouch|lifelink|reach|menace|first strike|double strike|hexproof|indestructible)",
+            r"^(ward\s*\{[^}]+\})",
+            r"^(protection from)",
+            r"^(\w+walk)",
+            r"^(\w+cycling)",
+        ]
+        
+        if not starts_with_keyword:
+            import re
+            for pattern in common_keyword_patterns:
+                if re.match(pattern, text_lower):
+                    starts_with_keyword = True
+                    break
+        
+        # If it doesn't start with a keyword, reject it
+        if not starts_with_keyword:
+            logger.debug(f"[Registry] Rejecting '{text}' - does not start with a known keyword")
+            return None
+        
+        # Now check for reminder text pattern
         reminder_match = KEYWORD_WITH_REMINDER_RE.match(text)
         if reminder_match:
             keyword_part = reminder_match.group(1).strip()
@@ -401,6 +453,7 @@ class KeywordAbilityRegistry:
                 cost = None
             
             keyword_name = KEYWORD_ALIASES.get(keyword_name, keyword_name)
+            logger.debug(f"[Registry] Matched keyword with reminder: '{text}' -> '{keyword_name}'")
             return (keyword_name, reminder, cost)
         
         cost_match = KEYWORD_WITH_COST_RE.match(text)
@@ -410,12 +463,17 @@ class KeywordAbilityRegistry:
             keyword_name = KEYWORD_ALIASES.get(keyword_name, keyword_name)
             return (keyword_name, None, cost)
         
-        keyword_name = text.lower()
+        # Only match if the entire line is exactly a keyword (not a sentence containing a keyword)
+        # This prevents matching "Enchanted creature has ward {2}." as a keyword line
+        keyword_name = text.lower().strip()
         keyword_name = KEYWORD_ALIASES.get(keyword_name, keyword_name)
         
+        # Check if the entire line is exactly a keyword name
         if keyword_name in self._parsers:
+            logger.debug(f"[Registry] Matched exact keyword: '{text}' -> '{keyword_name}'")
             return (keyword_name, None, None)
         
+        # Check for keyword patterns that match the entire line
         if keyword_name.endswith("walk") and keyword_name not in ["walk"]:
             return (keyword_name, None, None)
         
@@ -425,6 +483,8 @@ class KeywordAbilityRegistry:
         if keyword_name.endswith("cycling"):
             return (keyword_name, None, None)
         
+        # Don't match lines that contain keywords but aren't standalone keyword lines
+        # e.g., "Enchanted creature has ward {2}." should NOT match
         return None
     
     def parse_keyword(self, keyword_name: str, reminder_text: Optional[str], 
@@ -453,12 +513,18 @@ class KeywordAbilityRegistry:
         
         try:
             if reminder_text:
-                if hasattr(parser, 'can_parse_reminder') and parser.can_parse_reminder(reminder_text):
-                    effects = parser.parse_reminder(reminder_text, ctx)
-                    logger.debug(f"[KeywordRegistry] Parsed {len(effects)} effects from reminder text")
-                    return effects
+                if hasattr(parser, 'can_parse_reminder'):
+                    can_parse = parser.can_parse_reminder(reminder_text)
+                    logger.debug(f"[KeywordRegistry] can_parse_reminder('{reminder_text[:50]}...'): {can_parse}")
+                    if can_parse:
+                        effects = parser.parse_reminder(reminder_text, ctx)
+                        logger.debug(f"[KeywordRegistry] Parsed {len(effects)} effects from reminder text")
+                        return effects
+                    else:
+                        logger.warning(f"[KeywordRegistry] Parser cannot parse reminder text: '{reminder_text[:100]}'")
+                        return []
                 else:
-                    logger.debug(f"[KeywordRegistry] Parser cannot parse reminder text")
+                    logger.debug(f"[KeywordRegistry] Parser has no can_parse_reminder method")
                     return []
             else:
                 if hasattr(parser, 'parse_keyword_only'):

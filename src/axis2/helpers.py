@@ -17,4 +17,5 @@ def cleaned_oracle_text(face: Axis1Face) -> str:
     from axis2.parsing.text_extraction import get_remaining_text_for_parsing
     # Create empty lists since we don't have parsed abilities here
     # This maintains backward compatibility
-    return get_remaining_text_for_parsing(face, [], [])
+    remaining_text, _, _ = get_remaining_text_for_parsing(face, [], [], None)
+    return remaining_text

@@ -14,7 +14,7 @@ def parse_destruction_instead_actions(text: str) -> List[dict]:
     text = text.lower().strip()
     actions = []
     
-    if "remove all damage" in text or "remove damage" in text:
+    if "remove all damage" in text or "remove damage" in text or "remove all damage from it" in text:
         if "from it" in text or "from enchanted creature" in text:
             actions.append({
                 "action": "remove_damage",

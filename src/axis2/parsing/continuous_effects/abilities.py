@@ -18,36 +18,48 @@ class AbilitiesParser(ContinuousEffectParser):
 
     def parse(self, text: str, ctx: ParseContext, applies_to: Optional[str] = None,
               condition=None, duration: Optional[str] = None) -> ParseResult:
+        import logging
+        logger = logging.getLogger(__name__)
+        
         lower = text.lower()
+        logger.debug(f"[AbilitiesParser] Parsing: {text[:100]}, applies_to={applies_to}")
 
         # Extract the part after "has ..." or "gains ..."
         if "has " in lower:
             m = HAS_ABILITY_RE.search(lower)
             if not m:
+                logger.debug(f"[AbilitiesParser] HAS_ABILITY_RE did not match")
                 return ParseResult(matched=False)
             ability_part = m.group(1)
+            logger.debug(f"[AbilitiesParser] Extracted ability_part from 'has': {ability_part}")
         elif "gains " in lower or "gain " in lower:
             m = GAINS_ABILITY_RE.search(lower)
             if not m:
+                logger.debug(f"[AbilitiesParser] GAINS_ABILITY_RE did not match")
                 return ParseResult(matched=False)
             ability_part = m.group(1)
+            logger.debug(f"[AbilitiesParser] Extracted ability_part from 'gains': {ability_part}")
         else:
+            logger.debug(f"[AbilitiesParser] No 'has' or 'gains' found")
             return ParseResult(matched=False)
 
         # Normalize separators
         ability_part = ability_part.replace(", and ", ", ")
         ability_part = ability_part.replace(" and ", ", ")
         raw = [a.strip().rstrip(".") for a in ability_part.split(",")]
+        logger.debug(f"[AbilitiesParser] Split into raw abilities: {raw}")
 
         abilities: list[GrantedAbility] = []
 
         for a in raw:
             a_clean = re.sub(r"\s+until.*$", "", a).strip().lower()
+            logger.debug(f"[AbilitiesParser] Processing ability: '{a}' -> cleaned: '{a_clean}'")
 
-            # Ward {N}
-            m = re.match(r"ward\s*\{(\d+)\}", a_clean)
+            # Ward {N} - match anywhere in the string, not just at start
+            m = re.search(r"ward\s*\{(\d+)\}", a_clean)
             if m:
                 value = int(m.group(1))
+                logger.debug(f"[AbilitiesParser] Found ward {value}")
                 abilities.append(GrantedAbility(kind="ward", value=value))
                 continue
 

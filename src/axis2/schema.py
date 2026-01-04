@@ -463,8 +463,8 @@ class ActivatedAbility:
 
 @dataclass
 class GrantedAbility:
-    kind: str                  # e.g. "ward", "flying", "first_strike"
-    value: Optional[int] = None  # ward value, or None for abilities without parameters
+    kind: str                  # e.g. "ward", "flying", "first_strike", "islandwalk"
+    value: Optional[Union[int, str]] = None  # ward value (int), landwalk type (str), or None for abilities without parameters
 
 @dataclass
 class TriggerFilter:

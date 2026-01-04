@@ -1,5 +1,6 @@
 # axis2/parsing/keyword_abilities/__init__.py
 
+from typing import List
 from .registry import KeywordAbilityRegistry, KEYWORD_ALIASES
 from .base import KeywordAbilityParser
 

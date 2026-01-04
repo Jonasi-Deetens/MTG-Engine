@@ -557,10 +557,18 @@ def _parse_replacement_effects_from_text(text: str, ctx: ParseContext, skip_dura
 
 
 def _parse_continuous_effects(text: str, ctx: ParseContext, is_permanent: bool) -> list[ContinuousEffect]:
+    import logging
+    logger = logging.getLogger(__name__)
     continuous_effects = []
+    logger.debug(f"[BUILDER] _parse_continuous_effects: is_permanent={is_permanent}, text length={len(text)}")
     if is_permanent:
-        for sentence in split_into_sentences(text):
-            continuous_effects.extend(parse_continuous_effects(sentence, ctx))
+        sentences = split_into_sentences(text)
+        logger.debug(f"[BUILDER] Split into {len(sentences)} sentences: {sentences}")
+        for sentence in sentences:
+            logger.debug(f"[BUILDER] Parsing continuous effect sentence: {sentence[:100]}")
+            parsed = parse_continuous_effects(sentence, ctx)
+            logger.debug(f"[BUILDER] Parsed {len(parsed)} continuous effects from sentence")
+            continuous_effects.extend(parsed)
     return continuous_effects
 
 
@@ -585,6 +593,9 @@ def _parse_spell_effects(text: str, ctx: ParseContext, is_spell: bool) -> tuple[
 
 
 def _parse_face(face: Axis1Face, ctx: ParseContext) -> Axis2Face:
+    import logging
+    logger = logging.getLogger(__name__)
+    
     activated = _parse_axis1_activated(face, ctx)
     triggered = _parse_axis1_triggered(face, ctx)
     
@@ -619,29 +630,14 @@ def _parse_face(face: Axis1Face, ctx: ParseContext) -> Axis2Face:
     
     special_actions = _parse_special_actions(face, ctx)
     static_effects = _parse_static_abilities(face, ctx)
-    remaining_text = get_remaining_text_for_parsing(face, activated, triggered)
+    remaining_text, keyword_names, keyword_effects = get_remaining_text_for_parsing(face, activated, triggered, ctx)
     
-    from axis2.parsing.keyword_abilities import get_registry
-    registry = get_registry()
-    keyword_effects = []
-    keyword_names = []
-    
-    if face.oracle_text:
-        lines = face.oracle_text.split("\n")
-        for line in lines:
-            line = line.strip()
-            if not line:
-                continue
-            
-            result = registry.detect_keyword(line)
-            if result:
-                keyword_name, reminder_text, cost_text = result
-                keyword_names.append(keyword_name)
-                
-                parsed_effects = registry.parse_keyword(
-                    keyword_name, reminder_text, cost_text, line, ctx
-                )
-                keyword_effects.extend(parsed_effects)
+    import logging
+    logger = logging.getLogger(__name__)
+    print(f"[BUILDER PRINT] Remaining text after extraction (length={len(remaining_text)}): {remaining_text[:300]}")
+    print(f"[BUILDER PRINT] Keyword effects: {len(keyword_effects)}")
+    logger.warning(f"[BUILDER] Remaining text after extraction: {remaining_text[:300]}")
+    logger.warning(f"[BUILDER] Keyword effects: {len(keyword_effects)}")
     
     replacement_effects = _parse_replacement_effects_from_text(remaining_text, ctx, skip_duration_effects=True)
     
@@ -663,7 +659,10 @@ def _parse_face(face: Axis1Face, ctx: ParseContext) -> Axis2Face:
     is_spell = "instant" in types_lower or "sorcery" in types_lower
     is_permanent = any(t in types_lower for t in ["enchantment", "artifact", "creature", "planeswalker", "land"])
     
+    logger.warning(f"[BUILDER] Parsing continuous effects from remaining_text (length={len(remaining_text)}): {remaining_text[:300]}")
+    logger.warning(f"[BUILDER] is_permanent={is_permanent}, is_spell={is_spell}")
     continuous_effects = _parse_continuous_effects(remaining_text, ctx, is_permanent)
+    logger.warning(f"[BUILDER] Parsed {len(continuous_effects)} continuous effects")
     spell_effects, spell_targeting, spell_continuous_effects = _parse_spell_effects(remaining_text, ctx, is_spell)
     continuous_effects.extend(spell_continuous_effects)
     
