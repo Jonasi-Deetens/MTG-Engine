@@ -64,13 +64,29 @@ def get_remaining_text_for_parsing(
     # This preserves replacement effects and other abilities in parenthetical text
     # e.g., "Umbra armor (If enchanted creature would be destroyed...)" 
     parenthetical_text = []
+    keyword_lines = []
     lines = text.split("\n")
     cleaned_lines = []
     
     logger.debug(f"[TEXT_EXTRACT] Original text: {text[:200]}")
     
+    from axis2.parsing.keyword_abilities import get_registry
+    registry = get_registry()
+    
     for line in lines:
         stripped = line.strip()
+        # Check if this line is a keyword with reminder text
+        keyword_result = registry.detect_keyword(stripped)
+        if keyword_result:
+            keyword_name, reminder_text, cost_text = keyword_result
+            logger.debug(f"[TEXT_EXTRACT] Found keyword: {keyword_name}, reminder: {reminder_text[:50] if reminder_text else None}")
+            keyword_lines.append(stripped)
+            # If there's reminder text, extract it for parsing
+            if reminder_text:
+                parenthetical_text.append(reminder_text)
+            # Don't add keyword line to cleaned_lines (it will be handled by keyword registry)
+            continue
+        
         # Extract parenthetical text (e.g., "(If X would be destroyed...)")
         paren_match = re.search(r"\(([^)]+)\)", stripped)
         if paren_match:

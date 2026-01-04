@@ -621,7 +621,37 @@ def _parse_face(face: Axis1Face, ctx: ParseContext) -> Axis2Face:
     static_effects = _parse_static_abilities(face, ctx)
     remaining_text = get_remaining_text_for_parsing(face, activated, triggered)
     
+    from axis2.parsing.keyword_abilities import get_registry
+    registry = get_registry()
+    keyword_effects = []
+    keyword_names = []
+    
+    if face.oracle_text:
+        lines = face.oracle_text.split("\n")
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            
+            result = registry.detect_keyword(line)
+            if result:
+                keyword_name, reminder_text, cost_text = result
+                keyword_names.append(keyword_name)
+                
+                parsed_effects = registry.parse_keyword(
+                    keyword_name, reminder_text, cost_text, line, ctx
+                )
+                keyword_effects.extend(parsed_effects)
+    
     replacement_effects = _parse_replacement_effects_from_text(remaining_text, ctx, skip_duration_effects=True)
+    
+    for effect in keyword_effects:
+        if isinstance(effect, ReplacementEffect):
+            replacement_effects.append(effect)
+        elif isinstance(effect, TriggeredAbility):
+            triggered.append(effect)
+        elif isinstance(effect, ActivatedAbility):
+            activated.append(effect)
     
     reminder_etb_effects = _parse_reminder_text_etb_effects(face.reminder_text or [], ctx)
     replacement_effects.extend(reminder_etb_effects)
@@ -636,6 +666,10 @@ def _parse_face(face: Axis1Face, ctx: ParseContext) -> Axis2Face:
     continuous_effects = _parse_continuous_effects(remaining_text, ctx, is_permanent)
     spell_effects, spell_targeting, spell_continuous_effects = _parse_spell_effects(remaining_text, ctx, is_spell)
     continuous_effects.extend(spell_continuous_effects)
+    
+    for effect in keyword_effects:
+        if isinstance(effect, ContinuousEffect):
+            continuous_effects.append(effect)
     
     from axis2.parsing.enchant_restrictions import parse_enchant_restriction
     if "aura" in [t.lower() for t in face.subtypes]:
