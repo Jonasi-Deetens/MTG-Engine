@@ -17,9 +17,11 @@ dependencies = [
     "requests==2.32.3",
     "pydantic==2.8.2",
     "pydantic-settings==2.3.4",
+    "pydantic[email]==2.8.2",
     "SQLAlchemy==2.0.32",
     "psycopg2-binary==2.9.11",
     "python-dotenv==1.0.1",
+    "passlib[bcrypt]==1.7.4",
 ]
 
 [project.optional-dependencies]

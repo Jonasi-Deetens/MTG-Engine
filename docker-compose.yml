@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   api:
     build:
@@ -27,6 +25,28 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: mtg_frontend
+    environment:
+      - NEXT_PUBLIC_API_URL=http://api:8000
+      - WATCHPACK_POLLING=true
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      api:
+        condition: service_started
+    command: npm run dev
+    # Use polling for file watching on Windows
+    stdin_open: true
+    tty: true
 
 
 volumes:

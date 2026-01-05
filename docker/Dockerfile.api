@@ -1,10 +1,38 @@
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
 
+# Copy pyproject.toml and install dependencies
+COPY pyproject.toml .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir "fastapi==0.115.0" \
+    "uvicorn[standard]==0.30.0" \
+    "requests==2.32.3" \
+    "pydantic==2.8.2" \
+    "pydantic-settings==2.3.4" \
+    "pydantic[email]==2.8.2" \
+    "SQLAlchemy==2.0.32" \
+    "psycopg2-binary==2.9.11" \
+    "python-dotenv==1.0.1" \
+    "bcrypt==4.0.1"
+
+# Copy source code
 COPY src ./src
 
-CMD ["python", "src/api/main.py"]
+# Set PYTHONPATH so imports work correctly
+ENV PYTHONPATH=/app/src
+
+# Expose port
+EXPOSE 8000
+
+# Change working directory to src so imports work
+WORKDIR /app/src
+
+# Run uvicorn from src directory
+CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
