@@ -12,12 +12,30 @@ class TypeChangeParser(ContinuousEffectParser):
     def can_parse(self, text: str, ctx: ParseContext) -> bool:
         # ⚠️ CHEAP CHECK ONLY
         lower = text.lower()
+        
+        # Don't match replacement effect patterns - these should be handled by replacement parsers
+        if "damage would be dealt" in lower and "instead" in lower:
+            return False
+        if "would be" in lower and "instead" in lower:
+            return False
+        
         return (" is a " in lower or " is an " in lower or " is " in lower) and \
                any(t in lower for t in ["creature", "artifact", "enchantment", "land", "planeswalker", "instant", "sorcery"])
 
     def parse(self, text: str, ctx: ParseContext, applies_to: Optional[str] = None,
               condition=None, duration: Optional[str] = None) -> ParseResult:
         lower = text.lower()
+        
+        # Don't match replacement effect patterns - these should be handled by replacement parsers
+        if "damage would be dealt" in lower and "instead" in lower:
+            return ParseResult(matched=False)
+        if "would be" in lower and "instead" in lower:
+            return ParseResult(matched=False)
+        
+        # Don't match "is dealt to" - this is damage redirection, not type setting
+        if " is dealt to" in lower or " is dealt " in lower:
+            return ParseResult(matched=False)
+        
         if " is a " in lower:
             after = lower.split(" is a ", 1)[1]
         elif " is an " in lower:

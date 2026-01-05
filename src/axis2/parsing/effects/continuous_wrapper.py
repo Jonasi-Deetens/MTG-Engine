@@ -12,6 +12,11 @@ class ContinuousEffectWrapperParser(EffectParser):
     
     def can_parse(self, text: str, ctx: ParseContext) -> bool:
         lower = text.lower()
+        
+        # Don't match replacement effect patterns - these should be handled by replacement wrapper
+        if "damage would be dealt" in lower and "instead" in lower:
+            return False
+        
         continuous_indicators = (
             "gains ", "gain ", "has ", "have ", "gets ", "get ",
             "loses ", "lose ", "is ", "are ", "becomes ", "become "

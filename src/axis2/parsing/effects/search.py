@@ -172,7 +172,7 @@ class LightpawsSearchParser(EffectParser):
                 zones=["library"],
                 card_filter={
                     "types": ["aura"],
-                    "mana_value_lte": "that_aura",
+                    "mana_value_lte": Subject(scope="triggering_object"),
                     "different_name_than_each_aura_you_control": True,
                 },
                 optional=True,

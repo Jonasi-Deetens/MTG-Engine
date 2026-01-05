@@ -31,8 +31,15 @@ class Axis2TestRepository:
         self.session = session
 
     def save(self, name: str, axis2_json: dict):
-        obj = Axis2TestCard(name=name, axis2_json=axis2_json)
-        self.session.merge(obj)
+        # Check if record exists
+        existing = self.session.query(Axis2TestCard).filter_by(name=name).first()
+        if existing:
+            # Update existing record
+            existing.axis2_json = axis2_json
+        else:
+            # Insert new record
+            obj = Axis2TestCard(name=name, axis2_json=axis2_json)
+            self.session.add(obj)
         self.session.commit()
 
     def load(self, name: str):

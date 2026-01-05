@@ -153,21 +153,26 @@ class ZoneChangeParser(EffectParser):
 
         t = text.strip()
 
-        # 0. Attach this to target creature (Equip ability)
-        # Pattern: "Attach this to target creature you control."
+        # 0. Attach this to target/that creature (Equip ability or triggered ability)
+        # Pattern: "Attach this to target creature you control." or "attach this Aura to that creature"
         ATTACH_TO_TARGET_RE = re.compile(
-            r"attach\s+this\s+to\s+target\s+[^\.]+",
+            r"attach\s+(?:this|this\s+\w+)\s+to\s+(?:target|that)\s+[^\.]+",
             re.IGNORECASE
         )
         m = ATTACH_TO_TARGET_RE.search(t)
         if m:
             # For Equip, attach_to is "target" (the targeting is handled by ActivatedAbility.targeting)
+            # For triggered abilities, attach_to is "that_creature" (referring to the triggering creature)
+            if "that" in t.lower():
+                attach_to = "that_creature"
+            else:
+                attach_to = "target"
             return ParseResult(
                 matched=True,
                 effect=ChangeZoneEffect(
                     subject=Subject(scope="self"),
-                    to_zone="battlefield",  # Equipment stays on battlefield, just attaches
-                    attach_to="target"  # String identifier - targeting rules are in ActivatedAbility
+                    to_zone="battlefield",  # Equipment/Aura stays on battlefield, just attaches
+                    attach_to=attach_to  # String identifier - targeting rules are in ActivatedAbility or trigger
                 ),
                 consumed_text=text
             )

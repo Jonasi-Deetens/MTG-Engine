@@ -204,9 +204,15 @@ def validate_add_mana_effect(effect: AddManaEffect) -> List[str]:
     if not isinstance(effect.mana, list) or len(effect.mana) == 0:
         errors.append("AddManaEffect.mana must be a non-empty list")
     else:
+        # Special values allowed when choice is set (e.g., "any_color" for choice="color")
+        special_values = {"any_color", "any_type"}
         for symbol in effect.mana:
             if not isinstance(symbol, str):
                 errors.append(f"Invalid mana symbol type: {type(symbol)}")
+            elif symbol in special_values:
+                # Allow special values when choice is set
+                if effect.choice is None:
+                    errors.append(f"Special mana value '{symbol}' requires choice to be set")
             elif not (symbol.startswith("{") and symbol.endswith("}")):
                 errors.append(f"Invalid mana symbol format: {symbol}")
     return errors

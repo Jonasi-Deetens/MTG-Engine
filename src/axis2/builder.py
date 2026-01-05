@@ -10,7 +10,7 @@ from axis2.schema import (
     ActivatedAbility, TriggeredAbility, StaticEffect, Mode,
     SymbolicValue, TargetingRules, TargetingRestriction,
     ReplacementEffect, ContinuousEffect, TapCost, DraftFromSpellbookEffect,
-    ParseContext, Effect
+    ParseContext, Effect, EntersBattlefieldEvent
 )
 from axis2.parsing.delayed_triggers import (
     has_until_leaves_clause,
@@ -151,6 +151,21 @@ def _parse_reminder_text_triggers(reminder_texts: list[str], ctx: ParseContext) 
         if event is None or not effect_text:
             continue
         
+        # Normalize card names in trigger events to "self" or "this Aura"
+        if isinstance(event, EntersBattlefieldEvent):
+            if event.subject and event.subject.lower() == ctx.card_name.lower():
+                # Card name matches - normalize to "self" or "this Aura" based on type
+                if "aura" in ctx.primary_type.lower():
+                    event.subject = "this Aura"
+                elif "equipment" in ctx.primary_type.lower():
+                    event.subject = "this Equipment"
+                elif "creature" in ctx.primary_type.lower():
+                    event.subject = "this creature"
+                elif "enchantment" in ctx.primary_type.lower():
+                    event.subject = "this enchantment"
+                else:
+                    event.subject = "self"
+        
         triggered_ctx = ctx.with_flag("is_triggered_ability", True)
         effects = parse_effect_text(effect_text, triggered_ctx)
         
@@ -277,6 +292,21 @@ def _detect_triggered_abilities_from_text(oracle_text: str, ctx: ParseContext) -
         event = parse_trigger_event(condition_text)
         if event is None or not effect_text:
             continue
+        
+        # Normalize card names in trigger events to "self" or "this Aura"
+        if isinstance(event, EntersBattlefieldEvent):
+            if event.subject and event.subject.lower() == ctx.card_name.lower():
+                # Card name matches - normalize to "self" or "this Aura" based on type
+                if "aura" in ctx.primary_type.lower():
+                    event.subject = "this Aura"
+                elif "equipment" in ctx.primary_type.lower():
+                    event.subject = "this Equipment"
+                elif "creature" in ctx.primary_type.lower():
+                    event.subject = "this creature"
+                elif "enchantment" in ctx.primary_type.lower():
+                    event.subject = "this enchantment"
+                else:
+                    event.subject = "self"
         
         triggered_ctx = ctx.with_flag("is_triggered_ability", True)
         effects = parse_effect_text(effect_text, triggered_ctx)
@@ -435,6 +465,21 @@ def _parse_axis1_triggered(face: Axis1Face, ctx: ParseContext) -> list[Triggered
             continue
         
         event = parse_trigger_event(t.condition)
+        
+        # Normalize card names in trigger events to "self" or "this Aura"
+        if event and isinstance(event, EntersBattlefieldEvent):
+            if event.subject and event.subject.lower() == ctx.card_name.lower():
+                # Card name matches - normalize to "self" or "this Aura" based on type
+                if "aura" in ctx.primary_type.lower():
+                    event.subject = "this Aura"
+                elif "equipment" in ctx.primary_type.lower():
+                    event.subject = "this Equipment"
+                elif "creature" in ctx.primary_type.lower():
+                    event.subject = "this creature"
+                elif "enchantment" in ctx.primary_type.lower():
+                    event.subject = "this enchantment"
+                else:
+                    event.subject = "self"
         
         if not effect_text:
             effect_text = t.effect or ""

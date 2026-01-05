@@ -53,8 +53,42 @@ def parse_conditional(sentence: str, ctx):
 
         return None
 
-    # --- PHASE B: Fallback — standalone conditional at sentence start
+    # --- PHASE B: Handle "if you do" pattern specially
+    # Pattern: "you may [action]. If you do, [effect]"
+    if_you_do_match = re.search(r"\bif you do\b", sentence, re.I)
+    if if_you_do_match:
+        # Split at "if you do"
+        split_pos = if_you_do_match.start()
+        before_if = sentence[:split_pos].strip().rstrip(".").rstrip(",").strip()
+        after_if = sentence[if_you_do_match.end():].strip().lstrip(",").strip()
+        
+        # Parse the "after" part as the conditional effect
+        after_effects = parse_effect_text(after_if, ctx) if after_if else []
+        
+        # The "before" part might be:
+        # 1. A cost (e.g., "you may pay {1}") - skip it, costs aren't effects
+        # 2. An effect (e.g., "you may return another creature") - parse it
+        all_effects = []
+        
+        # Check if "before" is just a cost (starts with "you may pay")
+        if before_if.lower().startswith("you may pay"):
+            # This is a cost, not an effect - skip it
+            # The cost will be handled by Axis3 during resolution
+            pass
+        elif before_if.lower().startswith("you may"):
+            # This might be an optional effect - try to parse it
+            before_effects = parse_effect_text(before_if, ctx) if before_if else []
+            all_effects.extend(before_effects)
+        
+        # Add the conditional effects (the "if you do" part)
+        all_effects.extend(after_effects)
+        
+        return ConditionalEffect(condition="if_you_do", effects=all_effects)
+    
+    # --- PHASE C: Fallback — standalone conditional at sentence start
     for name, regex in CONDITIONAL_PATTERNS:
+        if name == "if_you_do":  # Skip, already handled above
+            continue
         m = regex.search(sentence)
         if m:
             inner = regex.sub("", sentence).strip().lstrip(",").strip()

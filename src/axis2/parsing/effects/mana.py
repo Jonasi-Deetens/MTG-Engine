@@ -56,12 +56,12 @@ class ManaParser(EffectParser):
                 consumed_text=text
             )
 
-        # 2. Any color
+        # 2. Any color: "Add one mana of any color"
         m = ADD_MANA_ANY_COLOR_RE.search(t)
         if m:
             return ParseResult(
                 matched=True,
-                effect=AddManaEffect(mana=[], choice="any_color"),
+                effect=AddManaEffect(mana=["any_color"], choice="color"),
                 consumed_text=text
             )
 
