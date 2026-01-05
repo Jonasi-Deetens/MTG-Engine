@@ -6,21 +6,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { Input } from '@/components/ui/Input';
 import { CardGrid } from '@/components/cards/CardGrid';
 import { CardGridSkeleton } from '@/components/skeletons/CardSkeleton';
+import { CardData } from '@/components/cards/CardPreview';
 import { api } from '@/lib/api';
 import { useDebounce } from '@/lib/hooks';
-
-interface CardData {
-  card_id: string;
-  name: string;
-  mana_cost?: string;
-  type_line?: string;
-  image_uris?: {
-    small?: string;
-    normal?: string;
-    large?: string;
-  };
-  set_code?: string;
-}
 
 interface SearchResponse {
   cards: CardData[];
@@ -71,10 +59,6 @@ export default function SearchPage() {
     searchCards(debouncedQuery, 1);
   }, [debouncedQuery, searchCards]);
 
-  function handleCardClick(card: CardData) {
-    // TODO: Navigate to card detail page
-  }
-
   return (
     <div className="space-y-6">
       <div>
@@ -110,7 +94,7 @@ export default function SearchPage() {
               Found {total} {total === 1 ? 'card' : 'cards'}
             </div>
           )}
-          <CardGrid cards={cards} onCardClick={handleCardClick} />
+          <CardGrid cards={cards} />
         </>
       )}
     </div>

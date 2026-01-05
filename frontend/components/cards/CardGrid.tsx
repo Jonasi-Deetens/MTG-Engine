@@ -4,10 +4,9 @@ import { CardPreview, CardData } from './CardPreview';
 
 interface CardGridProps {
   cards: CardData[];
-  onCardClick?: (card: CardData) => void;
 }
 
-export function CardGrid({ cards, onCardClick }: CardGridProps) {
+export function CardGrid({ cards }: CardGridProps) {
   if (cards.length === 0) {
     return (
       <div className="text-center py-12">
@@ -23,7 +22,6 @@ export function CardGrid({ cards, onCardClick }: CardGridProps) {
         <CardPreview
           key={card.card_id}
           card={card}
-          onClick={() => onCardClick?.(card)}
         />
       ))}
     </div>

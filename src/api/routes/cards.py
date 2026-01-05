@@ -57,6 +57,16 @@ def _card_model_to_response(card_model: Axis1CardModel) -> CardResponse:
     card_data = card_model.axis1_json or {}
     faces = card_data.get("faces", [])
     first_face = faces[0] if faces else {}
+    metadata = card_data.get("metadata", {})
+    
+    # For multi-face cards, Scryfall provides image_uris per face
+    # For single-face cards, image_uris are at the card level
+    # We also check metadata as a fallback
+    image_uris = (
+        first_face.get("image_uris") or 
+        card_data.get("image_uris") or 
+        metadata.get("image_uris")
+    )
     
     return CardResponse(
         card_id=card_model.card_id,
@@ -69,7 +79,7 @@ def _card_model_to_response(card_model: Axis1CardModel) -> CardResponse:
         power=first_face.get("power") or card_data.get("power"),
         toughness=first_face.get("toughness") or card_data.get("toughness"),
         colors=first_face.get("colors", []) or card_data.get("colors", []),
-        image_uris=first_face.get("image_uris") or card_data.get("image_uris"),
+        image_uris=image_uris,
         set_code=card_model.set_code,
         collector_number=card_model.collector_number
     )
