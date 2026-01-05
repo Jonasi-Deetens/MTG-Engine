@@ -122,6 +122,18 @@ def search_cards(
     )
 
 
+@router.get("/random", response_model=CardResponse)
+def get_random_card(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    """Get a random card from the database."""
+    card = db.query(Axis1CardModel).order_by(func.random()).first()
+    if not card:
+        raise HTTPException(status_code=404, detail="No cards found")
+    return _card_model_to_response(card)
+
+
 @router.get("/{card_id}", response_model=CardResponse)
 def get_card(
     card_id: str,

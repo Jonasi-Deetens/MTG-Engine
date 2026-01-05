@@ -25,8 +25,11 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy source code
 COPY src ./src
 
+# Copy scripts folder
+COPY scripts ./scripts
+
 # Set PYTHONPATH so imports work correctly
-ENV PYTHONPATH=/app/src
+ENV PYTHONPATH=/app/src:/app
 
 # Expose port
 EXPOSE 8000

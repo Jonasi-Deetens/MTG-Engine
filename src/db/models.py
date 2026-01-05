@@ -52,3 +52,27 @@ class Session(Base):
     
     # Relationship to user
     user = relationship("User", back_populates="sessions")
+
+class Keyword(Base):
+    """MTG keyword abilities with their configurable parameters."""
+    __tablename__ = "keywords"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String, unique=True, index=True, nullable=False)
+    description = Column(String)
+    
+    # Parameter flags
+    has_cost = Column(Boolean, default=False)
+    has_mana_cost = Column(Boolean, default=False)
+    has_number = Column(Boolean, default=False)
+    has_life_cost = Column(Boolean, default=False)
+    has_sacrifice_cost = Column(Boolean, default=False)
+    has_discard_cost = Column(Boolean, default=False)
+    
+    # Parameter type identifiers
+    cost_type = Column(String)  # "mana", "life", "sacrifice", "discard", etc.
+    number_type = Column(String)  # "annihilator", "bloodthirst", "ward", etc.
+    
+    # Additional metadata
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

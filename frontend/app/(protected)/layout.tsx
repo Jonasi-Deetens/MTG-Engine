@@ -50,6 +50,12 @@ export default function ProtectedLayout({
               >
                 Search
               </Link>
+              <Link
+                href="/builder"
+                className="text-slate-300 hover:text-white transition-colors"
+              >
+                Builder
+              </Link>
             </div>
             <div className="flex items-center gap-4">
               <span className="text-slate-300 text-sm">

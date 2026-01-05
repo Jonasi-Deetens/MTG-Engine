@@ -112,3 +112,11 @@ export const api = {
     apiRequest<T>(endpoint, { method: 'DELETE' }),
 };
 
+// Card API methods
+export const cards = {
+  // Get random card
+  getRandom: async (): Promise<any> => {
+    return api.get('/api/cards/random');
+  },
+};
+
