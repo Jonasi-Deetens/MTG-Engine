@@ -37,6 +37,14 @@ export interface TemplatesResponse {
   templates: Template[];
 }
 
+export interface CardAbilityGraphResponse {
+  id: number;
+  card_id: string;
+  ability_graph: any; // AbilityGraph type
+  created_at: string;
+  updated_at: string;
+}
+
 export const abilities = {
   // Validate an ability graph
   validate: async (graph: AbilityGraph, cardColors?: string[]): Promise<ValidationResponse> => {
@@ -64,6 +72,21 @@ export const abilities = {
   // Save template (placeholder)
   saveTemplate: async (template: Template): Promise<{ message: string; template: Template }> => {
     return api.post<{ message: string; template: Template }>('/api/abilities/templates', template);
+  },
+
+  // Save card ability graph
+  saveCardGraph: async (cardId: string, abilityGraph: AbilityGraph): Promise<CardAbilityGraphResponse> => {
+    return api.post<CardAbilityGraphResponse>(`/api/abilities/cards/${cardId}/graph`, abilityGraph);
+  },
+
+  // Get card ability graph
+  getCardGraph: async (cardId: string): Promise<CardAbilityGraphResponse> => {
+    return api.get<CardAbilityGraphResponse>(`/api/abilities/cards/${cardId}/graph`);
+  },
+
+  // Delete card ability graph
+  deleteCardGraph: async (cardId: string): Promise<void> => {
+    return api.delete(`/api/abilities/cards/${cardId}/graph`);
   },
 };
 

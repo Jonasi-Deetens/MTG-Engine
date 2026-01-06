@@ -118,5 +118,9 @@ export const cards = {
   getRandom: async (): Promise<any> => {
     return api.get('/api/cards/random');
   },
+  // Search cards by name
+  search: async (query: string, page: number = 1, pageSize: number = 20): Promise<any> => {
+    return api.get(`/api/cards/search?q=${encodeURIComponent(query)}&page=${page}&page_size=${pageSize}`);
+  },
 };
 

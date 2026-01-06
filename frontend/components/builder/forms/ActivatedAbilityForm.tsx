@@ -5,22 +5,14 @@
 import { useState } from 'react';
 import { useBuilderStore, ActivatedAbility, Effect } from '@/store/builderStore';
 import { Button } from '@/components/ui/Button';
+import { EFFECT_TYPE_OPTIONS } from '@/lib/effectTypes';
+import { EffectFields } from './EffectFields';
 
 interface ActivatedAbilityFormProps {
   abilityId?: string;
   onSave: () => void;
   onCancel: () => void;
 }
-
-const EFFECT_TYPE_OPTIONS = [
-  { value: 'damage', label: 'Deal Damage' },
-  { value: 'draw', label: 'Draw Cards' },
-  { value: 'token', label: 'Create Token' },
-  { value: 'counters', label: 'Add Counters' },
-  { value: 'life', label: 'Gain Life' },
-  { value: 'destroy', label: 'Destroy' },
-  { value: 'exile', label: 'Exile' },
-];
 
 export function ActivatedAbilityForm({ abilityId, onSave, onCancel }: ActivatedAbilityFormProps) {
   const { activatedAbilities, addActivatedAbility, updateActivatedAbility } = useBuilderStore();
@@ -31,13 +23,49 @@ export function ActivatedAbilityForm({ abilityId, onSave, onCancel }: ActivatedA
   const [effectType, setEffectType] = useState(existingAbility?.effect.type || 'damage');
   const [effectAmount, setEffectAmount] = useState(existingAbility?.effect.amount || 0);
   const [effectTarget, setEffectTarget] = useState(existingAbility?.effect.target || 'any');
+  const [effectManaType, setEffectManaType] = useState(existingAbility?.effect.manaType || 'C');
+  const [effectUntapTarget, setEffectUntapTarget] = useState(existingAbility?.effect.untapTarget || 'self');
+  const [effectZone, setEffectZone] = useState(existingAbility?.effect.zone || 'library');
+  const [effectCardType, setEffectCardType] = useState(existingAbility?.effect.cardType || 'any');
+  const [effectManaValueComparison, setEffectManaValueComparison] = useState(existingAbility?.effect.manaValueComparison || '<=');
+  const [effectManaValueComparisonValue, setEffectManaValueComparisonValue] = useState(existingAbility?.effect.manaValueComparisonValue || undefined);
+  const [effectManaValueComparisonSource, setEffectManaValueComparisonSource] = useState<string | undefined>(existingAbility?.effect.manaValueComparisonSource || 'fixed_value');
+  const [effectDifferentName, setEffectDifferentName] = useState(existingAbility?.effect.differentName || false);
+  const [effectAttachTo, setEffectAttachTo] = useState(existingAbility?.effect.attachTo || 'self');
+  
+  const selectedEffectType = EFFECT_TYPE_OPTIONS.find((opt) => opt.value === effectType);
 
   const handleSave = () => {
     const effect: Effect = {
       type: effectType,
       amount: effectAmount,
       target: effectTarget,
+      manaType: effectManaType,
+      untapTarget: effectUntapTarget,
+      zone: effectZone,
+      cardType: effectCardType,
+      manaValueComparison: effectManaValueComparison,
+      manaValueComparisonValue: effectManaValueComparisonValue,
+      manaValueComparisonSource: effectManaValueComparisonSource || 'fixed_value',
+      differentName: effectDifferentName,
+      attachTo: effectAttachTo,
     };
+
+    // Clean up undefined fields
+    if (!selectedEffectType?.requiresAmount) delete effect.amount;
+    if (!selectedEffectType?.requiresTarget) delete effect.target;
+    if (!selectedEffectType?.requiresManaType) delete effect.manaType;
+    if (!selectedEffectType?.requiresUntapTarget) delete effect.untapTarget;
+    if (!selectedEffectType?.requiresSearchFilters) {
+      delete effect.zone;
+      delete effect.cardType;
+      delete effect.manaValueComparison;
+      delete effect.manaValueComparisonValue;
+      delete effect.manaValueComparisonSource;
+      delete effect.differentName;
+    }
+    if (!selectedEffectType?.requiresZone) delete effect.zone;
+    if (!selectedEffectType?.requiresAttachTarget) delete effect.attachTo;
 
     const ability: ActivatedAbility = {
       id: abilityId || `activated-${Date.now()}`,
@@ -77,64 +105,92 @@ export function ActivatedAbilityForm({ abilityId, onSave, onCancel }: ActivatedA
         <label className="block text-sm font-medium text-slate-300 mb-2">
           Effect *
         </label>
-        <div className="space-y-3">
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">Effect Type</label>
-            <select
-              value={effectType}
-              onChange={(e) => setEffectType(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-700 text-white rounded border border-slate-600 focus:border-amber-500 focus:outline-none"
-            >
-              {EFFECT_TYPE_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          
-          {(effectType === 'damage' || effectType === 'draw' || effectType === 'token' || effectType === 'counters' || effectType === 'life') && (
-            <div>
-              <label className="block text-xs text-slate-400 mb-1">Amount</label>
-              <input
-                type="number"
-                value={effectAmount}
-                onChange={(e) => setEffectAmount(parseInt(e.target.value) || 0)}
-                min="0"
-                className="w-full px-3 py-2 bg-slate-700 text-white rounded border border-slate-600 focus:border-amber-500 focus:outline-none"
-              />
-            </div>
-          )}
-          
-          {effectType === 'damage' && (
-            <div>
-              <label className="block text-xs text-slate-400 mb-1">Target</label>
-              <select
-                value={effectTarget}
-                onChange={(e) => setEffectTarget(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-700 text-white rounded border border-slate-600 focus:border-amber-500 focus:outline-none"
-              >
-                <option value="any">Any Target</option>
-                <option value="creature">Target Creature</option>
-                <option value="player">Target Player</option>
-                <option value="planeswalker">Target Planeswalker</option>
-              </select>
-            </div>
-          )}
-        </div>
+        <EffectFields
+          effect={{
+            type: effectType,
+            amount: effectAmount,
+            target: effectTarget,
+            manaType: effectManaType,
+            untapTarget: effectUntapTarget,
+            zone: effectZone,
+            cardType: effectCardType,
+            manaValueComparison: effectManaValueComparison,
+            manaValueComparisonValue: effectManaValueComparisonValue,
+            manaValueComparisonSource: effectManaValueComparisonSource,
+            differentName: effectDifferentName,
+            attachTo: effectAttachTo,
+          }}
+          index={0}
+          allEffects={[{
+            type: effectType,
+            amount: effectAmount,
+            target: effectTarget,
+            manaType: effectManaType,
+            untapTarget: effectUntapTarget,
+            zone: effectZone,
+            cardType: effectCardType,
+            manaValueComparison: effectManaValueComparison,
+            manaValueComparisonValue: effectManaValueComparisonValue,
+            manaValueComparisonSource: effectManaValueComparisonSource,
+            differentName: effectDifferentName,
+            attachTo: effectAttachTo,
+          }]}
+          onUpdate={(field, value) => {
+            switch (field) {
+              case 'type':
+                setEffectType(value);
+                break;
+              case 'amount':
+                setEffectAmount(value);
+                break;
+              case 'target':
+                setEffectTarget(value);
+                break;
+              case 'manaType':
+                setEffectManaType(value);
+                break;
+              case 'untapTarget':
+                setEffectUntapTarget(value);
+                break;
+              case 'zone':
+                setEffectZone(value);
+                break;
+              case 'cardType':
+                setEffectCardType(value);
+                break;
+              case 'manaValueComparison':
+                setEffectManaValueComparison(value);
+                break;
+              case 'manaValueComparisonValue':
+                setEffectManaValueComparisonValue(value);
+                break;
+              case 'manaValueComparisonSource':
+                setEffectManaValueComparisonSource(value);
+                break;
+              case 'differentName':
+                setEffectDifferentName(value);
+                break;
+              case 'attachTo':
+                setEffectAttachTo(value);
+                break;
+            }
+          }}
+        />
       </div>
 
       {/* Actions */}
       <div className="flex gap-3 pt-4 border-t border-slate-700">
         <Button
           onClick={handleSave}
-          className="flex-1 bg-amber-600 hover:bg-amber-700"
+          variant="primary"
+          className="flex-1"
         >
           Save
         </Button>
         <Button
           onClick={onCancel}
-          className="flex-1 bg-slate-600 hover:bg-slate-500"
+          variant="secondary"
+          className="flex-1"
         >
           Cancel
         </Button>

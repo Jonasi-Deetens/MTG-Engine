@@ -169,13 +169,15 @@ export function KeywordAbilityForm({ abilityId, onSave, onCancel }: KeywordAbili
         <Button
           onClick={handleSave}
           disabled={!selectedKeywordName}
-          className="flex-1 bg-amber-600 hover:bg-amber-700 disabled:opacity-50"
+          variant="primary"
+          className="flex-1"
         >
           Save
         </Button>
         <Button
           onClick={onCancel}
-          className="flex-1 bg-slate-600 hover:bg-slate-500"
+          variant="secondary"
+          className="flex-1"
         >
           Cancel
         </Button>

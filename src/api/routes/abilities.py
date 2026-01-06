@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import Dict, Any, List, Optional
+from datetime import datetime
 
 # No deprecated folder references - keywords are loaded from database
 
@@ -12,10 +13,11 @@ from api.schemas.ability_schemas import (
     AbilityEdge,
     ValidationResponse,
     ValidationError,
-    NormalizedAbility
+    NormalizedAbility,
+    CardAbilityGraphResponse,
 )
 from api.routes.auth import get_current_user
-from db.models import User
+from db.models import User, CardAbilityGraph
 from db.connection import SessionLocal
 
 router = APIRouter(prefix="/api/abilities", tags=["abilities"])
@@ -536,4 +538,127 @@ def save_template(
     """Save a custom template (placeholder - would store in database)."""
     # TODO: Implement template storage in database
     return {"message": "Template saved (not yet persisted)", "template": template}
+
+
+@router.post("/cards/{card_id}/graph", response_model=CardAbilityGraphResponse)
+def save_card_ability_graph(
+    card_id: str,
+    ability_graph: AbilityGraph,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    """Save or update an ability graph for a specific card."""
+    print(f"[DEBUG] Saving graph for card_id: '{card_id}' (type: {type(card_id)}, len: {len(card_id) if card_id else 0}), user_id: {user.id}")
+    
+    # Validate card_id - check for None, empty string, or the literal string "undefined"
+    # Convert to string and strip whitespace
+    if card_id is None:
+        print(f"[DEBUG] card_id is None")
+        raise HTTPException(status_code=400, detail="Invalid card_id provided: card_id is None")
+    
+    card_id_str = str(card_id).strip()
+    if card_id_str == "":
+        print(f"[DEBUG] card_id is empty string after strip")
+        raise HTTPException(status_code=400, detail="Invalid card_id provided: card_id is empty")
+    
+    if card_id_str.lower() == "undefined" or card_id_str.lower() == "null":
+        print(f"[DEBUG] card_id is the string '{card_id_str}'")
+        raise HTTPException(status_code=400, detail=f"Invalid card_id provided: '{card_id_str}'")
+    
+    # Use the cleaned card_id
+    card_id = card_id_str
+    
+    try:
+        # Check if a graph already exists for this card and user
+        existing_graph = db.query(CardAbilityGraph).filter(
+            CardAbilityGraph.card_id == card_id,
+            CardAbilityGraph.user_id == user.id
+        ).first()
+        
+        if existing_graph:
+            # Update existing graph
+            existing_graph.ability_graph_json = ability_graph.model_dump()
+            existing_graph.updated_at = datetime.utcnow()
+            db.commit()
+            db.refresh(existing_graph)
+            
+            return CardAbilityGraphResponse(
+                id=existing_graph.id,
+                card_id=existing_graph.card_id,
+                ability_graph=AbilityGraph(**existing_graph.ability_graph_json),
+                created_at=existing_graph.created_at.isoformat(),
+                updated_at=existing_graph.updated_at.isoformat()
+            )
+        else:
+            # Create new graph
+            new_graph = CardAbilityGraph(
+                card_id=card_id,
+                user_id=user.id,
+                ability_graph_json=ability_graph.model_dump()
+            )
+            db.add(new_graph)
+            db.commit()
+            db.refresh(new_graph)
+            
+            return CardAbilityGraphResponse(
+                id=new_graph.id,
+                card_id=new_graph.card_id,
+                ability_graph=AbilityGraph(**new_graph.ability_graph_json),
+                created_at=new_graph.created_at.isoformat(),
+                updated_at=new_graph.updated_at.isoformat()
+            )
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to save ability graph: {str(e)}")
+
+
+@router.get("/cards/{card_id}/graph", response_model=CardAbilityGraphResponse)
+def get_card_ability_graph(
+    card_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    """Get the ability graph for a specific card."""
+    print(f"[DEBUG] Loading graph for card_id: {card_id}, user_id: {user.id}")
+    graph = db.query(CardAbilityGraph).filter(
+        CardAbilityGraph.card_id == card_id,
+        CardAbilityGraph.user_id == user.id
+    ).first()
+    
+    if not graph:
+        print(f"[DEBUG] No graph found for card_id: {card_id}, user_id: {user.id}")
+        raise HTTPException(status_code=404, detail="Ability graph not found for this card")
+    
+    print(f"[DEBUG] Found graph for card_id: {graph.card_id}, id: {graph.id}")
+    return CardAbilityGraphResponse(
+        id=graph.id,
+        card_id=graph.card_id,
+        ability_graph=AbilityGraph(**graph.ability_graph_json),
+        created_at=graph.created_at.isoformat(),
+        updated_at=graph.updated_at.isoformat()
+    )
+
+
+@router.delete("/cards/{card_id}/graph")
+def delete_card_ability_graph(
+    card_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    """Delete the ability graph for a specific card."""
+    graph = db.query(CardAbilityGraph).filter(
+        CardAbilityGraph.card_id == card_id,
+        CardAbilityGraph.user_id == user.id
+    ).first()
+    
+    if not graph:
+        raise HTTPException(status_code=404, detail="Ability graph not found for this card")
+    
+    try:
+        db.delete(graph)
+        db.commit()
+        return {"message": "Ability graph deleted successfully"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to delete ability graph: {str(e)}")
 

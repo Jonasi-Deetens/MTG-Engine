@@ -76,3 +76,27 @@ class Keyword(Base):
     # Additional metadata
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class CardAbilityGraph(Base):
+    """Stores ability graphs built for specific cards from Skyfall."""
+    __tablename__ = "card_ability_graphs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    card_id = Column(String, nullable=False, index=True)  # Reference to Skyfall card_id
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    
+    # Store the full ability graph JSON
+    ability_graph_json = Column(JSON, nullable=False)  # Full AbilityGraph structure
+    
+    # Additional metadata
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationship to user
+    user = relationship("User", backref="card_ability_graphs")
+    
+    # Unique constraint: one graph per card per user
+    __table_args__ = (
+        {"sqlite_autoincrement": True},
+    )

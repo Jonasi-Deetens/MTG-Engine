@@ -82,13 +82,15 @@ export function ContinuousAbilityForm({ abilityId, onSave, onCancel }: Continuou
       <div className="flex gap-3 pt-4 border-t border-slate-700">
         <Button
           onClick={handleSave}
-          className="flex-1 bg-amber-600 hover:bg-amber-700"
+          variant="primary"
+          className="flex-1"
         >
           Save
         </Button>
         <Button
           onClick={onCancel}
-          className="flex-1 bg-slate-600 hover:bg-slate-500"
+          variant="secondary"
+          className="flex-1"
         >
           Cancel
         </Button>

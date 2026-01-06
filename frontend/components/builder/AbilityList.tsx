@@ -4,6 +4,7 @@
 
 import { useBuilderStore, TriggeredAbility, ActivatedAbility, StaticAbility, ContinuousAbility, KeywordAbility } from '@/store/builderStore';
 import { AbilityCard } from './AbilityCard';
+import { Button } from '@/components/ui/Button';
 
 interface AbilityListProps {
   type: 'triggered' | 'activated' | 'static' | 'continuous' | 'keyword';
@@ -46,12 +47,13 @@ export function AbilityList({ type, onAdd, onEdit }: AbilityListProps) {
         <h3 className="text-lg font-semibold text-white capitalize">
           {type === 'continuous' ? 'Continuous Abilities' : `${type.charAt(0).toUpperCase() + type.slice(1)} Abilities`}
         </h3>
-        <button
+        <Button
           onClick={onAdd}
-          className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded text-sm font-medium transition-colors"
+          variant="primary"
+          size="sm"
         >
           + Add {type === 'continuous' ? 'Continuous' : type.charAt(0).toUpperCase() + type.slice(1)}
-        </button>
+        </Button>
       </div>
       
       {abilities.length === 0 ? (

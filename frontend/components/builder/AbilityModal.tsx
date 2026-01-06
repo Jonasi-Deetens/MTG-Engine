@@ -9,6 +9,7 @@ import { StaticAbilityForm } from './forms/StaticAbilityForm';
 import { ContinuousAbilityForm } from './forms/ContinuousAbilityForm';
 import { KeywordAbilityForm } from './forms/KeywordAbilityForm';
 import { TriggeredAbility, ActivatedAbility, StaticAbility, ContinuousAbility, KeywordAbility } from '@/store/builderStore';
+import { Button } from '@/components/ui/Button';
 
 interface AbilityModalProps {
   isOpen: boolean;
@@ -49,15 +50,17 @@ export function AbilityModal({ isOpen, onClose, type, abilityId }: AbilityModalP
       <div className="relative bg-slate-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4">
         <div className="sticky top-0 bg-slate-800 border-b border-slate-700 px-6 py-4 flex items-center justify-between">
           <h2 className="text-xl font-bold text-white">{getTitle()}</h2>
-          <button
+          <Button
             onClick={onClose}
-            className="text-slate-400 hover:text-white transition-colors"
+            variant="ghost"
+            size="sm"
+            className="text-slate-400 hover:text-white"
             aria-label="Close"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
-          </button>
+          </Button>
         </div>
         
         <div className="p-6">

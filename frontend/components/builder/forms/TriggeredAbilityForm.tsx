@@ -3,8 +3,11 @@
 // frontend/components/builder/forms/TriggeredAbilityForm.tsx
 
 import { useState, useEffect } from 'react';
-import { useBuilderStore, TriggeredAbility, Effect } from '@/store/builderStore';
+import { useBuilderStore, TriggeredAbility, Effect, StructuredCondition } from '@/store/builderStore';
 import { Button } from '@/components/ui/Button';
+import { ConditionBuilder } from '@/components/builder/ConditionBuilder';
+import { EffectFields } from './EffectFields';
+import { EFFECT_TYPE_OPTIONS } from '@/lib/effectTypes';
 
 interface TriggeredAbilityFormProps {
   abilityId?: string;
@@ -20,16 +23,41 @@ const EVENT_OPTIONS = [
   { value: 'blocks', label: 'Blocks' },
   { value: 'deals_damage', label: 'Deals Damage' },
   { value: 'takes_damage', label: 'Takes Damage' },
+  { value: 'card_enters', label: 'Card Enters Zone', hasEntersWhere: true, hasEntersFrom: true },
+  { value: 'spell_cast', label: 'Spell Cast' },
 ];
 
-const EFFECT_TYPE_OPTIONS = [
-  { value: 'damage', label: 'Deal Damage' },
-  { value: 'draw', label: 'Draw Cards' },
-  { value: 'token', label: 'Create Token' },
-  { value: 'counters', label: 'Add Counters' },
-  { value: 'life', label: 'Gain Life' },
-  { value: 'destroy', label: 'Destroy' },
+const ZONE_OPTIONS = [
+  { value: 'battlefield', label: 'Battlefield' },
+  { value: 'graveyard', label: 'Graveyard' },
+  { value: 'hand', label: 'Hand' },
+  { value: 'library', label: 'Library' },
   { value: 'exile', label: 'Exile' },
+  { value: 'command', label: 'Command Zone' },
+];
+
+const FROM_ZONE_OPTIONS = [
+  { value: '', label: 'Any Zone' },
+  { value: 'hand', label: 'Hand' },
+  { value: 'library', label: 'Library' },
+  { value: 'graveyard', label: 'Graveyard' },
+  { value: 'exile', label: 'Exile' },
+  { value: 'battlefield', label: 'Battlefield' },
+  { value: 'command', label: 'Command Zone' },
+];
+
+const CARD_TYPE_OPTIONS = [
+  { value: '', label: 'Any Card Type' },
+  { value: 'creature', label: 'Creature' },
+  { value: 'aura', label: 'Aura' },
+  { value: 'enchantment', label: 'Enchantment' },
+  { value: 'artifact', label: 'Artifact' },
+  { value: 'equipment', label: 'Equipment' },
+  { value: 'planeswalker', label: 'Planeswalker' },
+  { value: 'land', label: 'Land' },
+  { value: 'instant', label: 'Instant' },
+  { value: 'sorcery', label: 'Sorcery' },
+  { value: 'permanent', label: 'Permanent' },
 ];
 
 export function TriggeredAbilityForm({ abilityId, onSave, onCancel }: TriggeredAbilityFormProps) {
@@ -38,8 +66,11 @@ export function TriggeredAbilityForm({ abilityId, onSave, onCancel }: TriggeredA
   const existingAbility = abilityId ? triggeredAbilities.find((a) => a.id === abilityId) : null;
   
   const [event, setEvent] = useState(existingAbility?.event || 'enters_battlefield');
-  const [condition, setCondition] = useState(existingAbility?.condition || '');
+  const [condition, setCondition] = useState<StructuredCondition | string | undefined>(existingAbility?.condition);
   const [effects, setEffects] = useState<Effect[]>(existingAbility?.effects || [{ type: 'damage', amount: 0 }]);
+  const [entersWhere, setEntersWhere] = useState(existingAbility?.entersWhere || 'battlefield');
+  const [entersFrom, setEntersFrom] = useState(existingAbility?.entersFrom || '');
+  const [cardType, setCardType] = useState(existingAbility?.cardType || '');
 
   const handleAddEffect = () => {
     setEffects([...effects, { type: 'damage', amount: 0 }]);
@@ -50,9 +81,49 @@ export function TriggeredAbilityForm({ abilityId, onSave, onCancel }: TriggeredA
   };
 
   const handleUpdateEffect = (index: number, field: string, value: any) => {
-    const updated = [...effects];
-    updated[index] = { ...updated[index], [field]: value };
-    setEffects(updated);
+    setEffects((prevEffects) => {
+      const updated = [...prevEffects];
+      updated[index] = { ...updated[index], [field]: value };
+
+      // Clean up fields when effect type changes
+      if (field === 'type') {
+        const selectedType = EFFECT_TYPE_OPTIONS.find((opt) => opt.value === value);
+        if (!selectedType?.requiresAmount) delete updated[index].amount;
+        if (!selectedType?.requiresTarget) delete updated[index].target;
+        if (!selectedType?.requiresManaType) delete updated[index].manaType;
+        if (!selectedType?.requiresUntapTarget) delete updated[index].untapTarget;
+        if (!selectedType?.requiresSearchFilters) {
+          delete updated[index].cardType;
+          delete updated[index].manaValueComparison;
+          delete updated[index].manaValueComparisonValue;
+          delete updated[index].manaValueComparisonSource;
+          delete updated[index].differentName;
+        }
+        if (!selectedType?.requiresZone) delete updated[index].zone;
+        if (!selectedType?.requiresAttachTarget) delete updated[index].attachTo;
+        
+        // Clear fromEffect if the new type doesn't support it
+        if (value !== 'put_onto_battlefield' && value !== 'attach' && value !== 'return' && value !== 'exile' && value !== 'destroy') {
+          delete updated[index].fromEffect;
+        }
+      }
+      
+      // When manaValueComparisonSource changes away from 'fixed_value', clear the value
+      if (field === 'manaValueComparisonSource' && value !== 'fixed_value') {
+        delete updated[index].manaValueComparisonValue;
+      }
+      
+      // Validate fromEffect - must be less than current index
+      if (field === 'fromEffect' && value !== undefined) {
+        const fromIndex = typeof value === 'number' ? value : parseInt(value);
+        if (fromIndex >= index) {
+          // Invalid reference, clear it
+          delete updated[index].fromEffect;
+        }
+      }
+      
+      return updated;
+    });
   };
 
   const handleSave = () => {
@@ -60,7 +131,12 @@ export function TriggeredAbilityForm({ abilityId, onSave, onCancel }: TriggeredA
       id: abilityId || `triggered-${Date.now()}`,
       event,
       condition: condition || undefined,
-      effects: effects.filter((e) => e.type && (e.amount !== undefined || e.type !== 'damage')),
+      effects: effects.filter((e) => e.type && (e.amount !== undefined || !['damage', 'draw', 'token', 'counters', 'life'].includes(e.type))),
+      ...(event === 'card_enters' && {
+        entersWhere: entersWhere || 'battlefield',
+        entersFrom: entersFrom || undefined,
+        cardType: cardType || undefined,
+      }),
     };
 
     if (abilityId) {
@@ -91,18 +167,97 @@ export function TriggeredAbilityForm({ abilityId, onSave, onCancel }: TriggeredA
         </select>
       </div>
 
+      {/* Card Enters Zone Parameters */}
+      {event === 'card_enters' && (
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Enters Zone *
+            </label>
+            <select
+              value={entersWhere}
+              onChange={(e) => setEntersWhere(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-700 text-white rounded border border-slate-600 focus:border-amber-500 focus:outline-none"
+            >
+              {ZONE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Card Type <span className="text-slate-500">(optional)</span>
+            </label>
+            <select
+              value={cardType}
+              onChange={(e) => setCardType(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-700 text-white rounded border border-slate-600 focus:border-amber-500 focus:outline-none"
+            >
+              {CARD_TYPE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-slate-400 mt-1">
+              Leave as "Any Card Type" to trigger for all card types
+            </p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              From Zone <span className="text-slate-500">(optional)</span>
+            </label>
+            <select
+              value={entersFrom}
+              onChange={(e) => setEntersFrom(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-700 text-white rounded border border-slate-600 focus:border-amber-500 focus:outline-none"
+            >
+              {FROM_ZONE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-slate-400 mt-1">
+              Leave as "Any Zone" to trigger regardless of where the card came from
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Condition (Optional) */}
       <div>
-        <label className="block text-sm font-medium text-slate-300 mb-2">
-          Condition (Optional)
-        </label>
-        <input
-          type="text"
-          value={condition}
-          onChange={(e) => setCondition(e.target.value)}
-          placeholder="e.g., if you control an artifact"
-          className="w-full px-3 py-2 bg-slate-700 text-white rounded border border-slate-600 focus:border-amber-500 focus:outline-none"
-        />
+        <div className="flex items-center justify-between mb-2">
+          <label className="block text-sm font-medium text-slate-300">
+            Condition (Optional)
+          </label>
+          {!condition && (
+            <Button
+              type="button"
+              onClick={() => {
+                setCondition({ type: 'control_count', value: 1, permanentType: 'creature' });
+              }}
+              variant="link"
+              size="xs"
+              className="text-amber-400 hover:text-amber-300"
+            >
+              + Add Condition
+            </Button>
+          )}
+        </div>
+        {condition !== undefined && condition !== null && (
+          <ConditionBuilder
+            condition={condition}
+            onChange={(cond) => {
+              if (cond !== undefined) {
+                setCondition(cond);
+              }
+            }}
+            onRemove={() => setCondition(undefined)}
+          />
+        )}
       </div>
 
       {/* Effects */}
@@ -113,7 +268,9 @@ export function TriggeredAbilityForm({ abilityId, onSave, onCancel }: TriggeredA
           </label>
           <Button
             onClick={handleAddEffect}
-            className="px-3 py-1 text-xs bg-slate-600 hover:bg-slate-500"
+            variant="ghost"
+            size="xs"
+            className="text-amber-400 hover:text-amber-300"
           >
             + Add Effect
           </Button>
@@ -124,57 +281,22 @@ export function TriggeredAbilityForm({ abilityId, onSave, onCancel }: TriggeredA
               <div className="flex items-start justify-between mb-2">
                 <span className="text-xs text-slate-400">Effect {index + 1}</span>
                 {effects.length > 1 && (
-                  <button
+                  <Button
                     onClick={() => handleRemoveEffect(index)}
-                    className="text-xs text-red-400 hover:text-red-300"
+                    variant="link"
+                    size="xs"
+                    className="text-red-400 hover:text-red-300"
                   >
                     Remove
-                  </button>
+                  </Button>
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs text-slate-400 mb-1">Type</label>
-                  <select
-                    value={effect.type || 'damage'}
-                    onChange={(e) => handleUpdateEffect(index, 'type', e.target.value)}
-                    className="w-full px-2 py-1.5 bg-slate-800 text-white rounded border border-slate-600 text-sm focus:border-amber-500 focus:outline-none"
-                  >
-                    {EFFECT_TYPE_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                {(effect.type === 'damage' || effect.type === 'draw' || effect.type === 'token' || effect.type === 'counters' || effect.type === 'life') && (
-                  <div>
-                    <label className="block text-xs text-slate-400 mb-1">Amount</label>
-                    <input
-                      type="number"
-                      value={effect.amount || 0}
-                      onChange={(e) => handleUpdateEffect(index, 'amount', parseInt(e.target.value) || 0)}
-                      min="0"
-                      className="w-full px-2 py-1.5 bg-slate-800 text-white rounded border border-slate-600 text-sm focus:border-amber-500 focus:outline-none"
-                    />
-                  </div>
-                )}
-                {effect.type === 'damage' && (
-                  <div className="col-span-2">
-                    <label className="block text-xs text-slate-400 mb-1">Target</label>
-                    <select
-                      value={effect.target || 'any'}
-                      onChange={(e) => handleUpdateEffect(index, 'target', e.target.value)}
-                      className="w-full px-2 py-1.5 bg-slate-800 text-white rounded border border-slate-600 text-sm focus:border-amber-500 focus:outline-none"
-                    >
-                      <option value="any">Any Target</option>
-                      <option value="creature">Target Creature</option>
-                      <option value="player">Target Player</option>
-                      <option value="planeswalker">Target Planeswalker</option>
-                    </select>
-                  </div>
-                )}
-              </div>
+              <EffectFields
+                effect={effect}
+                index={index}
+                allEffects={effects}
+                onUpdate={(field, value) => handleUpdateEffect(index, field, value)}
+              />
             </div>
           ))}
         </div>
@@ -184,13 +306,15 @@ export function TriggeredAbilityForm({ abilityId, onSave, onCancel }: TriggeredA
       <div className="flex gap-3 pt-4 border-t border-slate-700">
         <Button
           onClick={handleSave}
-          className="flex-1 bg-amber-600 hover:bg-amber-700"
+          variant="primary"
+          className="flex-1"
         >
           Save
         </Button>
         <Button
           onClick={onCancel}
-          className="flex-1 bg-slate-600 hover:bg-slate-500"
+          variant="secondary"
+          className="flex-1"
         >
           Cancel
         </Button>

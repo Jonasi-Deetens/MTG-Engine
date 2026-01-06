@@ -23,6 +23,8 @@ export function ValidationPanel() {
   } = useBuilderStore();
 
   const [validating, setValidating] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
     const validateGraph = async () => {
@@ -70,14 +72,76 @@ export function ValidationPanel() {
     continuousAbilities.length +
     keywords.length;
 
+  const handleSave = async () => {
+    console.log('Save clicked, currentCard:', currentCard);
+    if (!currentCard) {
+      setSaveMessage({ type: 'error', text: 'No card selected' });
+      return;
+    }
+
+    const cardId = currentCard.card_id;
+    console.log('Card ID to save:', cardId);
+    if (!cardId) {
+      console.error('Card ID is missing! Card object:', currentCard);
+      setSaveMessage({ type: 'error', text: 'Card ID is missing. Please select a card again.' });
+      return;
+    }
+
+    const graph = convertToGraph();
+    if (!graph) {
+      setSaveMessage({ type: 'error', text: 'No abilities to save' });
+      return;
+    }
+
+    setSaving(true);
+    setSaveMessage(null);
+    try {
+      console.log('Saving graph for card_id:', cardId);
+      await abilities.saveCardGraph(cardId, graph);
+      setSaveMessage({ type: 'success', text: 'Ability graph saved successfully!' });
+      // Clear message after 3 seconds
+      setTimeout(() => setSaveMessage(null), 3000);
+    } catch (error: any) {
+      console.error('Save error:', error);
+      setSaveMessage({ 
+        type: 'error', 
+        text: error.message || 'Failed to save ability graph' 
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-white">Validation</h3>
-        <div className="text-sm text-slate-400">
-          {totalAbilities} ability{totalAbilities !== 1 ? 'ies' : ''} added
+        <div className="flex items-center gap-4">
+          <div className="text-sm text-slate-400">
+            {totalAbilities} ability{totalAbilities !== 1 ? 'ies' : ''} added
+          </div>
+          {currentCard && (
+            <Button
+              onClick={handleSave}
+              disabled={saving || totalAbilities === 0}
+              variant="primary"
+              size="sm"
+            >
+              {saving ? 'Saving...' : 'Save Graph'}
+            </Button>
+          )}
         </div>
       </div>
+      
+      {saveMessage && (
+        <div className={`mb-4 p-3 rounded text-sm ${
+          saveMessage.type === 'success' 
+            ? 'bg-green-900/50 text-green-200 border border-green-600' 
+            : 'bg-red-900/50 text-red-200 border border-red-600'
+        }`}>
+          {saveMessage.type === 'success' ? '✓' : '✗'} {saveMessage.text}
+        </div>
+      )}
       
       {validating && (
         <div className="text-sm text-slate-400 mb-4">Validating...</div>

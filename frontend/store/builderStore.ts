@@ -20,13 +20,23 @@ export interface CardData {
   collector_number?: string;
 }
 
+// Re-export condition types (must be before interfaces that use it)
+import type { StructuredCondition } from '@/lib/conditionTypes';
+
 // Ability Type Interfaces
 export interface TriggeredAbility {
   id: string;
-  event: string; // e.g., "enters_battlefield", "dies", "becomes_target"
-  condition?: string;
+  event: string; // e.g., "enters_battlefield", "dies", "becomes_target", "card_enters"
+  condition?: StructuredCondition | string; // Structured condition or legacy string
   effects: Effect[];
+  // For card_enters event
+  entersWhere?: string; // Zone where card enters (battlefield, graveyard, hand, etc.)
+  entersFrom?: string; // Optional: zone card came from (hand, library, graveyard, etc.)
+  cardType?: string; // Optional: card type filter (aura, creature, artifact, etc.)
 }
+
+// Re-export for convenience
+export type { StructuredCondition };
 
 export interface ActivatedAbility {
   id: string;
@@ -59,9 +69,23 @@ export interface KeywordAbility {
 export type { KeywordInfo } from '@/lib/abilities';
 
 export interface Effect {
-  type: string; // e.g., "damage", "draw", "token", "counters", "life"
+  type: string; // e.g., "damage", "draw", "token", "counters", "life", "search", "put_onto_battlefield", "attach", "shuffle"
   amount?: number;
   target?: string;
+  manaType?: string;
+  untapTarget?: string;
+  zone?: string; // For search (library, graveyard, hand, exile)
+  cardType?: string; // For search
+  manaValueComparison?: string; // For search (e.g., "<=", ">=")
+  manaValueComparisonValue?: number; // For search (fixed value)
+  manaValueComparisonSource?: string; // For search (triggering_source, triggering_aura, etc.)
+  differentName?: boolean | { // For search - can be boolean (legacy) or object with parameters
+    enabled: boolean;
+    compareAgainstType?: string; // e.g., "aura", "creature", "artifact" - if not set, means "any card"
+    compareAgainstZone?: string; // e.g., "controlled", "battlefield", "graveyard" - defaults to "controlled"
+  };
+  attachTo?: string; // For attach effect
+  fromEffect?: number; // Index of previous effect to reference (0-based, e.g., 0 = first effect, 1 = second effect)
   [key: string]: any; // Additional effect-specific data
 }
 
@@ -136,6 +160,7 @@ interface BuilderState {
   
   // Graph conversion
   convertToGraph: () => AbilityGraph | null;
+  loadFromGraph: (graph: AbilityGraph) => void;
   
   // Clear all
   clearAll: () => void;
@@ -230,6 +255,43 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
   
   // Convert ability lists to graph format for API
   convertToGraph: () => {
+    // Helper function to create effect nodes and chain them based on fromEffect references
+    const createEffectChain = (
+      effects: Effect[],
+      abilityId: string,
+      startNodeId: string, // The node to connect the first effect to (condition or trigger)
+      nodes: AbilityNode[],
+      edges: AbilityEdge[]
+    ): void => {
+      if (effects.length === 0) return;
+      
+      // Create all effect nodes first
+      const effectIds: string[] = [];
+      effects.forEach((effect, idx) => {
+        const effectId = `effect-${abilityId}-${idx}`;
+        effectIds.push(effectId);
+        nodes.push({
+          id: effectId,
+          type: 'EFFECT',
+          data: effect,
+        });
+      });
+      
+      // Build edges: chain effects based on fromEffect, or connect to startNode
+      effects.forEach((effect, idx) => {
+        const effectId = effectIds[idx];
+        
+        if (effect.fromEffect !== undefined && effect.fromEffect >= 0 && effect.fromEffect < idx) {
+          // This effect references a previous effect - chain it
+          const previousEffectId = effectIds[effect.fromEffect];
+          edges.push({ from_: previousEffectId, to: effectId });
+        } else {
+          // This effect doesn't reference a previous effect - connect to start node
+          edges.push({ from_: startNodeId, to: effectId });
+        }
+      });
+    };
+    
     const state = get();
     const nodes: AbilityNode[] = [];
     const edges: AbilityEdge[] = [];
@@ -247,37 +309,35 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
       nodes.push({
         id: triggerId,
         type: 'TRIGGER',
-        data: { event: ability.event },
+        data: { 
+          event: ability.event,
+          ...(ability.event === 'card_enters' && {
+            entersWhere: ability.entersWhere,
+            entersFrom: ability.entersFrom,
+            cardType: ability.cardType,
+          }),
+        },
       });
       
       if (ability.condition) {
         const conditionId = `condition-${ability.id}`;
+        // Handle both structured and legacy string conditions
+        const conditionData = typeof ability.condition === 'string' 
+          ? { condition: ability.condition, isStructured: false }
+          : { ...ability.condition, isStructured: true };
+        
         nodes.push({
           id: conditionId,
           type: 'CONDITION',
-          data: { condition: ability.condition },
+          data: conditionData,
         });
         edges.push({ from_: triggerId, to: conditionId });
         
-        ability.effects.forEach((effect, idx) => {
-          const effectId = `effect-${ability.id}-${idx}`;
-          nodes.push({
-            id: effectId,
-            type: 'EFFECT',
-            data: effect,
-          });
-          edges.push({ from_: conditionId, to: effectId });
-        });
+        // Create effect chain starting from condition
+        createEffectChain(ability.effects, ability.id, conditionId, nodes, edges);
       } else {
-        ability.effects.forEach((effect, idx) => {
-          const effectId = `effect-${ability.id}-${idx}`;
-          nodes.push({
-            id: effectId,
-            type: 'EFFECT',
-            data: effect,
-          });
-          edges.push({ from_: triggerId, to: effectId });
-        });
+        // Create effect chain starting from trigger
+        createEffectChain(ability.effects, ability.id, triggerId, nodes, edges);
       }
     });
     
@@ -365,6 +425,203 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
       edges,
       abilityType,
     };
+  },
+  
+  // Load abilities from graph (reverse of convertToGraph)
+  loadFromGraph: (graph: AbilityGraph) => {
+    const triggeredAbilities: TriggeredAbility[] = [];
+    const activatedAbilities: ActivatedAbility[] = [];
+    const staticAbilities: StaticAbility[] = [];
+    const continuousAbilities: ContinuousAbility[] = [];
+    const keywords: KeywordAbility[] = [];
+    
+    // Build adjacency map for easier traversal
+    const adjacency: Record<string, string[]> = {};
+    graph.edges.forEach(edge => {
+      if (!adjacency[edge.from_]) {
+        adjacency[edge.from_] = [];
+      }
+      adjacency[edge.from_].push(edge.to);
+    });
+    
+    // Group nodes by their prefix to identify ability groups
+    const nodeMap = new Map(graph.nodes.map(node => [node.id, node]));
+    const processedNodes = new Set<string>();
+    
+    // Process triggered abilities (trigger-* nodes)
+    graph.nodes
+      .filter(node => node.id.startsWith('trigger-'))
+      .forEach(triggerNode => {
+        if (processedNodes.has(triggerNode.id)) return;
+        
+        const abilityId = triggerNode.id.replace('trigger-', '');
+        const event = triggerNode.data.event || '';
+        
+        // Find connected nodes
+        const connectedIds = adjacency[triggerNode.id] || [];
+        const conditionNode = connectedIds
+          .map(id => nodeMap.get(id))
+          .find(node => node?.type === 'CONDITION');
+        
+        const effectNodes = connectedIds
+          .map(id => nodeMap.get(id))
+          .filter(node => node?.type === 'EFFECT');
+        
+        // Find the start node for effects (condition or trigger)
+        const effectStartNodeId = conditionNode ? conditionNode.id : triggerNode.id;
+        
+        // Reconstruct effects by following the chain from the start node
+        // Effects can be chained: startNode → effect0 → effect1 → effect2
+        const effects: Effect[] = [];
+        const effectNodeMap = new Map<string, { node: AbilityNode; index: number }>();
+        
+        // First, find all effect nodes and map them by their ID
+        graph.nodes
+          .filter(node => node.id.startsWith(`effect-${abilityId}-`))
+          .forEach((node, idx) => {
+            effectNodeMap.set(node.id, { node, index: idx });
+          });
+        
+        // Build effect chain by following edges from start node
+        const visitedEffects = new Set<string>();
+        const buildEffectChain = (currentNodeId: string): void => {
+          const nextEffectIds = adjacency[currentNodeId] || [];
+          
+          for (const nextId of nextEffectIds) {
+            const effectInfo = effectNodeMap.get(nextId);
+            if (effectInfo && !visitedEffects.has(nextId)) {
+              visitedEffects.add(nextId);
+              effects.push(effectInfo.node.data as Effect);
+              // Continue following the chain
+              buildEffectChain(nextId);
+            }
+          }
+        };
+        
+        // Start building chain from the start node
+        buildEffectChain(effectStartNodeId);
+        
+        // Reconstruct condition
+        let condition: StructuredCondition | string | undefined = undefined;
+        if (conditionNode) {
+          const conditionData = conditionNode.data;
+          if (conditionData.isStructured) {
+            // Remove the isStructured flag
+            const { isStructured, ...rest } = conditionData;
+            condition = rest as StructuredCondition;
+          } else {
+            condition = conditionData.condition as string;
+          }
+        }
+        
+        // Extract card_enters specific fields from trigger data
+        const triggeredAbility: TriggeredAbility = {
+          id: abilityId,
+          event,
+          condition,
+          effects,
+          ...(event === 'card_enters' && {
+            entersWhere: triggerNode.data.entersWhere,
+            entersFrom: triggerNode.data.entersFrom,
+            cardType: triggerNode.data.cardType,
+          }),
+        };
+        
+        triggeredAbilities.push(triggeredAbility);
+        processedNodes.add(triggerNode.id);
+        if (conditionNode) processedNodes.add(conditionNode.id);
+        // Mark all effect nodes as processed
+        effectNodeMap.forEach((_, effectId) => {
+          processedNodes.add(effectId);
+        });
+      });
+    
+    // Process activated abilities (activated-* nodes)
+    graph.nodes
+      .filter(node => node.id.startsWith('activated-'))
+      .forEach(activatedNode => {
+        if (processedNodes.has(activatedNode.id)) return;
+        
+        const abilityId = activatedNode.id.replace('activated-', '');
+        const cost = activatedNode.data.cost || '';
+        const effect = activatedNode.data.effect as Effect;
+        
+        activatedAbilities.push({
+          id: abilityId,
+          cost,
+          effect,
+        });
+        
+        processedNodes.add(activatedNode.id);
+      });
+    
+    // Process keywords (keyword-* nodes)
+    graph.nodes
+      .filter(node => node.id.startsWith('keyword-'))
+      .forEach(keywordNode => {
+        if (processedNodes.has(keywordNode.id)) return;
+        
+        const abilityId = keywordNode.id.replace('keyword-', '');
+        const data = keywordNode.data;
+        
+        keywords.push({
+          id: abilityId,
+          keyword: data.keyword || '',
+          cost: data.cost,
+          number: data.number,
+          lifeCost: data.lifeCost,
+          sacrificeCost: data.sacrificeCost,
+        });
+        
+        processedNodes.add(keywordNode.id);
+      });
+    
+    // Process static abilities (static-* nodes with EFFECT type and abilityType: 'static')
+    graph.nodes
+      .filter(node => node.id.startsWith('static-'))
+      .forEach(staticNode => {
+        if (processedNodes.has(staticNode.id)) return;
+        
+        const abilityId = staticNode.id.replace('static-', '');
+        const data = staticNode.data;
+        
+        if (data.abilityType === 'static') {
+          staticAbilities.push({
+            id: abilityId,
+            appliesTo: data.appliesTo || '',
+            effect: data.effect || '',
+          });
+          processedNodes.add(staticNode.id);
+        }
+      });
+    
+    // Process continuous abilities (continuous-* nodes with EFFECT type and abilityType: 'continuous')
+    graph.nodes
+      .filter(node => node.id.startsWith('continuous-'))
+      .forEach(continuousNode => {
+        if (processedNodes.has(continuousNode.id)) return;
+        
+        const abilityId = continuousNode.id.replace('continuous-', '');
+        const data = continuousNode.data;
+        
+        if (data.abilityType === 'continuous') {
+          continuousAbilities.push({
+            id: abilityId,
+            appliesTo: data.appliesTo || '',
+            effect: data.effect || '',
+          });
+          processedNodes.add(continuousNode.id);
+        }
+      });
+    
+    // Update store with loaded abilities
+    set({
+      triggeredAbilities,
+      activatedAbilities,
+      staticAbilities,
+      continuousAbilities,
+      keywords,
+    });
   },
   
   // Clear all abilities

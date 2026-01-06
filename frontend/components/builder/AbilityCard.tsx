@@ -4,6 +4,8 @@
 
 import { TriggeredAbility, ActivatedAbility, StaticAbility, ContinuousAbility, KeywordAbility } from '@/store/builderStore';
 import { Button } from '@/components/ui/Button';
+import { formatEffect } from '@/lib/effectTypes';
+import { formatCondition } from '@/lib/conditionTypes';
 
 interface AbilityCardProps {
   ability: TriggeredAbility | ActivatedAbility | StaticAbility | ContinuousAbility | KeywordAbility;
@@ -24,23 +26,22 @@ function getAbilitySummary(ability: any, type: string): string {
         blocks: 'Whenever this blocks',
         deals_damage: 'Whenever this deals damage',
         takes_damage: 'Whenever this takes damage',
+        card_enters: (() => {
+          const cardTypeText = a.cardType ? `a ${a.cardType}` : 'a card';
+          const zoneText = a.entersWhere || 'zone';
+          const fromText = a.entersFrom ? ` from ${a.entersFrom}` : '';
+          return `Whenever ${cardTypeText} enters the ${zoneText}${fromText}`;
+        })(),
+        spell_cast: 'Whenever you cast a spell',
       };
       const eventText = eventMap[a.event] || `When ${a.event}`;
-      const effectText = a.effects.map((e) => {
-        if (e.type === 'damage') return `deal ${e.amount || 0} damage`;
-        if (e.type === 'draw') return `draw ${e.amount || 1} card${(e.amount || 1) > 1 ? 's' : ''}`;
-        if (e.type === 'token') return `create ${e.amount || 1} token${(e.amount || 1) > 1 ? 's' : ''}`;
-        if (e.type === 'counters') return `put ${e.amount || 1} +1/+1 counter${(e.amount || 1) > 1 ? 's' : ''}`;
-        if (e.type === 'life') return `gain ${e.amount || 0} life`;
-        return e.type;
-      }).join(', ');
-      return `${eventText}, ${effectText}`;
+      const effectText = a.effects.map((e) => formatEffect(e).toLowerCase()).join(', ');
+      const conditionText = a.condition ? `, if ${formatCondition(a.condition).toLowerCase()}` : '';
+      return `${eventText}${conditionText}, ${effectText}`;
     }
     case 'activated': {
       const a = ability as ActivatedAbility;
-      const effectText = a.effect.type === 'damage' 
-        ? `deal ${a.effect.amount || 0} damage`
-        : a.effect.type;
+      const effectText = formatEffect(a.effect).toLowerCase();
       return `${a.cost}: ${effectText}`;
     }
     case 'static': {
@@ -98,13 +99,15 @@ export function AbilityCard({ ability, type, onEdit, onDelete }: AbilityCardProp
         <div className="flex gap-2 shrink-0">
           <Button
             onClick={onEdit}
-            className="px-3 py-1.5 text-xs bg-slate-600 hover:bg-slate-500"
+            variant="secondary"
+            size="xs"
           >
             Edit
           </Button>
           <Button
             onClick={onDelete}
-            className="px-3 py-1.5 text-xs bg-red-600 hover:bg-red-700"
+            variant="danger"
+            size="xs"
           >
             Delete
           </Button>

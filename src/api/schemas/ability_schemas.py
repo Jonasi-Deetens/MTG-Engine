@@ -59,3 +59,12 @@ class NormalizedAbility(BaseModel):
     effects: List[Dict[str, Any]] = []
     abilityType: str
 
+
+class CardAbilityGraphResponse(BaseModel):
+    """Response with saved ability graph."""
+    id: int
+    card_id: str
+    ability_graph: AbilityGraph
+    created_at: str
+    updated_at: str
+
