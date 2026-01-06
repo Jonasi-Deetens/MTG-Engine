@@ -32,6 +32,20 @@ export function ActivatedAbilityForm({ abilityId, onSave, onCancel }: ActivatedA
   const [effectManaValueComparisonSource, setEffectManaValueComparisonSource] = useState<string | undefined>(existingAbility?.effect.manaValueComparisonSource || 'fixed_value');
   const [effectDifferentName, setEffectDifferentName] = useState(existingAbility?.effect.differentName || false);
   const [effectAttachTo, setEffectAttachTo] = useState(existingAbility?.effect.attachTo || 'self');
+  // New fields for additional effect types
+  const [effectDuration, setEffectDuration] = useState(existingAbility?.effect.duration || 'until_end_of_turn');
+  const [effectChoice, setEffectChoice] = useState(existingAbility?.effect.choice || undefined);
+  const [effectProtectionType, setEffectProtectionType] = useState(existingAbility?.effect.protectionType || 'white');
+  const [effectKeyword, setEffectKeyword] = useState(existingAbility?.effect.keyword || '');
+  const [effectPowerChange, setEffectPowerChange] = useState(existingAbility?.effect.powerChange || 0);
+  const [effectToughnessChange, setEffectToughnessChange] = useState(existingAbility?.effect.toughnessChange || 0);
+  const [effectYourCreature, setEffectYourCreature] = useState(existingAbility?.effect.yourCreature || 'creature');
+  const [effectOpponentCreature, setEffectOpponentCreature] = useState(existingAbility?.effect.opponentCreature || 'creature');
+  const [effectDiscardType, setEffectDiscardType] = useState(existingAbility?.effect.discardType || 'chosen');
+  const [effectPosition, setEffectPosition] = useState(existingAbility?.effect.position || 'top');
+  const [effectReturnUnderOwner, setEffectReturnUnderOwner] = useState(existingAbility?.effect.returnUnderOwner || false);
+  const [effectSourceTarget, setEffectSourceTarget] = useState(existingAbility?.effect.sourceTarget || 'creature');
+  const [effectRedirectTarget, setEffectRedirectTarget] = useState(existingAbility?.effect.redirectTarget || 'creature');
   
   const selectedEffectType = EFFECT_TYPE_OPTIONS.find((opt) => opt.value === effectType);
 
@@ -49,6 +63,20 @@ export function ActivatedAbilityForm({ abilityId, onSave, onCancel }: ActivatedA
       manaValueComparisonSource: effectManaValueComparisonSource || 'fixed_value',
       differentName: effectDifferentName,
       attachTo: effectAttachTo,
+      // New fields
+      duration: effectDuration,
+      choice: effectChoice,
+      protectionType: effectProtectionType,
+      keyword: effectKeyword,
+      powerChange: effectPowerChange,
+      toughnessChange: effectToughnessChange,
+      yourCreature: effectYourCreature,
+      opponentCreature: effectOpponentCreature,
+      discardType: effectDiscardType,
+      position: effectPosition,
+      returnUnderOwner: effectReturnUnderOwner,
+      sourceTarget: effectSourceTarget,
+      redirectTarget: effectRedirectTarget,
     };
 
     // Clean up undefined fields
@@ -66,6 +94,23 @@ export function ActivatedAbilityForm({ abilityId, onSave, onCancel }: ActivatedA
     }
     if (!selectedEffectType?.requiresZone) delete effect.zone;
     if (!selectedEffectType?.requiresAttachTarget) delete effect.attachTo;
+    if (!selectedEffectType?.requiresDuration) delete effect.duration;
+    if (!selectedEffectType?.requiresChoice) delete effect.choice;
+    if (!selectedEffectType?.requiresProtectionType) delete effect.protectionType;
+    if (!selectedEffectType?.requiresKeyword) delete effect.keyword;
+    if (!selectedEffectType?.requiresPowerToughness) {
+      delete effect.powerChange;
+      delete effect.toughnessChange;
+    }
+    if (!selectedEffectType?.requiresTwoTargets) {
+      delete effect.yourCreature;
+      delete effect.opponentCreature;
+      delete effect.sourceTarget;
+      delete effect.redirectTarget;
+    }
+    if (!selectedEffectType?.requiresDiscardType) delete effect.discardType;
+    if (!selectedEffectType?.requiresPosition) delete effect.position;
+    if (effectType !== 'flicker') delete effect.returnUnderOwner;
 
     const ability: ActivatedAbility = {
       id: abilityId || `activated-${Date.now()}`,
@@ -119,6 +164,19 @@ export function ActivatedAbilityForm({ abilityId, onSave, onCancel }: ActivatedA
             manaValueComparisonSource: effectManaValueComparisonSource,
             differentName: effectDifferentName,
             attachTo: effectAttachTo,
+            duration: effectDuration,
+            choice: effectChoice,
+            protectionType: effectProtectionType,
+            keyword: effectKeyword,
+            powerChange: effectPowerChange,
+            toughnessChange: effectToughnessChange,
+            yourCreature: effectYourCreature,
+            opponentCreature: effectOpponentCreature,
+            discardType: effectDiscardType,
+            position: effectPosition,
+            returnUnderOwner: effectReturnUnderOwner,
+            sourceTarget: effectSourceTarget,
+            redirectTarget: effectRedirectTarget,
           }}
           index={0}
           allEffects={[{
@@ -134,6 +192,19 @@ export function ActivatedAbilityForm({ abilityId, onSave, onCancel }: ActivatedA
             manaValueComparisonSource: effectManaValueComparisonSource,
             differentName: effectDifferentName,
             attachTo: effectAttachTo,
+            duration: effectDuration,
+            choice: effectChoice,
+            protectionType: effectProtectionType,
+            keyword: effectKeyword,
+            powerChange: effectPowerChange,
+            toughnessChange: effectToughnessChange,
+            yourCreature: effectYourCreature,
+            opponentCreature: effectOpponentCreature,
+            discardType: effectDiscardType,
+            position: effectPosition,
+            returnUnderOwner: effectReturnUnderOwner,
+            sourceTarget: effectSourceTarget,
+            redirectTarget: effectRedirectTarget,
           }]}
           onUpdate={(field, value) => {
             switch (field) {
@@ -172,6 +243,51 @@ export function ActivatedAbilityForm({ abilityId, onSave, onCancel }: ActivatedA
                 break;
               case 'attachTo':
                 setEffectAttachTo(value);
+                break;
+              case 'duration':
+                setEffectDuration(value);
+                break;
+              case 'choice':
+                setEffectChoice(value);
+                break;
+              case 'protectionType':
+                setEffectProtectionType(value);
+                // If chosen_color, auto-set choice to color
+                if (value === 'chosen_color') {
+                  setEffectChoice('color');
+                } else if (effectProtectionType === 'chosen_color') {
+                  setEffectChoice(undefined);
+                }
+                break;
+              case 'keyword':
+                setEffectKeyword(value);
+                break;
+              case 'powerChange':
+                setEffectPowerChange(value);
+                break;
+              case 'toughnessChange':
+                setEffectToughnessChange(value);
+                break;
+              case 'yourCreature':
+                setEffectYourCreature(value);
+                break;
+              case 'opponentCreature':
+                setEffectOpponentCreature(value);
+                break;
+              case 'discardType':
+                setEffectDiscardType(value);
+                break;
+              case 'position':
+                setEffectPosition(value);
+                break;
+              case 'returnUnderOwner':
+                setEffectReturnUnderOwner(value);
+                break;
+              case 'sourceTarget':
+                setEffectSourceTarget(value);
+                break;
+              case 'redirectTarget':
+                setEffectRedirectTarget(value);
                 break;
             }
           }}

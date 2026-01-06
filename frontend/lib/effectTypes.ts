@@ -12,6 +12,14 @@ export interface EffectTypeOption {
   requiresSearchFilters?: boolean; // For library search effects
   requiresAttachTarget?: boolean; // For attach effects
   requiresZone?: boolean; // For search effects
+  requiresDuration?: boolean; // For temporary effects
+  requiresChoice?: boolean; // For effects requiring player choice
+  requiresProtectionType?: boolean; // For protection effects
+  requiresKeyword?: boolean; // For gain keyword effects
+  requiresPowerToughness?: boolean; // For change power/toughness effects
+  requiresTwoTargets?: boolean; // For fight, redirect damage effects
+  requiresDiscardType?: boolean; // For discard effects
+  requiresPosition?: boolean; // For look at effects
 }
 
 export const EFFECT_TYPE_OPTIONS: EffectTypeOption[] = [
@@ -31,6 +39,24 @@ export const EFFECT_TYPE_OPTIONS: EffectTypeOption[] = [
   { value: 'put_onto_battlefield', label: 'Put onto Battlefield', requiresTarget: false }, // Can use fromEffect instead
   { value: 'attach', label: 'Attach', requiresAttachTarget: true }, // Can use fromEffect or attachTo
   { value: 'shuffle', label: 'Shuffle Library', requiresTarget: false },
+  // New effect types
+  { value: 'protection', label: 'Gain Protection', requiresTarget: true, requiresDuration: true, requiresProtectionType: true, requiresChoice: true },
+  { value: 'gain_keyword', label: 'Gain Keyword', requiresTarget: true, requiresDuration: true, requiresKeyword: true },
+  { value: 'change_power_toughness', label: 'Change Power/Toughness', requiresTarget: true, requiresDuration: true, requiresPowerToughness: true },
+  { value: 'fight', label: 'Fight', requiresTwoTargets: true },
+  { value: 'mill', label: 'Mill', requiresTarget: true, requiresAmount: true },
+  { value: 'discard', label: 'Discard', requiresTarget: true, requiresAmount: true, requiresDiscardType: true },
+  { value: 'scry', label: 'Scry', requiresAmount: true },
+  { value: 'look_at', label: 'Look At', requiresAmount: true, requiresZone: true, requiresPosition: true },
+  { value: 'reveal', label: 'Reveal', requiresTarget: true },
+  { value: 'copy_spell', label: 'Copy Spell', requiresTarget: true },
+  { value: 'regenerate', label: 'Regenerate', requiresTarget: true },
+  { value: 'phase_out', label: 'Phase Out', requiresTarget: true },
+  { value: 'transform', label: 'Transform', requiresTarget: true },
+  { value: 'flicker', label: 'Flicker (Exile & Return)', requiresTarget: true },
+  { value: 'change_control', label: 'Change Control', requiresTarget: true, requiresDuration: true },
+  { value: 'prevent_damage', label: 'Prevent Damage', requiresTarget: true, requiresAmount: true },
+  { value: 'redirect_damage', label: 'Redirect Damage', requiresTwoTargets: true, requiresAmount: true },
 ];
 
 export const TARGET_OPTIONS = [
@@ -98,6 +124,65 @@ export const UNTAP_TARGET_OPTIONS = [
   { value: 'target_artifact', label: 'Target Artifact' },
   { value: 'target_permanent', label: 'Target Permanent' },
 ];
+
+export const DURATION_OPTIONS = [
+  { value: 'permanent', label: 'Permanent' },
+  { value: 'until_end_of_turn', label: 'Until End of Turn' },
+  { value: 'until_end_of_your_next_turn', label: 'Until End of Your Next Turn' },
+  { value: 'until_end_of_combat', label: 'Until End of Combat' },
+  { value: 'until_your_next_upkeep', label: 'Until Your Next Upkeep' },
+];
+
+export const CHOICE_TYPE_OPTIONS = [
+  { value: 'color', label: 'Choose a Color' },
+  { value: 'creature_type', label: 'Choose a Creature Type' },
+  { value: 'card_type', label: 'Choose a Card Type' },
+  { value: 'target', label: 'Choose a Target' },
+];
+
+export const PROTECTION_TYPE_OPTIONS = [
+  { value: 'white', label: 'White' },
+  { value: 'blue', label: 'Blue' },
+  { value: 'black', label: 'Black' },
+  { value: 'red', label: 'Red' },
+  { value: 'green', label: 'Green' },
+  { value: 'colorless', label: 'Colorless' },
+  { value: 'all_colors', label: 'All Colors' },
+  { value: 'artifact', label: 'Artifact' },
+  { value: 'enchantment', label: 'Enchantment' },
+  { value: 'creature', label: 'Creature' },
+  { value: 'instant', label: 'Instant' },
+  { value: 'sorcery', label: 'Sorcery' },
+  { value: 'planeswalker', label: 'Planeswalker' },
+  { value: 'land', label: 'Land' },
+  { value: 'chosen_color', label: 'Chosen Color (Player Choice)' },
+];
+
+export const DISCARD_TYPE_OPTIONS = [
+  { value: 'random', label: 'Random' },
+  { value: 'chosen', label: 'Chosen by Player' },
+  { value: 'all_of_type', label: 'All Cards of Chosen Type' },
+];
+
+export const LOOK_AT_POSITION_OPTIONS = [
+  { value: 'top', label: 'Top' },
+  { value: 'bottom', label: 'Bottom' },
+  { value: 'random', label: 'Random' },
+];
+
+// Helper function to format duration
+export function formatDuration(duration: string | undefined): string {
+  if (!duration || duration === 'permanent') {
+    return '';
+  }
+  const durationMap: Record<string, string> = {
+    'until_end_of_turn': 'until end of turn',
+    'until_end_of_your_next_turn': 'until end of your next turn',
+    'until_end_of_combat': 'until end of combat',
+    'until_your_next_upkeep': 'until your next upkeep',
+  };
+  return durationMap[duration] || duration;
+}
 
 export function formatEffect(effect: any): string {
   if (effect.type === 'damage') {
@@ -200,6 +285,134 @@ export function formatEffect(effect: any): string {
   if (effect.type === 'shuffle') {
     return 'Shuffle your library';
   }
+  
+  // Protection
+  if (effect.type === 'protection') {
+    const target = effect.target || 'target creature';
+    const protectionType = effect.protectionType || 'white';
+    const protectionLabel = PROTECTION_TYPE_OPTIONS.find(opt => opt.value === protectionType)?.label || protectionType;
+    const duration = formatDuration(effect.duration);
+    const choiceText = effect.choice ? ` (player chooses ${effect.choice})` : '';
+    return `Target ${target} gains protection from ${protectionLabel}${duration ? ` ${duration}` : ''}${choiceText}`;
+  }
+  
+  // Gain Keyword
+  if (effect.type === 'gain_keyword') {
+    const target = effect.target || 'target creature';
+    const keyword = effect.keyword || 'keyword';
+    const duration = formatDuration(effect.duration);
+    return `Target ${target} gains ${keyword}${duration ? ` ${duration}` : ''}`;
+  }
+  
+  // Change Power/Toughness
+  if (effect.type === 'change_power_toughness') {
+    const target = effect.target || 'target creature';
+    const powerChange = effect.powerChange || 0;
+    const toughnessChange = effect.toughnessChange || 0;
+    const powerSign = powerChange >= 0 ? '+' : '';
+    const toughnessSign = toughnessChange >= 0 ? '+' : '';
+    const duration = formatDuration(effect.duration);
+    return `Target ${target} gets ${powerSign}${powerChange}/${toughnessSign}${toughnessChange}${duration ? ` ${duration}` : ''}`;
+  }
+  
+  // Fight
+  if (effect.type === 'fight') {
+    const yourCreature = effect.yourCreature || 'target creature you control';
+    const opponentCreature = effect.opponentCreature || 'target creature you don\'t control';
+    return `Target ${yourCreature} fights target ${opponentCreature}`;
+  }
+  
+  // Mill
+  if (effect.type === 'mill') {
+    const target = effect.target || 'target player';
+    const amount = effect.amount || 1;
+    return `Target ${target} mills ${amount} card${amount > 1 ? 's' : ''}`;
+  }
+  
+  // Discard
+  if (effect.type === 'discard') {
+    const target = effect.target || 'target player';
+    const amount = effect.amount || 1;
+    const discardType = effect.discardType || 'chosen';
+    const discardTypeLabel = DISCARD_TYPE_OPTIONS.find(opt => opt.value === discardType)?.label || discardType;
+    return `Target ${target} discards ${amount} card${amount > 1 ? 's' : ''} (${discardTypeLabel})`;
+  }
+  
+  // Scry
+  if (effect.type === 'scry') {
+    const amount = effect.amount || 1;
+    return `Scry ${amount}`;
+  }
+  
+  // Look At
+  if (effect.type === 'look_at') {
+    const amount = effect.amount || 1;
+    const zone = effect.zone || 'library';
+    const position = effect.position || 'top';
+    const positionLabel = LOOK_AT_POSITION_OPTIONS.find(opt => opt.value === position)?.label || position;
+    const zoneLabel = zone === 'library' ? 'your library' : `your ${zone}`;
+    return `Look at the ${positionLabel} ${amount} card${amount > 1 ? 's' : ''} of ${zoneLabel}`;
+  }
+  
+  // Reveal
+  if (effect.type === 'reveal') {
+    const target = effect.target || 'target';
+    return `Reveal ${target}`;
+  }
+  
+  // Copy Spell
+  if (effect.type === 'copy_spell') {
+    const target = effect.target || 'target spell';
+    return `Copy ${target}`;
+  }
+  
+  // Regenerate
+  if (effect.type === 'regenerate') {
+    const target = effect.target || 'target creature';
+    return `Regenerate ${target}`;
+  }
+  
+  // Phase Out
+  if (effect.type === 'phase_out') {
+    const target = effect.target || 'target permanent';
+    return `Target ${target} phases out`;
+  }
+  
+  // Transform
+  if (effect.type === 'transform') {
+    const target = effect.target || 'target permanent';
+    return `Transform ${target}`;
+  }
+  
+  // Flicker
+  if (effect.type === 'flicker') {
+    const target = effect.target || 'target permanent';
+    const ownerText = effect.returnUnderOwner ? " under its owner's control" : '';
+    return `Exile ${target}, then return it to the battlefield${ownerText}`;
+  }
+  
+  // Change Control
+  if (effect.type === 'change_control') {
+    const target = effect.target || 'target permanent';
+    const duration = formatDuration(effect.duration);
+    return `Gain control of ${target}${duration ? ` ${duration}` : ''}`;
+  }
+  
+  // Prevent Damage
+  if (effect.type === 'prevent_damage') {
+    const target = effect.target || 'target';
+    const amount = effect.amount || 1;
+    return `Prevent the next ${amount} damage that would be dealt to ${target} this turn`;
+  }
+  
+  // Redirect Damage
+  if (effect.type === 'redirect_damage') {
+    const sourceTarget = effect.sourceTarget || 'target';
+    const redirectTarget = effect.redirectTarget || 'another target';
+    const amount = effect.amount || 1;
+    return `The next ${amount} damage that would be dealt to ${sourceTarget} is dealt to ${redirectTarget} instead`;
+  }
+  
   return effect.type || 'Unknown effect';
 }
 

@@ -12,8 +12,15 @@ import {
   ATTACH_TARGET_OPTIONS, 
   CARD_TYPE_FILTERS, 
   SEARCH_ZONE_OPTIONS,
-  COMPARE_AGAINST_ZONE_OPTIONS
+  COMPARE_AGAINST_ZONE_OPTIONS,
+  DURATION_OPTIONS,
+  CHOICE_TYPE_OPTIONS,
+  PROTECTION_TYPE_OPTIONS,
+  DISCARD_TYPE_OPTIONS,
+  LOOK_AT_POSITION_OPTIONS
 } from '@/lib/effectTypes';
+import { useEffect, useState } from 'react';
+import { abilities } from '@/lib/abilities';
 
 interface EffectFieldsProps {
   effect: Effect;
@@ -24,6 +31,18 @@ interface EffectFieldsProps {
 
 export function EffectFields({ effect, index, allEffects, onUpdate }: EffectFieldsProps) {
   const selectedEffectType = EFFECT_TYPE_OPTIONS.find((opt) => opt.value === effect.type);
+  const [keywords, setKeywords] = useState<Array<{ value: string; label: string }>>([]);
+
+  // Fetch keywords for gain_keyword effect
+  useEffect(() => {
+    if (selectedEffectType?.requiresKeyword) {
+      abilities.listKeywords().then((response) => {
+        setKeywords(response.keywords.map(k => ({ value: k.name, label: k.name })));
+      }).catch(() => {
+        setKeywords([]);
+      });
+    }
+  }, [selectedEffectType?.requiresKeyword]);
 
   return (
     <div className="space-y-3">
@@ -312,6 +331,235 @@ export function EffectFields({ effect, index, allEffects, onUpdate }: EffectFiel
               </option>
             ))}
           </select>
+        </div>
+      )}
+
+      {/* Duration */}
+      {selectedEffectType?.requiresDuration && (
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">Duration</label>
+          <select
+            value={effect.duration || 'until_end_of_turn'}
+            onChange={(e) => onUpdate('duration', e.target.value)}
+            className="w-full px-2 py-1.5 bg-slate-800 text-white rounded border border-slate-600 text-sm focus:border-amber-500 focus:outline-none"
+          >
+            {DURATION_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Choice Type */}
+      {selectedEffectType?.requiresChoice && (
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">Player Choice</label>
+          <select
+            value={effect.choice || 'color'}
+            onChange={(e) => onUpdate('choice', e.target.value)}
+            className="w-full px-2 py-1.5 bg-slate-800 text-white rounded border border-slate-600 text-sm focus:border-amber-500 focus:outline-none"
+          >
+            {CHOICE_TYPE_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-slate-500 mt-1">
+            Player will choose this at runtime
+          </p>
+        </div>
+      )}
+
+      {/* Protection Type */}
+      {selectedEffectType?.requiresProtectionType && (
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">Protection From</label>
+          <select
+            value={effect.protectionType || 'white'}
+            onChange={(e) => {
+              onUpdate('protectionType', e.target.value);
+              // If chosen_color, enable choice
+              if (e.target.value === 'chosen_color') {
+                onUpdate('choice', 'color');
+              } else {
+                onUpdate('choice', undefined);
+              }
+            }}
+            className="w-full px-2 py-1.5 bg-slate-800 text-white rounded border border-slate-600 text-sm focus:border-amber-500 focus:outline-none"
+          >
+            {PROTECTION_TYPE_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Keyword (for gain_keyword) */}
+      {selectedEffectType?.requiresKeyword && (
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">Keyword</label>
+          <select
+            value={effect.keyword || ''}
+            onChange={(e) => onUpdate('keyword', e.target.value)}
+            className="w-full px-2 py-1.5 bg-slate-800 text-white rounded border border-slate-600 text-sm focus:border-amber-500 focus:outline-none"
+          >
+            <option value="">Select a keyword</option>
+            {keywords.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Power/Toughness Change */}
+      {selectedEffectType?.requiresPowerToughness && (
+        <div className="space-y-2">
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">Power Change</label>
+            <input
+              type="number"
+              value={effect.powerChange || 0}
+              onChange={(e) => onUpdate('powerChange', parseInt(e.target.value) || 0)}
+              className="w-full px-2 py-1.5 bg-slate-800 text-white rounded border border-slate-600 text-sm focus:border-amber-500 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">Toughness Change</label>
+            <input
+              type="number"
+              value={effect.toughnessChange || 0}
+              onChange={(e) => onUpdate('toughnessChange', parseInt(e.target.value) || 0)}
+              className="w-full px-2 py-1.5 bg-slate-800 text-white rounded border border-slate-600 text-sm focus:border-amber-500 focus:outline-none"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Two Targets (for fight, redirect damage) */}
+      {selectedEffectType?.requiresTwoTargets && (
+        <div className="space-y-2">
+          {effect.type === 'fight' && (
+            <>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Your Creature</label>
+                <select
+                  value={effect.yourCreature || 'creature'}
+                  onChange={(e) => onUpdate('yourCreature', e.target.value)}
+                  className="w-full px-2 py-1.5 bg-slate-800 text-white rounded border border-slate-600 text-sm focus:border-amber-500 focus:outline-none"
+                >
+                  {TARGET_OPTIONS.filter(opt => opt.value === 'creature' || opt.value === 'self').map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Opponent's Creature</label>
+                <select
+                  value={effect.opponentCreature || 'creature'}
+                  onChange={(e) => onUpdate('opponentCreature', e.target.value)}
+                  className="w-full px-2 py-1.5 bg-slate-800 text-white rounded border border-slate-600 text-sm focus:border-amber-500 focus:outline-none"
+                >
+                  {TARGET_OPTIONS.filter(opt => opt.value === 'creature').map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
+          {effect.type === 'redirect_damage' && (
+            <>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Source Target (would receive damage)</label>
+                <select
+                  value={effect.sourceTarget || 'creature'}
+                  onChange={(e) => onUpdate('sourceTarget', e.target.value)}
+                  className="w-full px-2 py-1.5 bg-slate-800 text-white rounded border border-slate-600 text-sm focus:border-amber-500 focus:outline-none"
+                >
+                  {TARGET_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Redirect Target (receives damage instead)</label>
+                <select
+                  value={effect.redirectTarget || 'creature'}
+                  onChange={(e) => onUpdate('redirectTarget', e.target.value)}
+                  className="w-full px-2 py-1.5 bg-slate-800 text-white rounded border border-slate-600 text-sm focus:border-amber-500 focus:outline-none"
+                >
+                  {TARGET_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Discard Type */}
+      {selectedEffectType?.requiresDiscardType && (
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">Discard Type</label>
+          <select
+            value={effect.discardType || 'chosen'}
+            onChange={(e) => onUpdate('discardType', e.target.value)}
+            className="w-full px-2 py-1.5 bg-slate-800 text-white rounded border border-slate-600 text-sm focus:border-amber-500 focus:outline-none"
+          >
+            {DISCARD_TYPE_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Position (for look_at) */}
+      {selectedEffectType?.requiresPosition && (
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">Position</label>
+          <select
+            value={effect.position || 'top'}
+            onChange={(e) => onUpdate('position', e.target.value)}
+            className="w-full px-2 py-1.5 bg-slate-800 text-white rounded border border-slate-600 text-sm focus:border-amber-500 focus:outline-none"
+          >
+            {LOOK_AT_POSITION_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Return Under Owner (for flicker) */}
+      {effect.type === 'flicker' && (
+        <div>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={effect.returnUnderOwner || false}
+              onChange={(e) => onUpdate('returnUnderOwner', e.target.checked)}
+              className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-amber-600 focus:ring-amber-500"
+            />
+            <span className="text-xs text-slate-400">Return under owner's control</span>
+          </label>
         </div>
       )}
 

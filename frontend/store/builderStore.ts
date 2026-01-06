@@ -86,6 +86,20 @@ export interface Effect {
   };
   attachTo?: string; // For attach effect
   fromEffect?: number; // Index of previous effect to reference (0-based, e.g., 0 = first effect, 1 = second effect)
+  // New fields for additional effect types
+  duration?: string; // For temporary effects (until_end_of_turn, permanent, etc.)
+  choice?: string; // For effects requiring player choice (color, creature_type, etc.)
+  protectionType?: string; // For protection effects
+  keyword?: string; // For gain keyword effects
+  powerChange?: number; // For change power/toughness effects
+  toughnessChange?: number; // For change power/toughness effects
+  yourCreature?: string; // For fight effects
+  opponentCreature?: string; // For fight effects
+  discardType?: string; // For discard effects
+  position?: string; // For look at effects (top, bottom, random)
+  returnUnderOwner?: boolean; // For flicker effects
+  sourceTarget?: string; // For redirect damage effects
+  redirectTarget?: string; // For redirect damage effects
   [key: string]: any; // Additional effect-specific data
 }
 
