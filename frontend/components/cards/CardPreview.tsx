@@ -41,9 +41,11 @@ export interface CardData {
 interface CardPreviewProps {
   card: CardData;
   onVersionChange?: (card: CardData) => void;
+  onAddToDeck?: (card: CardData) => void;
+  showAddButton?: boolean;
 }
 
-export function CardPreview({ card, onVersionChange }: CardPreviewProps) {
+export function CardPreview({ card, onVersionChange, onAddToDeck, showAddButton = false }: CardPreviewProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [allVersions, setAllVersions] = useState<CardData[]>([]);
   const [loadingVersions, setLoadingVersions] = useState(false);
@@ -69,12 +71,20 @@ export function CardPreview({ card, onVersionChange }: CardPreviewProps) {
     fetchVersions();
   }, [card?.card_id, onVersionChange]);
 
+  const handleCardClick = () => {
+    if (onAddToDeck) {
+      onAddToDeck(card);
+    } else {
+      setIsModalOpen(true);
+    }
+  };
+
   return (
     <>
       <div className="aspect-[63/88] relative overflow-visible flex items-center justify-center group">
         <div 
           className={`absolute inset-0 transition-all duration-300 ease-out hover:scale-105 hover:shadow-2xl hover:shadow-black/60 cursor-pointer`}
-          onClick={() => setIsModalOpen(true)}
+          onClick={handleCardClick}
         >
           {imageUrl ? (
             <Image
@@ -91,6 +101,55 @@ export function CardPreview({ card, onVersionChange }: CardPreviewProps) {
             </div>
           )}
         </div>
+
+        {/* Add to Deck Button Overlay */}
+        {showAddButton && onAddToDeck && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="w-12 h-12 rounded-full bg-amber-600/90 text-white shadow-lg flex items-center justify-center pointer-events-none">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </div>
+          </div>
+        )}
+
+        {/* View Card Button (when in deck builder mode) */}
+        {onAddToDeck && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsModalOpen(true);
+            }}
+            className="absolute top-2 right-2 p-2 bg-slate-900/90 hover:bg-slate-800 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg z-10"
+            aria-label="View card details"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* Version Selector */}

@@ -293,13 +293,12 @@ export default function DeckBuilderPage() {
               ) : searchResults.length > 0 ? (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {searchResults.map((card) => (
-                    <div
+                    <CardPreview
                       key={card.card_id}
-                      className="cursor-pointer hover:scale-105 transition-transform"
-                      onClick={() => handleAddCard(card)}
-                    >
-                      <CardPreview card={card} />
-                    </div>
+                      card={card}
+                      onAddToDeck={handleAddCard}
+                      showAddButton={true}
+                    />
                   ))}
                 </div>
               ) : debouncedQuery ? (
