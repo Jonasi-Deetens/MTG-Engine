@@ -7,6 +7,7 @@ import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import Link from 'next/link';
 import { CardData } from '@/components/cards/CardPreview';
+import { FavoriteButton } from '@/components/collections/FavoriteButton';
 
 interface CardModalProps {
   isOpen: boolean;
@@ -46,7 +47,8 @@ export function CardModal({ isOpen, onClose, card, imageUrl }: CardModalProps) {
       aria-label={`Full size view of ${card.name}`}
     >
       {/* Action buttons */}
-      <div className="absolute top-4 right-4 z-[10000] flex gap-2">
+      <div className="absolute top-4 right-4 z-[10000] flex gap-2 items-center">
+        <FavoriteButton cardId={card.card_id} size="md" />
         <Link
           href={`/cards/${card.card_id}`}
           onClick={onClose}

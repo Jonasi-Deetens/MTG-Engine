@@ -6,7 +6,6 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { CardModal } from '@/components/ui/CardModal';
 import { CardVersionSelector } from './CardVersionSelector';
-import { FavoriteButton } from '@/components/collections/FavoriteButton';
 import { cards } from '@/lib/api';
 
 export interface CardData {
@@ -59,23 +58,6 @@ export function CardPreview({ card, onVersionChange }: CardPreviewProps) {
 
     fetchVersions();
   }, [card?.card_id, onVersionChange]);
-  
-  const favoriteButton = (
-    <div 
-      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-20"
-      data-favorite-button
-      onClick={(e) => {
-        e.stopPropagation();
-        e.preventDefault();
-      }}
-      onMouseDown={(e) => {
-        e.stopPropagation();
-        e.preventDefault();
-      }}
-    >
-      <FavoriteButton cardId={card.card_id} size="sm" />
-    </div>
-  );
 
   return (
     <>
@@ -99,7 +81,6 @@ export function CardPreview({ card, onVersionChange }: CardPreviewProps) {
             </div>
           )}
         </div>
-        {favoriteButton}
       </div>
 
       {/* Version Selector */}
