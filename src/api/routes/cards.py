@@ -134,6 +134,31 @@ def get_random_card(
     return _card_model_to_response(card)
 
 
+@router.get("/versions/{card_id}", response_model=List[CardResponse])
+def get_card_versions(
+    card_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    """Get all versions (printings) of a card by looking up the card's name."""
+    # Get the card to find its name
+    card = db.query(Axis1CardModel).filter(Axis1CardModel.card_id == card_id).first()
+    if not card:
+        raise HTTPException(status_code=404, detail="Card not found")
+    
+    # Use the name field from the model to find all versions
+    card_name = card.name
+    if not card_name:
+        raise HTTPException(status_code=404, detail="Card name not found")
+    
+    # Find all cards with the same name
+    all_versions = db.query(Axis1CardModel).filter(
+        Axis1CardModel.name == card_name
+    ).all()
+    
+    return [_card_model_to_response(c) for c in all_versions]
+
+
 @router.get("/{card_id}", response_model=CardResponse)
 def get_card(
     card_id: str,

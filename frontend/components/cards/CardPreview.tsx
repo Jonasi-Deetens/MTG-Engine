@@ -2,12 +2,15 @@
 
 // frontend/components/cards/CardPreview.tsx
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { CardModal } from '@/components/ui/CardModal';
+import { CardVersionSelector } from './CardVersionSelector';
+import { cards } from '@/lib/api';
 
 export interface CardData {
   card_id: string;
+  oracle_id?: string;
   name: string;
   mana_cost?: string;
   type_line?: string;
@@ -26,11 +29,34 @@ export interface CardData {
 
 interface CardPreviewProps {
   card: CardData;
+  onVersionChange?: (card: CardData) => void;
 }
 
-export function CardPreview({ card }: CardPreviewProps) {
+export function CardPreview({ card, onVersionChange }: CardPreviewProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [allVersions, setAllVersions] = useState<CardData[]>([]);
+  const [loadingVersions, setLoadingVersions] = useState(false);
   const imageUrl = card.image_uris?.normal || card.image_uris?.small || card.image_uris?.large;
+  
+  // Fetch all versions when card changes
+  useEffect(() => {
+    const fetchVersions = async () => {
+      if (!card?.card_id || !onVersionChange) return;
+      
+      setLoadingVersions(true);
+      try {
+        const versions = await cards.getVersions(card.card_id);
+        setAllVersions(versions || []);
+      } catch (err) {
+        console.error('Failed to fetch card versions:', err);
+        setAllVersions([card]); // Fallback to just current card
+      } finally {
+        setLoadingVersions(false);
+      }
+    };
+
+    fetchVersions();
+  }, [card?.card_id, onVersionChange]);
   
   return (
     <>
@@ -55,6 +81,18 @@ export function CardPreview({ card }: CardPreviewProps) {
           )}
         </div>
       </div>
+
+      {/* Version Selector */}
+      {onVersionChange && (
+        <div className="mt-3">
+          <CardVersionSelector
+            currentCard={card}
+            allVersions={allVersions.length > 0 ? allVersions : [card]}
+            onVersionChange={onVersionChange}
+            loading={loadingVersions}
+          />
+        </div>
+      )}
 
       {imageUrl && (
         <CardModal

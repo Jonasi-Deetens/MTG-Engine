@@ -4,6 +4,7 @@ import { create } from 'zustand';
 
 export interface CardData {
   card_id: string;
+  oracle_id?: string;
   name: string;
   mana_cost?: string;
   type_line?: string;

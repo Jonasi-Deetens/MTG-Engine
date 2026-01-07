@@ -569,46 +569,70 @@ def save_card_ability_graph(
     card_id = card_id_str
     
     try:
-        # Check if a graph already exists for this card and user
-        existing_graph = db.query(CardAbilityGraph).filter(
-            CardAbilityGraph.card_id == card_id,
-            CardAbilityGraph.user_id == user.id
-        ).first()
+        # Get the card to find its name
+        from db.models import Axis1CardModel
+        card = db.query(Axis1CardModel).filter(Axis1CardModel.card_id == card_id).first()
+        if not card:
+            raise HTTPException(status_code=404, detail="Card not found")
         
-        if existing_graph:
-            # Update existing graph
-            existing_graph.ability_graph_json = ability_graph.model_dump()
-            existing_graph.updated_at = datetime.utcnow()
-            db.commit()
-            db.refresh(existing_graph)
+        # Use the name field from the model to find all versions
+        card_name = card.name
+        if not card_name:
+            raise HTTPException(status_code=404, detail="Card name not found")
+        
+        # Find all cards with the same name
+        all_versions = db.query(Axis1CardModel).filter(
+            Axis1CardModel.name == card_name
+        ).all()
+        
+        print(f"[DEBUG] Found {len(all_versions)} versions of card '{card_name}'")
+        
+        saved_graphs = []
+        for version in all_versions:
+            # Check if graph exists for this version
+            existing = db.query(CardAbilityGraph).filter(
+                CardAbilityGraph.card_id == version.card_id,
+                CardAbilityGraph.user_id == user.id
+            ).first()
             
-            return CardAbilityGraphResponse(
-                id=existing_graph.id,
-                card_id=existing_graph.card_id,
-                ability_graph=AbilityGraph(**existing_graph.ability_graph_json),
-                created_at=existing_graph.created_at.isoformat(),
-                updated_at=existing_graph.updated_at.isoformat()
-            )
-        else:
-            # Create new graph
-            new_graph = CardAbilityGraph(
-                card_id=card_id,
-                user_id=user.id,
-                ability_graph_json=ability_graph.model_dump()
-            )
-            db.add(new_graph)
-            db.commit()
-            db.refresh(new_graph)
-            
-            return CardAbilityGraphResponse(
-                id=new_graph.id,
-                card_id=new_graph.card_id,
-                ability_graph=AbilityGraph(**new_graph.ability_graph_json),
-                created_at=new_graph.created_at.isoformat(),
-                updated_at=new_graph.updated_at.isoformat()
-            )
+            if existing:
+                # Update existing graph
+                existing.ability_graph_json = ability_graph.model_dump()
+                existing.updated_at = datetime.utcnow()
+                saved_graphs.append(existing)
+            else:
+                # Create new graph
+                new_graph = CardAbilityGraph(
+                    card_id=version.card_id,
+                    user_id=user.id,
+                    ability_graph_json=ability_graph.model_dump()
+                )
+                db.add(new_graph)
+                saved_graphs.append(new_graph)
+        
+        db.commit()
+        
+        # Refresh all saved graphs
+        for graph in saved_graphs:
+            db.refresh(graph)
+        
+        # Return the graph for the requested card_id
+        result = next((g for g in saved_graphs if g.card_id == card_id), saved_graphs[0])
+        
+        print(f"[DEBUG] Saved graph to {len(saved_graphs)} versions, returning graph for card_id: {result.card_id}")
+        
+        return CardAbilityGraphResponse(
+            id=result.id,
+            card_id=result.card_id,
+            ability_graph=AbilityGraph(**result.ability_graph_json),
+            created_at=result.created_at.isoformat(),
+            updated_at=result.updated_at.isoformat()
+        )
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
+        print(f"[ERROR] Failed to save ability graph: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to save ability graph: {str(e)}")
 
 
@@ -618,25 +642,62 @@ def get_card_ability_graph(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-    """Get the ability graph for a specific card."""
+    """Get the ability graph for a specific card, checking all versions if not found."""
     print(f"[DEBUG] Loading graph for card_id: {card_id}, user_id: {user.id}")
+    
+    # First try to get graph for this specific card_id
     graph = db.query(CardAbilityGraph).filter(
         CardAbilityGraph.card_id == card_id,
         CardAbilityGraph.user_id == user.id
     ).first()
     
-    if not graph:
-        print(f"[DEBUG] No graph found for card_id: {card_id}, user_id: {user.id}")
-        raise HTTPException(status_code=404, detail="Ability graph not found for this card")
+    if graph:
+        print(f"[DEBUG] Found graph for card_id: {graph.card_id}, id: {graph.id}")
+        return CardAbilityGraphResponse(
+            id=graph.id,
+            card_id=graph.card_id,
+            ability_graph=AbilityGraph(**graph.ability_graph_json),
+            created_at=graph.created_at.isoformat(),
+            updated_at=graph.updated_at.isoformat()
+        )
     
-    print(f"[DEBUG] Found graph for card_id: {graph.card_id}, id: {graph.id}")
-    return CardAbilityGraphResponse(
-        id=graph.id,
-        card_id=graph.card_id,
-        ability_graph=AbilityGraph(**graph.ability_graph_json),
-        created_at=graph.created_at.isoformat(),
-        updated_at=graph.updated_at.isoformat()
-    )
+    # If not found, check other versions
+    print(f"[DEBUG] No graph found for card_id: {card_id}, checking other versions...")
+    from db.models import Axis1CardModel
+    card = db.query(Axis1CardModel).filter(Axis1CardModel.card_id == card_id).first()
+    if not card:
+        raise HTTPException(status_code=404, detail="Card not found")
+    
+    card_name = card.name
+    if not card_name:
+        raise HTTPException(status_code=404, detail="Card name not found")
+    
+    # Find all cards with the same name
+    all_versions = db.query(Axis1CardModel).filter(
+        Axis1CardModel.name == card_name
+    ).all()
+    
+    print(f"[DEBUG] Checking {len(all_versions)} versions for saved graph...")
+    
+    # Check each version for a saved graph
+    for version in all_versions:
+        graph = db.query(CardAbilityGraph).filter(
+            CardAbilityGraph.card_id == version.card_id,
+            CardAbilityGraph.user_id == user.id
+        ).first()
+        if graph:
+            print(f"[DEBUG] Found graph for version card_id: {graph.card_id}, returning with requested card_id: {card_id}")
+            # Return it, but with the requested card_id
+            return CardAbilityGraphResponse(
+                id=graph.id,
+                card_id=card_id,  # Use requested card_id, not the one that had the graph
+                ability_graph=AbilityGraph(**graph.ability_graph_json),
+                created_at=graph.created_at.isoformat(),
+                updated_at=graph.updated_at.isoformat()
+            )
+    
+    print(f"[DEBUG] No graph found for any version of card '{card_name}'")
+    raise HTTPException(status_code=404, detail="Ability graph not found for this card or any of its versions")
 
 
 @router.delete("/cards/{card_id}/graph")

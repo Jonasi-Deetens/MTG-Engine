@@ -122,5 +122,9 @@ export const cards = {
   search: async (query: string, page: number = 1, pageSize: number = 20): Promise<any> => {
     return api.get(`/api/cards/search?q=${encodeURIComponent(query)}&page=${page}&page_size=${pageSize}`);
   },
+  // Get all versions of a card
+  getVersions: async (cardId: string): Promise<any[]> => {
+    return api.get(`/api/cards/versions/${cardId}`);
+  },
 };
 

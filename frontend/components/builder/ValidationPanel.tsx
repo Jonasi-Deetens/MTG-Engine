@@ -98,7 +98,10 @@ export function ValidationPanel() {
     try {
       console.log('Saving graph for card_id:', cardId);
       await abilities.saveCardGraph(cardId, graph);
-      setSaveMessage({ type: 'success', text: 'Ability graph saved successfully!' });
+      setSaveMessage({ 
+        type: 'success', 
+        text: 'Ability graph saved successfully to all versions!' 
+      });
       // Clear message after 3 seconds
       setTimeout(() => setSaveMessage(null), 3000);
     } catch (error: any) {

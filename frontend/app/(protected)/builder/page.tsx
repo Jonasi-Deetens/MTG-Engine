@@ -105,6 +105,16 @@ export default function BuilderPage() {
     }
   };
 
+  const handleVersionChange = async (newCard: CardData) => {
+    console.log('Version changed to:', newCard.card_id);
+    // Clear abilities first
+    clearAll();
+    // Set new card
+    setCurrentCard(newCard);
+    // Load graph for new version (will check all versions)
+    await loadSavedGraph(newCard.card_id);
+  };
+
   return (
     <div className="min-h-screen bg-slate-900 p-4">
       <div className="max-w-7xl mx-auto space-y-4">
@@ -149,7 +159,7 @@ export default function BuilderPage() {
           {currentCard && (
             <div className="flex items-start gap-6">
               <div className="w-48 shrink-0">
-                <CardPreview card={currentCard} />
+                <CardPreview card={currentCard} onVersionChange={handleVersionChange} />
               </div>
               <div className="flex-1 text-slate-300 space-y-3">
                 <div>
