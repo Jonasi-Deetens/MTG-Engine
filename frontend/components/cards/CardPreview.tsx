@@ -4,8 +4,10 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { CardModal } from '@/components/ui/CardModal';
 import { CardVersionSelector } from './CardVersionSelector';
+import { FavoriteButton } from '@/components/collections/FavoriteButton';
 import { cards } from '@/lib/api';
 
 export interface CardData {
@@ -30,9 +32,10 @@ export interface CardData {
 interface CardPreviewProps {
   card: CardData;
   onVersionChange?: (card: CardData) => void;
+  linkToDetail?: boolean; // If true, clicking card navigates to detail page instead of opening modal
 }
 
-export function CardPreview({ card, onVersionChange }: CardPreviewProps) {
+export function CardPreview({ card, onVersionChange, linkToDetail = false }: CardPreviewProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [allVersions, setAllVersions] = useState<CardData[]>([]);
   const [loadingVersions, setLoadingVersions] = useState(false);
@@ -58,29 +61,43 @@ export function CardPreview({ card, onVersionChange }: CardPreviewProps) {
     fetchVersions();
   }, [card?.card_id, onVersionChange]);
   
+  const cardImage = (
+    <div className="aspect-[63/88] relative overflow-visible flex items-center justify-center group">
+      <div 
+        className={`absolute inset-0 transition-all duration-300 ease-out hover:scale-105 hover:shadow-2xl hover:shadow-black/60 ${linkToDetail ? 'cursor-pointer' : 'cursor-pointer'}`}
+        onClick={linkToDetail ? undefined : () => setIsModalOpen(true)}
+      >
+        {imageUrl ? (
+          <Image
+            src={imageUrl}
+            alt={card.name}
+            fill
+            className="object-cover rounded-xl"
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+            unoptimized
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-slate-500 text-xs text-center p-2 bg-slate-800 rounded-lg">
+            No Image
+          </div>
+        )}
+      </div>
+      {/* Favorite button overlay */}
+      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+        <FavoriteButton cardId={card.card_id} size="sm" />
+      </div>
+    </div>
+  );
+  
   return (
     <>
-      <div className="aspect-[63/88] relative overflow-visible flex items-center justify-center">
-        <div 
-          className="absolute inset-0 transition-all duration-300 ease-out hover:scale-105 hover:shadow-2xl hover:shadow-black/60 cursor-pointer"
-          onClick={() => setIsModalOpen(true)}
-        >
-          {imageUrl ? (
-            <Image
-              src={imageUrl}
-              alt={card.name}
-              fill
-              className="object-cover rounded-xl"
-              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
-              unoptimized
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-slate-500 text-xs text-center p-2 bg-slate-800 rounded-lg">
-              No Image
-            </div>
-          )}
-        </div>
-      </div>
+      {linkToDetail ? (
+        <Link href={`/cards/${card.card_id}`}>
+          {cardImage}
+        </Link>
+      ) : (
+        cardImage
+      )}
 
       {/* Version Selector */}
       {onVersionChange && (

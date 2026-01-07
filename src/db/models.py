@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, JSON, Integer, DateTime, Boolean, ForeignKey
+from sqlalchemy import Column, String, JSON, Integer, DateTime, Boolean, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import declarative_base, relationship
 from datetime import datetime
 
@@ -98,5 +98,68 @@ class CardAbilityGraph(Base):
     
     # Unique constraint: one graph per card per user
     __table_args__ = (
+        {"sqlite_autoincrement": True},
+    )
+
+
+class UserFavorite(Base):
+    """User's favorite cards."""
+    __tablename__ = "user_favorites"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    card_id = Column(String, nullable=False, index=True)  # Reference to Axis1CardModel.card_id
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationship to user
+    user = relationship("User", backref="favorites")
+    
+    # Unique constraint: one favorite per card per user
+    __table_args__ = (
+        UniqueConstraint('user_id', 'card_id', name='uq_user_favorite'),
+        {"sqlite_autoincrement": True},
+    )
+
+
+class Collection(Base):
+    """User-created card collections."""
+    __tablename__ = "collections"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    name = Column(String, nullable=False)
+    description = Column(String)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationship to user
+    user = relationship("User", backref="collections")
+    
+    # Relationship to collection items
+    items = relationship("CollectionItem", back_populates="collection", cascade="all, delete-orphan")
+    
+    __table_args__ = (
+        {"sqlite_autoincrement": True},
+    )
+
+
+class CollectionItem(Base):
+    """Cards in a collection."""
+    __tablename__ = "collection_items"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    collection_id = Column(Integer, ForeignKey("collections.id"), nullable=False, index=True)
+    card_id = Column(String, nullable=False, index=True)  # Reference to Axis1CardModel.card_id
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationship to collection
+    collection = relationship("Collection", back_populates="items")
+    
+    # Unique constraint: one card per collection
+    __table_args__ = (
+        UniqueConstraint('collection_id', 'card_id', name='uq_collection_item'),
         {"sqlite_autoincrement": True},
     )

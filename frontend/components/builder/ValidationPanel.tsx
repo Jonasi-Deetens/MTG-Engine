@@ -72,6 +72,42 @@ export function ValidationPanel() {
     continuousAbilities.length +
     keywords.length;
 
+  const handleExport = () => {
+    const graph = convertToGraph();
+    if (!graph) {
+      alert('No abilities to export');
+      return;
+    }
+    const json = JSON.stringify(graph, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${currentCard?.name || 'ability-graph'}-graph.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleShare = async () => {
+    if (currentCard) {
+      const url = `${window.location.origin}/cards/${currentCard.card_id}`;
+      try {
+        await navigator.clipboard.writeText(url);
+        alert('Card link copied to clipboard!');
+      } catch (err) {
+        const textArea = document.createElement('textarea');
+        textArea.value = url;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        alert('Card link copied to clipboard!');
+      }
+    }
+  };
+
   const handleSave = async () => {
     console.log('Save clicked, currentCard:', currentCard);
     if (!currentCard) {
@@ -119,19 +155,37 @@ export function ValidationPanel() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-white">Validation</h3>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           <div className="text-sm text-slate-400">
             {totalAbilities} ability{totalAbilities !== 1 ? 'ies' : ''} added
           </div>
-          {currentCard && (
+          {totalAbilities > 0 && (
             <Button
-              onClick={handleSave}
-              disabled={saving || totalAbilities === 0}
-              variant="primary"
+              onClick={handleExport}
+              variant="outline"
               size="sm"
             >
-              {saving ? 'Saving...' : 'Save Graph'}
+              Export JSON
             </Button>
+          )}
+          {currentCard && (
+            <>
+              <Button
+                onClick={handleShare}
+                variant="outline"
+                size="sm"
+              >
+                Share Card
+              </Button>
+              <Button
+                onClick={handleSave}
+                disabled={saving || totalAbilities === 0}
+                variant="primary"
+                size="sm"
+              >
+                {saving ? 'Saving...' : 'Save Graph'}
+              </Button>
+            </>
           )}
         </div>
       </div>

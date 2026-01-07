@@ -51,10 +51,34 @@ export default function ProtectedLayout({
                 Search
               </Link>
               <Link
+                href="/browse"
+                className="text-slate-300 hover:text-white transition-colors"
+              >
+                Browse
+              </Link>
+              <Link
+                href="/templates"
+                className="text-slate-300 hover:text-white transition-colors"
+              >
+                Templates
+              </Link>
+              <Link
                 href="/builder"
                 className="text-slate-300 hover:text-white transition-colors"
               >
                 Builder
+              </Link>
+              <Link
+                href="/my-cards"
+                className="text-slate-300 hover:text-white transition-colors"
+              >
+                My Cards
+              </Link>
+              <Link
+                href="/getting-started"
+                className="text-slate-300 hover:text-white transition-colors"
+              >
+                Getting Started
               </Link>
             </div>
             <div className="flex items-center gap-4">

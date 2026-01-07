@@ -2,13 +2,14 @@
 
 // frontend/app/(protected)/search/page.tsx
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Input } from '@/components/ui/Input';
 import { CardGrid } from '@/components/cards/CardGrid';
 import { CardGridSkeleton } from '@/components/skeletons/CardSkeleton';
 import { CardData } from '@/components/cards/CardPreview';
 import { api } from '@/lib/api';
 import { useDebounce } from '@/lib/hooks';
+import { Button } from '@/components/ui/Button';
 
 interface SearchResponse {
   cards: CardData[];
@@ -18,38 +19,55 @@ interface SearchResponse {
   has_more: boolean;
 }
 
+const COLORS = ['W', 'U', 'B', 'R', 'G', 'C'];
+const COLOR_NAMES: Record<string, string> = {
+  'W': 'White',
+  'U': 'Blue',
+  'B': 'Black',
+  'R': 'Red',
+  'G': 'Green',
+  'C': 'Colorless',
+};
+
 export default function SearchPage() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [cards, setCards] = useState<CardData[]>([]);
+  const [allCards, setAllCards] = useState<CardData[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [hasMore, setHasMore] = useState(false);
+  
+  // Filters
+  const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [typeFilter, setTypeFilter] = useState('');
+  const [setFilter, setSetFilter] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
 
   const debouncedQuery = useDebounce(searchQuery, 500);
 
   const searchCards = useCallback(async (query: string, pageNum: number = 1) => {
     if (!query.trim()) {
-      setCards([]);
+      setAllCards([]);
       setTotal(0);
       return;
     }
 
     setLoading(true);
     setError('');
-
+    
     try {
+      // Fetch more results to allow client-side filtering
       const response = await api.get<SearchResponse>(
-        `/api/cards/search?q=${encodeURIComponent(query)}&page=${pageNum}&page_size=20`
+        `/api/cards/search?q=${encodeURIComponent(query)}&page=${pageNum}&page_size=100`
       );
-      setCards(response.cards);
+      setAllCards(response.cards);
       setTotal(response.total);
       setHasMore(response.has_more);
       setPage(pageNum);
     } catch (err: any) {
       setError(err?.data?.detail || err?.message || 'Failed to search cards');
-      setCards([]);
+      setAllCards([]);
     } finally {
       setLoading(false);
     }
@@ -58,6 +76,53 @@ export default function SearchPage() {
   useEffect(() => {
     searchCards(debouncedQuery, 1);
   }, [debouncedQuery, searchCards]);
+
+  // Apply client-side filters
+  const filteredCards = useMemo(() => {
+    let filtered = [...allCards];
+    
+    // Filter by colors
+    if (selectedColors.length > 0) {
+      filtered = filtered.filter(card => {
+        if (!card.colors || card.colors.length === 0) {
+          return selectedColors.includes('C'); // Colorless
+        }
+        return selectedColors.some(color => card.colors?.includes(color.toLowerCase()));
+      });
+    }
+    
+    // Filter by type
+    if (typeFilter) {
+      filtered = filtered.filter(card => 
+        card.type_line?.toLowerCase().includes(typeFilter.toLowerCase())
+      );
+    }
+    
+    // Filter by set
+    if (setFilter) {
+      filtered = filtered.filter(card => 
+        card.set_code?.toLowerCase() === setFilter.toLowerCase()
+      );
+    }
+    
+    return filtered;
+  }, [allCards, selectedColors, typeFilter, setFilter]);
+
+  const toggleColor = (color: string) => {
+    setSelectedColors(prev => 
+      prev.includes(color) 
+        ? prev.filter(c => c !== color)
+        : [...prev, color]
+    );
+  };
+
+  const clearFilters = () => {
+    setSelectedColors([]);
+    setTypeFilter('');
+    setSetFilter('');
+  };
+
+  const hasActiveFilters = selectedColors.length > 0 || typeFilter || setFilter;
 
   return (
     <div className="space-y-6">
@@ -70,13 +135,85 @@ export default function SearchPage() {
         </p>
       </div>
 
-      <div className="max-w-2xl">
-        <Input
-          type="text"
-          placeholder="Search for cards (e.g., Lightning Bolt, Jace, etc.)"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
+      <div className="space-y-4">
+        <div className="max-w-2xl">
+          <Input
+            type="text"
+            placeholder="Search for cards (e.g., Lightning Bolt, Jace, etc.)"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+
+        <div className="flex items-center gap-4">
+          <Button
+            onClick={() => setShowFilters(!showFilters)}
+            variant="outline"
+            size="sm"
+          >
+            {showFilters ? 'Hide' : 'Show'} Filters
+          </Button>
+          {hasActiveFilters && (
+            <Button
+              onClick={clearFilters}
+              variant="outline"
+              size="sm"
+            >
+              Clear Filters
+            </Button>
+          )}
+        </div>
+
+        {showFilters && (
+          <div className="bg-slate-800 rounded-lg p-4 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Colors
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {COLORS.map(color => (
+                  <button
+                    key={color}
+                    onClick={() => toggleColor(color)}
+                    className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                      selectedColors.includes(color)
+                        ? 'bg-amber-500 text-white'
+                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                    }`}
+                  >
+                    {COLOR_NAMES[color]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Type (contains)
+              </label>
+              <Input
+                type="text"
+                placeholder="e.g., Creature, Instant, Artifact"
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+                className="max-w-xs"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Set Code
+              </label>
+              <Input
+                type="text"
+                placeholder="e.g., M21, CMR"
+                value={setFilter}
+                onChange={(e) => setSetFilter(e.target.value.toUpperCase())}
+                className="max-w-xs"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {error && (
@@ -91,10 +228,14 @@ export default function SearchPage() {
         <>
           {searchQuery && (
             <div className="text-slate-400 text-sm">
-              Found {total} {total === 1 ? 'card' : 'cards'}
+              {hasActiveFilters ? (
+                <>Showing {filteredCards.length} of {total} cards (filtered)</>
+              ) : (
+                <>Found {total} {total === 1 ? 'card' : 'cards'}</>
+              )}
             </div>
           )}
-          <CardGrid cards={cards} />
+          <CardGrid cards={filteredCards} />
         </>
       )}
     </div>

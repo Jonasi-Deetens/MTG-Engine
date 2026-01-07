@@ -4,7 +4,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, func
 from typing import Optional, List
-from pydantic import BaseModel
 
 from db.connection import SessionLocal
 from db.models import Axis1CardModel
@@ -12,6 +11,8 @@ from db.repository import Axis1Repository
 from scryfall.client import ScryfallClient
 from api.routes.auth import get_current_user
 from db.models import User
+from api.schemas.card_schemas import CardResponse, SearchResponse
+from api.utils.card_utils import card_model_to_response
 
 router = APIRouter(prefix="/api/cards", tags=["cards"])
 
@@ -22,67 +23,6 @@ def get_db():
         yield db
     finally:
         db.close()
-
-
-# Response models
-class CardResponse(BaseModel):
-    card_id: str
-    oracle_id: Optional[str]
-    name: str
-    mana_cost: Optional[str]
-    mana_value: Optional[int]
-    type_line: Optional[str]
-    oracle_text: Optional[str]
-    power: Optional[str]
-    toughness: Optional[str]
-    colors: List[str]
-    image_uris: Optional[dict]
-    set_code: Optional[str]
-    collector_number: Optional[str]
-    
-    class Config:
-        from_attributes = True
-
-
-class SearchResponse(BaseModel):
-    cards: List[CardResponse]
-    total: int
-    page: int
-    page_size: int
-    has_more: bool
-
-
-def _card_model_to_response(card_model: Axis1CardModel) -> CardResponse:
-    """Convert Axis1CardModel to CardResponse."""
-    card_data = card_model.axis1_json or {}
-    faces = card_data.get("faces", [])
-    first_face = faces[0] if faces else {}
-    metadata = card_data.get("metadata", {})
-    
-    # For multi-face cards, Scryfall provides image_uris per face
-    # For single-face cards, image_uris are at the card level
-    # We also check metadata as a fallback
-    image_uris = (
-        first_face.get("image_uris") or 
-        card_data.get("image_uris") or 
-        metadata.get("image_uris")
-    )
-    
-    return CardResponse(
-        card_id=card_model.card_id,
-        oracle_id=card_data.get("oracle_id"),
-        name=first_face.get("name") or card_data.get("name", ""),
-        mana_cost=first_face.get("mana_cost") or card_data.get("mana_cost"),
-        mana_value=first_face.get("mana_value") or card_data.get("mana_value"),
-        type_line=first_face.get("type_line") or card_data.get("type_line"),
-        oracle_text=first_face.get("oracle_text") or card_data.get("oracle_text"),
-        power=first_face.get("power") or card_data.get("power"),
-        toughness=first_face.get("toughness") or card_data.get("toughness"),
-        colors=first_face.get("colors", []) or card_data.get("colors", []),
-        image_uris=image_uris,
-        set_code=card_model.set_code,
-        collector_number=card_model.collector_number
-    )
 
 
 @router.get("/search", response_model=SearchResponse)
@@ -111,7 +51,7 @@ def search_cards(
     cards = query.offset(offset).limit(page_size).all()
     
     # Convert to response models
-    card_responses = [_card_model_to_response(card) for card in cards]
+    card_responses = [card_model_to_response(card) for card in cards]
     
     return SearchResponse(
         cards=card_responses,
@@ -131,7 +71,7 @@ def get_random_card(
     card = db.query(Axis1CardModel).order_by(func.random()).first()
     if not card:
         raise HTTPException(status_code=404, detail="No cards found")
-    return _card_model_to_response(card)
+    return card_model_to_response(card)
 
 
 @router.get("/versions/{card_id}", response_model=List[CardResponse])
@@ -156,7 +96,7 @@ def get_card_versions(
         Axis1CardModel.name == card_name
     ).all()
     
-    return [_card_model_to_response(c) for c in all_versions]
+    return [card_model_to_response(c) for c in all_versions]
 
 
 @router.get("/{card_id}", response_model=CardResponse)
@@ -170,7 +110,7 @@ def get_card(
     if not card:
         raise HTTPException(status_code=404, detail="Card not found")
     
-    return _card_model_to_response(card)
+    return card_model_to_response(card)
 
 
 @router.get("", response_model=SearchResponse)
@@ -191,7 +131,7 @@ def list_cards(
     cards = query.offset(offset).limit(page_size).all()
     
     # Convert to response models
-    card_responses = [_card_model_to_response(card) for card in cards]
+    card_responses = [card_model_to_response(card) for card in cards]
     
     return SearchResponse(
         cards=card_responses,

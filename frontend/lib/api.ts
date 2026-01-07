@@ -118,6 +118,14 @@ export const cards = {
   getRandom: async (): Promise<any> => {
     return api.get('/api/cards/random');
   },
+  // Get card by ID
+  getById: async (cardId: string): Promise<any> => {
+    return api.get(`/api/cards/${encodeURIComponent(cardId)}`);
+  },
+  // List cards with pagination
+  list: async (page: number = 1, pageSize: number = 20): Promise<any> => {
+    return api.get(`/api/cards?page=${page}&page_size=${pageSize}`);
+  },
   // Search cards by name
   search: async (query: string, page: number = 1, pageSize: number = 20): Promise<any> => {
     return api.get(`/api/cards/search?q=${encodeURIComponent(query)}&page=${page}&page_size=${pageSize}`);

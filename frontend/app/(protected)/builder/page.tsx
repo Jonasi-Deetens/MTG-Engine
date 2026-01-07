@@ -3,6 +3,8 @@
 // frontend/app/(protected)/builder/page.tsx
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { useBuilderStore, CardData } from '@/store/builderStore';
 import { cards } from '@/lib/api';
 import { abilities } from '@/lib/abilities';
@@ -13,6 +15,7 @@ import { ValidationPanel } from '@/components/builder/ValidationPanel';
 import { AbilityTreeView } from '@/components/builder/AbilityTreeView';
 
 export default function BuilderPage() {
+  const searchParams = useSearchParams();
   const { currentCard, setCurrentCard, loadFromGraph, clearAll } = useBuilderStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -114,6 +117,30 @@ export default function BuilderPage() {
     // Load graph for new version (will check all versions)
     await loadSavedGraph(newCard.card_id);
   };
+
+  // Load card from query parameter on mount
+  useEffect(() => {
+    const cardId = searchParams.get('card');
+    if (cardId && (!currentCard || currentCard.card_id !== cardId)) {
+      const loadCardFromQuery = async () => {
+        setLoading(true);
+        setError('');
+        try {
+          const card = await cards.getById(cardId);
+          if (card?.card_id) {
+            clearAll();
+            setCurrentCard(card as CardData);
+            await loadSavedGraph(card.card_id);
+          }
+        } catch (err: any) {
+          setError(err?.data?.detail || err?.message || 'Failed to load card');
+        } finally {
+          setLoading(false);
+        }
+      };
+      loadCardFromQuery();
+    }
+  }, [searchParams, currentCard, setCurrentCard, clearAll]);
 
   return (
     <div className="min-h-screen bg-slate-900 p-4">
@@ -233,8 +260,13 @@ export default function BuilderPage() {
           )}
           {!currentCard && (
             <div className="text-center py-8 text-slate-500">
-              <p>No card selected</p>
-              <p className="text-sm mt-2">Search for a card by name or click "Random Card" to start building abilities</p>
+              <p className="text-lg mb-2">No card selected</p>
+              <p className="text-sm mb-4">Search for a card by name or click "Random Card" to start building abilities</p>
+              <Link href="/getting-started">
+                <Button variant="outline" size="sm">
+                  View Getting Started Guide
+                </Button>
+              </Link>
             </div>
           )}
         </div>
