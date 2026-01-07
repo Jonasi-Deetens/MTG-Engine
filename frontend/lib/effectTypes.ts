@@ -69,6 +69,7 @@ export const TARGET_OPTIONS = [
   { value: 'enchantment', label: 'Target Enchantment' },
   { value: 'permanent', label: 'Target Permanent' },
   { value: 'spell', label: 'Target Spell' },
+  { value: 'commander', label: 'Target Commander' },
 ];
 
 export const ATTACH_TARGET_OPTIONS = [
