@@ -9,6 +9,8 @@ import { Template } from '@/lib/abilities';
 import { useBuilderStore } from '@/store/builderStore';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Layers } from 'lucide-react';
 
 export default function TemplatesPage() {
   const router = useRouter();
@@ -78,12 +80,13 @@ export default function TemplatesPage() {
       )}
 
       {templates.length === 0 && !loading ? (
-        <div className="text-center py-12">
-          <p className="text-slate-400 text-lg">No templates available yet</p>
-          <p className="text-slate-500 text-sm mt-2">
-            Templates will appear here once they are created
-          </p>
-        </div>
+        <Card variant="elevated">
+          <EmptyState
+            icon={Layers}
+            title="No templates available"
+            description="Ability templates will appear here once they are created. Templates help you quickly build common ability patterns."
+          />
+        </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {templates.map((template) => (

@@ -10,6 +10,9 @@ import { CardData } from '@/components/cards/CardPreview';
 import { api } from '@/lib/api';
 import { useDebounce } from '@/lib/hooks';
 import { Button } from '@/components/ui/Button';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Card } from '@/components/ui/Card';
+import { SearchX } from 'lucide-react';
 
 interface SearchResponse {
   cards: CardData[];
@@ -226,16 +229,28 @@ export default function SearchPage() {
         <CardGridSkeleton count={20} />
       ) : (
         <>
-          {searchQuery && (
-            <div className="text-slate-400 text-sm">
-              {hasActiveFilters ? (
-                <>Showing {filteredCards.length} of {total} cards (filtered)</>
-              ) : (
-                <>Found {total} {total === 1 ? 'card' : 'cards'}</>
+          {searchQuery && filteredCards.length === 0 && total === 0 ? (
+            <Card variant="elevated">
+              <EmptyState
+                icon={SearchX}
+                title="No cards found"
+                description={`No cards match your search "${searchQuery}". Try adjusting your search query or filters to find what you're looking for.`}
+              />
+            </Card>
+          ) : (
+            <>
+              {searchQuery && (
+                <div className="text-slate-400 text-sm">
+                  {hasActiveFilters ? (
+                    <>Showing {filteredCards.length} of {total} cards (filtered)</>
+                  ) : (
+                    <>Found {total} {total === 1 ? 'card' : 'cards'}</>
+                  )}
+                </div>
               )}
-            </div>
+              <CardGrid cards={filteredCards} />
+            </>
           )}
-          <CardGrid cards={filteredCards} />
         </>
       )}
     </div>

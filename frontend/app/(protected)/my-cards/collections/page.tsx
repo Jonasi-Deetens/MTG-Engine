@@ -7,6 +7,8 @@ import { useRouter } from 'next/navigation';
 import { collections, CollectionResponse } from '@/lib/collections';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Folder } from 'lucide-react';
 import Link from 'next/link';
 
 export default function CollectionsPage() {
@@ -141,14 +143,17 @@ export default function CollectionsPage() {
         <div className="text-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500 mx-auto"></div>
         </div>
-      ) : collectionsList.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-slate-400 text-lg">No collections yet</p>
-          <p className="text-slate-500 text-sm mt-2">
-            Create a collection to organize your cards
-          </p>
-        </div>
-      ) : (
+      ) : collectionsList.length === 0 && !showCreateForm ? (
+        <Card variant="elevated">
+          <EmptyState
+            icon={Folder}
+            title="No collections yet"
+            description="Create collections to organize your cards into groups. Perfect for organizing by format, theme, or any other category you prefer."
+            actionLabel="Create Collection"
+            onAction={() => setShowCreateForm(true)}
+          />
+        </Card>
+      ) : collectionsList.length === 0 ? null : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {collectionsList.map((collection) => (
             <Card key={collection.id} variant="elevated">

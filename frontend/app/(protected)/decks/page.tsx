@@ -7,6 +7,9 @@ import { useRouter } from 'next/navigation';
 import { decks, DeckResponse } from '@/lib/decks';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { BookOpen, SearchX, Users, Globe, Lock } from 'lucide-react';
 import Link from 'next/link';
 
 export default function DecksPage() {
@@ -104,45 +107,73 @@ export default function DecksPage() {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500 mx-auto"></div>
         </div>
       ) : filteredDecks.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-slate-400 text-lg">No decks found</p>
-          <p className="text-slate-500 text-sm mt-2">
-            {decksList.length === 0
-              ? 'Create your first deck to get started'
-              : 'Try adjusting your search or filters'}
-          </p>
-          {decksList.length === 0 && (
-            <Link href="/decks/builder" className="mt-4 inline-block">
-              <Button variant="primary">Create New Deck</Button>
-            </Link>
+        <Card variant="elevated">
+          {decksList.length === 0 ? (
+            <EmptyState
+              icon={BookOpen}
+              title="No decks yet"
+              description="Create your first deck to start building your collection. You can add cards, set commanders, and validate your deck."
+              actionLabel="Create New Deck"
+              actionHref="/decks/builder"
+            />
+          ) : (
+            <EmptyState
+              icon={SearchX}
+              title="No decks found"
+              description="Try adjusting your search query or format filter to find what you're looking for."
+            />
           )}
-        </div>
+        </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredDecks.map((deck) => (
             <Card key={deck.id} variant="elevated">
               <div className="p-6 space-y-4">
                 <div>
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="text-xl font-semibold text-white">
+                  <div className="flex items-start justify-between mb-3">
+                    <h3 className="text-xl font-semibold text-white flex-1">
                       {deck.name}
                     </h3>
-                    {deck.is_public && (
-                      <span className="text-xs bg-green-600 text-white px-2 py-1 rounded">
-                        Public
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2 ml-2">
+                      {deck.is_public ? (
+                        <StatusBadge
+                          label="Public"
+                          variant="success"
+                          icon={Globe}
+                          size="sm"
+                        />
+                      ) : (
+                        <StatusBadge
+                          label="Private"
+                          variant="default"
+                          icon={Lock}
+                          size="sm"
+                        />
+                      )}
+                    </div>
                   </div>
                   {deck.description && (
-                    <p className="text-slate-400 text-sm mb-2">
+                    <p className="text-slate-400 text-sm mb-3 line-clamp-2">
                       {deck.description}
                     </p>
                   )}
-                  <div className="flex items-center gap-4 text-sm text-slate-500">
-                    <span>Format: {deck.format}</span>
-                    <span>{deck.card_count} cards</span>
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    <StatusBadge
+                      label={deck.format}
+                      variant="info"
+                      size="sm"
+                    />
+                  </div>
+                  <div className="flex items-center gap-4 text-sm text-slate-400">
+                    <span className="flex items-center gap-1">
+                      <BookOpen className="w-4 h-4" />
+                      {deck.card_count} cards
+                    </span>
                     {deck.commander_count > 0 && (
-                      <span>{deck.commander_count} commander{deck.commander_count > 1 ? 's' : ''}</span>
+                      <span className="flex items-center gap-1">
+                        <Users className="w-4 h-4" />
+                        {deck.commander_count} commander{deck.commander_count > 1 ? 's' : ''}
+                      </span>
                     )}
                   </div>
                 </div>

@@ -13,6 +13,7 @@ import { CardData } from '@/components/cards/CardPreview';
 import { CardPreview } from '@/components/cards/CardPreview';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { BookOpen, Heart, Folder, Search, Plus, Code, Grid3x3 } from 'lucide-react';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -87,47 +88,50 @@ export default function DashboardPage() {
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card variant="elevated">
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-2">
+        <Card variant="elevated" className="relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-amber-600/20 to-transparent rounded-bl-full"></div>
+          <div className="p-6 relative">
+            <div className="flex items-center justify-between mb-4">
               <span className="text-slate-400 text-sm uppercase tracking-wide">Decks</span>
-              <svg className="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
+              <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                <BookOpen className="w-6 h-6 text-amber-500" />
+              </div>
             </div>
-            <div className="text-3xl font-bold text-white">{stats.decks}</div>
-            <Link href="/decks" className="text-sm text-amber-500 hover:text-amber-400 mt-2 inline-block">
-              View all →
+            <div className="text-4xl font-bold text-white mb-2">{stats.decks}</div>
+            <Link href="/decks" className="text-sm text-amber-500 hover:text-amber-400 inline-flex items-center gap-1 transition-colors">
+              View all <span>→</span>
             </Link>
           </div>
         </Card>
 
-        <Card variant="elevated">
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-2">
+        <Card variant="elevated" className="relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-pink-600/20 to-transparent rounded-bl-full"></div>
+          <div className="p-6 relative">
+            <div className="flex items-center justify-between mb-4">
               <span className="text-slate-400 text-sm uppercase tracking-wide">Favorites</span>
-              <svg className="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-              </svg>
+              <div className="p-2 rounded-lg bg-pink-500/10 border border-pink-500/20">
+                <Heart className="w-6 h-6 text-pink-500" fill="currentColor" />
+              </div>
             </div>
-            <div className="text-3xl font-bold text-white">{stats.favorites}</div>
-            <Link href="/my-cards/favorites" className="text-sm text-amber-500 hover:text-amber-400 mt-2 inline-block">
-              View all →
+            <div className="text-4xl font-bold text-white mb-2">{stats.favorites}</div>
+            <Link href="/my-cards/favorites" className="text-sm text-pink-500 hover:text-pink-400 inline-flex items-center gap-1 transition-colors">
+              View all <span>→</span>
             </Link>
           </div>
         </Card>
 
-        <Card variant="elevated">
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-2">
+        <Card variant="elevated" className="relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-600/20 to-transparent rounded-bl-full"></div>
+          <div className="p-6 relative">
+            <div className="flex items-center justify-between mb-4">
               <span className="text-slate-400 text-sm uppercase tracking-wide">Collections</span>
-              <svg className="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-              </svg>
+              <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                <Folder className="w-6 h-6 text-blue-500" />
+              </div>
             </div>
-            <div className="text-3xl font-bold text-white">{stats.collections}</div>
-            <Link href="/my-cards/collections" className="text-sm text-amber-500 hover:text-amber-400 mt-2 inline-block">
-              View all →
+            <div className="text-4xl font-bold text-white mb-2">{stats.collections}</div>
+            <Link href="/my-cards/collections" className="text-sm text-blue-500 hover:text-blue-400 inline-flex items-center gap-1 transition-colors">
+              View all <span>→</span>
             </Link>
           </div>
         </Card>
@@ -138,11 +142,12 @@ export default function DashboardPage() {
         <h2 className="font-heading text-2xl font-bold text-white mb-4">Quick Actions</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Link href="/search">
-            <Card variant="elevated" className="p-6 hover:bg-slate-700 transition-colors cursor-pointer h-full">
-              <div className="text-center">
-                <svg className="w-12 h-12 text-amber-500 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
+            <Card variant="elevated" className="relative overflow-hidden p-6 hover:scale-105 hover:shadow-xl hover:shadow-amber-900/20 transition-all cursor-pointer h-full group border border-slate-700 hover:border-amber-500/50">
+              <div className="absolute inset-0 bg-gradient-to-br from-amber-600/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="text-center relative">
+                <div className="inline-flex p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 mb-4 group-hover:bg-amber-500/20 transition-colors">
+                  <Search className="w-8 h-8 text-amber-500" />
+                </div>
                 <h3 className="font-semibold text-white mb-1">Search Cards</h3>
                 <p className="text-sm text-slate-400">Find cards by name or filters</p>
               </div>
@@ -150,11 +155,12 @@ export default function DashboardPage() {
           </Link>
 
           <Link href="/decks/builder">
-            <Card variant="elevated" className="p-6 hover:bg-slate-700 transition-colors cursor-pointer h-full">
-              <div className="text-center">
-                <svg className="w-12 h-12 text-amber-500 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
+            <Card variant="elevated" className="relative overflow-hidden p-6 hover:scale-105 hover:shadow-xl hover:shadow-blue-900/20 transition-all cursor-pointer h-full group border border-slate-700 hover:border-blue-500/50">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="text-center relative">
+                <div className="inline-flex p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 mb-4 group-hover:bg-blue-500/20 transition-colors">
+                  <Plus className="w-8 h-8 text-blue-500" />
+                </div>
                 <h3 className="font-semibold text-white mb-1">Create Deck</h3>
                 <p className="text-sm text-slate-400">Build a new deck from scratch</p>
               </div>
@@ -162,11 +168,12 @@ export default function DashboardPage() {
           </Link>
 
           <Link href="/builder">
-            <Card variant="elevated" className="p-6 hover:bg-slate-700 transition-colors cursor-pointer h-full">
-              <div className="text-center">
-                <svg className="w-12 h-12 text-amber-500 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                </svg>
+            <Card variant="elevated" className="relative overflow-hidden p-6 hover:scale-105 hover:shadow-xl hover:shadow-purple-900/20 transition-all cursor-pointer h-full group border border-slate-700 hover:border-purple-500/50">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-600/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="text-center relative">
+                <div className="inline-flex p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 mb-4 group-hover:bg-purple-500/20 transition-colors">
+                  <Code className="w-8 h-8 text-purple-500" />
+                </div>
                 <h3 className="font-semibold text-white mb-1">Ability Builder</h3>
                 <p className="text-sm text-slate-400">Create ability graphs</p>
               </div>
@@ -174,11 +181,12 @@ export default function DashboardPage() {
           </Link>
 
           <Link href="/browse">
-            <Card variant="elevated" className="p-6 hover:bg-slate-700 transition-colors cursor-pointer h-full">
-              <div className="text-center">
-                <svg className="w-12 h-12 text-amber-500 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
+            <Card variant="elevated" className="relative overflow-hidden p-6 hover:scale-105 hover:shadow-xl hover:shadow-green-900/20 transition-all cursor-pointer h-full group border border-slate-700 hover:border-green-500/50">
+              <div className="absolute inset-0 bg-gradient-to-br from-green-600/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="text-center relative">
+                <div className="inline-flex p-3 rounded-xl bg-green-500/10 border border-green-500/20 mb-4 group-hover:bg-green-500/20 transition-colors">
+                  <Grid3x3 className="w-8 h-8 text-green-500" />
+                </div>
                 <h3 className="font-semibold text-white mb-1">Browse Cards</h3>
                 <p className="text-sm text-slate-400">Explore all cards</p>
               </div>

@@ -8,6 +8,9 @@ import { CardGrid } from '@/components/cards/CardGrid';
 import { CardGridSkeleton } from '@/components/skeletons/CardSkeleton';
 import { CardData } from '@/components/cards/CardPreview';
 import { Button } from '@/components/ui/Button';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Card } from '@/components/ui/Card';
+import { Heart } from 'lucide-react';
 import Link from 'next/link';
 
 export default function FavoritesPage() {
@@ -62,15 +65,15 @@ export default function FavoritesPage() {
       {loading && favorites.length === 0 ? (
         <CardGridSkeleton count={24} />
       ) : favorites.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-slate-400 text-lg">No favorites yet</p>
-          <p className="text-slate-500 text-sm mt-2">
-            Start adding cards to your favorites to see them here
-          </p>
-          <Link href="/browse" className="mt-4 inline-block">
-            <Button variant="primary">Browse Cards</Button>
-          </Link>
-        </div>
+        <Card variant="elevated">
+          <EmptyState
+            icon={Heart}
+            title="No favorites yet"
+            description="Start adding cards to your favorites by clicking the heart icon on any card. Your favorite cards will appear here for easy access."
+            actionLabel="Browse Cards"
+            actionHref="/browse"
+          />
+        </Card>
       ) : (
         <>
           <CardGrid cards={favorites} />
