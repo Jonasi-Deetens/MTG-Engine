@@ -163,3 +163,67 @@ class CollectionItem(Base):
         UniqueConstraint('collection_id', 'card_id', name='uq_collection_item'),
         {"sqlite_autoincrement": True},
     )
+
+
+class Deck(Base):
+    """User-created Magic: The Gathering decks."""
+    __tablename__ = "decks"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    name = Column(String, nullable=False)
+    description = Column(String)
+    format = Column(String, nullable=False)  # Commander, Standard, Modern, etc.
+    is_public = Column(Boolean, default=False)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    user = relationship("User", backref="decks")
+    cards = relationship("DeckCard", back_populates="deck", cascade="all, delete-orphan")
+    commanders = relationship("DeckCommander", back_populates="deck", cascade="all, delete-orphan")
+    
+    __table_args__ = (
+        {"sqlite_autoincrement": True},
+    )
+
+
+class DeckCard(Base):
+    """Cards in a deck with quantities."""
+    __tablename__ = "deck_cards"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    deck_id = Column(Integer, ForeignKey("decks.id"), nullable=False, index=True)
+    card_id = Column(String, nullable=False, index=True)  # Reference to Axis1CardModel.card_id
+    quantity = Column(Integer, default=1, nullable=False)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    deck = relationship("Deck", back_populates="cards")
+    
+    # Unique constraint: one entry per card per deck
+    __table_args__ = (
+        UniqueConstraint('deck_id', 'card_id', name='uq_deck_card'),
+        {"sqlite_autoincrement": True},
+    )
+
+
+class DeckCommander(Base):
+    """Commander(s) for Commander format decks."""
+    __tablename__ = "deck_commanders"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    deck_id = Column(Integer, ForeignKey("decks.id"), nullable=False, index=True)
+    card_id = Column(String, nullable=False, index=True)  # Reference to Axis1CardModel.card_id
+    position = Column(Integer, default=0)  # For partner commanders (0 = first, 1 = second, etc.)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    deck = relationship("Deck", back_populates="commanders")
+    
+    __table_args__ = (
+        {"sqlite_autoincrement": True},
+    )

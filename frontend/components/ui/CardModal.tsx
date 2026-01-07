@@ -5,6 +5,7 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
+import Link from 'next/link';
 import { CardData } from '@/components/cards/CardPreview';
 
 interface CardModalProps {
@@ -44,27 +45,52 @@ export function CardModal({ isOpen, onClose, card, imageUrl }: CardModalProps) {
       aria-modal="true"
       aria-label={`Full size view of ${card.name}`}
     >
-      {/* Close button */}
-      <button
-        onClick={onClose}
-        className="absolute top-4 right-4 z-[10000] p-3 rounded-full bg-slate-900/90 hover:bg-slate-800/90 text-white transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-lg"
-        aria-label="Close modal"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+      {/* Action buttons */}
+      <div className="absolute top-4 right-4 z-[10000] flex gap-2">
+        <Link
+          href={`/cards/${card.card_id}`}
+          onClick={onClose}
+          className="p-3 rounded-full bg-amber-600/90 hover:bg-amber-500/90 text-white transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-lg flex items-center gap-2"
+          aria-label="View card details"
         >
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-      </button>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+            <polyline points="15 3 21 3 21 9"></polyline>
+            <line x1="10" y1="14" x2="21" y2="3"></line>
+          </svg>
+          <span className="text-sm font-medium hidden sm:inline">View Details</span>
+        </Link>
+        <button
+          onClick={onClose}
+          className="p-3 rounded-full bg-slate-900/90 hover:bg-slate-800/90 text-white transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-lg"
+          aria-label="Close modal"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
 
       {/* Content container - prevent click propagation */}
       <div

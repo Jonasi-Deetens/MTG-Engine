@@ -69,6 +69,12 @@ export default function ProtectedLayout({
                 Builder
               </Link>
               <Link
+                href="/decks"
+                className="text-slate-300 hover:text-white transition-colors"
+              >
+                Decks
+              </Link>
+              <Link
                 href="/my-cards"
                 className="text-slate-300 hover:text-white transition-colors"
               >

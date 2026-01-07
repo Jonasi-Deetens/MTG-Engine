@@ -22,7 +22,6 @@ export function CardGrid({ cards }: CardGridProps) {
         <CardPreview
           key={card.card_id}
           card={card}
-          linkToDetail={true}
         />
       ))}
     </div>

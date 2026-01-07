@@ -7,6 +7,7 @@ export interface CardData {
   oracle_id?: string;
   name: string;
   mana_cost?: string;
+  mana_value?: number;
   type_line?: string;
   oracle_text?: string;
   power?: string;

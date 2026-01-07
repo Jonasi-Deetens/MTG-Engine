@@ -130,7 +130,7 @@ export default function HomePage() {
             {featuredCards.map((card) => (
               <div key={card.card_id} className="flex justify-center">
                 <div className="w-48">
-                  <CardPreview card={card} linkToDetail={false} />
+                  <CardPreview card={card} />
                 </div>
               </div>
             ))}
