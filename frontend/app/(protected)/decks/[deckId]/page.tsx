@@ -202,6 +202,86 @@ export default function DeckDetailPage() {
             </div>
           </Card>
 
+          {/* Price Summary */}
+          {currentDeck.cards.length > 0 && (() => {
+            const cardsWithPrices = currentDeck.cards.filter(
+              (dc) => dc.card.prices?.usd
+            );
+            if (cardsWithPrices.length === 0) return null;
+
+            const totalPrice = currentDeck.cards.reduce((sum, dc) => {
+              const price = dc.card.prices?.usd
+                ? parseFloat(dc.card.prices.usd) * dc.quantity
+                : 0;
+              return sum + price;
+            }, 0);
+
+            const cardCount = currentDeck.cards.reduce(
+              (sum, dc) => sum + dc.quantity,
+              0
+            );
+            const avgPrice = totalPrice / cardCount;
+
+            const mostExpensive = [...currentDeck.cards]
+              .filter((dc) => dc.card.prices?.usd)
+              .sort(
+                (a, b) =>
+                  parseFloat(b.card.prices!.usd!) -
+                  parseFloat(a.card.prices!.usd!)
+              )
+              .slice(0, 3);
+
+            return (
+              <Card variant="elevated">
+                <div className="p-6 space-y-4">
+                  <h2 className="text-xl font-semibold text-white">
+                    Price Summary
+                  </h2>
+                  <div className="space-y-3">
+                    <div>
+                      <div className="text-sm text-slate-400 mb-1">
+                        Total Deck Price
+                      </div>
+                      <div className="text-2xl font-bold text-amber-400">
+                        ${totalPrice.toFixed(2)}
+                      </div>
+                    </div>
+                    <div className="pt-2 border-t border-slate-700">
+                      <div className="text-sm text-slate-400 mb-1">
+                        Average Card Price
+                      </div>
+                      <div className="text-lg font-semibold text-slate-300">
+                        ${avgPrice.toFixed(2)}
+                      </div>
+                    </div>
+                    {mostExpensive.length > 0 && (
+                      <div className="pt-2 border-t border-slate-700">
+                        <div className="text-sm text-slate-400 mb-2">
+                          Most Expensive Cards
+                        </div>
+                        <div className="space-y-1">
+                          {mostExpensive.map((dc) => (
+                            <div
+                              key={dc.card_id}
+                              className="flex items-center justify-between text-sm"
+                            >
+                              <span className="text-slate-300 truncate flex-1">
+                                {dc.card.name}
+                              </span>
+                              <span className="text-amber-400 font-semibold ml-2">
+                                ${parseFloat(dc.card.prices!.usd!).toFixed(2)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </Card>
+            );
+          })()}
+
           {/* Mana Curve */}
           {currentDeck.cards.length > 0 && (
             <Card variant="elevated">

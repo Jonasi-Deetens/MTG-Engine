@@ -52,6 +52,19 @@ export function DeckCardList({ cards, onQuantityChange, onRemove, showControls =
             {deckCard.card.mana_cost && (
               <p className="text-sm text-amber-400 font-mono">{deckCard.card.mana_cost}</p>
             )}
+            {deckCard.card.prices?.usd && (
+              <div className="mt-1">
+                <span className="text-xs text-slate-500">Price: </span>
+                <span className="text-sm text-amber-400 font-semibold">
+                  ${parseFloat(deckCard.card.prices.usd).toFixed(2)}
+                </span>
+                {deckCard.quantity > 1 && (
+                  <span className="text-xs text-slate-500 ml-2">
+                    (×{deckCard.quantity} = ${(parseFloat(deckCard.card.prices.usd) * deckCard.quantity).toFixed(2)})
+                  </span>
+                )}
+              </div>
+            )}
           </div>
           {showControls && (
             <div className="flex items-center gap-2">

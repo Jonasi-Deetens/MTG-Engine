@@ -70,6 +70,11 @@ def card_model_to_response(card_model: Axis1CardModel) -> CardResponse:
         colors=first_face.get("colors", []) or card_data.get("colors", []),
         image_uris=image_uris,
         set_code=card_model.set_code,
-        collector_number=card_model.collector_number
+        collector_number=card_model.collector_number,
+        rarity=metadata.get("rarity"),
+        legalities=metadata.get("legalities"),
+        prices=metadata.get("prices"),
+        artist=metadata.get("artist"),
+        flavor_text=first_face.get("flavor_text") or card_data.get("flavor_text")
     )
 

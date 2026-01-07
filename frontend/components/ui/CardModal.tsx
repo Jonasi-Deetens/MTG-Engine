@@ -8,6 +8,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { CardData } from '@/components/cards/CardPreview';
 import { FavoriteButton } from '@/components/collections/FavoriteButton';
+import { RarityBadge } from '@/components/ui/RarityBadge';
 
 interface CardModalProps {
   isOpen: boolean;
@@ -118,9 +119,14 @@ export function CardModal({ isOpen, onClose, card, imageUrl }: CardModalProps) {
           {/* Name and Mana Cost */}
           <div>
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4 mb-2">
-              <h1 className="font-heading text-2xl sm:text-3xl lg:text-4xl font-bold text-white leading-tight">
-                {card.name}
-              </h1>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 flex-wrap mb-2">
+                  <h1 className="font-heading text-2xl sm:text-3xl lg:text-4xl font-bold text-white leading-tight">
+                    {card.name}
+                  </h1>
+                  {card.rarity && <RarityBadge rarity={card.rarity} />}
+                </div>
+              </div>
               {card.mana_cost && (
                 <div className="text-xl sm:text-2xl text-slate-300 font-semibold whitespace-nowrap">
                   {card.mana_cost}
@@ -208,6 +214,41 @@ export function CardModal({ isOpen, onClose, card, imageUrl }: CardModalProps) {
                   </span>
                 )}
               </p>
+            </div>
+          )}
+
+          {/* Prices */}
+          {card.prices && (card.prices.usd || card.prices.eur || card.prices.usd_foil) && (
+            <div className="space-y-1">
+              <p className="text-xs text-slate-500 uppercase tracking-wider">
+                Prices
+              </p>
+              <div className="flex flex-wrap gap-3">
+                {card.prices.usd && (
+                  <div>
+                    <span className="text-xs text-slate-400">USD:</span>{' '}
+                    <span className="text-sm text-amber-400 font-semibold">
+                      ${parseFloat(card.prices.usd).toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                {card.prices.usd_foil && (
+                  <div>
+                    <span className="text-xs text-slate-400">USD Foil:</span>{' '}
+                    <span className="text-sm text-amber-400 font-semibold">
+                      ${parseFloat(card.prices.usd_foil).toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                {card.prices.eur && (
+                  <div>
+                    <span className="text-xs text-slate-400">EUR:</span>{' '}
+                    <span className="text-sm text-amber-400 font-semibold">
+                      €{parseFloat(card.prices.eur).toFixed(2)}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

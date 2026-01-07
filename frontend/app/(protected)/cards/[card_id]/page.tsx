@@ -15,6 +15,8 @@ import { FavoriteButton } from '@/components/collections/FavoriteButton';
 import { AddToCollectionButton } from '@/components/collections/AddToCollectionButton';
 import { useBuilderStore } from '@/store/builderStore';
 import { AbilityTreeView } from '@/components/builder/AbilityTreeView';
+import { RarityBadge } from '@/components/ui/RarityBadge';
+import { LegalityDisplay } from '@/components/cards/LegalityDisplay';
 
 export default function CardDetailPage() {
   const params = useParams();
@@ -205,7 +207,10 @@ export default function CardDetailPage() {
             <div className="md:col-span-2 space-y-4">
               <div className="flex items-start justify-between">
                 <div>
-                  <h1 className="text-3xl font-bold text-white mb-2">{card.name}</h1>
+                  <div className="flex items-center gap-2 flex-wrap mb-2">
+                    <h1 className="text-3xl font-bold text-white">{card.name}</h1>
+                    {card.rarity && <RarityBadge rarity={card.rarity} />}
+                  </div>
                   {card.mana_cost && (
                     <p className="text-xl font-mono text-amber-400">{card.mana_cost}</p>
                   )}
@@ -251,6 +256,60 @@ export default function CardDetailPage() {
                   <p className="text-base text-slate-200 mt-1 whitespace-pre-wrap leading-relaxed">
                     {card.oracle_text}
                   </p>
+                </div>
+              )}
+
+              {card.flavor_text && (
+                <div>
+                  <span className="text-xs text-slate-400 uppercase tracking-wide">Flavor Text</span>
+                  <p className="text-base text-slate-300 mt-1 italic leading-relaxed">
+                    {card.flavor_text}
+                  </p>
+                </div>
+              )}
+
+              {card.prices && (card.prices.usd || card.prices.eur || card.prices.usd_foil) && (
+                <div>
+                  <span className="text-xs text-slate-400 uppercase tracking-wide">Prices</span>
+                  <div className="flex flex-wrap gap-4 mt-1">
+                    {card.prices.usd && (
+                      <div>
+                        <span className="text-sm text-slate-400">USD:</span>{' '}
+                        <span className="text-base text-amber-400 font-semibold">
+                          ${parseFloat(card.prices.usd).toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+                    {card.prices.usd_foil && (
+                      <div>
+                        <span className="text-sm text-slate-400">USD Foil:</span>{' '}
+                        <span className="text-base text-amber-400 font-semibold">
+                          ${parseFloat(card.prices.usd_foil).toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+                    {card.prices.eur && (
+                      <div>
+                        <span className="text-sm text-slate-400">EUR:</span>{' '}
+                        <span className="text-base text-amber-400 font-semibold">
+                          €{parseFloat(card.prices.eur).toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {card.legalities && Object.keys(card.legalities).length > 0 && (
+                <div>
+                  <LegalityDisplay legalities={card.legalities} />
+                </div>
+              )}
+
+              {card.artist && (
+                <div>
+                  <span className="text-xs text-slate-400 uppercase tracking-wide">Artist</span>
+                  <p className="text-base text-slate-300 mt-1">{card.artist}</p>
                 </div>
               )}
 

@@ -374,6 +374,7 @@ class Axis1Mapper:
                     subtypes = []
 
                 oracle_text = f.get("oracle_text")
+                flavor_text = f.get("flavor_text")
 
                 face = Axis1Face(
                     face_id=f"face_{idx}",
@@ -390,6 +391,7 @@ class Axis1Mapper:
                     loyalty=f.get("loyalty"),
                     defense=f.get("defense"),
                     oracle_text=oracle_text,
+                    flavor_text=flavor_text,
                     keywords=f.get("keywords", []),
                     activated_abilities=_extract_activated_abilities_from_oracle(oracle_text or ""),
                     triggered_abilities=_extract_triggered_abilities_from_oracle(oracle_text or ""),
@@ -416,6 +418,7 @@ class Axis1Mapper:
                 subtypes = []
 
             oracle_text = scry.get("oracle_text")
+            flavor_text = scry.get("flavor_text")
 
             face = Axis1Face(
                 face_id="front",
@@ -432,6 +435,7 @@ class Axis1Mapper:
                 loyalty=scry.get("loyalty"),
                 defense=scry.get("defense"),
                 oracle_text=oracle_text,
+                flavor_text=flavor_text,
                 keywords=scry.get("keywords", []),
                 activated_abilities=_extract_activated_abilities_from_oracle(oracle_text or ""),
                 triggered_abilities=_extract_triggered_abilities_from_oracle(oracle_text or ""),
@@ -460,6 +464,14 @@ class Axis1Mapper:
         # ------------------------------------------------------------
         # 4. Metadata
         # ------------------------------------------------------------
+        # Capture prices from Scryfall (can be None for some currencies)
+        prices = scry.get("prices") or {}
+        # Ensure prices dict is properly formatted
+        prices_dict = {}
+        if prices:
+            for key, value in prices.items():
+                prices_dict[key] = value  # Can be None or string
+        
         metadata = Axis1Metadata(
             rarity=scry.get("rarity"),
             artist=scry.get("artist"),
@@ -469,6 +481,7 @@ class Axis1Mapper:
             watermark=scry.get("watermark"),
             legalities=scry.get("legalities") or {},
             image_uris=scry.get("image_uris") or {},
+            prices=prices_dict,
         )
 
         # ------------------------------------------------------------

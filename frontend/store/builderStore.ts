@@ -20,6 +20,16 @@ export interface CardData {
   };
   set_code?: string;
   collector_number?: string;
+  rarity?: string;
+  legalities?: Record<string, string>;
+  prices?: {
+    usd?: string;
+    usd_foil?: string;
+    eur?: string;
+    tix?: string;
+  };
+  artist?: string;
+  flavor_text?: string;
 }
 
 // Re-export condition types (must be before interfaces that use it)

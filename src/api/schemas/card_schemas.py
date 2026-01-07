@@ -18,6 +18,11 @@ class CardResponse(BaseModel):
     image_uris: Optional[dict]
     set_code: Optional[str]
     collector_number: Optional[str]
+    rarity: Optional[str] = None
+    legalities: Optional[dict] = None
+    prices: Optional[dict] = None
+    artist: Optional[str] = None
+    flavor_text: Optional[str] = None
     
     class Config:
         from_attributes = True

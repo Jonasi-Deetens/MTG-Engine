@@ -41,7 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const response = await apiLogin({ username, password });
       setUser(response.user);
-      router.push('/search');
+      router.push('/dashboard');
     } catch (error) {
       throw error;
     }

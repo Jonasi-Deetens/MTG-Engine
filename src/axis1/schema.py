@@ -143,6 +143,7 @@ class Axis1Metadata(BaseModel):
 
     legalities: Dict[str, str] = Field(default_factory=dict)
     image_uris: Dict[str, str] = Field(default_factory=dict)
+    prices: Dict[str, Optional[str]] = Field(default_factory=dict)  # usd, usd_foil, eur, tix, etc.
 
 
 class Axis1Card(BaseModel):
