@@ -12,7 +12,6 @@ import { DeckCardList } from '@/components/decks/DeckCardList';
 import { DeckValidationPanel } from '@/components/decks/DeckValidationPanel';
 import { ManaCurveChart } from '@/components/decks/ManaCurveChart';
 import { CardTypeBreakdown } from '@/components/decks/CardTypeBreakdown';
-import { DeckImportExport } from '@/components/decks/DeckImportExport';
 import { CardPreview } from '@/components/cards/CardPreview';
 
 export default function DeckDetailPage() {
@@ -31,7 +30,6 @@ export default function DeckDetailPage() {
   } = useDeckStore();
 
   const [exporting, setExporting] = useState(false);
-  const [showImportExport, setShowImportExport] = useState(false);
 
   useEffect(() => {
     if (!isNaN(deckId)) {
@@ -134,12 +132,6 @@ export default function DeckDetailPage() {
             Edit Deck
           </Button>
           <Button
-            onClick={() => setShowImportExport(!showImportExport)}
-            variant="outline"
-          >
-            {showImportExport ? 'Hide' : 'Import/Export'}
-          </Button>
-          <Button
             onClick={handleDelete}
             variant="outline"
             className="text-red-400 hover:text-red-300"
@@ -148,14 +140,6 @@ export default function DeckDetailPage() {
           </Button>
         </div>
       </div>
-
-      {showImportExport && (
-        <Card variant="elevated">
-          <div className="p-6">
-            <DeckImportExport deckId={deckId} onImportSuccess={() => loadDeck(deckId)} />
-          </div>
-        </Card>
-      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content */}

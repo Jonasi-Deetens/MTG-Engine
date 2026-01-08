@@ -18,6 +18,7 @@ import { FormatSelector } from '@/components/decks/FormatSelector';
 import { DeckValidationPanel } from '@/components/decks/DeckValidationPanel';
 import { ManaCurveChart } from '@/components/decks/ManaCurveChart';
 import { CardTypeBreakdown } from '@/components/decks/CardTypeBreakdown';
+import { DeckImport } from '@/components/decks/DeckImport';
 
 export default function DeckBuilderPage() {
   const router = useRouter();
@@ -39,6 +40,7 @@ export default function DeckBuilderPage() {
     removeCommander,
     validateDeck,
     clearDeck,
+    refreshDeck,
   } = useDeckStore();
 
   const [deckName, setDeckName] = useState('');
@@ -46,6 +48,7 @@ export default function DeckBuilderPage() {
   const [deckFormat, setDeckFormat] = useState('Commander');
   const [isPublic, setIsPublic] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showImport, setShowImport] = useState(false);
 
   // Card search
   const [searchQuery, setSearchQuery] = useState('');
@@ -183,12 +186,20 @@ export default function DeckBuilderPage() {
         </div>
         <div className="flex gap-2">
           {currentDeck && (
-            <Button
-              onClick={() => router.push(`/decks/${currentDeck.id}`)}
-              variant="outline"
-            >
-              View Deck
-            </Button>
+            <>
+              <Button
+                onClick={() => setShowImport(true)}
+                variant="outline"
+              >
+                Import
+              </Button>
+              <Button
+                onClick={() => router.push(`/decks/${currentDeck.id}`)}
+                variant="outline"
+              >
+                View Deck
+              </Button>
+            </>
           )}
           <Button
             onClick={() => router.push('/decks')}
@@ -355,6 +366,33 @@ export default function DeckBuilderPage() {
           )}
         </div>
       </div>
+
+      {/* Import Modal */}
+      {showImport && currentDeck && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <Card variant="elevated" className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-white">Import Deck List</h2>
+                <Button
+                  onClick={() => setShowImport(false)}
+                  variant="outline"
+                  size="sm"
+                >
+                  Close
+                </Button>
+              </div>
+              <DeckImport
+                deckId={currentDeck.id}
+                onImportSuccess={() => {
+                  refreshDeck(currentDeck.id);
+                  setShowImport(false);
+                }}
+              />
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
