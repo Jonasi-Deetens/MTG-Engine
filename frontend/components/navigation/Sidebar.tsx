@@ -2,7 +2,7 @@
 
 // frontend/components/navigation/Sidebar.tsx
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
@@ -18,8 +18,6 @@ import {
   Heart,
   Rocket,
   LogOut,
-  ChevronLeft,
-  ChevronRight,
   Menu,
   X,
 } from 'lucide-react';
@@ -45,15 +43,12 @@ const navItems: NavItem[] = [
 export function Sidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
-  const { isCollapsed, setIsCollapsed } = useSidebar();
+  const { isCollapsed } = useSidebar();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
 
-  const toggleCollapse = () => {
-    setIsCollapsed(!isCollapsed);
-  };
-
-  const isExpanded = !isCollapsed || isHovering;
+  // Always collapsed unless hovering
+  const isExpanded = isHovering;
   const sidebarWidth = isExpanded ? 'w-64' : 'w-16';
 
   // Group nav items by section
@@ -72,7 +67,7 @@ export function Sidebar() {
       <Link
         href={item.href}
         className={`
-          group relative flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all
+          group relative flex items-center gap-3 px-3 h-10 rounded-lg transition-all overflow-hidden
           ${isActive
             ? 'bg-amber-600/20 text-amber-400 border-l-2 border-amber-500'
             : 'text-slate-300 hover:bg-slate-700 hover:text-white'
@@ -82,15 +77,9 @@ export function Sidebar() {
         onClick={() => setIsMobileOpen(false)}
         title={!isExpanded ? item.label : undefined}
       >
-        <Icon className={`flex-shrink-0 ${isExpanded ? 'w-5 h-5' : 'w-6 h-6'}`} />
+        <Icon className="flex-shrink-0 w-5 h-5" />
         {isExpanded && (
-          <span className="font-medium whitespace-nowrap">{item.label}</span>
-        )}
-        {/* Tooltip for collapsed state */}
-        {!isExpanded && (
-          <span className="absolute left-full ml-2 px-2 py-1 bg-slate-900 text-white text-sm rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 border border-slate-700">
-            {item.label}
-          </span>
+          <span className="font-medium whitespace-nowrap overflow-hidden text-ellipsis">{item.label}</span>
         )}
       </Link>
     );
@@ -101,37 +90,28 @@ export function Sidebar() {
       className={`
         h-screen bg-slate-800 border-r border-slate-700
         flex flex-col transition-all duration-300 flex-shrink-0
-        ${isExpanded ? 'w-64' : 'w-16'}
+        ${sidebarWidth}
+        relative
       `}
-      onMouseEnter={() => isCollapsed && setIsHovering(true)}
+      onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-slate-700">
+      <div className="flex items-center justify-between p-4 border-b border-slate-700 relative z-10 h-16 overflow-hidden">
         {isExpanded ? (
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <BookOpen className="w-6 h-6 text-amber-500" />
-            <span className="font-heading text-lg font-bold text-white">MTG Engine</span>
+          <Link href="/dashboard" className="flex items-center gap-2 h-full">
+            <BookOpen className="w-5 h-5 text-amber-500 flex-shrink-0" />
+            <span className="font-heading text-lg font-bold text-white whitespace-nowrap overflow-hidden text-ellipsis">MTG Engine</span>
           </Link>
         ) : (
-          <Link href="/dashboard" className="flex items-center justify-center w-full">
-            <BookOpen className="w-6 h-6 text-amber-500" />
+          <Link href="/dashboard" className="flex items-center justify-center w-full h-full">
+            <BookOpen className="w-5 h-5 text-amber-500 flex-shrink-0" />
           </Link>
-        )}
-        {/* Desktop collapse button - only show when not hovering (or when expanded) */}
-        {(!isCollapsed || !isHovering) && (
-          <button
-            onClick={toggleCollapse}
-            className="hidden md:flex items-center justify-center w-8 h-8 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
-            aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-          </button>
         )}
         {/* Mobile close button */}
         <button
           onClick={() => setIsMobileOpen(false)}
-          className="md:hidden flex items-center justify-center w-8 h-8 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+          className="md:hidden flex items-center justify-center w-8 h-8 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-white transition-colors flex-shrink-0"
           aria-label="Close menu"
         >
           <X className="w-5 h-5" />
@@ -139,16 +119,12 @@ export function Sidebar() {
       </div>
 
       {/* Navigation Items */}
-      <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-6">
+      <nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-2 space-y-6 relative z-10">
         {Object.entries(groupedItems).map(([section, items]) => (
-          <div key={section}>
-            {isExpanded && (
-              <div className="px-3 mb-2">
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  {section}
-                </span>
-              </div>
-            )}
+          <div key={section} className="overflow-x-hidden">
+            <div className="px-3 mb-2 h-5 flex items-center flex-shrink-0">
+              <div className={`h-px bg-slate-600 flex-shrink-0 ${isExpanded ? 'w-full' : 'w-8 mx-auto'}`} aria-label={section} />
+            </div>
             <div className="space-y-1">
               {items.map((item) => (
                 <NavLink key={item.href} item={item} />
@@ -159,30 +135,33 @@ export function Sidebar() {
       </nav>
 
       {/* User Section */}
-      <div className="border-t border-slate-700 p-4 space-y-2">
+      <div className="border-t border-slate-700 p-4 relative z-10 min-h-[88px] overflow-hidden">
         {isExpanded ? (
-          <>
-            <div className="px-3 py-2 text-sm text-slate-400">
-              {user?.username}
+          <div className="space-y-2">
+            <div className="px-3 py-2 text-sm text-slate-400 h-8 flex items-center overflow-hidden">
+              <span className="whitespace-nowrap overflow-hidden text-ellipsis">{user?.username}</span>
             </div>
             <Button
               variant="outline"
               size="sm"
               onClick={() => logout()}
-              className="w-full flex items-center justify-center gap-2"
+              className="w-full flex items-center justify-center gap-2 h-10"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-5 h-5" />
               Logout
             </Button>
-          </>
+          </div>
         ) : (
-          <button
-            onClick={() => logout()}
-            className="w-full flex items-center justify-center p-2 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
-            aria-label="Logout"
-          >
-            <LogOut className="w-5 h-5" />
-          </button>
+          <div className="flex items-center justify-center h-full">
+            <button
+              onClick={() => logout()}
+              className="w-full flex items-center justify-center p-2 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-white transition-colors h-10"
+              aria-label="Logout"
+              title="Logout"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
+          </div>
         )}
       </div>
     </div>
@@ -196,7 +175,7 @@ export function Sidebar() {
         className="md:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors"
         aria-label="Open menu"
       >
-        <Menu className="w-6 h-6" />
+        <Menu className="w-5 h-5" />
       </button>
 
       {/* Mobile backdrop */}
@@ -212,6 +191,7 @@ export function Sidebar() {
         className={`
           fixed
           left-0 top-0 h-screen z-40
+          overflow-visible
           ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}
           md:translate-x-0
           transition-transform duration-300

@@ -5,7 +5,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { SidebarProvider, useSidebar } from '@/context/SidebarContext';
+import { SidebarProvider } from '@/context/SidebarContext';
 import { Sidebar } from '@/components/navigation/Sidebar';
 
 function ProtectedLayoutContent({
@@ -13,16 +13,13 @@ function ProtectedLayoutContent({
 }: {
   children: React.ReactNode;
 }) {
-  const { isCollapsed } = useSidebar();
-  const sidebarWidth = isCollapsed ? 'md:ml-16' : 'md:ml-64';
-
   return (
-    <div className="min-h-screen bg-slate-900">
-      {/* Sidebar - Fixed position */}
+    <div className="min-h-screen bg-slate-900 overflow-x-hidden">
+      {/* Sidebar - Fixed position, overlays content */}
       <Sidebar />
 
-      {/* Main Content - With margin for sidebar */}
-      <main className={`min-h-screen overflow-x-hidden ${sidebarWidth} transition-all duration-300`}>
+      {/* Main Content - Fixed margin for collapsed sidebar (expanded sidebar overlays) */}
+      <main className="min-h-screen overflow-x-hidden md:ml-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-16 md:pt-8">
           {children}
         </div>

@@ -25,9 +25,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="overflow-x-hidden">
       <body
-        className={`${inter.variable} ${cinzel.variable} antialiased bg-slate-900 text-slate-100`}
+        className={`${inter.variable} ${cinzel.variable} antialiased bg-slate-900 text-slate-100 overflow-x-hidden`}
       >
         <AuthProvider>{children}</AuthProvider>
       </body>

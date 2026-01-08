@@ -13,18 +13,17 @@ interface SidebarContextType {
 const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
 
 export function SidebarProvider({ children }: { children: ReactNode }) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  // Always start collapsed for hover-based expansion
+  const [isCollapsed, setIsCollapsed] = useState(true);
 
+  // Clear any saved state since we want hover-only behavior
   useEffect(() => {
-    const saved = sessionStorage.getItem('sidebar-collapsed');
-    if (saved !== null) {
-      setIsCollapsed(saved === 'true');
-    }
+    sessionStorage.removeItem('sidebar-collapsed');
   }, []);
 
   const handleSetCollapsed = (collapsed: boolean) => {
-    setIsCollapsed(collapsed);
-    sessionStorage.setItem('sidebar-collapsed', String(collapsed));
+    // Always keep it collapsed (hover will handle expansion)
+    setIsCollapsed(true);
   };
 
   return (
