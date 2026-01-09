@@ -47,14 +47,14 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-angel-white via-angel-cream to-angel-white px-4">
       <div className="w-full max-w-md">
         <Card variant="elevated" className="p-8">
           <div className="text-center mb-8">
-            <h1 className="font-heading text-3xl font-bold text-white mb-2">
+            <h1 className="font-heading text-3xl font-bold text-slate-900 mb-2">
               Create Account
             </h1>
-            <p className="text-slate-400">
+            <p className="text-slate-600">
               Sign up to access the MTG Engine
             </p>
           </div>
@@ -116,17 +116,17 @@ export default function RegisterPage() {
             </Button>
           </form>
 
-          <div className="mt-6 text-center text-sm text-slate-400">
+          <div className="mt-6 text-center text-sm text-slate-600">
             <p>
               Already have an account?{' '}
-              <Link href="/login" className="text-amber-500 hover:text-amber-400 underline">
+              <Link href="/login" className="text-amber-600 hover:text-amber-500 underline">
                 Sign in here
               </Link>
             </p>
           </div>
 
           <div className="mt-4 text-center">
-            <Link href="/" className="text-sm text-slate-400 hover:text-slate-300">
+            <Link href="/" className="text-sm text-slate-600 hover:text-amber-600">
               ← Back to home
             </Link>
           </div>

@@ -132,14 +132,14 @@ export function DeckImport({ deckId, onImportSuccess }: DeckImportProps) {
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="text-lg font-semibold text-white mb-2">Import Deck List</h3>
-        <p className="text-sm text-slate-400 mb-4">
+        <h3 className="text-lg font-semibold text-slate-900 mb-2">Import Deck List</h3>
+        <p className="text-sm text-slate-600 mb-4">
           Paste your deck list in text format. Supported formats:
         </p>
-        <ul className="text-sm text-slate-400 list-disc list-inside mb-4 space-y-1">
-          <li><code className="bg-slate-700 px-1 rounded">4 Lightning Bolt</code></li>
-          <li><code className="bg-slate-700 px-1 rounded">1x Lightning Bolt</code></li>
-          <li><code className="bg-slate-700 px-1 rounded">Lightning Bolt</code> (defaults to 1)</li>
+        <ul className="text-sm text-slate-600 list-disc list-inside mb-4 space-y-1">
+          <li><code className="bg-amber-50 px-1 rounded border border-amber-200/50">4 Lightning Bolt</code></li>
+          <li><code className="bg-amber-50 px-1 rounded border border-amber-200/50">1x Lightning Bolt</code></li>
+          <li><code className="bg-amber-50 px-1 rounded border border-amber-200/50">Lightning Bolt</code> (defaults to 1)</li>
         </ul>
       </div>
 
@@ -148,7 +148,7 @@ export function DeckImport({ deckId, onImportSuccess }: DeckImportProps) {
         onChange={(e) => setImportText(e.target.value)}
         placeholder="4 Lightning Bolt&#10;2 Mountain&#10;1x Sol Ring&#10;..."
         rows={12}
-        className="w-full px-3 py-2 bg-slate-700 text-white rounded border border-slate-600 focus:border-amber-500 focus:outline-none font-mono text-sm"
+        className="w-full px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 focus:border-amber-500 focus:outline-none font-mono text-sm"
       />
 
       <Button
@@ -181,7 +181,7 @@ export function DeckImport({ deckId, onImportSuccess }: DeckImportProps) {
                 <ul className="list-disc list-inside mt-1 ml-2 space-y-1">
                   {result.failed.map((fail, idx) => (
                     <li key={idx}>
-                      <code className="bg-slate-800 px-1 rounded">{fail.name}</code>: {fail.reason}
+                      <code className="bg-amber-50 px-1 rounded border border-amber-200/50">{fail.name}</code>: {fail.reason}
                     </li>
                   ))}
                 </ul>

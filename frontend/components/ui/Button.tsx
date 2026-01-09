@@ -22,11 +22,11 @@ export function Button({
   
   const variants = {
     primary: 'bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white shadow-lg shadow-amber-900/50',
-    secondary: 'bg-slate-700 hover:bg-slate-600 text-white',
-    outline: 'border-2 border-amber-500 text-amber-500 hover:bg-amber-500 hover:text-white bg-transparent',
-    ghost: 'bg-transparent hover:bg-slate-700 text-slate-300 hover:text-white',
+    secondary: 'bg-amber-100 hover:bg-amber-200 text-slate-900 border border-amber-200/50',
+    outline: 'border-2 border-amber-500 text-amber-600 hover:bg-amber-500 hover:text-white bg-transparent',
+    ghost: 'bg-transparent hover:bg-amber-50 text-slate-700 hover:text-slate-900',
     danger: 'bg-red-600 hover:bg-red-700 text-white',
-    link: 'bg-transparent text-amber-400 hover:text-amber-300 underline-offset-4 hover:underline p-0',
+    link: 'bg-transparent text-amber-600 hover:text-amber-500 underline-offset-4 hover:underline p-0',
   };
   
   const sizes = {

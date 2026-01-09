@@ -58,7 +58,7 @@ export default function CollectionDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-angel-white flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>
       </div>
     );
@@ -66,7 +66,7 @@ export default function CollectionDetailPage() {
 
   if (error || !collection) {
     return (
-      <div className="min-h-screen bg-slate-900 p-4">
+      <div className="min-h-screen bg-angel-white p-4">
         <div className="max-w-4xl mx-auto">
           <div className="bg-red-900/50 border border-red-600 rounded-lg p-6 text-red-200">
             <h1 className="text-2xl font-bold mb-2">Error</h1>
@@ -85,16 +85,16 @@ export default function CollectionDetailPage() {
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/my-cards/collections" className="text-slate-400 hover:text-white transition-colors mb-2 inline-block">
+        <Link href="/my-cards/collections" className="text-slate-600 hover:text-amber-600 transition-colors mb-2 inline-block">
           ← Back to Collections
         </Link>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="font-heading text-3xl font-bold text-white mb-2">
+            <h1 className="font-heading text-3xl font-bold text-slate-900 mb-2">
               {collection.name}
             </h1>
             {collection.description && (
-              <p className="text-slate-400 mb-2">{collection.description}</p>
+              <p className="text-slate-600 mb-2">{collection.description}</p>
             )}
             <p className="text-slate-500 text-sm">
               {collection.card_count} card{collection.card_count !== 1 ? 's' : ''}
@@ -105,7 +105,7 @@ export default function CollectionDetailPage() {
 
       {collection.cards.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-slate-400 text-lg">This collection is empty</p>
+          <p className="text-slate-600 text-lg">This collection is empty</p>
           <p className="text-slate-500 text-sm mt-2">
             Add cards to this collection from card detail pages
           </p>

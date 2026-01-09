@@ -117,7 +117,7 @@ export function ConditionBuilder({ condition, onChange, onRemove }: ConditionBui
   }, [condition]);
 
   return (
-    <div className="space-y-3 bg-slate-700/50 rounded-lg p-4 border border-slate-600">
+    <div className="space-y-3 bg-amber-50/50 rounded-lg p-4 border border-amber-200/50">
       {onRemove && (
         <div className="flex justify-end mb-2">
           <Button
@@ -132,7 +132,7 @@ export function ConditionBuilder({ condition, onChange, onRemove }: ConditionBui
         </div>
       )}
       <div>
-        <label className="block text-xs text-slate-400 mb-1">Condition Type</label>
+        <label className="block text-xs text-slate-600 mb-1">Condition Type</label>
         <select
           value={conditionType}
           onChange={(e) => {
@@ -147,7 +147,7 @@ export function ConditionBuilder({ condition, onChange, onRemove }: ConditionBui
             setManaValue(0);
             setSource('triggering_source');
           }}
-          className="w-full px-3 py-2 bg-slate-800 text-white rounded border border-slate-600 text-sm focus:border-amber-500 focus:outline-none"
+          className="w-full px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 text-sm focus:border-amber-500 focus:outline-none"
         >
           {CONDITION_TYPE_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -165,7 +165,7 @@ export function ConditionBuilder({ condition, onChange, onRemove }: ConditionBui
             value={value}
             onChange={(e) => setValue(parseInt(e.target.value) || 0)}
             min="0"
-            className="w-full px-3 py-2 bg-slate-800 text-white rounded border border-slate-600 text-sm focus:border-amber-500 focus:outline-none"
+            className="w-full px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 text-sm focus:border-amber-500 focus:outline-none"
           />
         </div>
       )}
@@ -176,7 +176,7 @@ export function ConditionBuilder({ condition, onChange, onRemove }: ConditionBui
           <select
             value={comparison}
             onChange={(e) => setComparison(e.target.value)}
-            className="w-full px-3 py-2 bg-slate-800 text-white rounded border border-slate-600 text-sm focus:border-amber-500 focus:outline-none"
+            className="w-full px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 text-sm focus:border-amber-500 focus:outline-none"
           >
             {COMPARISON_OPERATORS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -193,7 +193,7 @@ export function ConditionBuilder({ condition, onChange, onRemove }: ConditionBui
           <select
             value={target}
             onChange={(e) => setTarget(e.target.value)}
-            className="w-full px-3 py-2 bg-slate-800 text-white rounded border border-slate-600 text-sm focus:border-amber-500 focus:outline-none"
+            className="w-full px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 text-sm focus:border-amber-500 focus:outline-none"
           >
             {CONDITION_TARGET_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -210,7 +210,7 @@ export function ConditionBuilder({ condition, onChange, onRemove }: ConditionBui
           <select
             value={permanentType}
             onChange={(e) => setPermanentType(e.target.value)}
-            className="w-full px-3 py-2 bg-slate-800 text-white rounded border border-slate-600 text-sm focus:border-amber-500 focus:outline-none"
+            className="w-full px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 text-sm focus:border-amber-500 focus:outline-none"
           >
             {PERMANENT_TYPES.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -229,7 +229,7 @@ export function ConditionBuilder({ condition, onChange, onRemove }: ConditionBui
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             placeholder="e.g., flying, haste"
-            className="w-full px-3 py-2 bg-slate-800 text-white rounded border border-slate-600 text-sm focus:border-amber-500 focus:outline-none"
+            className="w-full px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 text-sm focus:border-amber-500 focus:outline-none"
           />
         </div>
       )}
@@ -242,7 +242,7 @@ export function ConditionBuilder({ condition, onChange, onRemove }: ConditionBui
             value={counterType}
             onChange={(e) => setCounterType(e.target.value)}
             placeholder="e.g., +1/+1, -1/-1, loyalty"
-            className="w-full px-3 py-2 bg-slate-800 text-white rounded border border-slate-600 text-sm focus:border-amber-500 focus:outline-none"
+            className="w-full px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 text-sm focus:border-amber-500 focus:outline-none"
           />
         </div>
       )}
@@ -259,7 +259,7 @@ export function ConditionBuilder({ condition, onChange, onRemove }: ConditionBui
                   setManaValue(0);
                 }
               }}
-              className="w-full px-3 py-2 bg-slate-800 text-white rounded border border-slate-600 text-sm focus:border-amber-500 focus:outline-none"
+              className="w-full px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 text-sm focus:border-amber-500 focus:outline-none"
             >
               {CONDITION_TARGET_OPTIONS.filter(opt => 
                 opt.value === 'triggering_source' || 
@@ -284,7 +284,7 @@ export function ConditionBuilder({ condition, onChange, onRemove }: ConditionBui
                 value={manaValue}
                 onChange={(e) => setManaValue(parseInt(e.target.value) || 0)}
                 min="0"
-                className="w-full px-3 py-2 bg-slate-800 text-white rounded border border-slate-600 text-sm focus:border-amber-500 focus:outline-none"
+                className="w-full px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 text-sm focus:border-amber-500 focus:outline-none"
               />
             </div>
           )}

@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Input } from '@/components/ui/Input';
+import { SearchInput } from '@/components/ui/SearchInput';
 import { CardGrid } from '@/components/cards/CardGrid';
 import { CardGridSkeleton } from '@/components/skeletons/CardSkeleton';
 import { CardData } from '@/components/cards/CardPreview';
@@ -139,21 +139,20 @@ export default function SearchPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-heading text-3xl font-bold text-white mb-2">
+        <h1 className="font-heading text-3xl font-bold text-slate-900 mb-2">
           Card Search
         </h1>
-        <p className="text-slate-400">
+        <p className="text-slate-600">
           Search through Magic: The Gathering cards
         </p>
       </div>
 
       <div className="space-y-4">
         <div className="max-w-2xl">
-          <Input
-            type="text"
+          <SearchInput
             placeholder="Search for cards (e.g., Lightning Bolt, Jace, etc.)"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={setSearchQuery}
           />
         </div>
 
@@ -177,9 +176,9 @@ export default function SearchPage() {
         </div>
 
         {showFilters && (
-          <div className="bg-slate-800 rounded-lg p-4 space-y-4">
+          <div className="bg-white border border-amber-200/50 rounded-lg p-4 space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label className="block text-sm font-medium text-slate-700 mb-2">
                 Colors
               </label>
               <div className="flex flex-wrap gap-2">
@@ -190,7 +189,7 @@ export default function SearchPage() {
                     className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                       selectedColors.includes(color)
                         ? 'bg-amber-500 text-white'
-                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                        : 'bg-amber-50 text-slate-700 hover:bg-amber-100 border border-amber-200/50'
                     }`}
                   >
                     {COLOR_NAMES[color]}
@@ -200,7 +199,7 @@ export default function SearchPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label className="block text-sm font-medium text-slate-700 mb-2">
                 Type (contains)
               </label>
               <Input
@@ -213,7 +212,7 @@ export default function SearchPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label className="block text-sm font-medium text-slate-700 mb-2">
                 Set Code
               </label>
               <Input
@@ -249,7 +248,7 @@ export default function SearchPage() {
           ) : (
             <>
               {searchQuery && (
-                <div className="text-slate-400 text-sm">
+                <div className="text-slate-600 text-sm">
                   {hasActiveFilters ? (
                     <>Showing {filteredCards.length} of {total} cards (filtered)</>
                   ) : (

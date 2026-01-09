@@ -151,13 +151,13 @@ export function TriggeredAbilityForm({ abilityId, onSave, onCancel }: TriggeredA
     <div className="space-y-6">
       {/* Event Selection */}
       <div>
-        <label className="block text-sm font-medium text-slate-300 mb-2">
+        <label className="block text-sm font-medium text-slate-700 mb-2">
           Trigger Event *
         </label>
         <select
           value={event}
           onChange={(e) => setEvent(e.target.value)}
-          className="w-full px-3 py-2 bg-slate-700 text-white rounded border border-slate-600 focus:border-amber-500 focus:outline-none"
+          className="w-full px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 focus:border-amber-500 focus:outline-none"
         >
           {EVENT_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -171,13 +171,13 @@ export function TriggeredAbilityForm({ abilityId, onSave, onCancel }: TriggeredA
       {event === 'card_enters' && (
         <div className="space-y-3">
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
+            <label className="block text-sm font-medium text-slate-700 mb-2">
               Enters Zone *
             </label>
             <select
               value={entersWhere}
               onChange={(e) => setEntersWhere(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-700 text-white rounded border border-slate-600 focus:border-amber-500 focus:outline-none"
+              className="w-full px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 focus:border-amber-500 focus:outline-none"
             >
               {ZONE_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -187,13 +187,13 @@ export function TriggeredAbilityForm({ abilityId, onSave, onCancel }: TriggeredA
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
+            <label className="block text-sm font-medium text-slate-700 mb-2">
               Card Type <span className="text-slate-500">(optional)</span>
             </label>
             <select
               value={cardType}
               onChange={(e) => setCardType(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-700 text-white rounded border border-slate-600 focus:border-amber-500 focus:outline-none"
+              className="w-full px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 focus:border-amber-500 focus:outline-none"
             >
               {CARD_TYPE_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -201,18 +201,18 @@ export function TriggeredAbilityForm({ abilityId, onSave, onCancel }: TriggeredA
                 </option>
               ))}
             </select>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs text-slate-600 mt-1">
               Leave as "Any Card Type" to trigger for all card types
             </p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
+            <label className="block text-sm font-medium text-slate-700 mb-2">
               From Zone <span className="text-slate-500">(optional)</span>
             </label>
             <select
               value={entersFrom}
               onChange={(e) => setEntersFrom(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-700 text-white rounded border border-slate-600 focus:border-amber-500 focus:outline-none"
+              className="w-full px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 focus:border-amber-500 focus:outline-none"
             >
               {FROM_ZONE_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -220,7 +220,7 @@ export function TriggeredAbilityForm({ abilityId, onSave, onCancel }: TriggeredA
                 </option>
               ))}
             </select>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs text-slate-600 mt-1">
               Leave as "Any Zone" to trigger regardless of where the card came from
             </p>
           </div>
@@ -230,7 +230,7 @@ export function TriggeredAbilityForm({ abilityId, onSave, onCancel }: TriggeredA
       {/* Condition (Optional) */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="block text-sm font-medium text-slate-300">
+          <label className="block text-sm font-medium text-slate-700">
             Condition (Optional)
           </label>
           {!condition && (
@@ -241,7 +241,7 @@ export function TriggeredAbilityForm({ abilityId, onSave, onCancel }: TriggeredA
               }}
               variant="link"
               size="xs"
-              className="text-amber-400 hover:text-amber-300"
+              className="text-amber-600 hover:text-amber-700"
             >
               + Add Condition
             </Button>
@@ -263,23 +263,23 @@ export function TriggeredAbilityForm({ abilityId, onSave, onCancel }: TriggeredA
       {/* Effects */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="block text-sm font-medium text-slate-300">
+          <label className="block text-sm font-medium text-slate-700">
             Effects *
           </label>
           <Button
             onClick={handleAddEffect}
             variant="ghost"
             size="xs"
-            className="text-amber-400 hover:text-amber-300"
+            className="text-amber-600 hover:text-amber-700"
           >
             + Add Effect
           </Button>
         </div>
         <div className="space-y-3">
           {effects.map((effect, index) => (
-            <div key={index} className="bg-slate-700/50 rounded p-3 border border-slate-600">
+            <div key={index} className="bg-amber-50/50 rounded p-3 border border-amber-200/50">
               <div className="flex items-start justify-between mb-2">
-                <span className="text-xs text-slate-400">Effect {index + 1}</span>
+                <span className="text-xs text-slate-600">Effect {index + 1}</span>
                 {effects.length > 1 && (
                   <Button
                     onClick={() => handleRemoveEffect(index)}
@@ -303,7 +303,7 @@ export function TriggeredAbilityForm({ abilityId, onSave, onCancel }: TriggeredA
       </div>
 
       {/* Actions */}
-      <div className="flex gap-3 pt-4 border-t border-slate-700">
+      <div className="flex gap-3 pt-4 border-t border-amber-200/50">
         <Button
           onClick={handleSave}
           variant="primary"

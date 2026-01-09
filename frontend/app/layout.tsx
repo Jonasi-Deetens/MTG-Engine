@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Cinzel } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
+import { NavbarWrapper } from "@/components/navigation/NavbarWrapper";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -27,10 +28,10 @@ export default function RootLayout({
   return (
     <html lang="en" className="overflow-x-hidden">
       <body
-        className={`${inter.variable} ${cinzel.variable} antialiased bg-slate-900 text-slate-100 overflow-x-hidden`}
+        className={`${inter.variable} ${cinzel.variable} antialiased bg-angel-white text-slate-900 overflow-x-hidden`}
       >
         <AuthProvider>
-          {children}
+          <NavbarWrapper>{children}</NavbarWrapper>
         </AuthProvider>
       </body>
     </html>

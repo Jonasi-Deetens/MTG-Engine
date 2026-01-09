@@ -47,14 +47,14 @@ export function AbilityModal({ isOpen, onClose, type, abilityId }: AbilityModalP
       />
       
       {/* Modal */}
-      <div className="relative bg-slate-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4">
-        <div className="sticky top-0 bg-slate-800 border-b border-slate-700 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-white">{getTitle()}</h2>
+      <div className="relative bg-white border border-amber-200/50 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4">
+        <div className="sticky top-0 bg-white border-b border-amber-200/50 px-6 py-4 flex items-center justify-between">
+          <h2 className="text-xl font-bold text-slate-900">{getTitle()}</h2>
           <Button
             onClick={onClose}
             variant="ghost"
             size="sm"
-            className="text-slate-400 hover:text-white"
+            className="text-slate-600 hover:text-slate-900"
             aria-label="Close"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

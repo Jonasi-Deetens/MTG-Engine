@@ -70,7 +70,7 @@ export default function DeckDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-angel-white flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>
       </div>
     );
@@ -78,9 +78,9 @@ export default function DeckDetailPage() {
 
   if (error || !currentDeck) {
     return (
-      <div className="min-h-screen bg-slate-900 p-4">
+      <div className="min-h-screen bg-angel-white p-4">
         <div className="max-w-4xl mx-auto">
-          <div className="bg-red-900/50 border border-red-600 rounded-lg p-6 text-red-200">
+          <div className="bg-red-50 border border-red-600 rounded-lg p-6 text-red-800">
             <h1 className="text-2xl font-bold mb-2">Error</h1>
             <p>{error || 'Deck not found'}</p>
             <Button
@@ -107,13 +107,13 @@ export default function DeckDetailPage() {
           >
             ← Back to Decks
           </Button>
-          <h1 className="font-heading text-3xl font-bold text-white mb-2">
+          <h1 className="font-heading text-3xl font-bold text-slate-900 mb-2">
             {currentDeck.name}
           </h1>
           {currentDeck.description && (
-            <p className="text-slate-400 mb-2">{currentDeck.description}</p>
+            <p className="text-slate-600 mb-2">{currentDeck.description}</p>
           )}
-          <div className="flex items-center gap-4 text-sm text-slate-500">
+          <div className="flex items-center gap-4 text-sm text-slate-600">
             <span>Format: {currentDeck.format}</span>
             <span>{currentDeck.card_count} cards</span>
             {currentDeck.commander_count > 0 && (
@@ -134,7 +134,7 @@ export default function DeckDetailPage() {
           <Button
             onClick={handleDelete}
             variant="outline"
-            className="text-red-400 hover:text-red-300"
+            className="text-red-600 hover:text-red-700"
           >
             Delete
           </Button>
@@ -148,12 +148,12 @@ export default function DeckDetailPage() {
           {currentDeck.commanders.length > 0 && (
             <Card variant="elevated">
               <div className="p-6 space-y-4">
-                <h2 className="text-xl font-semibold text-white">Commanders</h2>
+                <h2 className="text-xl font-semibold text-slate-900">Commanders</h2>
                 <div className="flex gap-4">
                   {currentDeck.commanders.map((commander, index) => (
                     <div key={commander.card_id} className="text-center">
                       <CardPreview card={commander.card} />
-                      <p className="text-xs text-slate-400 mt-1">
+                      <p className="text-xs text-slate-600 mt-1">
                         Commander {index + 1}
                       </p>
                     </div>
@@ -166,7 +166,7 @@ export default function DeckDetailPage() {
           {/* Deck List */}
           <Card variant="elevated">
             <div className="p-6 space-y-4">
-              <h2 className="text-xl font-semibold text-white">
+              <h2 className="text-xl font-semibold text-slate-900">
                 Deck List ({currentDeck.card_count} cards)
               </h2>
               <DeckCardList
@@ -218,29 +218,29 @@ export default function DeckDetailPage() {
             return (
               <Card variant="elevated">
                 <div className="p-6 space-y-4">
-                  <h2 className="text-xl font-semibold text-white">
+                  <h2 className="text-xl font-semibold text-slate-900">
                     Price Summary
                   </h2>
                   <div className="space-y-3">
                     <div>
-                      <div className="text-sm text-slate-400 mb-1">
+                      <div className="text-sm text-slate-600 mb-1">
                         Total Deck Price
                       </div>
-                      <div className="text-2xl font-bold text-amber-400">
+                      <div className="text-2xl font-bold text-amber-600">
                         ${totalPrice.toFixed(2)}
                       </div>
                     </div>
-                    <div className="pt-2 border-t border-slate-700">
-                      <div className="text-sm text-slate-400 mb-1">
+                    <div className="pt-2 border-t border-amber-200/50">
+                      <div className="text-sm text-slate-600 mb-1">
                         Average Card Price
                       </div>
-                      <div className="text-lg font-semibold text-slate-300">
+                      <div className="text-lg font-semibold text-slate-700">
                         ${avgPrice.toFixed(2)}
                       </div>
                     </div>
                     {mostExpensive.length > 0 && (
-                      <div className="pt-2 border-t border-slate-700">
-                        <div className="text-sm text-slate-400 mb-2">
+                      <div className="pt-2 border-t border-amber-200/50">
+                        <div className="text-sm text-slate-600 mb-2">
                           Most Expensive Cards
                         </div>
                         <div className="space-y-1">
@@ -249,10 +249,10 @@ export default function DeckDetailPage() {
                               key={dc.card_id}
                               className="flex items-center justify-between text-sm"
                             >
-                              <span className="text-slate-300 truncate flex-1">
+                              <span className="text-slate-700 truncate flex-1">
                                 {dc.card.name}
                               </span>
-                              <span className="text-amber-400 font-semibold ml-2">
+                              <span className="text-amber-600 font-semibold ml-2">
                                 ${parseFloat(dc.card.prices!.usd!).toFixed(2)}
                               </span>
                             </div>

@@ -11,8 +11,8 @@ interface DeckValidationPanelProps {
 export function DeckValidationPanel({ validation }: DeckValidationPanelProps) {
   if (!validation) {
     return (
-      <div className="p-4 bg-slate-800 rounded-lg">
-        <p className="text-slate-400 text-sm">Validation not available</p>
+      <div className="p-4 bg-white border border-amber-200/50 rounded-lg">
+        <p className="text-slate-600 text-sm">Validation not available</p>
       </div>
     );
   }
@@ -37,7 +37,7 @@ export function DeckValidationPanel({ validation }: DeckValidationPanelProps) {
             </>
           )}
         </div>
-        <p className="text-sm text-slate-300">
+        <p className="text-sm text-slate-700">
           Format: {validation.format} | Cards: {validation.card_count} | Commanders: {validation.commander_count}
         </p>
       </div>

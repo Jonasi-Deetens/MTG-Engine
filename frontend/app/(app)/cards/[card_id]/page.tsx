@@ -127,7 +127,7 @@ export default function CardDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-angel-white flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>
       </div>
     );
@@ -135,7 +135,7 @@ export default function CardDetailPage() {
 
   if (error || !card) {
     return (
-      <div className="min-h-screen bg-slate-900 p-4">
+      <div className="min-h-screen bg-angel-white p-4">
         <div className="max-w-4xl mx-auto">
           <div className="bg-red-900/50 border border-red-600 rounded-lg p-6 text-red-200">
             <h1 className="text-2xl font-bold mb-2">Error</h1>
@@ -157,7 +157,7 @@ export default function CardDetailPage() {
     <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <Link href="/search" className="text-slate-400 hover:text-white transition-colors">
+          <Link href="/search" className="text-slate-600 hover:text-amber-600 transition-colors">
             ← Back to Search
           </Link>
           <div className="flex items-center gap-2">
@@ -176,7 +176,7 @@ export default function CardDetailPage() {
         </div>
 
         {/* Main Card Info */}
-        <div className="bg-slate-800 rounded-lg p-6">
+        <div className="bg-white border border-amber-200/50 rounded-lg p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Card Image */}
             <div className="md:col-span-1">
@@ -192,7 +192,7 @@ export default function CardDetailPage() {
                   />
                 </div>
               ) : (
-                <div className="aspect-[63/88] flex items-center justify-center bg-slate-700 rounded-xl text-slate-500">
+                <div className="aspect-[63/88] flex items-center justify-center bg-amber-50 border border-amber-200/50 rounded-xl text-slate-500">
                   No Image
                 </div>
               )}
@@ -215,7 +215,7 @@ export default function CardDetailPage() {
               <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-2 flex-wrap mb-2">
-                    <h1 className="text-3xl font-bold text-white">{card.name}</h1>
+                    <h1 className="text-3xl font-bold text-slate-900">{card.name}</h1>
                     {card.rarity && <RarityBadge rarity={card.rarity} />}
                   </div>
                   {card.mana_cost && (
@@ -227,15 +227,15 @@ export default function CardDetailPage() {
 
               {card.type_line && (
                 <div>
-                  <span className="text-xs text-slate-400 uppercase tracking-wide">Type</span>
-                  <p className="text-base text-white mt-1">{card.type_line}</p>
+                  <span className="text-xs text-slate-600 uppercase tracking-wide">Type</span>
+                  <p className="text-base text-slate-900 mt-1">{card.type_line}</p>
                 </div>
               )}
 
               {(card.power && card.toughness) && (
                 <div>
-                  <span className="text-xs text-slate-400 uppercase tracking-wide">Power / Toughness</span>
-                  <p className="text-base text-white mt-1 font-mono">
+                  <span className="text-xs text-slate-600 uppercase tracking-wide">Power / Toughness</span>
+                  <p className="text-base text-slate-900 mt-1 font-mono">
                     {card.power} / {card.toughness}
                   </p>
                 </div>
@@ -243,12 +243,12 @@ export default function CardDetailPage() {
 
               {card.colors && card.colors.length > 0 && (
                 <div>
-                  <span className="text-xs text-slate-400 uppercase tracking-wide">Colors</span>
+                  <span className="text-xs text-slate-600 uppercase tracking-wide">Colors</span>
                   <div className="flex gap-2 mt-1">
                     {card.colors.map((color, idx) => (
                       <span
                         key={idx}
-                        className="px-3 py-1 rounded text-sm font-medium bg-slate-700 text-white capitalize"
+                        className="px-3 py-1 rounded text-sm font-medium bg-amber-100 text-slate-900 capitalize border border-amber-200/50"
                       >
                         {color}
                       </span>
@@ -259,8 +259,8 @@ export default function CardDetailPage() {
 
               {card.oracle_text && (
                 <div>
-                  <span className="text-xs text-slate-400 uppercase tracking-wide">Oracle Text</span>
-                  <p className="text-base text-slate-200 mt-1 whitespace-pre-wrap leading-relaxed">
+                  <span className="text-xs text-slate-600 uppercase tracking-wide">Oracle Text</span>
+                  <p className="text-base text-slate-800 mt-1 whitespace-pre-wrap leading-relaxed">
                     {card.oracle_text}
                   </p>
                 </div>
@@ -268,8 +268,8 @@ export default function CardDetailPage() {
 
               {card.flavor_text && (
                 <div>
-                  <span className="text-xs text-slate-400 uppercase tracking-wide">Flavor Text</span>
-                  <p className="text-base text-slate-300 mt-1 italic leading-relaxed">
+                  <span className="text-xs text-slate-600 uppercase tracking-wide">Flavor Text</span>
+                  <p className="text-base text-slate-700 mt-1 italic leading-relaxed">
                     {card.flavor_text}
                   </p>
                 </div>
@@ -277,28 +277,28 @@ export default function CardDetailPage() {
 
               {card.prices && (card.prices.usd || card.prices.eur || card.prices.usd_foil) && (
                 <div>
-                  <span className="text-xs text-slate-400 uppercase tracking-wide">Prices</span>
+                  <span className="text-xs text-slate-600 uppercase tracking-wide">Prices</span>
                   <div className="flex flex-wrap gap-4 mt-1">
                     {card.prices.usd && (
                       <div>
-                        <span className="text-sm text-slate-400">USD:</span>{' '}
-                        <span className="text-base text-amber-400 font-semibold">
+                        <span className="text-sm text-slate-600">USD:</span>{' '}
+                        <span className="text-base text-amber-600 font-semibold">
                           ${parseFloat(card.prices.usd).toFixed(2)}
                         </span>
                       </div>
                     )}
                     {card.prices.usd_foil && (
                       <div>
-                        <span className="text-sm text-slate-400">USD Foil:</span>{' '}
-                        <span className="text-base text-amber-400 font-semibold">
+                        <span className="text-sm text-slate-600">USD Foil:</span>{' '}
+                        <span className="text-base text-amber-600 font-semibold">
                           ${parseFloat(card.prices.usd_foil).toFixed(2)}
                         </span>
                       </div>
                     )}
                     {card.prices.eur && (
                       <div>
-                        <span className="text-sm text-slate-400">EUR:</span>{' '}
-                        <span className="text-base text-amber-400 font-semibold">
+                        <span className="text-sm text-slate-600">EUR:</span>{' '}
+                        <span className="text-base text-amber-600 font-semibold">
                           €{parseFloat(card.prices.eur).toFixed(2)}
                         </span>
                       </div>
@@ -315,23 +315,23 @@ export default function CardDetailPage() {
 
               {card.artist && (
                 <div>
-                  <span className="text-xs text-slate-400 uppercase tracking-wide">Artist</span>
-                  <p className="text-base text-slate-300 mt-1">{card.artist}</p>
+                  <span className="text-xs text-slate-600 uppercase tracking-wide">Artist</span>
+                  <p className="text-base text-slate-700 mt-1">{card.artist}</p>
                 </div>
               )}
 
               {(card.set_code || card.collector_number) && (
-                <div className="flex gap-4 text-sm text-slate-400">
+                <div className="flex gap-4 text-sm text-slate-600">
                   {card.set_code && (
                     <div>
                       <span className="uppercase tracking-wide">Set:</span>{' '}
-                      <span className="text-slate-300">{card.set_code.toUpperCase()}</span>
+                      <span className="text-slate-800">{card.set_code.toUpperCase()}</span>
                     </div>
                   )}
                   {card.collector_number && (
                     <div>
                       <span className="uppercase tracking-wide">#:</span>{' '}
-                      <span className="text-slate-300">{card.collector_number}</span>
+                      <span className="text-slate-800">{card.collector_number}</span>
                     </div>
                   )}
                 </div>
@@ -344,13 +344,13 @@ export default function CardDetailPage() {
         {isAuthenticated && (
           <>
             {loadingGraph ? (
-              <div className="bg-slate-800 rounded-lg p-6">
-                <div className="text-center text-slate-400">Loading ability graph...</div>
+              <div className="bg-white border border-amber-200/50 rounded-lg p-6">
+                <div className="text-center text-slate-600">Loading ability graph...</div>
               </div>
             ) : abilityGraph ? (
-              <div className="bg-slate-800 rounded-lg p-6">
+              <div className="bg-white border border-amber-200/50 rounded-lg p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-2xl font-bold text-white">Saved Ability Graph</h2>
+                  <h2 className="text-2xl font-bold text-slate-900">Saved Ability Graph</h2>
                   <div className="flex items-center gap-2">
                     <Button onClick={handleExportGraph} variant="outline" size="sm">
                       Export JSON
@@ -360,14 +360,14 @@ export default function CardDetailPage() {
                     </Button>
                   </div>
                 </div>
-                <div className="bg-slate-900 rounded-lg p-4">
+                <div className="bg-amber-50 border border-amber-200/50 rounded-lg p-4">
                   <AbilityTreeView />
                 </div>
               </div>
             ) : (
-              <div className="bg-slate-800 rounded-lg p-6">
+              <div className="bg-white border border-amber-200/50 rounded-lg p-6">
                 <div className="text-center space-y-4">
-                  <p className="text-slate-400">No ability graph saved for this card yet.</p>
+                  <p className="text-slate-600">No ability graph saved for this card yet.</p>
                   <Button onClick={handleEditInBuilder} variant="primary">
                     Create Ability Graph
                   </Button>
@@ -379,8 +379,8 @@ export default function CardDetailPage() {
 
         {/* All Versions Section */}
         {allVersions.length > 1 && (
-          <div className="bg-slate-800 rounded-lg p-6">
-            <h2 className="text-2xl font-bold text-white mb-4">
+          <div className="bg-white border border-amber-200/50 rounded-lg p-6">
+            <h2 className="text-2xl font-bold text-slate-900 mb-4">
               All Printings ({allVersions.length})
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
@@ -404,7 +404,7 @@ export default function CardDetailPage() {
                       unoptimized
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-slate-700 text-slate-500 text-xs">
+                    <div className="w-full h-full flex items-center justify-center bg-amber-50 border border-amber-200/50 text-slate-500 text-xs">
                       {version.set_code?.toUpperCase()}
                     </div>
                   )}

@@ -56,10 +56,10 @@ export default function DecksPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-heading text-3xl font-bold text-white mb-2">
+          <h1 className="font-heading text-3xl font-bold text-slate-900 mb-2">
             My Decks
           </h1>
-          <p className="text-slate-400">
+          <p className="text-slate-600">
             Create and manage your Magic: The Gathering decks
           </p>
         </div>
@@ -78,13 +78,13 @@ export default function DecksPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search decks..."
-            className="w-full px-3 py-2 bg-slate-700 text-white rounded border border-slate-600 focus:border-amber-500 focus:outline-none"
+            className="w-full px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 focus:border-amber-500 focus:outline-none"
           />
         </div>
         <select
           value={formatFilter}
           onChange={(e) => setFormatFilter(e.target.value)}
-          className="px-3 py-2 bg-slate-700 text-white rounded border border-slate-600 focus:border-amber-500 focus:outline-none"
+          className="px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 focus:border-amber-500 focus:outline-none"
         >
           <option value="">All Formats</option>
           <option value="Commander">Commander</option>
@@ -97,7 +97,7 @@ export default function DecksPage() {
       </div>
 
       {error && (
-        <div className="p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400">
+        <div className="p-4 bg-red-50 border border-red-300 rounded-lg text-red-700">
           {error}
         </div>
       )}
@@ -131,7 +131,7 @@ export default function DecksPage() {
               <div className="p-6 space-y-4">
                 <div>
                   <div className="flex items-start justify-between mb-3">
-                    <h3 className="text-xl font-semibold text-white flex-1">
+                    <h3 className="text-xl font-semibold text-slate-900 flex-1">
                       {deck.name}
                     </h3>
                     <div className="flex items-center gap-2 ml-2">
@@ -153,7 +153,7 @@ export default function DecksPage() {
                     </div>
                   </div>
                   {deck.description && (
-                    <p className="text-slate-400 text-sm mb-3 line-clamp-2">
+                    <p className="text-slate-600 text-sm mb-3 line-clamp-2">
                       {deck.description}
                     </p>
                   )}
@@ -164,7 +164,7 @@ export default function DecksPage() {
                       size="sm"
                     />
                   </div>
-                  <div className="flex items-center gap-4 text-sm text-slate-400">
+                  <div className="flex items-center gap-4 text-sm text-slate-600">
                     <span className="flex items-center gap-1">
                       <BookOpen className="w-4 h-4" />
                       {deck.card_count} cards
@@ -177,7 +177,7 @@ export default function DecksPage() {
                     )}
                   </div>
                 </div>
-                <div className="flex gap-2 pt-4 border-t border-slate-700">
+                <div className="flex gap-2 pt-4 border-t border-amber-200/50">
                   <Link href={`/decks/${deck.id}`} className="flex-1">
                     <Button variant="primary" size="sm" className="w-full">
                       View
@@ -192,7 +192,7 @@ export default function DecksPage() {
                     onClick={() => handleDelete(deck.id, deck.name)}
                     variant="outline"
                     size="sm"
-                    className="text-red-400 hover:text-red-300"
+                    className="text-red-600 hover:text-red-700"
                   >
                     Delete
                   </Button>

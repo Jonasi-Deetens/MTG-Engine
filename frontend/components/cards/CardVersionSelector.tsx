@@ -36,9 +36,9 @@ export function CardVersionSelector({
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         disabled={loading}
-        className="w-full px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded border border-slate-600 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-between gap-2"
+        className="w-full px-3 py-2 bg-white hover:bg-amber-50 text-slate-900 rounded border border-amber-200/50 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-between gap-2"
       >
-        <span className="text-xs text-slate-300">Version:</span>
+        <span className="text-xs text-slate-600">Version:</span>
         <span className="text-xs font-semibold">{currentVersionLabel}</span>
         <svg
           className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
@@ -59,7 +59,7 @@ export function CardVersionSelector({
           />
           
           {/* Dropdown */}
-          <div className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-20 max-h-96 overflow-y-auto">
+          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-amber-200/50 rounded-lg shadow-xl z-20 max-h-96 overflow-y-auto">
             <div className="p-2 space-y-1">
               {allVersions.map((version) => {
                 const isCurrent = version.card_id === currentCard.card_id;
@@ -78,8 +78,8 @@ export function CardVersionSelector({
                     }}
                     className={`w-full p-2 rounded text-left transition-colors flex items-center gap-3 ${
                       isCurrent
-                        ? 'bg-amber-600/20 border border-amber-500/50'
-                        : 'hover:bg-slate-700 border border-transparent'
+                        ? 'bg-amber-100/80 border border-amber-500/50'
+                        : 'hover:bg-amber-50 border border-transparent'
                     }`}
                   >
                     {imageUrl && (
@@ -95,18 +95,18 @@ export function CardVersionSelector({
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <div className={`text-xs font-semibold ${isCurrent ? 'text-amber-400' : 'text-white'}`}>
+                      <div className={`text-xs font-semibold ${isCurrent ? 'text-amber-600' : 'text-slate-900'}`}>
                         {versionLabel}
                       </div>
                       {version.set_code && (
-                        <div className="text-xs text-slate-400 truncate">
+                        <div className="text-xs text-slate-600 truncate">
                           {version.set_code}
                         </div>
                       )}
                     </div>
                     {isCurrent && (
                       <svg
-                        className="w-4 h-4 text-amber-400 flex-shrink-0"
+                        className="w-4 h-4 text-amber-600 flex-shrink-0"
                         fill="currentColor"
                         viewBox="0 0 20 20"
                       >

@@ -48,9 +48,9 @@ export function CommanderSelector({ commanders, onAdd, onRemove, maxCommanders =
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="text-lg font-semibold text-white mb-2">Commanders</h3>
+        <h3 className="text-lg font-semibold text-slate-900 mb-2">Commanders</h3>
         {commanders.length === 0 ? (
-          <p className="text-slate-400 text-sm">No commanders selected</p>
+          <p className="text-slate-600 text-sm">No commanders selected</p>
         ) : (
           <div className="flex gap-4 flex-wrap">
             {commanders.map((commander, index) => (
@@ -68,7 +68,7 @@ export function CommanderSelector({ commanders, onAdd, onRemove, maxCommanders =
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
-                <p className="text-xs text-center text-slate-400 mt-1">
+                <p className="text-xs text-center text-slate-600 mt-1">
                   Commander {index + 1}
                 </p>
               </div>
@@ -86,7 +86,7 @@ export function CommanderSelector({ commanders, onAdd, onRemove, maxCommanders =
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               placeholder="Search for commander..."
-              className="flex-1 px-3 py-2 bg-slate-700 text-white rounded border border-slate-600 focus:border-amber-500 focus:outline-none"
+              className="flex-1 px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 focus:border-amber-500 focus:outline-none"
             />
             <Button
               onClick={handleSearch}
@@ -98,7 +98,7 @@ export function CommanderSelector({ commanders, onAdd, onRemove, maxCommanders =
           </div>
 
           {searchResults.length > 0 && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-slate-800 rounded-lg">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-white border border-amber-200/50 rounded-lg">
               {searchResults.map((card) => (
                 <div
                   key={card.card_id}
@@ -114,7 +114,7 @@ export function CommanderSelector({ commanders, onAdd, onRemove, maxCommanders =
       )}
 
       {!canAddMore && (
-        <p className="text-slate-400 text-sm">Maximum {maxCommanders} commanders allowed</p>
+        <p className="text-slate-600 text-sm">Maximum {maxCommanders} commanders allowed</p>
       )}
     </div>
   );

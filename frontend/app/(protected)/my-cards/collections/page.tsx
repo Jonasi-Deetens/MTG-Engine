@@ -77,13 +77,13 @@ export default function CollectionsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <Link href="/my-cards" className="text-slate-400 hover:text-white transition-colors mb-2 inline-block">
+          <Link href="/my-cards" className="text-slate-600 hover:text-amber-600 transition-colors mb-2 inline-block">
             ← Back to My Cards
           </Link>
-          <h1 className="font-heading text-3xl font-bold text-white mb-2">
+          <h1 className="font-heading text-3xl font-bold text-slate-900 mb-2">
             Collections
           </h1>
-          <p className="text-slate-400">
+          <p className="text-slate-600">
             Organize your cards into collections
           </p>
         </div>
@@ -99,7 +99,7 @@ export default function CollectionsPage() {
         <Card variant="elevated">
           <div className="p-6 space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label className="block text-sm font-medium text-slate-700 mb-2">
                 Collection Name *
               </label>
               <input
@@ -107,11 +107,11 @@ export default function CollectionsPage() {
                 value={newCollectionName}
                 onChange={(e) => setNewCollectionName(e.target.value)}
                 placeholder="e.g., My Commander Deck"
-                className="w-full px-3 py-2 bg-slate-700 text-white rounded border border-slate-600 focus:border-amber-500 focus:outline-none"
+                className="w-full px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 focus:border-amber-500 focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label className="block text-sm font-medium text-slate-700 mb-2">
                 Description (optional)
               </label>
               <textarea
@@ -119,7 +119,7 @@ export default function CollectionsPage() {
                 onChange={(e) => setNewCollectionDesc(e.target.value)}
                 placeholder="Describe this collection..."
                 rows={3}
-                className="w-full px-3 py-2 bg-slate-700 text-white rounded border border-slate-600 focus:border-amber-500 focus:outline-none"
+                className="w-full px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 focus:border-amber-500 focus:outline-none"
               />
             </div>
             <Button
@@ -159,11 +159,11 @@ export default function CollectionsPage() {
             <Card key={collection.id} variant="elevated">
               <div className="p-6 space-y-4">
                 <div>
-                  <h3 className="text-xl font-semibold text-white mb-1">
+                  <h3 className="text-xl font-semibold text-slate-900 mb-1">
                     {collection.name}
                   </h3>
                   {collection.description && (
-                    <p className="text-slate-400 text-sm">
+                    <p className="text-slate-600 text-sm">
                       {collection.description}
                     </p>
                   )}

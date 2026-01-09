@@ -81,9 +81,9 @@ export function CardPreview({ card, onVersionChange, onAddToDeck, showAddButton 
 
   return (
     <>
-      <div className="aspect-[63/88] relative overflow-visible flex items-center justify-center group">
+      <div className="aspect-[63/88] relative overflow-hidden rounded-xl flex items-center justify-center group">
         <div 
-          className={`absolute inset-0 transition-all duration-300 ease-out hover:scale-105 hover:shadow-2xl hover:shadow-black/60 cursor-pointer`}
+          className={`absolute inset-0 transition-all duration-300 ease-out hover:scale-105 hover:shadow-2xl hover:shadow-black/60 cursor-pointer rounded-xl`}
           onClick={handleCardClick}
         >
           {imageUrl ? (
@@ -96,7 +96,7 @@ export function CardPreview({ card, onVersionChange, onAddToDeck, showAddButton 
               unoptimized
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-slate-500 text-xs text-center p-2 bg-slate-800 rounded-lg">
+            <div className="w-full h-full flex items-center justify-center text-slate-600 text-xs text-center p-2 bg-amber-50 rounded-xl">
               No Image
             </div>
           )}
@@ -131,7 +131,7 @@ export function CardPreview({ card, onVersionChange, onAddToDeck, showAddButton 
               e.stopPropagation();
               setIsModalOpen(true);
             }}
-            className="absolute top-2 right-2 p-2 bg-slate-900/90 hover:bg-slate-800 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg z-10"
+            className="absolute top-2 right-2 p-2 bg-white/90 hover:bg-white text-slate-900 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg z-10 border border-amber-200/50"
             aria-label="View card details"
           >
             <svg

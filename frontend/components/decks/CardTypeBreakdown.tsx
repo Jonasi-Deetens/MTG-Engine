@@ -91,17 +91,17 @@ export function CardTypeBreakdown({ cards }: CardTypeBreakdownProps) {
   
   return (
     <div className="space-y-2">
-      <h3 className="text-lg font-semibold text-white">Card Types</h3>
+      <h3 className="text-lg font-semibold text-slate-900">Card Types</h3>
       <div className="space-y-2">
         {typeData.map((item, index) => {
           const percentage = total > 0 ? (item.count / total) * 100 : 0;
           return (
             <div key={item.type} className="space-y-1">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-300">{item.type}</span>
-                <span className="text-slate-400">{item.count} ({percentage.toFixed(1)}%)</span>
+                <span className="text-slate-700">{item.type}</span>
+                <span className="text-slate-600">{item.count} ({percentage.toFixed(1)}%)</span>
               </div>
-              <div className="w-full bg-slate-700 rounded-full h-2">
+              <div className="w-full bg-amber-100 rounded-full h-2">
                 <div
                   className={`${colors[index % colors.length]} h-2 rounded-full transition-all`}
                   style={{ width: `${percentage}%` }}
@@ -112,7 +112,7 @@ export function CardTypeBreakdown({ cards }: CardTypeBreakdownProps) {
         })}
       </div>
       {typeData.length === 0 && (
-        <p className="text-slate-400 text-sm">No cards to analyze</p>
+        <p className="text-slate-600 text-sm">No cards to analyze</p>
       )}
     </div>
   );

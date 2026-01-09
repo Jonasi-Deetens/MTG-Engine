@@ -48,13 +48,13 @@ export function ContinuousAbilityForm({ abilityId, onSave, onCancel }: Continuou
     <div className="space-y-6">
       {/* Applies To */}
       <div>
-        <label className="block text-sm font-medium text-slate-300 mb-2">
+        <label className="block text-sm font-medium text-slate-700 mb-2">
           Applies To *
         </label>
         <select
           value={appliesTo}
           onChange={(e) => setAppliesTo(e.target.value)}
-          className="w-full px-3 py-2 bg-slate-700 text-white rounded border border-slate-600 focus:border-amber-500 focus:outline-none"
+          className="w-full px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 focus:border-amber-500 focus:outline-none"
         >
           {APPLIES_TO_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -66,7 +66,7 @@ export function ContinuousAbilityForm({ abilityId, onSave, onCancel }: Continuou
 
       {/* Effect */}
       <div>
-        <label className="block text-sm font-medium text-slate-300 mb-2">
+        <label className="block text-sm font-medium text-slate-700 mb-2">
           Effect Description *
         </label>
         <textarea
@@ -74,12 +74,12 @@ export function ContinuousAbilityForm({ abilityId, onSave, onCancel }: Continuou
           onChange={(e) => setEffect(e.target.value)}
           placeholder="e.g., gets +1/+1, has flying, can't be blocked"
           rows={4}
-          className="w-full px-3 py-2 bg-slate-700 text-white rounded border border-slate-600 focus:border-amber-500 focus:outline-none resize-none"
+          className="w-full px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 focus:border-amber-500 focus:outline-none resize-none"
         />
       </div>
 
       {/* Actions */}
-      <div className="flex gap-3 pt-4 border-t border-slate-700">
+      <div className="flex gap-3 pt-4 border-t border-amber-200/50">
         <Button
           onClick={handleSave}
           variant="primary"

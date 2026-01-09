@@ -130,7 +130,7 @@ export function ActivatedAbilityForm({ abilityId, onSave, onCancel }: ActivatedA
     <div className="space-y-6">
       {/* Cost */}
       <div>
-        <label className="block text-sm font-medium text-slate-300 mb-2">
+        <label className="block text-sm font-medium text-slate-700 mb-2">
           Activation Cost *
         </label>
         <input
@@ -138,16 +138,16 @@ export function ActivatedAbilityForm({ abilityId, onSave, onCancel }: ActivatedA
           value={cost}
           onChange={(e) => setCost(e.target.value)}
           placeholder="e.g., {T}, {1}{R}, Sacrifice a creature"
-          className="w-full px-3 py-2 bg-slate-700 text-white rounded border border-slate-600 focus:border-amber-500 focus:outline-none"
+          className="w-full px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 focus:border-amber-500 focus:outline-none"
         />
-        <p className="text-xs text-slate-400 mt-1">
+        <p className="text-xs text-slate-600 mt-1">
           Use mana symbols like {'{T}'}, {'{1}{R}'}, or describe other costs
         </p>
       </div>
 
       {/* Effect */}
       <div>
-        <label className="block text-sm font-medium text-slate-300 mb-2">
+        <label className="block text-sm font-medium text-slate-700 mb-2">
           Effect *
         </label>
         <EffectFields
@@ -295,7 +295,7 @@ export function ActivatedAbilityForm({ abilityId, onSave, onCancel }: ActivatedA
       </div>
 
       {/* Actions */}
-      <div className="flex gap-3 pt-4 border-t border-slate-700">
+      <div className="flex gap-3 pt-4 border-t border-amber-200/50">
         <Button
           onClick={handleSave}
           variant="primary"

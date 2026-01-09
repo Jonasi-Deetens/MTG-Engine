@@ -67,11 +67,11 @@ export function KeywordAbilityForm({ abilityId, onSave, onCancel }: KeywordAbili
     <div className="space-y-6">
       {/* Keyword Selection */}
       <div>
-        <label className="block text-sm font-medium text-slate-300 mb-2">
+        <label className="block text-sm font-medium text-slate-700 mb-2">
           Keyword *
         </label>
         {loading ? (
-          <div className="text-sm text-slate-400">Loading keywords...</div>
+          <div className="text-sm text-slate-600">Loading keywords...</div>
         ) : (
           <select
             value={selectedKeywordName}
@@ -83,7 +83,7 @@ export function KeywordAbilityForm({ abilityId, onSave, onCancel }: KeywordAbili
               setLifeCost(undefined);
               setSacrificeCost(false);
             }}
-            className="w-full px-3 py-2 bg-slate-700 text-white rounded border border-slate-600 focus:border-amber-500 focus:outline-none"
+            className="w-full px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 focus:border-amber-500 focus:outline-none"
           >
             <option value="">Select a keyword...</option>
             {availableKeywords.map((kw) => (
@@ -94,7 +94,7 @@ export function KeywordAbilityForm({ abilityId, onSave, onCancel }: KeywordAbili
           </select>
         )}
         {selectedKeyword?.options.description && (
-          <p className="text-xs text-slate-400 mt-1">{selectedKeyword.options.description}</p>
+          <p className="text-xs text-slate-600 mt-1">{selectedKeyword.options.description}</p>
         )}
       </div>
 
@@ -103,7 +103,7 @@ export function KeywordAbilityForm({ abilityId, onSave, onCancel }: KeywordAbili
         <div className="space-y-4">
           {selectedKeyword.options.has_mana_cost && (
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label className="block text-sm font-medium text-slate-700 mb-2">
                 Mana Cost
               </label>
               <input
@@ -111,14 +111,14 @@ export function KeywordAbilityForm({ abilityId, onSave, onCancel }: KeywordAbili
                 value={cost}
                 onChange={(e) => setCost(e.target.value)}
                 placeholder="e.g., {2}, {1}{R}"
-                className="w-full px-3 py-2 bg-slate-700 text-white rounded border border-slate-600 focus:border-amber-500 focus:outline-none"
+                className="w-full px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 focus:border-amber-500 focus:outline-none"
               />
             </div>
           )}
 
           {selectedKeyword.options.has_number && (
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label className="block text-sm font-medium text-slate-700 mb-2">
                 Number Value
               </label>
               <input
@@ -127,14 +127,14 @@ export function KeywordAbilityForm({ abilityId, onSave, onCancel }: KeywordAbili
                 onChange={(e) => setNumber(e.target.value ? parseInt(e.target.value) : undefined)}
                 min="0"
                 placeholder="e.g., 2 for Annihilator 2"
-                className="w-full px-3 py-2 bg-slate-700 text-white rounded border border-slate-600 focus:border-amber-500 focus:outline-none"
+                className="w-full px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 focus:border-amber-500 focus:outline-none"
               />
             </div>
           )}
 
           {selectedKeyword.options.has_life_cost && (
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label className="block text-sm font-medium text-slate-700 mb-2">
                 Life Cost
               </label>
               <input
@@ -143,7 +143,7 @@ export function KeywordAbilityForm({ abilityId, onSave, onCancel }: KeywordAbili
                 onChange={(e) => setLifeCost(e.target.value ? parseInt(e.target.value) : undefined)}
                 min="0"
                 placeholder="e.g., 3"
-                className="w-full px-3 py-2 bg-slate-700 text-white rounded border border-slate-600 focus:border-amber-500 focus:outline-none"
+                className="w-full px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 focus:border-amber-500 focus:outline-none"
               />
             </div>
           )}
@@ -155,9 +155,9 @@ export function KeywordAbilityForm({ abilityId, onSave, onCancel }: KeywordAbili
                   type="checkbox"
                   checked={sacrificeCost}
                   onChange={(e) => setSacrificeCost(e.target.checked)}
-                  className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-amber-600 focus:ring-amber-500"
+                  className="w-4 h-4 rounded border-amber-200/50 bg-white text-amber-600 focus:ring-amber-500"
                 />
-                <span className="text-sm font-medium text-slate-300">Requires Sacrifice Cost</span>
+                <span className="text-sm font-medium text-slate-700">Requires Sacrifice Cost</span>
               </label>
             </div>
           )}
@@ -165,7 +165,7 @@ export function KeywordAbilityForm({ abilityId, onSave, onCancel }: KeywordAbili
       )}
 
       {/* Actions */}
-      <div className="flex gap-3 pt-4 border-t border-slate-700">
+      <div className="flex gap-3 pt-4 border-t border-amber-200/50">
         <Button
           onClick={handleSave}
           disabled={!selectedKeywordName}

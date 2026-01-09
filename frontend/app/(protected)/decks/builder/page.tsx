@@ -9,6 +9,7 @@ import { decks } from '@/lib/decks';
 import { cards, CardData } from '@/lib/api';
 import { useDebounce } from '@/lib/hooks';
 import { Button } from '@/components/ui/Button';
+import { SearchInput } from '@/components/ui/SearchInput';
 import { Card } from '@/components/ui/Card';
 import { CardPreview } from '@/components/cards/CardPreview';
 import { CardGridSkeleton } from '@/components/skeletons/CardSkeleton';
@@ -177,10 +178,10 @@ export default function DeckBuilderPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-heading text-3xl font-bold text-white mb-2">
+          <h1 className="font-heading text-3xl font-bold text-slate-900 mb-2">
             Deck Builder
           </h1>
-          <p className="text-slate-400">
+          <p className="text-slate-600">
             {currentDeck ? `Editing: ${currentDeck.name}` : 'Create a new deck'}
           </p>
         </div>
@@ -223,7 +224,7 @@ export default function DeckBuilderPage() {
           <Card variant="elevated">
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
+                <label className="block text-sm font-medium text-slate-700 mb-2">
                   Deck Name *
                 </label>
                 <input
@@ -231,11 +232,11 @@ export default function DeckBuilderPage() {
                   value={deckName}
                   onChange={(e) => setDeckName(e.target.value)}
                   placeholder="My Awesome Deck"
-                  className="w-full px-3 py-2 bg-slate-700 text-white rounded border border-slate-600 focus:border-amber-500 focus:outline-none"
+                  className="w-full px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 focus:border-amber-500 focus:outline-none"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
+                <label className="block text-sm font-medium text-slate-700 mb-2">
                   Description
                 </label>
                 <textarea
@@ -243,7 +244,7 @@ export default function DeckBuilderPage() {
                   onChange={(e) => setDeckDescription(e.target.value)}
                   placeholder="Describe your deck..."
                   rows={3}
-                  className="w-full px-3 py-2 bg-slate-700 text-white rounded border border-slate-600 focus:border-amber-500 focus:outline-none"
+                  className="w-full px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 focus:border-amber-500 focus:outline-none"
                 />
               </div>
               <FormatSelector
@@ -257,9 +258,9 @@ export default function DeckBuilderPage() {
                   id="isPublic"
                   checked={isPublic}
                   onChange={(e) => setIsPublic(e.target.checked)}
-                  className="w-4 h-4 text-amber-600 bg-slate-700 border-slate-600 rounded focus:ring-amber-500"
+                  className="w-4 h-4 text-amber-600 bg-white border-amber-200/50 rounded focus:ring-amber-500"
                 />
-                <label htmlFor="isPublic" className="text-sm text-slate-300">
+                <label htmlFor="isPublic" className="text-sm text-slate-700">
                   Make deck public
                 </label>
               </div>
@@ -291,13 +292,11 @@ export default function DeckBuilderPage() {
           {/* Card Search */}
           <Card variant="elevated">
             <div className="p-6 space-y-4">
-              <h3 className="text-lg font-semibold text-white">Search Cards</h3>
-              <input
-                type="text"
+              <h3 className="text-lg font-semibold text-slate-900">Search Cards</h3>
+              <SearchInput
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={setSearchQuery}
                 placeholder="Search for cards..."
-                className="w-full px-3 py-2 bg-slate-700 text-white rounded border border-slate-600 focus:border-amber-500 focus:outline-none"
               />
               {searching ? (
                 <CardGridSkeleton count={8} />
@@ -313,7 +312,7 @@ export default function DeckBuilderPage() {
                   ))}
                 </div>
               ) : debouncedQuery ? (
-                <p className="text-slate-400 text-center py-4">No cards found</p>
+                <p className="text-slate-600 text-center py-4">No cards found</p>
               ) : null}
             </div>
           </Card>
@@ -322,7 +321,7 @@ export default function DeckBuilderPage() {
           {currentDeck && (
             <Card variant="elevated">
               <div className="p-6 space-y-4">
-                <h3 className="text-lg font-semibold text-white">
+                <h3 className="text-lg font-semibold text-slate-900">
                   Deck ({currentDeck.card_count} cards)
                 </h3>
                 <DeckCardList
@@ -373,7 +372,7 @@ export default function DeckBuilderPage() {
           <Card variant="elevated" className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-white">Import Deck List</h2>
+                <h2 className="text-xl font-semibold text-slate-900">Import Deck List</h2>
                 <Button
                   onClick={() => setShowImport(false)}
                   variant="outline"

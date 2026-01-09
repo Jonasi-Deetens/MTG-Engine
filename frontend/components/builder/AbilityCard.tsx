@@ -86,7 +86,7 @@ export function AbilityCard({ ability, type, onEdit, onDelete }: AbilityCardProp
   const badgeColor = getTypeBadgeColor(type);
 
   return (
-    <div className="bg-slate-700 rounded-lg p-4 border border-slate-600 hover:border-slate-500 transition-colors">
+    <div className="bg-white rounded-lg p-4 border border-amber-200/50 hover:border-amber-300/50 transition-colors">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2">
@@ -94,7 +94,7 @@ export function AbilityCard({ ability, type, onEdit, onDelete }: AbilityCardProp
               {type.charAt(0).toUpperCase() + type.slice(1)}
             </span>
           </div>
-          <p className="text-sm text-slate-200 line-clamp-2">{summary}</p>
+          <p className="text-sm text-slate-800 line-clamp-2">{summary}</p>
         </div>
         <div className="flex gap-2 shrink-0">
           <Button

@@ -2,8 +2,8 @@
 
 export function CardSkeleton() {
   return (
-    <div className="aspect-[63/88] bg-slate-800/50 border border-slate-700/50 rounded-lg animate-pulse">
-      <div className="w-full h-full bg-slate-700/50 rounded-lg"></div>
+    <div className="aspect-[63/88] bg-amber-50/50 border border-amber-200/50 rounded-lg animate-pulse">
+      <div className="w-full h-full bg-amber-100/50 rounded-lg"></div>
     </div>
   );
 }

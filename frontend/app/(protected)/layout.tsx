@@ -5,8 +5,6 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { SidebarProvider } from '@/context/SidebarContext';
-import { Sidebar } from '@/components/navigation/Sidebar';
 
 function ProtectedLayoutContent({
   children,
@@ -14,13 +12,10 @@ function ProtectedLayoutContent({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-slate-900 overflow-x-hidden">
-      {/* Sidebar - Fixed position, overlays content */}
-      <Sidebar />
-
-      {/* Main Content - Fixed margin for collapsed sidebar (expanded sidebar overlays) */}
-      <main className="min-h-screen overflow-x-hidden md:ml-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-16 md:pt-8">
+    <div className="min-h-screen bg-angel-white overflow-x-hidden">
+      {/* Main Content - Navbar is handled by NavbarWrapper in root layout */}
+      <main className="min-h-screen">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {children}
         </div>
       </main>
@@ -44,7 +39,7 @@ export default function ProtectedLayout({
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900">
+      <div className="min-h-screen flex items-center justify-center bg-angel-white">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>
       </div>
     );
@@ -54,10 +49,6 @@ export default function ProtectedLayout({
     return null;
   }
 
-  return (
-    <SidebarProvider>
-      <ProtectedLayoutContent>{children}</ProtectedLayoutContent>
-    </SidebarProvider>
-  );
+  return <ProtectedLayoutContent>{children}</ProtectedLayoutContent>;
 }
 

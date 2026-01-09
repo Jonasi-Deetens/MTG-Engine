@@ -44,13 +44,13 @@ export default function FavoritesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <Link href="/my-cards" className="text-slate-400 hover:text-white transition-colors mb-2 inline-block">
+          <Link href="/my-cards" className="text-slate-600 hover:text-amber-600 transition-colors mb-2 inline-block">
             ← Back to My Cards
           </Link>
-          <h1 className="font-heading text-3xl font-bold text-white mb-2">
+          <h1 className="font-heading text-3xl font-bold text-slate-900 mb-2">
             Favorites
           </h1>
-          <p className="text-slate-400">
+          <p className="text-slate-600">
             {favorites.length} favorite card{favorites.length !== 1 ? 's' : ''}
           </p>
         </div>
@@ -87,7 +87,7 @@ export default function FavoritesPage() {
             >
               Previous
             </Button>
-            <span className="text-slate-400">
+            <span className="text-slate-600">
               Page {page}
             </span>
             <Button

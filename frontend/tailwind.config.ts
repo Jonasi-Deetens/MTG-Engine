@@ -25,6 +25,14 @@ const config: Config = {
           gold: "#d4af37",
           amber: "#f4a460",
         },
+        // Angel theme colors (Elesh Norn white-yellow)
+        angel: {
+          white: "#fefcf8",
+          cream: "#f5f0e8",
+          gold: "#d4af37",
+          yellow: "#f4d03f",
+          amber: "#f4a460",
+        },
       },
       fontFamily: {
         sans: ["var(--font-inter)", "system-ui", "sans-serif"],
