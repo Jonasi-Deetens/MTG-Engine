@@ -1,8 +1,9 @@
 'use client';
 
-// frontend/app/(protected)/search/page.tsx
+// frontend/app/(app)/search/page.tsx
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Input } from '@/components/ui/Input';
 import { CardGrid } from '@/components/cards/CardGrid';
 import { CardGridSkeleton } from '@/components/skeletons/CardSkeleton';
@@ -33,7 +34,10 @@ const COLOR_NAMES: Record<string, string> = {
 };
 
 export default function SearchPage() {
-  const [searchQuery, setSearchQuery] = useState('');
+  const searchParams = useSearchParams();
+  const urlQuery = searchParams.get('q') || '';
+  
+  const [searchQuery, setSearchQuery] = useState(urlQuery);
   const [allCards, setAllCards] = useState<CardData[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -48,6 +52,11 @@ export default function SearchPage() {
   const [showFilters, setShowFilters] = useState(false);
 
   const debouncedQuery = useDebounce(searchQuery, 500);
+
+  // Sync search query with URL parameter
+  useEffect(() => {
+    setSearchQuery(urlQuery);
+  }, [urlQuery]);
 
   const searchCards = useCallback(async (query: string, pageNum: number = 1) => {
     if (!query.trim()) {

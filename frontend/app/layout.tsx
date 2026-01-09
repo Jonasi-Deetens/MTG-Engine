@@ -29,7 +29,9 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${cinzel.variable} antialiased bg-slate-900 text-slate-100 overflow-x-hidden`}
       >
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

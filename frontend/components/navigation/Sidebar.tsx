@@ -18,6 +18,7 @@ import {
   Heart,
   Rocket,
   LogOut,
+  LogIn,
   Menu,
   X,
 } from 'lucide-react';
@@ -27,22 +28,23 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   section?: string;
+  requiresAuth?: boolean;
 }
 
 const navItems: NavItem[] = [
-  { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', section: 'main' },
-  { href: '/search', icon: Search, label: 'Search', section: 'main' },
-  { href: '/browse', icon: Grid3x3, label: 'Browse', section: 'main' },
-  { href: '/builder', icon: Code, label: 'Builder', section: 'build' },
-  { href: '/decks', icon: BookOpen, label: 'Decks', section: 'build' },
-  { href: '/templates', icon: Layers, label: 'Templates', section: 'build' },
-  { href: '/my-cards', icon: Heart, label: 'My Cards', section: 'collections' },
-  { href: '/getting-started', icon: Rocket, label: 'Getting Started', section: 'help' },
+  { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', section: 'main', requiresAuth: true },
+  { href: '/search', icon: Search, label: 'Search', section: 'main', requiresAuth: false },
+  { href: '/browse', icon: Grid3x3, label: 'Browse', section: 'main', requiresAuth: false },
+  { href: '/builder', icon: Code, label: 'Builder', section: 'build', requiresAuth: false },
+  { href: '/decks', icon: BookOpen, label: 'Decks', section: 'build', requiresAuth: true },
+  { href: '/templates', icon: Layers, label: 'Templates', section: 'build', requiresAuth: false },
+  { href: '/my-cards', icon: Heart, label: 'My Cards', section: 'collections', requiresAuth: true },
+  { href: '/getting-started', icon: Rocket, label: 'Getting Started', section: 'help', requiresAuth: false },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { user, logout } = useAuth();
+  const { user, logout, isAuthenticated } = useAuth();
   const { isCollapsed } = useSidebar();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
@@ -51,8 +53,11 @@ export function Sidebar() {
   const isExpanded = isHovering;
   const sidebarWidth = isExpanded ? 'w-64' : 'w-16';
 
+  // Filter nav items based on authentication
+  const visibleNavItems = navItems.filter(item => !item.requiresAuth || isAuthenticated);
+
   // Group nav items by section
-  const groupedItems = navItems.reduce((acc, item) => {
+  const groupedItems = visibleNavItems.reduce((acc, item) => {
     const section = item.section || 'main';
     if (!acc[section]) acc[section] = [];
     acc[section].push(item);
@@ -99,12 +104,12 @@ export function Sidebar() {
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-slate-700 relative z-10 h-16 overflow-hidden">
         {isExpanded ? (
-          <Link href="/dashboard" className="flex items-center gap-2 h-full">
+          <Link href="/" className="flex items-center gap-2 h-full">
             <BookOpen className="w-5 h-5 text-amber-500 flex-shrink-0" />
             <span className="font-heading text-lg font-bold text-white whitespace-nowrap overflow-hidden text-ellipsis">MTG Engine</span>
           </Link>
         ) : (
-          <Link href="/dashboard" className="flex items-center justify-center w-full h-full">
+          <Link href="/" className="flex items-center justify-center w-full h-full">
             <BookOpen className="w-5 h-5 text-amber-500 flex-shrink-0" />
           </Link>
         )}
@@ -136,32 +141,53 @@ export function Sidebar() {
 
       {/* User Section */}
       <div className="border-t border-slate-700 p-4 relative z-10 min-h-[88px] overflow-hidden">
-        {isExpanded ? (
-          <div className="space-y-2">
-            <div className="px-3 py-2 text-sm text-slate-400 h-8 flex items-center overflow-hidden">
-              <span className="whitespace-nowrap overflow-hidden text-ellipsis">{user?.username}</span>
+        {isAuthenticated ? (
+          isExpanded ? (
+            <div className="space-y-2">
+              <div className="px-3 py-2 text-sm text-slate-400 h-8 flex items-center overflow-hidden">
+                <span className="whitespace-nowrap overflow-hidden text-ellipsis">{user?.username}</span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => logout()}
+                className="w-full flex items-center justify-center gap-2 h-10"
+              >
+                <LogOut className="w-5 h-5" />
+                Logout
+              </Button>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => logout()}
-              className="w-full flex items-center justify-center gap-2 h-10"
-            >
-              <LogOut className="w-5 h-5" />
-              Logout
-            </Button>
-          </div>
+          ) : (
+            <div className="flex items-center justify-center h-full">
+              <button
+                onClick={() => logout()}
+                className="w-full flex items-center justify-center p-2 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-white transition-colors h-10"
+                aria-label="Logout"
+                title="Logout"
+              >
+                <LogOut className="w-5 h-5" />
+              </button>
+            </div>
+          )
         ) : (
-          <div className="flex items-center justify-center h-full">
-            <button
-              onClick={() => logout()}
-              className="w-full flex items-center justify-center p-2 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-white transition-colors h-10"
-              aria-label="Logout"
-              title="Logout"
+          isExpanded ? (
+            <Link
+              href="/login"
+              className="w-full flex items-center justify-center gap-2 h-10 px-3 rounded-lg bg-amber-600 hover:bg-amber-700 text-white transition-colors"
             >
-              <LogOut className="w-5 h-5" />
-            </button>
-          </div>
+              <LogIn className="w-5 h-5" />
+              Login
+            </Link>
+          ) : (
+            <Link
+              href="/login"
+              className="w-full flex items-center justify-center p-2 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-white transition-colors h-10"
+              aria-label="Login"
+              title="Login"
+            >
+              <LogIn className="w-5 h-5" />
+            </Link>
+          )
         )}
       </div>
     </div>

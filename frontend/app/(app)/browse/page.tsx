@@ -1,6 +1,6 @@
 'use client';
 
-// frontend/app/(protected)/browse/page.tsx
+// frontend/app/(app)/browse/page.tsx
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';

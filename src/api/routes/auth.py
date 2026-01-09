@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
 from datetime import datetime, timedelta
+from typing import Optional
 import secrets
 import bcrypt
 
@@ -124,6 +125,22 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
             detail="User not found"
         )
     
+    return user
+
+
+def get_optional_user(request: Request, db: Session = Depends(get_db)) -> Optional[User]:
+    """Get current user from session, or None if not authenticated."""
+    session_id = request.cookies.get("session_id")
+    if not session_id or session_id not in sessions:
+        return None
+    
+    session_data = sessions[session_id]
+    if datetime.utcnow() > session_data["expires_at"]:
+        if session_id in sessions:
+            del sessions[session_id]
+        return None
+    
+    user = db.query(User).filter(User.id == session_data["user_id"]).first()
     return user
 
 

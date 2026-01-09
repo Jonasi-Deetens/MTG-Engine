@@ -1,6 +1,6 @@
 'use client';
 
-// frontend/app/(protected)/cards/[card_id]/page.tsx
+// frontend/app/cards/[card_id]/page.tsx
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -17,12 +17,14 @@ import { useBuilderStore } from '@/store/builderStore';
 import { AbilityTreeView } from '@/components/builder/AbilityTreeView';
 import { RarityBadge } from '@/components/ui/RarityBadge';
 import { LegalityDisplay } from '@/components/cards/LegalityDisplay';
+import { useAuth } from '@/context/AuthContext';
 
 export default function CardDetailPage() {
   const params = useParams();
   const router = useRouter();
   const cardId = params.card_id as string;
   const { loadFromGraph } = useBuilderStore();
+  const { isAuthenticated } = useAuth();
   
   const [card, setCard] = useState<CardData | null>(null);
   const [allVersions, setAllVersions] = useState<CardData[]>([]);
@@ -52,20 +54,22 @@ export default function CardDetailPage() {
           setAllVersions([cardData]);
         }
         
-        // Try to fetch saved ability graph
-        setLoadingGraph(true);
-        try {
-          const graph = await abilities.getCardGraph(cardId);
-          if (graph && graph.ability_graph) {
-            setAbilityGraph(graph.ability_graph);
+        // Try to fetch saved ability graph (only if authenticated)
+        if (isAuthenticated) {
+          setLoadingGraph(true);
+          try {
+            const graph = await abilities.getCardGraph(cardId);
+            if (graph && graph.ability_graph) {
+              setAbilityGraph(graph.ability_graph);
+            }
+          } catch (err: any) {
+            // 404 is fine - no graph saved yet
+            if (err.status !== 404) {
+              console.error('Failed to fetch ability graph:', err);
+            }
+          } finally {
+            setLoadingGraph(false);
           }
-        } catch (err: any) {
-          // 404 is fine - no graph saved yet
-          if (err.status !== 404) {
-            console.error('Failed to fetch ability graph:', err);
-          }
-        } finally {
-          setLoadingGraph(false);
         }
       } catch (err: any) {
         setError(err?.data?.detail || err?.message || 'Failed to load card');
@@ -75,7 +79,7 @@ export default function CardDetailPage() {
     };
 
     fetchCard();
-  }, [cardId]);
+  }, [cardId, isAuthenticated]);
 
   const handleVersionChange = async (newCard: CardData) => {
     router.push(`/cards/${newCard.card_id}`);
@@ -150,8 +154,7 @@ export default function CardDetailPage() {
   const imageUrl = card.image_uris?.large || card.image_uris?.normal || card.image_uris?.small;
 
   return (
-    <div className="min-h-screen bg-slate-900 p-4">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <Link href="/search" className="text-slate-400 hover:text-white transition-colors">
@@ -161,10 +164,14 @@ export default function CardDetailPage() {
             <Button onClick={handleShare} variant="outline" size="sm">
               Share
             </Button>
-            <AddToCollectionButton cardId={card.card_id} />
-            <Button onClick={handleEditInBuilder} variant="primary" size="sm">
-              Edit in Builder
-            </Button>
+            {isAuthenticated && (
+              <>
+                <AddToCollectionButton cardId={card.card_id} />
+                <Button onClick={handleEditInBuilder} variant="primary" size="sm">
+                  Edit in Builder
+                </Button>
+              </>
+            )}
           </div>
         </div>
 
@@ -215,7 +222,7 @@ export default function CardDetailPage() {
                     <p className="text-xl font-mono text-amber-400">{card.mana_cost}</p>
                   )}
                 </div>
-                <FavoriteButton cardId={card.card_id} size="lg" />
+                {isAuthenticated && <FavoriteButton cardId={card.card_id} size="lg" />}
               </div>
 
               {card.type_line && (
@@ -333,37 +340,41 @@ export default function CardDetailPage() {
           </div>
         </div>
 
-        {/* Ability Graph Section */}
-        {loadingGraph ? (
-          <div className="bg-slate-800 rounded-lg p-6">
-            <div className="text-center text-slate-400">Loading ability graph...</div>
-          </div>
-        ) : abilityGraph ? (
-          <div className="bg-slate-800 rounded-lg p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold text-white">Saved Ability Graph</h2>
-              <div className="flex items-center gap-2">
-                <Button onClick={handleExportGraph} variant="outline" size="sm">
-                  Export JSON
-                </Button>
-                <Button onClick={handleEditInBuilder} variant="secondary" size="sm">
-                  Edit Graph
-                </Button>
+        {/* Ability Graph Section - Only show if authenticated */}
+        {isAuthenticated && (
+          <>
+            {loadingGraph ? (
+              <div className="bg-slate-800 rounded-lg p-6">
+                <div className="text-center text-slate-400">Loading ability graph...</div>
               </div>
-            </div>
-            <div className="bg-slate-900 rounded-lg p-4">
-              <AbilityTreeView />
-            </div>
-          </div>
-        ) : (
-          <div className="bg-slate-800 rounded-lg p-6">
-            <div className="text-center space-y-4">
-              <p className="text-slate-400">No ability graph saved for this card yet.</p>
-              <Button onClick={handleEditInBuilder} variant="primary">
-                Create Ability Graph
-              </Button>
-            </div>
-          </div>
+            ) : abilityGraph ? (
+              <div className="bg-slate-800 rounded-lg p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-2xl font-bold text-white">Saved Ability Graph</h2>
+                  <div className="flex items-center gap-2">
+                    <Button onClick={handleExportGraph} variant="outline" size="sm">
+                      Export JSON
+                    </Button>
+                    <Button onClick={handleEditInBuilder} variant="secondary" size="sm">
+                      Edit Graph
+                    </Button>
+                  </div>
+                </div>
+                <div className="bg-slate-900 rounded-lg p-4">
+                  <AbilityTreeView />
+                </div>
+              </div>
+            ) : (
+              <div className="bg-slate-800 rounded-lg p-6">
+                <div className="text-center space-y-4">
+                  <p className="text-slate-400">No ability graph saved for this card yet.</p>
+                  <Button onClick={handleEditInBuilder} variant="primary">
+                    Create Ability Graph
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {/* All Versions Section */}
@@ -402,7 +413,6 @@ export default function CardDetailPage() {
             </div>
           </div>
         )}
-      </div>
     </div>
   );
 }
