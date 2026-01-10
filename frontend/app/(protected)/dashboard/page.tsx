@@ -5,7 +5,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { decks } from '@/lib/decks';
+import { decks, DeckDetailResponse } from '@/lib/decks';
 import { collections } from '@/lib/collections';
 import { cards } from '@/lib/api';
 import { DeckResponse } from '@/lib/decks';
@@ -14,6 +14,7 @@ import { CardPreview } from '@/components/cards/CardPreview';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { QuickActions } from '@/components/dashboard/QuickActions';
+import { DeckCard } from '@/components/decks/DeckCard';
 import { BookOpen, Heart, Folder } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -24,6 +25,7 @@ export default function DashboardPage() {
     collections: 0,
   });
   const [recentDecks, setRecentDecks] = useState<DeckResponse[]>([]);
+  const [deckDetails, setDeckDetails] = useState<Record<number, DeckDetailResponse>>({});
   const [featuredCards, setFeaturedCards] = useState<CardData[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -53,7 +55,22 @@ export default function DashboardPage() {
         const sortedDecks = [...decksList].sort(
           (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
         );
-        setRecentDecks(sortedDecks.slice(0, 5));
+        const topDecks = sortedDecks.slice(0, 5);
+        setRecentDecks(topDecks);
+
+        // Fetch deck details for all decks to get commander/first card images
+        const allDeckDetails: Record<number, DeckDetailResponse> = {};
+        await Promise.all(
+          topDecks.map(async (deck) => {
+            try {
+              const detail = await decks.getDeck(deck.id);
+              allDeckDetails[deck.id] = detail;
+            } catch (err) {
+              console.error(`Failed to load details for deck ${deck.id}:`, err);
+            }
+          })
+        );
+        setDeckDetails(allDeckDetails);
 
         // Filter out nulls from random cards
         setFeaturedCards(randomCards.filter((card): card is CardData => card !== null));
@@ -94,14 +111,23 @@ export default function DashboardPage() {
           <div className="p-6 relative">
             <div className="flex items-center justify-between mb-4">
               <span className="text-[color:var(--theme-text-secondary)] text-sm uppercase tracking-wide">Decks</span>
-              <div className="p-2 rounded-lg bg-[color:var(--theme-accent-primary)]/10 border border-[color:var(--theme-accent-primary)]/20">
+              <div className="p-2 rounded-lg">
                 <BookOpen className="w-6 h-6 text-[color:var(--theme-accent-primary)]" />
               </div>
             </div>
-            <div className="text-4xl font-bold text-[color:var(--theme-text-primary)] mb-2">{stats.decks}</div>
-            <Link href="/decks" className="text-sm text-[color:var(--theme-accent-primary)] hover:text-theme-accent-hover inline-flex items-center gap-1 transition-colors">
-              View all <span>→</span>
-            </Link>
+            <div className="text-4xl font-bold text-[color:var(--theme-text-primary)] mb-4">{stats.decks}</div>
+            <div className="flex flex-col gap-2">
+              <Link href="/decks">
+                <Button variant="primary" size="sm" className="w-full">
+                  View All
+                </Button>
+              </Link>
+              <Link href="/decks/builder">
+                <Button variant="outline" size="sm" className="w-full">
+                  Create New
+                </Button>
+              </Link>
+            </div>
           </div>
         </Card>
 
@@ -110,13 +136,15 @@ export default function DashboardPage() {
           <div className="p-6 relative">
             <div className="flex items-center justify-between mb-4">
               <span className="text-[color:var(--theme-text-secondary)] text-sm uppercase tracking-wide">Favorites</span>
-              <div className="p-2 rounded-lg bg-pink-500/10 border border-pink-500/20">
+              <div className="p-2 rounded-lg">
                 <Heart className="w-6 h-6 text-pink-500" fill="currentColor" />
               </div>
             </div>
-            <div className="text-4xl font-bold text-[color:var(--theme-text-primary)] mb-2">{stats.favorites}</div>
-            <Link href="/my-cards/favorites" className="text-sm text-pink-500 hover:text-pink-400 inline-flex items-center gap-1 transition-colors">
-              View all <span>→</span>
+            <div className="text-4xl font-bold text-[color:var(--theme-text-primary)] mb-4">{stats.favorites}</div>
+            <Link href="/my-cards/favorites">
+              <Button variant="primary" size="sm" className="w-full">
+                View All
+              </Button>
             </Link>
           </div>
         </Card>
@@ -126,14 +154,23 @@ export default function DashboardPage() {
           <div className="p-6 relative">
             <div className="flex items-center justify-between mb-4">
               <span className="text-[color:var(--theme-text-secondary)] text-sm uppercase tracking-wide">Collections</span>
-              <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
+              <div className="p-2 rounded-lg">
                 <Folder className="w-6 h-6 text-blue-500" />
               </div>
             </div>
-            <div className="text-4xl font-bold text-[color:var(--theme-text-primary)] mb-2">{stats.collections}</div>
-            <Link href="/my-cards/collections" className="text-sm text-blue-500 hover:text-blue-400 inline-flex items-center gap-1 transition-colors">
-              View all <span>→</span>
-            </Link>
+            <div className="text-4xl font-bold text-[color:var(--theme-text-primary)] mb-4">{stats.collections}</div>
+            <div className="flex flex-col gap-2">
+              <Link href="/my-cards/collections">
+                <Button variant="primary" size="sm" className="w-full">
+                  View All
+                </Button>
+              </Link>
+              <Link href="/my-cards/collections">
+                <Button variant="outline" size="sm" className="w-full">
+                  Create New
+                </Button>
+              </Link>
+            </div>
           </div>
         </Card>
       </div>
@@ -153,26 +190,18 @@ export default function DashboardPage() {
             </Link>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {recentDecks.map((deck) => (
-              <Link key={deck.id} href={`/decks/${deck.id}`}>
-                <Card variant="elevated" className="p-6 transition-colors cursor-pointer h-full">
-                  <h3 className="font-semibold text-[color:var(--theme-text-primary)] mb-2">{deck.name}</h3>
-                  {deck.description && (
-                    <p className="text-sm text-[color:var(--theme-text-secondary)] mb-3 line-clamp-2">{deck.description}</p>
-                  )}
-                  <div className="flex items-center gap-4 text-sm text-[color:var(--theme-text-secondary)]">
-                    <span>{deck.format}</span>
-                    <span>{deck.card_count} cards</span>
-                    {deck.commander_count > 0 && (
-                      <span>{deck.commander_count} commander{deck.commander_count > 1 ? 's' : ''}</span>
-                    )}
-                  </div>
-                  <div className="mt-3 text-xs text-[color:var(--theme-text-muted)]">
-                    Updated {new Date(deck.updated_at).toLocaleDateString()}
-                  </div>
-                </Card>
-              </Link>
-            ))}
+            {recentDecks.map((deck) => {
+              const detail = deckDetails[deck.id];
+              return (
+                <Link key={deck.id} href={`/decks/${deck.id}`} className="block">
+                  <DeckCard
+                    deck={deck}
+                    deckDetail={detail}
+                    showActions={false}
+                  />
+                </Link>
+              );
+            })}
           </div>
         </div>
       )}

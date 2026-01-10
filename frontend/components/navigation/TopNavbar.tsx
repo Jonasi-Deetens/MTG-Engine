@@ -27,7 +27,7 @@ export function TopNavbar({ variant = 'app', showSpacer = true }: TopNavbarProps
   // Variant styles - theme-aware
   const variantStyles = {
     landing: {
-      container: 'bg-[color:var(--theme-card-bg)]/95 backdrop-blur-md border border-[color:var(--theme-card-border)]',
+      container: 'bg-[color:var(--theme-card-bg)]/95 backdrop-blur-md',
       text: 'text-[color:var(--theme-text-primary)]',
       hover: 'hover:bg-[color:var(--theme-card-hover)]/80',
       active: 'text-[color:var(--theme-nav-active)] font-semibold border-b-2 border-[color:var(--theme-nav-active-border)] pb-2',
@@ -35,7 +35,7 @@ export function TopNavbar({ variant = 'app', showSpacer = true }: TopNavbarProps
       mobileBorder: 'border-[color:var(--theme-card-border)]',
     },
     app: {
-      container: 'bg-[color:var(--theme-card-bg)]/98 backdrop-blur-sm border border-[color:var(--theme-card-border)]',
+      container: 'bg-[color:var(--theme-card-bg)]/98 backdrop-blur-sm',
       text: 'text-[color:var(--theme-text-secondary)]',
       hover: 'hover:bg-[color:var(--theme-card-hover)]/80',
       active: 'text-[color:var(--theme-nav-active)] font-semibold border-b-2 border-[color:var(--theme-nav-active-border)] pb-2',
@@ -70,10 +70,12 @@ export function TopNavbar({ variant = 'app', showSpacer = true }: TopNavbarProps
         className={`
           fixed top-4 left-4 right-4 z-50
           ${styles.container}
-          shadow-lg
           rounded-2xl
           transition-all
         `}
+        style={{
+          boxShadow: `0 2px 8px -4px var(--theme-accent-primary)`,
+        }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">

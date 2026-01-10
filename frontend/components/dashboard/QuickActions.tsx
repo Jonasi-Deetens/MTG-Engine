@@ -55,7 +55,7 @@ export function QuickActions({
 }: QuickActionsProps) {
   return (
     <div>
-      <h2 className="font-heading text-2xl font-bold text-slate-900 mb-4">{title}</h2>
+      <h2 className="font-heading text-2xl font-bold text-[color:var(--theme-text-primary)] mb-4">{title}</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {actions.map((action) => (
           <QuickActionCard

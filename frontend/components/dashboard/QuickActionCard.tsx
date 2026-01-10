@@ -73,16 +73,19 @@ export function QuickActionCard({
       <Card
         variant="elevated"
         className={`
-          relative overflow-hidden p-6 
-          hover:scale-105 hover:shadow-xl ${colors.hoverShadow}
-          transition-all cursor-pointer h-full group 
-          border border-[color:var(--theme-card-border)] ${colors.hoverBorder}
+          relative overflow-visible p-6 
+          hover:scale-105
+          transition-all duration-200 cursor-pointer h-full group 
+          border-0
         `}
       >
-        <div
-          className={`absolute inset-0 bg-gradient-to-br ${colors.hoverGradient} via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity`}
+        {/* Theme-colored drop shadow on hover */}
+        <div className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none" 
+             style={{
+               boxShadow: `0 4px 20px -4px var(--theme-accent-primary)`,
+             }}
         />
-        <div className="text-center relative">
+        <div className="text-center relative z-10">
           <div
             className={`inline-flex p-3 rounded-xl ${colors.iconBg} mb-4 transition-colors`}
           >

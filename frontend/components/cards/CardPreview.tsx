@@ -23,6 +23,7 @@ export interface CardData {
     small?: string;
     normal?: string;
     large?: string;
+    art_crop?: string;
   };
   set_code?: string;
   collector_number?: string;
@@ -43,9 +44,10 @@ interface CardPreviewProps {
   onVersionChange?: (card: CardData) => void;
   onAddToDeck?: (card: CardData) => void;
   showAddButton?: boolean;
+  disableClick?: boolean;
 }
 
-export function CardPreview({ card, onVersionChange, onAddToDeck, showAddButton = false }: CardPreviewProps) {
+export function CardPreview({ card, onVersionChange, onAddToDeck, showAddButton = false, disableClick = false }: CardPreviewProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [allVersions, setAllVersions] = useState<CardData[]>([]);
   const [loadingVersions, setLoadingVersions] = useState(false);
@@ -83,23 +85,29 @@ export function CardPreview({ card, onVersionChange, onAddToDeck, showAddButton 
     <>
       <div className="aspect-[63/88] relative overflow-visible rounded-xl flex items-center justify-center group">
         <div 
-          className={`absolute inset-0 transition-all duration-300 ease-out hover:scale-105 hover:shadow-2xl hover:shadow-black/60 cursor-pointer rounded-xl`}
-          onClick={handleCardClick}
+          className={`absolute inset-0 transition-all duration-300 ease-out hover:scale-105 ${disableClick ? '' : 'cursor-pointer'} rounded-xl group`}
+          onClick={disableClick ? undefined : handleCardClick}
         >
           {imageUrl ? (
             <Image
               src={imageUrl}
               alt={card.name}
               fill
-              className="object-cover rounded-xl"
+              className="object-cover rounded-xl relative z-10"
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
               unoptimized
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-[color:var(--theme-text-secondary)] text-xs text-center p-2 bg-[color:var(--theme-card-hover)] rounded-xl">
+            <div className="w-full h-full flex items-center justify-center text-[color:var(--theme-text-secondary)] text-xs text-center p-2 bg-[color:var(--theme-card-hover)] rounded-xl relative z-10">
               No Image
             </div>
           )}
+          {/* Theme-colored drop shadow on hover */}
+          <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-0" 
+               style={{
+                 boxShadow: `0 4px 12px -2px var(--theme-accent-primary)`,
+               }}
+          />
         </div>
 
         {/* Add to Deck Button Overlay */}

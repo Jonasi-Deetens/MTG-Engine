@@ -8,8 +8,8 @@ import { decks, DeckResponse } from '@/lib/decks';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { StatusBadge } from '@/components/ui/StatusBadge';
-import { BookOpen, SearchX, Users, Globe, Lock } from 'lucide-react';
+import { DeckCard } from '@/components/decks/DeckCard';
+import { BookOpen, SearchX } from 'lucide-react';
 import Link from 'next/link';
 
 export default function DecksPage() {
@@ -127,78 +127,12 @@ export default function DecksPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredDecks.map((deck) => (
-            <Card key={deck.id} variant="elevated">
-              <div className="p-6 space-y-4">
-                <div>
-                  <div className="flex items-start justify-between mb-3">
-                    <h3 className="text-xl font-semibold text-[color:var(--theme-text-primary)] flex-1">
-                      {deck.name}
-                    </h3>
-                    <div className="flex items-center gap-2 ml-2">
-                      {deck.is_public ? (
-                        <StatusBadge
-                          label="Public"
-                          variant="success"
-                          icon={Globe}
-                          size="sm"
-                        />
-                      ) : (
-                        <StatusBadge
-                          label="Private"
-                          variant="default"
-                          icon={Lock}
-                          size="sm"
-                        />
-                      )}
-                    </div>
-                  </div>
-                  {deck.description && (
-                    <p className="text-[color:var(--theme-text-secondary)] text-sm mb-3 line-clamp-2">
-                      {deck.description}
-                    </p>
-                  )}
-                  <div className="flex flex-wrap items-center gap-2 mb-2">
-                    <StatusBadge
-                      label={deck.format}
-                      variant="info"
-                      size="sm"
-                    />
-                  </div>
-                  <div className="flex items-center gap-4 text-sm text-[color:var(--theme-text-secondary)]">
-                    <span className="flex items-center gap-1">
-                      <BookOpen className="w-4 h-4" />
-                      {deck.card_count} cards
-                    </span>
-                    {deck.commander_count > 0 && (
-                      <span className="flex items-center gap-1">
-                        <Users className="w-4 h-4" />
-                        {deck.commander_count} commander{deck.commander_count > 1 ? 's' : ''}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex gap-2 pt-4 border-t border-amber-200/50">
-                  <Link href={`/decks/${deck.id}`} className="flex-1">
-                    <Button variant="primary" size="sm" className="w-full">
-                      View
-                    </Button>
-                  </Link>
-                  <Link href={`/decks/builder?deck=${deck.id}`} className="flex-1">
-                    <Button variant="outline" size="sm" className="w-full">
-                      Edit
-                    </Button>
-                  </Link>
-                  <Button
-                    onClick={() => handleDelete(deck.id, deck.name)}
-                    variant="outline"
-                    size="sm"
-                    className="text-[color:var(--theme-status-error)] hover:opacity-90"
-                  >
-                    Delete
-                  </Button>
-                </div>
-              </div>
-            </Card>
+            <DeckCard
+              key={deck.id}
+              deck={deck}
+              showActions={true}
+              onDelete={handleDelete}
+            />
           ))}
         </div>
       )}

@@ -7,10 +7,10 @@ interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: 'default' | 'elevated' | 'bordered';
 }
 
-export function Card({ children, variant = 'default', className, ...props }: CardProps) {
+export function Card({ children, variant = 'default', className, style, ...props }: CardProps) {
   const variants = {
     default: 'bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] hover:border-[color:var(--theme-border-hover)] shadow-md hover:shadow-lg',
-    elevated: 'bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] hover:border-[color:var(--theme-border-hover)] shadow-xl hover:shadow-2xl shadow-black/10',
+    elevated: 'bg-[color:var(--theme-card-bg)] border-0',
     bordered: 'bg-[color:var(--theme-card-bg)] border-2 border-[color:var(--theme-accent-primary)] hover:border-theme-accent-hover shadow-md hover:shadow-lg',
   };
   
@@ -19,8 +19,10 @@ export function Card({ children, variant = 'default', className, ...props }: Car
       className={cn(
         'rounded-lg p-6 transition-all duration-200',
         variants[variant],
+        variant === 'elevated' && 'card-elevated-shadow',
         className
       )}
+      style={style}
       {...props}
     >
       {children}

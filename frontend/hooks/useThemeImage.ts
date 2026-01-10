@@ -15,68 +15,55 @@ export function useThemeImage(
   imageName: string,
   extension: string = 'png'
 ): string {
-  // Initialize with theme-specific image path immediately
-  const getInitialImagePath = (): string => {
+  // Helper function to get current theme
+  const getCurrentTheme = (): Theme => {
     if (typeof document !== 'undefined') {
       const dataTheme = document.documentElement.getAttribute('data-theme') as Theme | null;
-      let theme: Theme = defaultTheme;
+      // Migrate 'angel' to 'light' if found
       if (dataTheme === 'angel') {
-        theme = 'light';
-      } else if (dataTheme && ['light', 'dark'].includes(dataTheme)) {
-        theme = dataTheme;
-      } else if (typeof window !== 'undefined') {
-        try {
-          const storedTheme = localStorage.getItem('mtg-engine-theme') as Theme | null;
-          if (storedTheme === 'angel') {
-            theme = 'light';
-          } else if (storedTheme && ['light', 'dark'].includes(storedTheme)) {
-            theme = storedTheme;
-          }
-        } catch (e) {
-          // Ignore
-        }
+        return 'light';
       }
-      return getThemeImage(imageName, theme, extension);
+      if (dataTheme && ['light', 'dark'].includes(dataTheme)) {
+        return dataTheme;
+      }
     }
-    return getThemeImage(imageName, defaultTheme, extension);
+    if (typeof window !== 'undefined') {
+      try {
+        const storedTheme = localStorage.getItem('mtg-engine-theme') as Theme | null;
+        // Migrate 'angel' to 'light' if found
+        if (storedTheme === 'angel') {
+          return 'light';
+        }
+        const availableThemes: Theme[] = ['light', 'dark'];
+        if (storedTheme && availableThemes.includes(storedTheme)) {
+          return storedTheme;
+        }
+      } catch (e) {
+        // Ignore
+      }
+    }
+    return defaultTheme;
+  };
+
+  // Initialize with theme-specific image path immediately
+  const getInitialImagePath = (): string => {
+    const theme = getCurrentTheme();
+    return getThemeImage(imageName, theme, extension);
   };
 
   const [imagePath, setImagePath] = useState(getInitialImagePath);
-  const [currentTheme, setCurrentTheme] = useState<Theme>(defaultTheme);
+  const [currentTheme, setCurrentTheme] = useState<Theme>(getCurrentTheme);
 
-  // Get initial theme from document or localStorage
+  // Get initial theme from document or localStorage and update image immediately
   useEffect(() => {
-    const getCurrentTheme = (): Theme => {
-      if (typeof document !== 'undefined') {
-        const dataTheme = document.documentElement.getAttribute('data-theme') as Theme | null;
-        // Migrate 'angel' to 'light' if found
-        if (dataTheme === 'angel') {
-          return 'light';
-        }
-        if (dataTheme && ['light', 'dark'].includes(dataTheme)) {
-          return dataTheme;
-        }
-      }
-      if (typeof window !== 'undefined') {
-        try {
-          const storedTheme = localStorage.getItem('mtg-engine-theme') as Theme | null;
-          // Migrate 'angel' to 'light' if found
-          if (storedTheme === 'angel') {
-            return 'light';
-          }
-          const availableThemes: Theme[] = ['light', 'dark'];
-          if (storedTheme && availableThemes.includes(storedTheme)) {
-            return storedTheme;
-          }
-        } catch (e) {
-          // Ignore
-        }
-      }
-      return defaultTheme;
-    };
-
     const initialTheme = getCurrentTheme();
     setCurrentTheme(initialTheme);
+    
+    // Immediately update image path if it's different
+    const initialImagePath = getThemeImage(imageName, initialTheme, extension);
+    if (imagePath !== initialImagePath) {
+      setImagePath(initialImagePath);
+    }
 
     // Listen to data-theme attribute changes (MutationObserver)
     if (typeof document !== 'undefined') {
@@ -126,28 +113,31 @@ export function useThemeImage(
     // Get theme-specific image path
     const themeImage = getThemeImage(imageName, currentTheme, extension);
     
-    // Only update if the path actually changed to prevent unnecessary reloads
+    // Always update to match current theme (handles navigation back to page)
     if (imagePath !== themeImage) {
       // Preload the new image before switching to prevent flickering
       const img = new Image();
+      let cancelled = false;
+      
       img.onload = () => {
-        // Only update if theme hasn't changed while loading
-        setImagePath((prevPath) => {
-          const currentThemeImage = getThemeImage(imageName, currentTheme, extension);
-          return currentThemeImage === themeImage ? themeImage : prevPath;
-        });
+        if (!cancelled) {
+          setImagePath(themeImage);
+        }
       };
       img.onerror = () => {
         // Theme-specific image doesn't exist, but still use theme-specific path
         // This prevents flickering - let browser handle 404 gracefully
-        setImagePath((prevPath) => {
-          const currentThemeImage = getThemeImage(imageName, currentTheme, extension);
-          return currentThemeImage === themeImage ? themeImage : prevPath;
-        });
+        if (!cancelled) {
+          setImagePath(themeImage);
+        }
       };
       img.src = themeImage;
+      
+      return () => {
+        cancelled = true;
+      };
     }
-  }, [currentTheme, imageName, extension]);
+  }, [currentTheme, imageName, extension, imagePath]);
 
   return imagePath;
 }

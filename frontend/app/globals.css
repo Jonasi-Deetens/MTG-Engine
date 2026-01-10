@@ -156,3 +156,14 @@ body {
   transform: translateY(-4px);
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
 }
+
+/* Elevated card shadow with theme color */
+.card-elevated-shadow {
+  box-shadow: 0 4px 6px -1px rgba(245, 158, 11, 0.1), 
+              0 2px 4px -1px rgba(245, 158, 11, 0.06);
+}
+
+[data-theme="dark"] .card-elevated-shadow {
+  box-shadow: 0 4px 6px -1px rgba(211, 32, 42, 0.1), 
+              0 2px 4px -1px rgba(211, 32, 42, 0.06);
+}
