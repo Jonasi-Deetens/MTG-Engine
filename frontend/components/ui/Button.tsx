@@ -23,7 +23,7 @@ export function Button({
   const variants = {
     primary: 'bg-[color:var(--theme-button-primary-bg)] hover:bg-[color:var(--theme-button-primary-hover)] text-[color:var(--theme-button-primary-text)] shadow-lg shadow-black/20',
     secondary: 'bg-[color:var(--theme-button-secondary-bg)] hover:bg-[color:var(--theme-button-secondary-hover)] text-[color:var(--theme-button-secondary-text)] border border-[color:var(--theme-border-default)]',
-    outline: 'border-2 border-[color:var(--theme-button-outline-border)] text-[color:var(--theme-button-outline-text)] hover:bg-[color:var(--theme-button-outline-hover)] hover:text-white bg-transparent',
+    outline: 'border-2 border-[color:var(--theme-button-outline-border)] text-[color:var(--theme-button-outline-text)] hover:bg-[color:var(--theme-button-outline-hover)] hover:text-[color:var(--theme-button-outline-text)] bg-transparent',
     ghost: 'bg-transparent hover:bg-[color:var(--theme-button-ghost-hover)] text-[color:var(--theme-button-ghost-text)] hover:text-[color:var(--theme-text-primary)]',
     danger: 'bg-[color:var(--theme-status-error)] hover:opacity-90 text-white',
     link: 'bg-transparent text-[color:var(--theme-accent-primary)] hover:text-[color:var(--theme-accent-hover)] underline-offset-4 hover:underline p-0',

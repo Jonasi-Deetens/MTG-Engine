@@ -36,6 +36,8 @@
   --theme-button-outline-hover: #d97706; /* amber-600 - darker amber hover */
   --theme-button-ghost-text: #4a4a4a;
   --theme-button-ghost-hover: #fef3c7; /* amber-100 - light amber hover */
+  --theme-nav-active: #f59e0b; /* amber-500 - active color for default/angel theme */
+  --theme-nav-active-border: #f59e0b; /* amber-500 - border color for active nav */
 }
 
 /* Light theme - neutral with subtle amber accents */
@@ -74,6 +76,8 @@
   --theme-button-outline-hover: #f1f5f9; /* slate-100 - neutral hover */
   --theme-button-ghost-text: #475569; /* slate-600 */
   --theme-button-ghost-hover: #f1f5f9; /* slate-100 */
+  --theme-nav-active: #475569; /* slate-600 - neutral active color for light theme */
+  --theme-nav-active-border: #475569; /* slate-600 - border color for active nav */
 }
 
 /* Dark theme */
@@ -112,6 +116,8 @@
   --theme-button-outline-hover: #f59e0b;
   --theme-button-ghost-text: #cbd5e1;
   --theme-button-ghost-hover: #334155;
+  --theme-nav-active: #ffffff; /* white - active color for dark theme */
+  --theme-nav-active-border: #ffffff; /* white - border color for active nav */
 }
 
 /* Angel theme (Elesh Norn white-yellow with amber/orange accents) */
@@ -150,6 +156,8 @@
   --theme-button-outline-hover: #d97706; /* amber-600 - darker amber hover */
   --theme-button-ghost-text: #4a4a4a;
   --theme-button-ghost-hover: #fef3c7; /* amber-100 - light amber hover */
+  --theme-nav-active: #f59e0b; /* amber-500 - active color for angel theme */
+  --theme-nav-active-border: #f59e0b; /* amber-500 - border color for active nav */
 }
 
 @theme inline {

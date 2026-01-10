@@ -30,7 +30,7 @@ export function TopNavbar({ variant = 'app', showSpacer = true }: TopNavbarProps
       container: 'bg-[color:var(--theme-card-bg)]/95 backdrop-blur-md border border-[color:var(--theme-card-border)]',
       text: 'text-[color:var(--theme-text-primary)]',
       hover: 'hover:bg-[color:var(--theme-card-hover)]/80',
-      active: 'text-[color:var(--theme-accent-primary)] font-semibold',
+      active: 'text-[color:var(--theme-nav-active)] font-semibold border-b-2 border-[color:var(--theme-nav-active-border)] pb-2',
       logo: 'text-[color:var(--theme-text-primary)]',
       mobileBorder: 'border-[color:var(--theme-card-border)]',
     },
@@ -38,7 +38,7 @@ export function TopNavbar({ variant = 'app', showSpacer = true }: TopNavbarProps
       container: 'bg-[color:var(--theme-card-bg)]/98 backdrop-blur-sm border border-[color:var(--theme-card-border)]',
       text: 'text-[color:var(--theme-text-secondary)]',
       hover: 'hover:bg-[color:var(--theme-card-hover)]/80',
-      active: 'text-[color:var(--theme-accent-primary)] font-semibold',
+      active: 'text-[color:var(--theme-nav-active)] font-semibold border-b-2 border-[color:var(--theme-nav-active-border)] pb-2',
       logo: 'text-[color:var(--theme-text-primary)]',
       mobileBorder: 'border-[color:var(--theme-card-border)]',
     },
@@ -53,8 +53,9 @@ export function TopNavbar({ variant = 'app', showSpacer = true }: TopNavbarProps
       <Link
         href={item.href}
         className={`
-          flex items-center px-4 py-2 rounded-lg transition-all
+          flex items-center px-4 py-2 rounded-lg transition-all relative
           ${isActive ? styles.active : `${styles.text} ${styles.hover}`}
+          ${isActive ? 'rounded-b-none -mb-[2px]' : ''}
         `}
         onClick={() => setIsMobileOpen(false)}
       >
