@@ -24,23 +24,23 @@ export function TopNavbar({ variant = 'app', showSpacer = true }: TopNavbarProps
   // Filter nav items based on authentication
   const visibleNavItems = navItems.filter(item => !item.requiresAuth || isAuthenticated);
 
-  // Variant styles - theme-aware
+  // Variant styles - theme-aware with glassmorphism
   const variantStyles = {
     landing: {
-      container: 'bg-[color:var(--theme-card-bg)]/95 backdrop-blur-md',
+      container: 'bg-[color:var(--theme-card-bg)]/70 backdrop-blur-md',
       text: 'text-[color:var(--theme-text-primary)]',
-      hover: 'hover:bg-[color:var(--theme-card-hover)]/80',
+      hover: '',
       active: 'text-[color:var(--theme-nav-active)] font-semibold border-b-2 border-[color:var(--theme-nav-active-border)] pb-2',
       logo: 'text-[color:var(--theme-text-primary)]',
-      mobileBorder: 'border-[color:var(--theme-card-border)]',
+      mobileBorder: 'border-white/20',
     },
     app: {
-      container: 'bg-[color:var(--theme-card-bg)]/98 backdrop-blur-sm',
+      container: 'bg-[color:var(--theme-card-bg)]/70 backdrop-blur-md',
       text: 'text-[color:var(--theme-text-secondary)]',
-      hover: 'hover:bg-[color:var(--theme-card-hover)]/80',
+      hover: '',
       active: 'text-[color:var(--theme-nav-active)] font-semibold border-b-2 border-[color:var(--theme-nav-active-border)] pb-2',
       logo: 'text-[color:var(--theme-text-primary)]',
-      mobileBorder: 'border-[color:var(--theme-card-border)]',
+      mobileBorder: 'border-white/20',
     },
   };
 
@@ -53,9 +53,9 @@ export function TopNavbar({ variant = 'app', showSpacer = true }: TopNavbarProps
       <Link
         href={item.href}
         className={`
-          flex items-center px-4 py-2 rounded-lg transition-all relative
-          ${isActive ? styles.active : `${styles.text} ${styles.hover}`}
-          ${isActive ? 'rounded-b-none -mb-[2px]' : ''}
+          flex items-center px-4 py-2 rounded-lg transition-colors relative group
+          ${isActive ? styles.active : `${styles.text} hover:text-[color:var(--theme-nav-active)] hover:font-semibold`}
+          ${isActive ? 'rounded-b-none -mb-[2px]' : 'group-hover:border-b-2 group-hover:border-[color:var(--theme-nav-active-border)] group-hover:pb-2 group-hover:rounded-b-none group-hover:-mb-[2px] border-b-2 border-transparent'}
         `}
         onClick={() => setIsMobileOpen(false)}
       >
