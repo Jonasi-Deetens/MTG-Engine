@@ -40,8 +40,8 @@ const LEGALITY_COLORS: Record<string, { bg: string; text: string; label: string 
     label: 'Restricted',
   },
   not_legal: {
-    bg: 'bg-slate-600/20',
-    text: 'text-slate-400',
+    bg: 'bg-[color:var(--theme-bg-secondary)]',
+    text: 'text-[color:var(--theme-text-secondary)]',
     label: 'Not Legal',
   },
 };
@@ -54,7 +54,7 @@ function getLegalityStyle(legality: string | undefined) {
 export function LegalityDisplay({ legalities, className = '' }: LegalityDisplayProps) {
   if (!legalities || Object.keys(legalities).length === 0) {
     return (
-      <div className={`text-sm text-slate-400 ${className}`}>
+      <div className={`text-sm text-[color:var(--theme-text-secondary)] ${className}`}>
         No legality information available
       </div>
     );
@@ -69,7 +69,7 @@ export function LegalityDisplay({ legalities, className = '' }: LegalityDisplayP
 
   return (
     <div className={`space-y-2 ${className}`}>
-      <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">
+      <p className="text-xs text-[color:var(--theme-text-muted)] uppercase tracking-wider mb-2">
         Format Legality
       </p>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">

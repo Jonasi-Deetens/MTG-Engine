@@ -154,9 +154,9 @@ export function ValidationPanel() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-slate-900">Validation</h3>
+        <h3 className="text-lg font-semibold text-[color:var(--theme-text-primary)]">Validation</h3>
         <div className="flex items-center gap-2">
-          <div className="text-sm text-slate-600">
+          <div className="text-sm text-[color:var(--theme-text-secondary)]">
             {totalAbilities} ability{totalAbilities !== 1 ? 'ies' : ''} added
           </div>
           {totalAbilities > 0 && (
@@ -201,13 +201,13 @@ export function ValidationPanel() {
       )}
       
       {validating && (
-        <div className="text-sm text-slate-400 mb-4">Validating...</div>
+        <div className="text-sm text-[color:var(--theme-text-muted)] mb-4">Validating...</div>
       )}
       
       {!validating && (
         <div className="space-y-3">
           {totalAbilities === 0 && (
-            <div className="p-3 bg-amber-50/50 border border-amber-200/50 rounded text-sm text-slate-600">
+            <div className="p-3 bg-[color:var(--theme-card-hover)] border border-[color:var(--theme-card-border)] rounded text-sm text-[color:var(--theme-text-secondary)]">
               No abilities added yet. Add abilities using the tabs above.
             </div>
           )}

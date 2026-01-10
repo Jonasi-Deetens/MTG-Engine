@@ -64,10 +64,10 @@ export default function BrowsePage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-heading text-3xl font-bold text-slate-900 mb-2">
+          <h1 className="font-heading text-3xl font-bold text-[color:var(--theme-text-primary)] mb-2">
             Browse Cards
           </h1>
-          <p className="text-slate-600">
+          <p className="text-[color:var(--theme-text-secondary)]">
             Explore Magic: The Gathering cards
           </p>
         </div>
@@ -77,7 +77,7 @@ export default function BrowsePage() {
       </div>
 
       {error && (
-        <div className="p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400">
+        <div className="p-4 bg-[color:var(--theme-status-error)]/20 border border-[color:var(--theme-status-error)]/50 rounded-lg text-[color:var(--theme-status-error)]">
           {error}
         </div>
       )}
@@ -86,7 +86,7 @@ export default function BrowsePage() {
         <CardGridSkeleton count={24} />
       ) : (
         <>
-          <div className="text-slate-600 text-sm">
+          <div className="text-[color:var(--theme-text-secondary)] text-sm">
             Showing {cardsData.length} of {total} cards (Page {page})
           </div>
           <CardGrid cards={cardsData} />
@@ -100,7 +100,7 @@ export default function BrowsePage() {
             >
               Previous
             </Button>
-            <span className="text-slate-600">
+            <span className="text-[color:var(--theme-text-secondary)]">
               Page {page}
             </span>
             <Button

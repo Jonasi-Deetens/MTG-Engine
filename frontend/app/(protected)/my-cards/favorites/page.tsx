@@ -44,20 +44,20 @@ export default function FavoritesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <Link href="/my-cards" className="text-slate-600 hover:text-amber-600 transition-colors mb-2 inline-block">
+          <Link href="/my-cards" className="text-[color:var(--theme-text-secondary)] hover:text-amber-600 transition-colors mb-2 inline-block">
             ← Back to My Cards
           </Link>
-          <h1 className="font-heading text-3xl font-bold text-slate-900 mb-2">
+          <h1 className="font-heading text-3xl font-bold text-[color:var(--theme-text-primary)] mb-2">
             Favorites
           </h1>
-          <p className="text-slate-600">
+          <p className="text-[color:var(--theme-text-secondary)]">
             {favorites.length} favorite card{favorites.length !== 1 ? 's' : ''}
           </p>
         </div>
       </div>
 
       {error && (
-        <div className="p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400">
+        <div className="p-4 bg-[color:var(--theme-status-error)]/20 border border-[color:var(--theme-status-error)]/50 rounded-lg text-[color:var(--theme-status-error)]">
           {error}
         </div>
       )}
@@ -87,7 +87,7 @@ export default function FavoritesPage() {
             >
               Previous
             </Button>
-            <span className="text-slate-600">
+            <span className="text-[color:var(--theme-text-secondary)]">
               Page {page}
             </span>
             <Button

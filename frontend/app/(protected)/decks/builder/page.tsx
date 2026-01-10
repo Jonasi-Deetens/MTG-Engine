@@ -178,10 +178,10 @@ export default function DeckBuilderPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-heading text-3xl font-bold text-slate-900 mb-2">
+          <h1 className="font-heading text-3xl font-bold text-[color:var(--theme-text-primary)] mb-2">
             Deck Builder
           </h1>
-          <p className="text-slate-600">
+          <p className="text-[color:var(--theme-text-secondary)]">
             {currentDeck ? `Editing: ${currentDeck.name}` : 'Create a new deck'}
           </p>
         </div>
@@ -212,7 +212,7 @@ export default function DeckBuilderPage() {
       </div>
 
       {error && (
-        <div className="p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400">
+        <div className="p-4 bg-[color:var(--theme-status-error)]/20 border border-[color:var(--theme-status-error)]/50 rounded-lg text-[color:var(--theme-status-error)]">
           {error}
         </div>
       )}
@@ -224,7 +224,7 @@ export default function DeckBuilderPage() {
           <Card variant="elevated">
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-medium text-[color:var(--theme-text-secondary)] mb-2">
                   Deck Name *
                 </label>
                 <input
@@ -232,11 +232,11 @@ export default function DeckBuilderPage() {
                   value={deckName}
                   onChange={(e) => setDeckName(e.target.value)}
                   placeholder="My Awesome Deck"
-                  className="w-full px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 focus:border-amber-500 focus:outline-none"
+                  className="w-full px-3 py-2 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-medium text-[color:var(--theme-text-secondary)] mb-2">
                   Description
                 </label>
                 <textarea
@@ -244,7 +244,7 @@ export default function DeckBuilderPage() {
                   onChange={(e) => setDeckDescription(e.target.value)}
                   placeholder="Describe your deck..."
                   rows={3}
-                  className="w-full px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 focus:border-amber-500 focus:outline-none"
+                  className="w-full px-3 py-2 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none"
                 />
               </div>
               <FormatSelector
@@ -258,9 +258,9 @@ export default function DeckBuilderPage() {
                   id="isPublic"
                   checked={isPublic}
                   onChange={(e) => setIsPublic(e.target.checked)}
-                  className="w-4 h-4 text-amber-600 bg-white border-amber-200/50 rounded focus:ring-amber-500"
+                  className="w-4 h-4 text-[color:var(--theme-accent-primary)] bg-[color:var(--theme-input-bg)] border-[color:var(--theme-input-border)] rounded focus:ring-[color:var(--theme-border-focus)]"
                 />
-                <label htmlFor="isPublic" className="text-sm text-slate-700">
+                <label htmlFor="isPublic" className="text-sm text-[color:var(--theme-text-secondary)]">
                   Make deck public
                 </label>
               </div>
@@ -292,7 +292,7 @@ export default function DeckBuilderPage() {
           {/* Card Search */}
           <Card variant="elevated">
             <div className="p-6 space-y-4">
-              <h3 className="text-lg font-semibold text-slate-900">Search Cards</h3>
+              <h3 className="text-lg font-semibold text-[color:var(--theme-text-primary)]">Search Cards</h3>
               <SearchInput
                 value={searchQuery}
                 onChange={setSearchQuery}
@@ -312,7 +312,7 @@ export default function DeckBuilderPage() {
                   ))}
                 </div>
               ) : debouncedQuery ? (
-                <p className="text-slate-600 text-center py-4">No cards found</p>
+                <p className="text-[color:var(--theme-text-secondary)] text-center py-4">No cards found</p>
               ) : null}
             </div>
           </Card>
@@ -321,7 +321,7 @@ export default function DeckBuilderPage() {
           {currentDeck && (
             <Card variant="elevated">
               <div className="p-6 space-y-4">
-                <h3 className="text-lg font-semibold text-slate-900">
+                <h3 className="text-lg font-semibold text-[color:var(--theme-text-primary)]">
                   Deck ({currentDeck.card_count} cards)
                 </h3>
                 <DeckCardList
@@ -372,7 +372,7 @@ export default function DeckBuilderPage() {
           <Card variant="elevated" className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-slate-900">Import Deck List</h2>
+                <h2 className="text-xl font-semibold text-[color:var(--theme-text-primary)]">Import Deck List</h2>
                 <Button
                   onClick={() => setShowImport(false)}
                   variant="outline"

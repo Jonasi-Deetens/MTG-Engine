@@ -96,7 +96,7 @@ export function CardPreview({ card, onVersionChange, onAddToDeck, showAddButton 
               unoptimized
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-slate-600 text-xs text-center p-2 bg-amber-50 rounded-xl">
+            <div className="w-full h-full flex items-center justify-center text-[color:var(--theme-text-secondary)] text-xs text-center p-2 bg-[color:var(--theme-card-hover)] rounded-xl">
               No Image
             </div>
           )}
@@ -105,7 +105,7 @@ export function CardPreview({ card, onVersionChange, onAddToDeck, showAddButton 
         {/* Add to Deck Button Overlay */}
         {showAddButton && onAddToDeck && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
-            <div className="w-12 h-12 rounded-full bg-amber-600/90 text-white shadow-lg flex items-center justify-center pointer-events-none">
+            <div className="w-12 h-12 rounded-full bg-[color:var(--theme-button-primary-bg)]/90 text-[color:var(--theme-button-primary-text)] shadow-lg flex items-center justify-center pointer-events-none">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="24"
@@ -131,7 +131,7 @@ export function CardPreview({ card, onVersionChange, onAddToDeck, showAddButton 
               e.stopPropagation();
               setIsModalOpen(true);
             }}
-            className="absolute top-2 right-2 p-2 bg-white/90 hover:bg-white text-slate-900 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg z-10 border border-amber-200/50"
+            className="absolute top-2 right-2 p-2 bg-[color:var(--theme-card-bg)]/90 hover:bg-[color:var(--theme-card-bg)] text-[color:var(--theme-text-primary)] rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg z-10 border border-[color:var(--theme-card-border)]"
             aria-label="View card details"
           >
             <svg

@@ -139,10 +139,10 @@ export default function SearchPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-heading text-3xl font-bold text-slate-900 mb-2">
+        <h1 className="font-heading text-3xl font-bold text-[color:var(--theme-text-primary)] mb-2">
           Card Search
         </h1>
-        <p className="text-slate-600">
+        <p className="text-[color:var(--theme-text-secondary)]">
           Search through Magic: The Gathering cards
         </p>
       </div>
@@ -176,9 +176,9 @@ export default function SearchPage() {
         </div>
 
         {showFilters && (
-          <div className="bg-white border border-amber-200/50 rounded-lg p-4 space-y-4">
+          <div className="bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] rounded-lg p-4 space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-[color:var(--theme-text-secondary)] mb-2">
                 Colors
               </label>
               <div className="flex flex-wrap gap-2">
@@ -188,8 +188,8 @@ export default function SearchPage() {
                     onClick={() => toggleColor(color)}
                     className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                       selectedColors.includes(color)
-                        ? 'bg-amber-500 text-white'
-                        : 'bg-amber-50 text-slate-700 hover:bg-amber-100 border border-amber-200/50'
+                        ? 'bg-[color:var(--theme-accent-primary)] text-[color:var(--theme-button-primary-text)]'
+                        : 'bg-[color:var(--theme-card-hover)] text-[color:var(--theme-text-secondary)] hover:bg-[color:var(--theme-card-hover)] border border-[color:var(--theme-card-border)]'
                     }`}
                   >
                     {COLOR_NAMES[color]}
@@ -199,7 +199,7 @@ export default function SearchPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-[color:var(--theme-text-secondary)] mb-2">
                 Type (contains)
               </label>
               <Input
@@ -212,7 +212,7 @@ export default function SearchPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-[color:var(--theme-text-secondary)] mb-2">
                 Set Code
               </label>
               <Input
@@ -228,7 +228,7 @@ export default function SearchPage() {
       </div>
 
       {error && (
-        <div className="p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400">
+        <div className="p-4 bg-[color:var(--theme-status-error)]/20 border border-[color:var(--theme-status-error)]/50 rounded-lg text-[color:var(--theme-status-error)]">
           {error}
         </div>
       )}
@@ -248,7 +248,7 @@ export default function SearchPage() {
           ) : (
             <>
               {searchQuery && (
-                <div className="text-slate-600 text-sm">
+                <div className="text-[color:var(--theme-text-secondary)] text-sm">
                   {hasActiveFilters ? (
                     <>Showing {filteredCards.length} of {total} cards (filtered)</>
                   ) : (

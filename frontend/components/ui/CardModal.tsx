@@ -53,7 +53,7 @@ export function CardModal({ isOpen, onClose, card, imageUrl }: CardModalProps) {
         <Link
           href={`/cards/${card.card_id}`}
           onClick={onClose}
-          className="p-3 rounded-full bg-amber-600/90 hover:bg-amber-500/90 text-white transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-lg flex items-center gap-2"
+          className="p-3 rounded-full bg-[color:var(--theme-button-primary-bg)]/90 hover:bg-[color:var(--theme-button-primary-hover)]/90 text-[color:var(--theme-button-primary-text)] transition-colors focus:outline-none focus:ring-2 focus:ring-[color:var(--theme-border-focus)] shadow-lg flex items-center gap-2"
           aria-label="View card details"
         >
           <svg
@@ -226,24 +226,24 @@ export function CardModal({ isOpen, onClose, card, imageUrl }: CardModalProps) {
               <div className="flex flex-wrap gap-3">
                 {card.prices.usd && (
                   <div>
-                    <span className="text-xs text-slate-400">USD:</span>{' '}
-                    <span className="text-sm text-amber-400 font-semibold">
+                    <span className="text-xs text-[color:var(--theme-text-muted)]">USD:</span>{' '}
+                    <span className="text-sm text-[color:var(--theme-accent-secondary)] font-semibold">
                       ${parseFloat(card.prices.usd).toFixed(2)}
                     </span>
                   </div>
                 )}
                 {card.prices.usd_foil && (
                   <div>
-                    <span className="text-xs text-slate-400">USD Foil:</span>{' '}
-                    <span className="text-sm text-amber-400 font-semibold">
+                    <span className="text-xs text-[color:var(--theme-text-muted)]">USD Foil:</span>{' '}
+                    <span className="text-sm text-[color:var(--theme-accent-secondary)] font-semibold">
                       ${parseFloat(card.prices.usd_foil).toFixed(2)}
                     </span>
                   </div>
                 )}
                 {card.prices.eur && (
                   <div>
-                    <span className="text-xs text-slate-400">EUR:</span>{' '}
-                    <span className="text-sm text-amber-400 font-semibold">
+                    <span className="text-xs text-[color:var(--theme-text-muted)]">EUR:</span>{' '}
+                    <span className="text-sm text-[color:var(--theme-accent-secondary)] font-semibold">
                       €{parseFloat(card.prices.eur).toFixed(2)}
                     </span>
                   </div>

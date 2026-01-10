@@ -16,11 +16,11 @@ interface QuickActionCardProps {
 
 const colorClasses = {
   amber: {
-    iconBg: 'bg-amber-500/10 border-amber-500/20 group-hover:bg-amber-500/20',
-    iconColor: 'text-amber-500',
-    hoverGradient: 'from-amber-600/10',
-    hoverShadow: 'hover:shadow-amber-900/20',
-    hoverBorder: 'hover:border-amber-500/50',
+    iconBg: 'bg-[color:var(--theme-accent-primary)]/10 border-[color:var(--theme-accent-primary)]/20 group-hover:bg-[color:var(--theme-accent-primary)]/20',
+    iconColor: 'text-[color:var(--theme-accent-primary)]',
+    hoverGradient: 'from-theme-accent-hover/10',
+    hoverShadow: 'hover:shadow-theme-accent-primary/20',
+    hoverBorder: 'hover:border-[color:var(--theme-border-hover)]',
   },
   blue: {
     iconBg: 'bg-blue-500/10 border-blue-500/20 group-hover:bg-blue-500/20',
@@ -76,7 +76,7 @@ export function QuickActionCard({
           relative overflow-hidden p-6 
           hover:scale-105 hover:shadow-xl ${colors.hoverShadow}
           transition-all cursor-pointer h-full group 
-          border border-amber-200/50 ${colors.hoverBorder}
+          border border-[color:var(--theme-card-border)] ${colors.hoverBorder}
         `}
       >
         <div
@@ -88,8 +88,8 @@ export function QuickActionCard({
           >
             <Icon className={`w-8 h-8 ${colors.iconColor}`} />
           </div>
-          <h3 className="font-semibold text-slate-900 mb-1">{title}</h3>
-          <p className="text-sm text-slate-600">{description}</p>
+          <h3 className="font-semibold text-[color:var(--theme-text-primary)] mb-1">{title}</h3>
+          <p className="text-sm text-[color:var(--theme-text-secondary)]">{description}</p>
         </div>
       </Card>
     </Link>

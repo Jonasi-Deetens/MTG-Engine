@@ -51,17 +51,17 @@ export default function RegisterPage() {
       <div className="w-full max-w-md">
         <Card variant="elevated" className="p-8">
           <div className="text-center mb-8">
-            <h1 className="font-heading text-3xl font-bold text-slate-900 mb-2">
+            <h1 className="font-heading text-3xl font-bold text-[color:var(--theme-text-primary)] mb-2">
               Create Account
             </h1>
-            <p className="text-slate-600">
+            <p className="text-[color:var(--theme-text-secondary)]">
               Sign up to access the MTG Engine
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
-              <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400 text-sm">
+              <div className="p-3 bg-[color:var(--theme-status-error)]/20 border border-[color:var(--theme-status-error)]/50 rounded-lg text-[color:var(--theme-status-error)] text-sm">
                 {error}
               </div>
             )}
@@ -116,7 +116,7 @@ export default function RegisterPage() {
             </Button>
           </form>
 
-          <div className="mt-6 text-center text-sm text-slate-600">
+          <div className="mt-6 text-center text-sm text-[color:var(--theme-text-secondary)]">
             <p>
               Already have an account?{' '}
               <Link href="/login" className="text-amber-600 hover:text-amber-500 underline">
@@ -126,7 +126,7 @@ export default function RegisterPage() {
           </div>
 
           <div className="mt-4 text-center">
-            <Link href="/" className="text-sm text-slate-600 hover:text-amber-600">
+            <Link href="/" className="text-sm text-[color:var(--theme-text-secondary)] hover:text-amber-600">
               ← Back to home
             </Link>
           </div>

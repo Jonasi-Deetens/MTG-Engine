@@ -18,15 +18,15 @@ export function Button({
   disabled,
   ...props
 }: ButtonProps) {
-  const baseStyles = 'font-medium rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center';
+  const baseStyles = 'font-medium rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer inline-flex items-center justify-center';
   
   const variants = {
-    primary: 'bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white shadow-lg shadow-amber-900/50',
-    secondary: 'bg-amber-100 hover:bg-amber-200 text-slate-900 border border-amber-200/50',
-    outline: 'border-2 border-amber-500 text-amber-600 hover:bg-amber-500 hover:text-white bg-transparent',
-    ghost: 'bg-transparent hover:bg-amber-50 text-slate-700 hover:text-slate-900',
-    danger: 'bg-red-600 hover:bg-red-700 text-white',
-    link: 'bg-transparent text-amber-600 hover:text-amber-500 underline-offset-4 hover:underline p-0',
+    primary: 'bg-[color:var(--theme-button-primary-bg)] hover:bg-[color:var(--theme-button-primary-hover)] text-[color:var(--theme-button-primary-text)] shadow-lg shadow-black/20',
+    secondary: 'bg-[color:var(--theme-button-secondary-bg)] hover:bg-[color:var(--theme-button-secondary-hover)] text-[color:var(--theme-button-secondary-text)] border border-[color:var(--theme-border-default)]',
+    outline: 'border-2 border-[color:var(--theme-button-outline-border)] text-[color:var(--theme-button-outline-text)] hover:bg-[color:var(--theme-button-outline-hover)] hover:text-white bg-transparent',
+    ghost: 'bg-transparent hover:bg-[color:var(--theme-button-ghost-hover)] text-[color:var(--theme-button-ghost-text)] hover:text-[color:var(--theme-text-primary)]',
+    danger: 'bg-[color:var(--theme-status-error)] hover:opacity-90 text-white',
+    link: 'bg-transparent text-[color:var(--theme-accent-primary)] hover:text-[color:var(--theme-accent-hover)] underline-offset-4 hover:underline p-0',
   };
   
   const sizes = {

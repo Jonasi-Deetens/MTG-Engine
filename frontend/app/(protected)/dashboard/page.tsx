@@ -79,10 +79,10 @@ export default function DashboardPage() {
     <div className="space-y-8">
       {/* Welcome Section */}
       <div>
-        <h1 className="font-heading text-4xl font-bold text-slate-900 mb-2">
+        <h1 className="font-heading text-4xl font-bold text-[color:var(--theme-text-primary)] mb-2">
           Welcome Back
         </h1>
-        <p className="text-slate-600 text-lg">
+        <p className="text-[color:var(--theme-text-secondary)] text-lg">
           Manage your decks, explore cards, and build powerful ability graphs
         </p>
       </div>
@@ -93,13 +93,13 @@ export default function DashboardPage() {
           <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-amber-600/20 to-transparent rounded-bl-full"></div>
           <div className="p-6 relative">
             <div className="flex items-center justify-between mb-4">
-              <span className="text-slate-600 text-sm uppercase tracking-wide">Decks</span>
-              <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                <BookOpen className="w-6 h-6 text-amber-500" />
+              <span className="text-[color:var(--theme-text-secondary)] text-sm uppercase tracking-wide">Decks</span>
+              <div className="p-2 rounded-lg bg-[color:var(--theme-accent-primary)]/10 border border-[color:var(--theme-accent-primary)]/20">
+                <BookOpen className="w-6 h-6 text-[color:var(--theme-accent-primary)]" />
               </div>
             </div>
-            <div className="text-4xl font-bold text-slate-900 mb-2">{stats.decks}</div>
-            <Link href="/decks" className="text-sm text-amber-500 hover:text-amber-400 inline-flex items-center gap-1 transition-colors">
+            <div className="text-4xl font-bold text-[color:var(--theme-text-primary)] mb-2">{stats.decks}</div>
+            <Link href="/decks" className="text-sm text-[color:var(--theme-accent-primary)] hover:text-theme-accent-hover inline-flex items-center gap-1 transition-colors">
               View all <span>→</span>
             </Link>
           </div>
@@ -109,7 +109,7 @@ export default function DashboardPage() {
           <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-pink-600/20 to-transparent rounded-bl-full"></div>
           <div className="p-6 relative">
             <div className="flex items-center justify-between mb-4">
-              <span className="text-slate-400 text-sm uppercase tracking-wide">Favorites</span>
+              <span className="text-[color:var(--theme-text-muted)] text-sm uppercase tracking-wide">Favorites</span>
               <div className="p-2 rounded-lg bg-pink-500/10 border border-pink-500/20">
                 <Heart className="w-6 h-6 text-pink-500" fill="currentColor" />
               </div>
@@ -125,7 +125,7 @@ export default function DashboardPage() {
           <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-600/20 to-transparent rounded-bl-full"></div>
           <div className="p-6 relative">
             <div className="flex items-center justify-between mb-4">
-              <span className="text-slate-400 text-sm uppercase tracking-wide">Collections</span>
+              <span className="text-[color:var(--theme-text-muted)] text-sm uppercase tracking-wide">Collections</span>
               <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
                 <Folder className="w-6 h-6 text-blue-500" />
               </div>
@@ -145,7 +145,7 @@ export default function DashboardPage() {
       {recentDecks.length > 0 && (
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-heading text-2xl font-bold text-slate-900">Recent Decks</h2>
+            <h2 className="font-heading text-2xl font-bold text-[color:var(--theme-text-primary)]">Recent Decks</h2>
             <Link href="/decks">
               <Button variant="outline" size="sm">
                 View All
@@ -155,19 +155,19 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {recentDecks.map((deck) => (
               <Link key={deck.id} href={`/decks/${deck.id}`}>
-                <Card variant="elevated" className="p-6 hover:bg-amber-50 transition-colors cursor-pointer h-full">
-                  <h3 className="font-semibold text-slate-900 mb-2">{deck.name}</h3>
+                <Card variant="elevated" className="p-6 transition-colors cursor-pointer h-full">
+                  <h3 className="font-semibold text-[color:var(--theme-text-primary)] mb-2">{deck.name}</h3>
                   {deck.description && (
-                    <p className="text-sm text-slate-600 mb-3 line-clamp-2">{deck.description}</p>
+                    <p className="text-sm text-[color:var(--theme-text-secondary)] mb-3 line-clamp-2">{deck.description}</p>
                   )}
-                  <div className="flex items-center gap-4 text-sm text-slate-600">
+                  <div className="flex items-center gap-4 text-sm text-[color:var(--theme-text-secondary)]">
                     <span>{deck.format}</span>
                     <span>{deck.card_count} cards</span>
                     {deck.commander_count > 0 && (
                       <span>{deck.commander_count} commander{deck.commander_count > 1 ? 's' : ''}</span>
                     )}
                   </div>
-                  <div className="mt-3 text-xs text-slate-500">
+                  <div className="mt-3 text-xs text-[color:var(--theme-text-muted)]">
                     Updated {new Date(deck.updated_at).toLocaleDateString()}
                   </div>
                 </Card>
@@ -181,7 +181,7 @@ export default function DashboardPage() {
       {featuredCards.length > 0 && (
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-heading text-2xl font-bold text-slate-900">Featured Cards</h2>
+            <h2 className="font-heading text-2xl font-bold text-[color:var(--theme-text-primary)]">Featured Cards</h2>
             <Button
               variant="outline"
               size="sm"
@@ -214,8 +214,8 @@ export default function DashboardPage() {
       {/* Empty State for New Users */}
       {stats.decks === 0 && stats.favorites === 0 && stats.collections === 0 && (
         <Card variant="bordered" className="p-8 text-center">
-          <h3 className="text-xl font-semibold text-slate-900 mb-2">Get Started</h3>
-          <p className="text-slate-600 mb-6">
+          <h3 className="text-xl font-semibold text-[color:var(--theme-text-primary)] mb-2">Get Started</h3>
+          <p className="text-[color:var(--theme-text-secondary)] mb-6">
             Start by searching for cards, creating your first deck, or exploring the ability builder.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">

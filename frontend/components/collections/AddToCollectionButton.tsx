@@ -70,29 +70,29 @@ export function AddToCollectionButton({ cardId, onAdded }: AddToCollectionButton
             className="fixed inset-0 z-10"
             onClick={() => setShowMenu(false)}
           />
-          <div className="absolute top-full mt-2 right-0 bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-20 min-w-[200px]">
+          <div className="absolute top-full mt-2 right-0 bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] rounded-lg shadow-xl z-20 min-w-[200px]">
             <div className="p-2 max-h-64 overflow-y-auto">
               {collectionsList.map((collection) => (
                 <button
                   key={collection.id}
                   onClick={() => handleAdd(collection.id)}
                   disabled={adding === collection.id}
-                  className="w-full text-left px-3 py-2 text-sm text-white hover:bg-slate-700 rounded transition-colors disabled:opacity-50"
+                  className="w-full text-left px-3 py-2 text-sm text-[color:var(--theme-text-primary)] hover:bg-[color:var(--theme-card-hover)] rounded transition-colors disabled:opacity-50"
                 >
                   {adding === collection.id ? 'Adding...' : collection.name}
-                  <span className="text-slate-500 text-xs ml-2">
+                  <span className="text-[color:var(--theme-text-muted)] text-xs ml-2">
                     ({collection.card_count})
                   </span>
                 </button>
               ))}
             </div>
-            <div className="border-t border-slate-700 p-2">
+            <div className="border-t border-[color:var(--theme-border-default)] p-2">
               <button
                 onClick={() => {
                   setShowMenu(false);
                   window.location.href = '/my-cards/collections';
                 }}
-                className="w-full text-left px-3 py-2 text-sm text-amber-400 hover:bg-slate-700 rounded transition-colors"
+                className="w-full text-left px-3 py-2 text-sm text-[color:var(--theme-accent-secondary)] hover:bg-[color:var(--theme-card-hover)] rounded transition-colors"
               >
                 + New Collection
               </button>

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Cinzel } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
+import { ThemeProvider } from "@/context/ThemeContext";
 import { NavbarWrapper } from "@/components/navigation/NavbarWrapper";
 
 const inter = Inter({
@@ -26,13 +27,29 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="overflow-x-hidden">
+    <html lang="en" className="overflow-x-hidden" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  const theme = localStorage.getItem('mtg-engine-theme') || 'angel';
+                  document.documentElement.setAttribute('data-theme', theme);
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
       <body
-        className={`${inter.variable} ${cinzel.variable} antialiased bg-angel-white text-slate-900 overflow-x-hidden`}
+        className={`${inter.variable} ${cinzel.variable} antialiased bg-[color:var(--theme-bg-primary)] text-[color:var(--theme-text-primary)] overflow-x-hidden`}
       >
-        <AuthProvider>
-          <NavbarWrapper>{children}</NavbarWrapper>
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <NavbarWrapper>{children}</NavbarWrapper>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

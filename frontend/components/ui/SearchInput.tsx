@@ -59,7 +59,7 @@ export function SearchInput({
       {iconPosition === 'left' && (
         <Search
           className={cn(
-            'absolute left-3 top-1/2 transform -translate-y-1/2 text-amber-600 pointer-events-none',
+            'absolute left-3 top-1/2 transform -translate-y-1/2 text-[color:var(--theme-accent-primary)] pointer-events-none',
             iconSizeClasses[size]
           )}
         />
@@ -71,9 +71,9 @@ export function SearchInput({
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         className={cn(
-          'w-full bg-white border border-amber-200/50 rounded-lg',
-          'text-slate-900 placeholder-slate-500',
-          'focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500',
+          'w-full bg-[color:var(--theme-input-bg)] border border-[color:var(--theme-input-border)] rounded-lg',
+          'text-[color:var(--theme-input-text)] placeholder-theme-input-placeholder',
+          'focus:outline-none focus:ring-2 focus:ring-[color:var(--theme-border-focus)] focus:border-[color:var(--theme-border-focus)]',
           'transition-all duration-200',
           sizeClasses[size],
           paddingClasses[size],
@@ -87,8 +87,8 @@ export function SearchInput({
           onClick={handleClear}
           className={cn(
             'absolute right-3 top-1/2 transform -translate-y-1/2 p-1',
-            'hover:bg-amber-50 rounded transition-colors',
-            'text-slate-700 hover:text-slate-900'
+            'hover:bg-[color:var(--theme-card-hover)] rounded transition-colors cursor-pointer',
+            'text-[color:var(--theme-text-secondary)] hover:text-[color:var(--theme-text-primary)]'
           )}
           aria-label="Clear search"
           type="button"
@@ -99,7 +99,7 @@ export function SearchInput({
       {iconPosition === 'right' && !showClearButton && (
         <Search
           className={cn(
-            'absolute right-3 top-1/2 transform -translate-y-1/2 text-amber-600 pointer-events-none',
+            'absolute right-3 top-1/2 transform -translate-y-1/2 text-[color:var(--theme-accent-primary)] pointer-events-none',
             iconSizeClasses[size]
           )}
         />

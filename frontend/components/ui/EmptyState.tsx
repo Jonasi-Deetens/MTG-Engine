@@ -29,14 +29,14 @@ export function EmptyState({
 
   return (
     <div className={`flex flex-col items-center justify-center py-16 px-4 text-center ${className}`}>
-      <div className="mb-6 p-4 rounded-full bg-slate-800/50 border border-slate-700">
+      <div className="mb-6 p-4 rounded-full bg-[color:var(--theme-bg-secondary)] border border-[color:var(--theme-border-default)]">
         <Icon 
-          className="w-16 h-16 text-slate-400" 
+          className="w-16 h-16 text-[color:var(--theme-text-muted)]" 
           strokeWidth={iconStrokeWidth}
         />
       </div>
-      <h3 className="text-xl font-semibold text-white mb-2">{title}</h3>
-      <p className="text-slate-400 max-w-md mb-6">{description}</p>
+      <h3 className="text-xl font-semibold text-[color:var(--theme-text-primary)] mb-2">{title}</h3>
+      <p className="text-[color:var(--theme-text-secondary)] max-w-md mb-6">{description}</p>
       {(actionLabel && (onAction || actionHref)) && (
         <div>
           {actionHref ? (

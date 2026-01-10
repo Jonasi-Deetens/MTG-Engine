@@ -48,9 +48,9 @@ export function ManaCurveChart({ cards }: ManaCurveChartProps) {
   
   return (
     <div className="space-y-2">
-      <h3 className="text-lg font-semibold text-slate-900">Mana Curve</h3>
+      <h3 className="text-lg font-semibold text-[color:var(--theme-text-primary)]">Mana Curve</h3>
       {cards.length === 0 ? (
-        <p className="text-slate-600 text-sm">No cards to analyze</p>
+        <p className="text-[color:var(--theme-text-secondary)] text-sm">No cards to analyze</p>
       ) : (
         <div className="flex items-end gap-1 h-48">
           {curveData.map((data) => {
@@ -73,10 +73,10 @@ export function ManaCurveChart({ cards }: ManaCurveChartProps) {
                   )}
                 </div>
                 <div className="flex flex-col items-center gap-0.5 mt-1">
-                  <span className="text-xs text-slate-600 font-mono">
+                  <span className="text-xs text-[color:var(--theme-text-secondary)] font-mono">
                     {data.cmc === 8 ? '7+' : data.cmc}
                   </span>
-                  <span className="text-xs text-slate-700">
+                  <span className="text-xs text-[color:var(--theme-text-secondary)]">
                     {data.count}
                   </span>
                 </div>

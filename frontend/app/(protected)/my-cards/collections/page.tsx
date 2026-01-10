@@ -77,13 +77,13 @@ export default function CollectionsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <Link href="/my-cards" className="text-slate-600 hover:text-amber-600 transition-colors mb-2 inline-block">
+          <Link href="/my-cards" className="text-[color:var(--theme-text-secondary)] hover:text-amber-600 transition-colors mb-2 inline-block">
             ← Back to My Cards
           </Link>
-          <h1 className="font-heading text-3xl font-bold text-slate-900 mb-2">
+          <h1 className="font-heading text-3xl font-bold text-[color:var(--theme-text-primary)] mb-2">
             Collections
           </h1>
-          <p className="text-slate-600">
+          <p className="text-[color:var(--theme-text-secondary)]">
             Organize your cards into collections
           </p>
         </div>
@@ -99,7 +99,7 @@ export default function CollectionsPage() {
         <Card variant="elevated">
           <div className="p-6 space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-[color:var(--theme-text-secondary)] mb-2">
                 Collection Name *
               </label>
               <input
@@ -107,11 +107,11 @@ export default function CollectionsPage() {
                 value={newCollectionName}
                 onChange={(e) => setNewCollectionName(e.target.value)}
                 placeholder="e.g., My Commander Deck"
-                className="w-full px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 focus:border-amber-500 focus:outline-none"
+                className="w-full px-3 py-2 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-[color:var(--theme-text-secondary)] mb-2">
                 Description (optional)
               </label>
               <textarea
@@ -119,7 +119,7 @@ export default function CollectionsPage() {
                 onChange={(e) => setNewCollectionDesc(e.target.value)}
                 placeholder="Describe this collection..."
                 rows={3}
-                className="w-full px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 focus:border-amber-500 focus:outline-none"
+                className="w-full px-3 py-2 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none"
               />
             </div>
             <Button
@@ -134,7 +134,7 @@ export default function CollectionsPage() {
       )}
 
       {error && (
-        <div className="p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400">
+        <div className="p-4 bg-[color:var(--theme-status-error)]/20 border border-[color:var(--theme-status-error)]/50 rounded-lg text-[color:var(--theme-status-error)]">
           {error}
         </div>
       )}
@@ -159,19 +159,19 @@ export default function CollectionsPage() {
             <Card key={collection.id} variant="elevated">
               <div className="p-6 space-y-4">
                 <div>
-                  <h3 className="text-xl font-semibold text-slate-900 mb-1">
+                  <h3 className="text-xl font-semibold text-[color:var(--theme-text-primary)] mb-1">
                     {collection.name}
                   </h3>
                   {collection.description && (
-                    <p className="text-slate-600 text-sm">
+                    <p className="text-[color:var(--theme-text-secondary)] text-sm">
                       {collection.description}
                     </p>
                   )}
-                  <p className="text-slate-500 text-sm mt-2">
+                  <p className="text-[color:var(--theme-text-muted)] text-sm mt-2">
                     {collection.card_count} card{collection.card_count !== 1 ? 's' : ''}
                   </p>
                 </div>
-                <div className="flex gap-2 pt-4 border-t border-slate-700">
+                <div className="flex gap-2 pt-4 border-t border-[color:var(--theme-border-default)]">
                   <Link href={`/my-cards/collections/${collection.id}`} className="flex-1">
                     <Button variant="primary" size="sm" className="w-full">
                       View

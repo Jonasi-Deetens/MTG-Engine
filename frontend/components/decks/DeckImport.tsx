@@ -132,14 +132,14 @@ export function DeckImport({ deckId, onImportSuccess }: DeckImportProps) {
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="text-lg font-semibold text-slate-900 mb-2">Import Deck List</h3>
-        <p className="text-sm text-slate-600 mb-4">
+        <h3 className="text-lg font-semibold text-[color:var(--theme-text-primary)] mb-2">Import Deck List</h3>
+        <p className="text-sm text-[color:var(--theme-text-secondary)] mb-4">
           Paste your deck list in text format. Supported formats:
         </p>
-        <ul className="text-sm text-slate-600 list-disc list-inside mb-4 space-y-1">
-          <li><code className="bg-amber-50 px-1 rounded border border-amber-200/50">4 Lightning Bolt</code></li>
-          <li><code className="bg-amber-50 px-1 rounded border border-amber-200/50">1x Lightning Bolt</code></li>
-          <li><code className="bg-amber-50 px-1 rounded border border-amber-200/50">Lightning Bolt</code> (defaults to 1)</li>
+        <ul className="text-sm text-[color:var(--theme-text-secondary)] list-disc list-inside mb-4 space-y-1">
+          <li><code className="bg-[color:var(--theme-card-hover)] px-1 rounded border border-[color:var(--theme-card-border)]">4 Lightning Bolt</code></li>
+          <li><code className="bg-[color:var(--theme-card-hover)] px-1 rounded border border-[color:var(--theme-card-border)]">1x Lightning Bolt</code></li>
+          <li><code className="bg-[color:var(--theme-card-hover)] px-1 rounded border border-[color:var(--theme-card-border)]">Lightning Bolt</code> (defaults to 1)</li>
         </ul>
       </div>
 
@@ -148,7 +148,7 @@ export function DeckImport({ deckId, onImportSuccess }: DeckImportProps) {
         onChange={(e) => setImportText(e.target.value)}
         placeholder="4 Lightning Bolt&#10;2 Mountain&#10;1x Sol Ring&#10;..."
         rows={12}
-        className="w-full px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 focus:border-amber-500 focus:outline-none font-mono text-sm"
+        className="w-full px-3 py-2 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none font-mono text-sm"
       />
 
       <Button
@@ -163,10 +163,10 @@ export function DeckImport({ deckId, onImportSuccess }: DeckImportProps) {
       {result && (
         <div className={`p-4 rounded-lg border ${
           result.failed.length === 0
-            ? 'bg-green-500/20 border-green-500/50 text-green-400'
+            ? 'bg-[color:var(--theme-status-success)]/20 border-[color:var(--theme-status-success)]/50 text-[color:var(--theme-status-success)]'
             : result.success > 0
-            ? 'bg-yellow-500/20 border-yellow-500/50 text-yellow-400'
-            : 'bg-red-500/20 border-red-500/50 text-red-400'
+            ? 'bg-[color:var(--theme-status-warning)]/20 border-[color:var(--theme-status-warning)]/50 text-[color:var(--theme-status-warning)]'
+            : 'bg-[color:var(--theme-status-error)]/20 border-[color:var(--theme-status-error)]/50 text-[color:var(--theme-status-error)]'
         }`}>
           <div className="font-semibold mb-2">
             Import {result.failed.length === 0 ? 'Complete' : 'Partial'}
@@ -181,7 +181,7 @@ export function DeckImport({ deckId, onImportSuccess }: DeckImportProps) {
                 <ul className="list-disc list-inside mt-1 ml-2 space-y-1">
                   {result.failed.map((fail, idx) => (
                     <li key={idx}>
-                      <code className="bg-amber-50 px-1 rounded border border-amber-200/50">{fail.name}</code>: {fail.reason}
+                      <code className="bg-[color:var(--theme-card-hover)] px-1 rounded border border-[color:var(--theme-card-border)]">{fail.name}</code>: {fail.reason}
                     </li>
                   ))}
                 </ul>

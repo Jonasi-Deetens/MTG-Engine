@@ -65,16 +65,16 @@ export default function TemplatesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-heading text-3xl font-bold text-slate-900 mb-2">
+        <h1 className="font-heading text-3xl font-bold text-[color:var(--theme-text-primary)] mb-2">
           Ability Templates
         </h1>
-        <p className="text-slate-600">
+        <p className="text-[color:var(--theme-text-secondary)]">
           Browse and use pre-built ability templates to get started quickly
         </p>
       </div>
 
       {error && (
-        <div className="p-4 bg-red-50 border border-red-300 rounded-lg text-red-700">
+        <div className="p-4 bg-[color:var(--theme-status-error)]/20 border border-[color:var(--theme-status-error)]/50 rounded-lg text-[color:var(--theme-status-error)]">
           {error}
         </div>
       )}
@@ -93,10 +93,10 @@ export default function TemplatesPage() {
             <Card key={template.id} variant="elevated">
               <div className="p-6 space-y-4">
                 <div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-2">
+                  <h3 className="text-xl font-bold text-[color:var(--theme-text-primary)] mb-2">
                     {template.name}
                   </h3>
-                  <p className="text-slate-600 text-sm">
+                  <p className="text-[color:var(--theme-text-secondary)] text-sm">
                     {template.description}
                   </p>
                 </div>

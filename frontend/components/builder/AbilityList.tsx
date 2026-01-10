@@ -44,7 +44,7 @@ export function AbilityList({ type, onAdd, onEdit }: AbilityListProps) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-slate-900 capitalize">
+        <h3 className="text-lg font-semibold text-[color:var(--theme-text-primary)] capitalize">
           {type === 'continuous' ? 'Continuous Abilities' : `${type.charAt(0).toUpperCase() + type.slice(1)} Abilities`}
         </h3>
         <Button
@@ -57,7 +57,7 @@ export function AbilityList({ type, onAdd, onEdit }: AbilityListProps) {
       </div>
       
       {abilities.length === 0 ? (
-        <div className="text-center py-12 text-slate-600">
+        <div className="text-center py-12 text-[color:var(--theme-text-secondary)]">
           <p className="text-sm">No {type} abilities added yet</p>
           <p className="text-xs mt-1">Click "Add" to create one</p>
         </div>

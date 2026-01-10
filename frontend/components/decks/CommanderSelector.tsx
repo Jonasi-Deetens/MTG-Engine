@@ -48,9 +48,9 @@ export function CommanderSelector({ commanders, onAdd, onRemove, maxCommanders =
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="text-lg font-semibold text-slate-900 mb-2">Commanders</h3>
+        <h3 className="text-lg font-semibold text-[color:var(--theme-text-primary)] mb-2">Commanders</h3>
         {commanders.length === 0 ? (
-          <p className="text-slate-600 text-sm">No commanders selected</p>
+          <p className="text-[color:var(--theme-text-secondary)] text-sm">No commanders selected</p>
         ) : (
           <div className="flex gap-4 flex-wrap">
             {commanders.map((commander, index) => (
@@ -61,14 +61,14 @@ export function CommanderSelector({ commanders, onAdd, onRemove, maxCommanders =
                     e.stopPropagation();
                     onRemove(commander.card_id);
                   }}
-                  className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-600 hover:bg-red-500 text-white flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                  className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-[color:var(--theme-status-error)] hover:opacity-90 text-white flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10"
                   title="Remove commander"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
-                <p className="text-xs text-center text-slate-600 mt-1">
+                <p className="text-xs text-center text-[color:var(--theme-text-secondary)] mt-1">
                   Commander {index + 1}
                 </p>
               </div>
@@ -86,7 +86,7 @@ export function CommanderSelector({ commanders, onAdd, onRemove, maxCommanders =
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               placeholder="Search for commander..."
-              className="flex-1 px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 focus:border-amber-500 focus:outline-none"
+              className="flex-1 px-3 py-2 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none"
             />
             <Button
               onClick={handleSearch}
@@ -98,7 +98,7 @@ export function CommanderSelector({ commanders, onAdd, onRemove, maxCommanders =
           </div>
 
           {searchResults.length > 0 && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-white border border-amber-200/50 rounded-lg">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] rounded-lg">
               {searchResults.map((card) => (
                 <div
                   key={card.card_id}
@@ -114,7 +114,7 @@ export function CommanderSelector({ commanders, onAdd, onRemove, maxCommanders =
       )}
 
       {!canAddMore && (
-        <p className="text-slate-600 text-sm">Maximum {maxCommanders} commanders allowed</p>
+        <p className="text-[color:var(--theme-text-secondary)] text-sm">Maximum {maxCommanders} commanders allowed</p>
       )}
     </div>
   );

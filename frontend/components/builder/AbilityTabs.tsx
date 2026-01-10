@@ -39,15 +39,15 @@ export function AbilityTabs() {
   return (
     <div className="flex flex-col h-full">
       {/* Tab Navigation */}
-      <div className="flex border-b border-amber-200/50 mb-4">
+      <div className="flex border-b border-[color:var(--theme-border-default)] mb-4">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={`px-4 py-2 font-medium text-sm transition-colors ${
               activeTab === tab.id
-                ? 'text-amber-600 border-b-2 border-amber-600'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'text-[color:var(--theme-accent-primary)] border-b-2 border-[color:var(--theme-accent-primary)]'
+                : 'text-[color:var(--theme-text-secondary)] hover:text-[color:var(--theme-text-primary)]'
             }`}
           >
             {tab.label}

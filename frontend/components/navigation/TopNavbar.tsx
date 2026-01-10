@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { navItems, NavItem } from './navConfig';
+import { ThemeSwitcher } from '@/components/ui/ThemeSwitcher';
 import { BookOpen, Menu, X, ChevronDown } from 'lucide-react';
 
 interface TopNavbarProps {
@@ -23,23 +24,23 @@ export function TopNavbar({ variant = 'app', showSpacer = true }: TopNavbarProps
   // Filter nav items based on authentication
   const visibleNavItems = navItems.filter(item => !item.requiresAuth || isAuthenticated);
 
-  // Variant styles - white-yellow angel theme
+  // Variant styles - theme-aware
   const variantStyles = {
     landing: {
-      container: 'bg-white/95 backdrop-blur-md border border-amber-200/50',
-      text: 'text-slate-800',
-      hover: 'hover:bg-amber-100/80',
-      active: 'text-amber-600 font-semibold',
-      logo: 'text-slate-900',
-      mobileBorder: 'border-amber-200/50',
+      container: 'bg-[color:var(--theme-card-bg)]/95 backdrop-blur-md border border-[color:var(--theme-card-border)]',
+      text: 'text-[color:var(--theme-text-primary)]',
+      hover: 'hover:bg-[color:var(--theme-card-hover)]/80',
+      active: 'text-[color:var(--theme-accent-primary)] font-semibold',
+      logo: 'text-[color:var(--theme-text-primary)]',
+      mobileBorder: 'border-[color:var(--theme-card-border)]',
     },
     app: {
-      container: 'bg-white/98 backdrop-blur-sm border border-amber-200/30',
-      text: 'text-slate-700',
-      hover: 'hover:bg-amber-100/80',
-      active: 'text-amber-600 font-semibold',
-      logo: 'text-slate-900',
-      mobileBorder: 'border-amber-200/30',
+      container: 'bg-[color:var(--theme-card-bg)]/98 backdrop-blur-sm border border-[color:var(--theme-card-border)]',
+      text: 'text-[color:var(--theme-text-secondary)]',
+      hover: 'hover:bg-[color:var(--theme-card-hover)]/80',
+      active: 'text-[color:var(--theme-accent-primary)] font-semibold',
+      logo: 'text-[color:var(--theme-text-primary)]',
+      mobileBorder: 'border-[color:var(--theme-card-border)]',
     },
   };
 
@@ -68,7 +69,6 @@ export function TopNavbar({ variant = 'app', showSpacer = true }: TopNavbarProps
         className={`
           fixed top-4 left-4 right-4 z-50
           ${styles.container}
-          border
           shadow-lg
           rounded-2xl
           transition-all
@@ -98,7 +98,7 @@ export function TopNavbar({ variant = 'app', showSpacer = true }: TopNavbarProps
                   <button
                     onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                     className={`
-                      flex items-center gap-2 px-4 py-2 rounded-lg transition-all
+                      flex items-center gap-2 px-4 py-2 rounded-lg transition-all cursor-pointer
                       ${styles.text} ${styles.hover}
                     `}
                   >
@@ -112,13 +112,16 @@ export function TopNavbar({ variant = 'app', showSpacer = true }: TopNavbarProps
                         className="fixed inset-0 z-40"
                         onClick={() => setIsUserMenuOpen(false)}
                       />
-                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-amber-200/50 py-2 z-50">
+                      <div className="absolute right-0 mt-2 w-56 bg-[color:var(--theme-card-bg)] rounded-lg shadow-xl border border-[color:var(--theme-card-border)] py-2 z-50">
+                        <div className="px-4 py-2 border-b border-[color:var(--theme-border-default)]">
+                          <ThemeSwitcher />
+                        </div>
                         <button
                           onClick={() => {
                             logout();
                             setIsUserMenuOpen(false);
                           }}
-                          className="w-full flex items-center px-4 py-2 text-slate-700 hover:bg-amber-50 transition-colors"
+                          className="w-full flex items-center px-4 py-2 text-[color:var(--theme-text-secondary)] hover:bg-[color:var(--theme-card-hover)] transition-colors cursor-pointer"
                         >
                           <span>Logout</span>
                         </button>

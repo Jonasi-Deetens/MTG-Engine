@@ -59,13 +59,13 @@ export function DeckImportExport({ deckId, onImportSuccess }: DeckImportExportPr
     <div className="space-y-6">
       {/* Import Section */}
       <div className="space-y-2">
-        <h3 className="text-lg font-semibold text-white">Import Deck</h3>
+        <h3 className="text-lg font-semibold text-[color:var(--theme-text-primary)]">Import Deck</h3>
         <textarea
           value={importText}
           onChange={(e) => setImportText(e.target.value)}
           placeholder="Paste deck list here (format: 4 Lightning Bolt)"
           rows={10}
-          className="w-full px-3 py-2 bg-slate-700 text-white rounded border border-slate-600 focus:border-amber-500 focus:outline-none font-mono text-sm"
+          className="w-full px-3 py-2 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none font-mono text-sm"
         />
         <Button
           onClick={handleImport}
@@ -74,19 +74,19 @@ export function DeckImportExport({ deckId, onImportSuccess }: DeckImportExportPr
         >
           {importing ? 'Importing...' : 'Import Deck'}
         </Button>
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-[color:var(--theme-text-muted)]">
           Note: Import functionality is currently limited. Full parsing coming soon.
         </p>
       </div>
 
       {/* Export Section */}
       <div className="space-y-2">
-        <h3 className="text-lg font-semibold text-white">Export Deck</h3>
+        <h3 className="text-lg font-semibold text-[color:var(--theme-text-primary)]">Export Deck</h3>
         <div className="flex gap-2">
           <select
             value={exportFormat}
             onChange={(e) => setExportFormat(e.target.value as 'text' | 'json')}
-            className="px-3 py-2 bg-slate-700 text-white rounded border border-slate-600 focus:border-amber-500 focus:outline-none"
+            className="px-3 py-2 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none"
           >
             <option value="text">Text Format</option>
             <option value="json">JSON Format</option>
@@ -103,7 +103,7 @@ export function DeckImportExport({ deckId, onImportSuccess }: DeckImportExportPr
         {exportData && (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <p className="text-sm text-slate-300">Exported Data:</p>
+              <p className="text-sm text-[color:var(--theme-text-secondary)]">Exported Data:</p>
               <Button
                 onClick={handleCopyExport}
                 variant="outline"
@@ -116,7 +116,7 @@ export function DeckImportExport({ deckId, onImportSuccess }: DeckImportExportPr
               value={exportData}
               readOnly
               rows={10}
-              className="w-full px-3 py-2 bg-slate-800 text-white rounded border border-slate-600 font-mono text-sm"
+              className="w-full px-3 py-2 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] font-mono text-sm"
             />
           </div>
         )}

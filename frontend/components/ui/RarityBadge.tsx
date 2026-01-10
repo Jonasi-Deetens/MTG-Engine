@@ -19,9 +19,9 @@ const RARITY_STYLES: Record<string, { bg: string; text: string; border: string }
     border: 'border-slate-300',
   },
   rare: {
-    bg: 'bg-amber-500/80',
+    bg: 'bg-[color:var(--theme-accent-primary)]/80',
     text: 'text-white',
-    border: 'border-amber-400',
+    border: 'border-[color:var(--theme-accent-secondary)]',
   },
   mythic: {
     bg: 'bg-orange-600/80',

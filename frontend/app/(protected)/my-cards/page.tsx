@@ -50,10 +50,10 @@ export default function MyCardsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-heading text-3xl font-bold text-slate-900 mb-2">
+        <h1 className="font-heading text-3xl font-bold text-[color:var(--theme-text-primary)] mb-2">
           My Cards
         </h1>
-        <p className="text-slate-600">
+        <p className="text-[color:var(--theme-text-secondary)]">
           Your favorite cards and collections
         </p>
       </div>
@@ -63,8 +63,8 @@ export default function MyCardsPage() {
           <Link href="/my-cards/favorites" className="block p-6">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-xl font-semibold text-slate-900 mb-1">Favorites</h3>
-                <p className="text-slate-600 text-sm">{favorites.length} cards</p>
+                <h3 className="text-xl font-semibold text-[color:var(--theme-text-primary)] mb-1">Favorites</h3>
+                <p className="text-[color:var(--theme-text-secondary)] text-sm">{favorites.length} cards</p>
               </div>
               <svg className="w-8 h-8 text-amber-500" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
@@ -77,8 +77,8 @@ export default function MyCardsPage() {
           <Link href="/my-cards/collections" className="block p-6">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-xl font-semibold text-slate-900 mb-1">Collections</h3>
-                <p className="text-slate-600 text-sm">Organize your cards</p>
+                <h3 className="text-xl font-semibold text-[color:var(--theme-text-primary)] mb-1">Collections</h3>
+                <p className="text-[color:var(--theme-text-secondary)] text-sm">Organize your cards</p>
               </div>
               <svg className="w-8 h-8 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
@@ -89,9 +89,9 @@ export default function MyCardsPage() {
       </div>
 
       <div>
-        <h2 className="text-2xl font-bold text-slate-900 mb-4">Recent Favorites</h2>
+        <h2 className="text-2xl font-bold text-[color:var(--theme-text-primary)] mb-4">Recent Favorites</h2>
         {error && (
-          <div className="p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400 mb-4">
+          <div className="p-4 bg-[color:var(--theme-status-error)]/20 border border-[color:var(--theme-status-error)]/50 rounded-lg text-[color:var(--theme-status-error)] mb-4">
             {error}
           </div>
         )}
@@ -99,8 +99,8 @@ export default function MyCardsPage() {
           <CardGridSkeleton count={12} />
         ) : favorites.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-slate-600 text-lg">No favorites yet</p>
-            <p className="text-slate-500 text-sm mt-2">
+            <p className="text-[color:var(--theme-text-secondary)] text-lg">No favorites yet</p>
+            <p className="text-[color:var(--theme-text-muted)] text-sm mt-2">
               Start adding cards to your favorites to see them here
             </p>
             <Link href="/browse" className="mt-4 inline-block">

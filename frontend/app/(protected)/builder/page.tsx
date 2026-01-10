@@ -144,12 +144,12 @@ export default function BuilderPage() {
   }, [searchParams, currentCard, setCurrentCard, clearAll]);
 
   return (
-    <div className="min-h-screen bg-angel-white p-4">
+    <div className="min-h-screen bg-[color:var(--theme-bg-primary)] p-4">
       <div className="max-w-7xl mx-auto space-y-4">
         {/* Top Section: Card Preview */}
-        <div className="bg-white border border-amber-200/50 rounded-lg p-6">
+        <div className="bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold text-slate-900">Ability Builder</h1>
+            <h1 className="text-2xl font-bold text-[color:var(--theme-text-primary)]">Ability Builder</h1>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
                 <div className="w-64">
@@ -181,7 +181,7 @@ export default function BuilderPage() {
             </div>
           </div>
           {error && (
-            <div className="mb-4 p-3 bg-red-900/50 text-red-200 rounded text-sm">
+            <div className="mb-4 p-3 bg-[color:var(--theme-status-error)]/20 text-[color:var(--theme-status-error)] rounded text-sm">
               {error}
             </div>
           )}
@@ -190,11 +190,11 @@ export default function BuilderPage() {
               <div className="w-48 shrink-0">
                 <CardPreview card={currentCard} onVersionChange={handleVersionChange} />
               </div>
-              <div className="flex-1 text-slate-700 space-y-3">
+              <div className="flex-1 text-[color:var(--theme-text-secondary)] space-y-3">
                 <div>
-                  <h2 className="text-2xl font-bold text-slate-900 mb-1">{currentCard.name}</h2>
+                  <h2 className="text-2xl font-bold text-[color:var(--theme-text-primary)] mb-1">{currentCard.name}</h2>
                   {currentCard.mana_cost && (
-                    <p className="text-base font-mono text-amber-600">
+                    <p className="text-base font-mono text-[color:var(--theme-accent-primary)]">
                       {currentCard.mana_cost}
                     </p>
                   )}
@@ -202,15 +202,15 @@ export default function BuilderPage() {
                 
                 {currentCard.type_line && (
                   <div>
-                    <span className="text-xs text-slate-600 uppercase tracking-wide">Type</span>
-                    <p className="text-sm text-slate-900 mt-1">{currentCard.type_line}</p>
+                    <span className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">Type</span>
+                    <p className="text-sm text-[color:var(--theme-text-primary)] mt-1">{currentCard.type_line}</p>
                   </div>
                 )}
                 
                 {(currentCard.power && currentCard.toughness) && (
                   <div>
-                    <span className="text-xs text-slate-600 uppercase tracking-wide">Power / Toughness</span>
-                    <p className="text-sm text-slate-900 mt-1 font-mono">
+                    <span className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">Power / Toughness</span>
+                    <p className="text-sm text-[color:var(--theme-text-primary)] mt-1 font-mono">
                       {currentCard.power} / {currentCard.toughness}
                     </p>
                   </div>
@@ -218,12 +218,12 @@ export default function BuilderPage() {
                 
                 {currentCard.colors && currentCard.colors.length > 0 && (
                   <div>
-                    <span className="text-xs text-slate-600 uppercase tracking-wide">Colors</span>
+                    <span className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">Colors</span>
                     <div className="flex gap-2 mt-1">
                       {currentCard.colors.map((color, idx) => (
                         <span
                           key={idx}
-                          className="px-2 py-1 rounded text-xs font-medium bg-amber-100 text-slate-900 capitalize border border-amber-200/50"
+                          className="px-2 py-1 rounded text-xs font-medium bg-[color:var(--theme-card-hover)] text-[color:var(--theme-text-primary)] capitalize border border-[color:var(--theme-card-border)]"
                         >
                           {color}
                         </span>
@@ -234,25 +234,25 @@ export default function BuilderPage() {
                 
                 {currentCard.oracle_text && (
                   <div>
-                    <span className="text-xs text-slate-600 uppercase tracking-wide">Oracle Text</span>
-                    <p className="text-sm text-slate-800 mt-1 whitespace-pre-wrap leading-relaxed">
+                    <span className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">Oracle Text</span>
+                    <p className="text-sm text-[color:var(--theme-text-primary)] mt-1 whitespace-pre-wrap leading-relaxed">
                       {currentCard.oracle_text}
                     </p>
                   </div>
                 )}
                 
                 {(currentCard.set_code || currentCard.collector_number) && (
-                  <div className="flex gap-4 text-xs text-slate-600">
+                  <div className="flex gap-4 text-xs text-[color:var(--theme-text-secondary)]">
                     {currentCard.set_code && (
                       <div>
                         <span className="uppercase tracking-wide">Set:</span>{' '}
-                        <span className="text-slate-800">{currentCard.set_code.toUpperCase()}</span>
+                        <span className="text-[color:var(--theme-text-primary)]">{currentCard.set_code.toUpperCase()}</span>
                       </div>
                     )}
                     {currentCard.collector_number && (
                       <div>
                         <span className="uppercase tracking-wide">#:</span>{' '}
-                        <span className="text-slate-800">{currentCard.collector_number}</span>
+                        <span className="text-[color:var(--theme-text-primary)]">{currentCard.collector_number}</span>
                       </div>
                     )}
                   </div>
@@ -261,7 +261,7 @@ export default function BuilderPage() {
             </div>
           )}
           {!currentCard && (
-            <div className="text-center py-8 text-slate-600">
+            <div className="text-center py-8 text-[color:var(--theme-text-secondary)]">
               <p className="text-lg mb-2">No card selected</p>
               <p className="text-sm mb-4">Search for a card by name or click "Random Card" to start building abilities</p>
               <Link href="/getting-started">
@@ -276,19 +276,19 @@ export default function BuilderPage() {
         {/* Main Section: Split between Tabs and Preview */}
         <div className="grid grid-cols-2 gap-4">
           {/* Left: Ability Builder Tabs */}
-          <div className="bg-white border border-amber-200/50 rounded-lg p-6 min-h-[500px]">
+          <div className="bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] rounded-lg p-6 min-h-[500px]">
             <AbilityTabs />
           </div>
 
           {/* Right: Tree View Preview */}
-          <div className="bg-white border border-amber-200/50 rounded-lg p-6 min-h-[500px] overflow-y-auto">
-            <h2 className="text-xl font-bold text-slate-900 mb-4">Ability Preview</h2>
+          <div className="bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] rounded-lg p-6 min-h-[500px] overflow-y-auto">
+            <h2 className="text-xl font-bold text-[color:var(--theme-text-primary)] mb-4">Ability Preview</h2>
             <AbilityTreeView />
           </div>
         </div>
 
         {/* Bottom Section: Validation */}
-        <div className="bg-white border border-amber-200/50 rounded-lg p-6">
+        <div className="bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] rounded-lg p-6">
           <ValidationPanel />
         </div>
       </div>

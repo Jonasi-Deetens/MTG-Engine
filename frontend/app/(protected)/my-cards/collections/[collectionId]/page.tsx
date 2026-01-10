@@ -68,7 +68,7 @@ export default function CollectionDetailPage() {
     return (
       <div className="min-h-screen bg-angel-white p-4">
         <div className="max-w-4xl mx-auto">
-          <div className="bg-red-900/50 border border-red-600 rounded-lg p-6 text-red-200">
+          <div className="bg-[color:var(--theme-status-error)]/20 border border-[color:var(--theme-status-error)]/50 rounded-lg p-6 text-[color:var(--theme-status-error)]">
             <h1 className="text-2xl font-bold mb-2">Error</h1>
             <p>{error || 'Collection not found'}</p>
             <Link href="/my-cards/collections">
@@ -85,18 +85,18 @@ export default function CollectionDetailPage() {
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/my-cards/collections" className="text-slate-600 hover:text-amber-600 transition-colors mb-2 inline-block">
+        <Link href="/my-cards/collections" className="text-[color:var(--theme-text-secondary)] hover:text-amber-600 transition-colors mb-2 inline-block">
           ← Back to Collections
         </Link>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="font-heading text-3xl font-bold text-slate-900 mb-2">
+            <h1 className="font-heading text-3xl font-bold text-[color:var(--theme-text-primary)] mb-2">
               {collection.name}
             </h1>
             {collection.description && (
-              <p className="text-slate-600 mb-2">{collection.description}</p>
+              <p className="text-[color:var(--theme-text-secondary)] mb-2">{collection.description}</p>
             )}
-            <p className="text-slate-500 text-sm">
+            <p className="text-[color:var(--theme-text-muted)] text-sm">
               {collection.card_count} card{collection.card_count !== 1 ? 's' : ''}
             </p>
           </div>
@@ -105,8 +105,8 @@ export default function CollectionDetailPage() {
 
       {collection.cards.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-slate-600 text-lg">This collection is empty</p>
-          <p className="text-slate-500 text-sm mt-2">
+          <p className="text-[color:var(--theme-text-secondary)] text-lg">This collection is empty</p>
+          <p className="text-[color:var(--theme-text-muted)] text-sm mt-2">
             Add cards to this collection from card detail pages
           </p>
         </div>

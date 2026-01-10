@@ -13,11 +13,11 @@ interface StatusBadgeProps {
 }
 
 const variantStyles = {
-  default: 'bg-slate-200 text-slate-700 border-slate-300',
-  success: 'bg-green-100 text-green-700 border-green-300',
-  warning: 'bg-yellow-100 text-yellow-700 border-yellow-300',
-  error: 'bg-red-100 text-red-700 border-red-300',
-  info: 'bg-blue-100 text-blue-700 border-blue-300',
+  default: 'bg-[color:var(--theme-bg-secondary)] text-[color:var(--theme-text-secondary)] border-[color:var(--theme-border-default)]',
+  success: 'bg-[color:var(--theme-status-success)]/20 text-[color:var(--theme-status-success)] border-[color:var(--theme-status-success)]/50',
+  warning: 'bg-[color:var(--theme-status-warning)]/20 text-[color:var(--theme-status-warning)] border-[color:var(--theme-status-warning)]/50',
+  error: 'bg-[color:var(--theme-status-error)]/20 text-[color:var(--theme-status-error)] border-[color:var(--theme-status-error)]/50',
+  info: 'bg-[color:var(--theme-status-info)]/20 text-[color:var(--theme-status-info)] border-[color:var(--theme-status-info)]/50',
 };
 
 const sizeStyles = {

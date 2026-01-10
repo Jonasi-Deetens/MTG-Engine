@@ -117,7 +117,7 @@ export function ConditionBuilder({ condition, onChange, onRemove }: ConditionBui
   }, [condition]);
 
   return (
-    <div className="space-y-3 bg-amber-50/50 rounded-lg p-4 border border-amber-200/50">
+    <div className="space-y-3 bg-[color:var(--theme-card-hover)] rounded-lg p-4 border border-[color:var(--theme-card-border)]">
       {onRemove && (
         <div className="flex justify-end mb-2">
           <Button
@@ -125,14 +125,14 @@ export function ConditionBuilder({ condition, onChange, onRemove }: ConditionBui
             onClick={onRemove}
             variant="link"
             size="xs"
-            className="text-red-400 hover:text-red-300"
+            className="text-[color:var(--theme-status-error)] hover:opacity-80"
           >
             Remove
           </Button>
         </div>
       )}
       <div>
-        <label className="block text-xs text-slate-600 mb-1">Condition Type</label>
+        <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Condition Type</label>
         <select
           value={conditionType}
           onChange={(e) => {
@@ -147,7 +147,7 @@ export function ConditionBuilder({ condition, onChange, onRemove }: ConditionBui
             setManaValue(0);
             setSource('triggering_source');
           }}
-          className="w-full px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 text-sm focus:border-amber-500 focus:outline-none"
+          className="w-full px-3 py-2 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
         >
           {CONDITION_TYPE_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -159,24 +159,24 @@ export function ConditionBuilder({ condition, onChange, onRemove }: ConditionBui
 
       {selectedConditionType?.requiresValue && (
         <div>
-          <label className="block text-xs text-slate-400 mb-1">Value</label>
+          <label className="block text-xs text-[color:var(--theme-text-muted)] mb-1">Value</label>
           <input
             type="number"
             value={value}
             onChange={(e) => setValue(parseInt(e.target.value) || 0)}
             min="0"
-            className="w-full px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 text-sm focus:border-amber-500 focus:outline-none"
+            className="w-full px-3 py-2 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
           />
         </div>
       )}
 
       {selectedConditionType?.requiresComparison && (
         <div>
-          <label className="block text-xs text-slate-400 mb-1">Comparison</label>
+          <label className="block text-xs text-[color:var(--theme-text-muted)] mb-1">Comparison</label>
           <select
             value={comparison}
             onChange={(e) => setComparison(e.target.value)}
-            className="w-full px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 text-sm focus:border-amber-500 focus:outline-none"
+            className="w-full px-3 py-2 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
           >
             {COMPARISON_OPERATORS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -189,11 +189,11 @@ export function ConditionBuilder({ condition, onChange, onRemove }: ConditionBui
 
       {selectedConditionType?.requiresTarget && (
         <div>
-          <label className="block text-xs text-slate-400 mb-1">Target</label>
+          <label className="block text-xs text-[color:var(--theme-text-muted)] mb-1">Target</label>
           <select
             value={target}
             onChange={(e) => setTarget(e.target.value)}
-            className="w-full px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 text-sm focus:border-amber-500 focus:outline-none"
+            className="w-full px-3 py-2 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
           >
             {CONDITION_TARGET_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -206,11 +206,11 @@ export function ConditionBuilder({ condition, onChange, onRemove }: ConditionBui
 
       {selectedConditionType?.requiresType && (
         <div>
-          <label className="block text-xs text-slate-400 mb-1">Permanent Type</label>
+          <label className="block text-xs text-[color:var(--theme-text-muted)] mb-1">Permanent Type</label>
           <select
             value={permanentType}
             onChange={(e) => setPermanentType(e.target.value)}
-            className="w-full px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 text-sm focus:border-amber-500 focus:outline-none"
+            className="w-full px-3 py-2 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
           >
             {PERMANENT_TYPES.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -223,26 +223,26 @@ export function ConditionBuilder({ condition, onChange, onRemove }: ConditionBui
 
       {conditionType === 'has_keyword' && (
         <div>
-          <label className="block text-xs text-slate-400 mb-1">Keyword</label>
+          <label className="block text-xs text-[color:var(--theme-text-muted)] mb-1">Keyword</label>
           <input
             type="text"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             placeholder="e.g., flying, haste"
-            className="w-full px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 text-sm focus:border-amber-500 focus:outline-none"
+            className="w-full px-3 py-2 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
           />
         </div>
       )}
 
       {conditionType === 'has_counter' && (
         <div>
-          <label className="block text-xs text-slate-400 mb-1">Counter Type</label>
+          <label className="block text-xs text-[color:var(--theme-text-muted)] mb-1">Counter Type</label>
           <input
             type="text"
             value={counterType}
             onChange={(e) => setCounterType(e.target.value)}
             placeholder="e.g., +1/+1, -1/-1, loyalty"
-            className="w-full px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 text-sm focus:border-amber-500 focus:outline-none"
+            className="w-full px-3 py-2 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
           />
         </div>
       )}
@@ -250,7 +250,7 @@ export function ConditionBuilder({ condition, onChange, onRemove }: ConditionBui
       {conditionType === 'mana_value_comparison' && (
         <div className="space-y-2">
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Compare Against</label>
+            <label className="block text-xs text-[color:var(--theme-text-muted)] mb-1">Compare Against</label>
             <select
               value={source}
               onChange={(e) => {
@@ -259,7 +259,7 @@ export function ConditionBuilder({ condition, onChange, onRemove }: ConditionBui
                   setManaValue(0);
                 }
               }}
-              className="w-full px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 text-sm focus:border-amber-500 focus:outline-none"
+              className="w-full px-3 py-2 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
             >
               {CONDITION_TARGET_OPTIONS.filter(opt => 
                 opt.value === 'triggering_source' || 
@@ -275,16 +275,16 @@ export function ConditionBuilder({ condition, onChange, onRemove }: ConditionBui
             </select>
           </div>
           {source === 'triggering_source' || source === 'triggering_aura' || source === 'triggering_spell' ? (
-            <p className="text-xs text-slate-500">Will compare against the triggering source's mana value</p>
+            <p className="text-xs text-[color:var(--theme-text-muted)]">Will compare against the triggering source's mana value</p>
           ) : (
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Fixed Mana Value</label>
+              <label className="block text-xs text-[color:var(--theme-text-muted)] mb-1">Fixed Mana Value</label>
               <input
                 type="number"
                 value={manaValue}
                 onChange={(e) => setManaValue(parseInt(e.target.value) || 0)}
                 min="0"
-                className="w-full px-3 py-2 bg-white text-slate-900 rounded border border-amber-200/50 text-sm focus:border-amber-500 focus:outline-none"
+                className="w-full px-3 py-2 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
               />
             </div>
           )}

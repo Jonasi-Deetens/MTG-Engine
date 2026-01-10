@@ -114,7 +114,7 @@ export function LandingSearchResults({
                       onClick={() => toggleColor(color)}
                       className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
                         selectedColors.includes(color)
-                          ? 'bg-amber-500 text-white'
+                          ? 'bg-[color:var(--theme-accent-primary)] text-[color:var(--theme-button-primary-text)]'
                           : 'bg-white/20 text-white hover:bg-white/30'
                       }`}
                     >
@@ -132,7 +132,7 @@ export function LandingSearchResults({
                   value={typeFilter}
                   onChange={(e) => setTypeFilter(e.target.value)}
                   placeholder="e.g., Creature, Instant..."
-                  className="w-full px-2 py-1 text-xs bg-white/20 border border-white/30 rounded text-white placeholder-white/50 focus:border-amber-500 focus:outline-none"
+                  className="w-full px-2 py-1 text-xs bg-white/20 border border-white/30 rounded text-white placeholder-white/50 focus:border-[color:var(--theme-border-focus)] focus:outline-none"
                 />
               </div>
             </div>
