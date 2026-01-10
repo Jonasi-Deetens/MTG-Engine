@@ -41,7 +41,7 @@ export function DeckCardList({ cards, onQuantityChange, onRemove, showControls =
       {cards.map((deckCard) => (
         <div
           key={deckCard.card_id}
-          className="flex items-center gap-4 p-3 bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] rounded-lg hover:bg-[color:var(--theme-card-hover)] transition-colors"
+          className="flex items-center gap-4 p-3 bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] rounded-lg transition-colors"
         >
           <div className="flex-shrink-0 w-16">
             <CardPreview card={deckCard.card} />

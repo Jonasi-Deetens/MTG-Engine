@@ -19,7 +19,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [currentTheme, setCurrentThemeState] = useState<Theme>(defaultTheme);
   const [mounted, setMounted] = useState(false);
 
-  const availableThemes: Theme[] = ['light', 'dark', 'angel'];
+  const availableThemes: Theme[] = ['light', 'dark'];
 
   // Apply theme to document
   const applyTheme = useCallback((theme: Theme) => {
@@ -32,9 +32,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const storedTheme = localStorage.getItem(THEME_STORAGE_KEY) as Theme | null;
-      const initialTheme = storedTheme && availableThemes.includes(storedTheme) 
-        ? storedTheme 
-        : defaultTheme;
+      // Migrate 'angel' theme to 'light' for backward compatibility
+      let initialTheme: Theme = defaultTheme;
+      if (storedTheme === 'angel') {
+        initialTheme = 'light';
+        // Update localStorage to reflect the migration
+        localStorage.setItem(THEME_STORAGE_KEY, 'light');
+      } else if (storedTheme && availableThemes.includes(storedTheme)) {
+        initialTheme = storedTheme;
+      }
       
       // Apply theme immediately before React renders to prevent flash
       applyTheme(initialTheme);

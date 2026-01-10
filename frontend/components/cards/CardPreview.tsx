@@ -81,7 +81,7 @@ export function CardPreview({ card, onVersionChange, onAddToDeck, showAddButton 
 
   return (
     <>
-      <div className="aspect-[63/88] relative overflow-hidden rounded-xl flex items-center justify-center group">
+      <div className="aspect-[63/88] relative overflow-visible rounded-xl flex items-center justify-center group">
         <div 
           className={`absolute inset-0 transition-all duration-300 ease-out hover:scale-105 hover:shadow-2xl hover:shadow-black/60 cursor-pointer rounded-xl`}
           onClick={handleCardClick}

@@ -9,9 +9,9 @@ interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 
 export function Card({ children, variant = 'default', className, ...props }: CardProps) {
   const variants = {
-    default: 'bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] hover:bg-[color:var(--theme-card-hover)] hover:border-[color:var(--theme-border-hover)] shadow-md hover:shadow-lg',
-    elevated: 'bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] hover:bg-[color:var(--theme-card-hover)] hover:border-[color:var(--theme-border-hover)] shadow-xl hover:shadow-2xl shadow-black/10',
-    bordered: 'bg-[color:var(--theme-card-bg)] border-2 border-[color:var(--theme-accent-primary)] hover:bg-[color:var(--theme-card-hover)] hover:border-theme-accent-hover shadow-md hover:shadow-lg',
+    default: 'bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] hover:border-[color:var(--theme-border-hover)] shadow-md hover:shadow-lg',
+    elevated: 'bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] hover:border-[color:var(--theme-border-hover)] shadow-xl hover:shadow-2xl shadow-black/10',
+    bordered: 'bg-[color:var(--theme-card-bg)] border-2 border-[color:var(--theme-accent-primary)] hover:border-theme-accent-hover shadow-md hover:shadow-lg',
   };
   
   return (

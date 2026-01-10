@@ -69,8 +69,8 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-angel-white flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>
+      <div className="min-h-screen bg-[color:var(--theme-bg-primary)] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[color:var(--theme-accent-primary)]"></div>
       </div>
     );
   }
@@ -109,12 +109,12 @@ export default function DashboardPage() {
           <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-pink-600/20 to-transparent rounded-bl-full"></div>
           <div className="p-6 relative">
             <div className="flex items-center justify-between mb-4">
-              <span className="text-[color:var(--theme-text-muted)] text-sm uppercase tracking-wide">Favorites</span>
+              <span className="text-[color:var(--theme-text-secondary)] text-sm uppercase tracking-wide">Favorites</span>
               <div className="p-2 rounded-lg bg-pink-500/10 border border-pink-500/20">
                 <Heart className="w-6 h-6 text-pink-500" fill="currentColor" />
               </div>
             </div>
-            <div className="text-4xl font-bold text-white mb-2">{stats.favorites}</div>
+            <div className="text-4xl font-bold text-[color:var(--theme-text-primary)] mb-2">{stats.favorites}</div>
             <Link href="/my-cards/favorites" className="text-sm text-pink-500 hover:text-pink-400 inline-flex items-center gap-1 transition-colors">
               View all <span>→</span>
             </Link>
@@ -125,12 +125,12 @@ export default function DashboardPage() {
           <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-600/20 to-transparent rounded-bl-full"></div>
           <div className="p-6 relative">
             <div className="flex items-center justify-between mb-4">
-              <span className="text-[color:var(--theme-text-muted)] text-sm uppercase tracking-wide">Collections</span>
+              <span className="text-[color:var(--theme-text-secondary)] text-sm uppercase tracking-wide">Collections</span>
               <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
                 <Folder className="w-6 h-6 text-blue-500" />
               </div>
             </div>
-            <div className="text-4xl font-bold text-white mb-2">{stats.collections}</div>
+            <div className="text-4xl font-bold text-[color:var(--theme-text-primary)] mb-2">{stats.collections}</div>
             <Link href="/my-cards/collections" className="text-sm text-blue-500 hover:text-blue-400 inline-flex items-center gap-1 transition-colors">
               View all <span>→</span>
             </Link>

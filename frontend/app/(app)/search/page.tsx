@@ -5,6 +5,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { SearchInput } from '@/components/ui/SearchInput';
+import { Input } from '@/components/ui/Input';
 import { CardGrid } from '@/components/cards/CardGrid';
 import { CardGridSkeleton } from '@/components/skeletons/CardSkeleton';
 import { CardData } from '@/components/cards/CardPreview';

@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Default theme (angel) - fallback */
+/* Default theme (light) - fallback */
 :root {
   --theme-bg-primary: #fefcf8; /* angel.white */
   --theme-bg-secondary: #f5f0e8; /* angel.cream */
@@ -36,92 +36,12 @@
   --theme-button-outline-hover: #d97706; /* amber-600 - darker amber hover */
   --theme-button-ghost-text: #4a4a4a;
   --theme-button-ghost-hover: #fef3c7; /* amber-100 - light amber hover */
-  --theme-nav-active: #f59e0b; /* amber-500 - active color for default/angel theme */
+  --theme-nav-active: #f59e0b; /* amber-500 - active color for default/light theme */
   --theme-nav-active-border: #f59e0b; /* amber-500 - border color for active nav */
 }
 
-/* Light theme - neutral with subtle amber accents */
+/* Light theme (Elesh Norn white-yellow with amber/orange accents) */
 [data-theme="light"] {
-  --theme-bg-primary: #ffffff;
-  --theme-bg-secondary: #f8f9fa;
-  --theme-bg-tertiary: #f1f3f5;
-  --theme-text-primary: #1e293b;
-  --theme-text-secondary: #475569;
-  --theme-text-muted: #64748b;
-  --theme-border-default: #e2e8f0; /* slate-200 - neutral border */
-  --theme-border-hover: #cbd5e1; /* slate-300 - neutral hover border */
-  --theme-border-focus: #f59e0b; /* amber-500 - only for focus states */
-  --theme-accent-primary: #f59e0b; /* amber-500 - only for primary buttons */
-  --theme-accent-secondary: #fbbf24; /* amber-400 - subtle accent */
-  --theme-accent-hover: #d97706; /* amber-600 - for primary button hover */
-  --theme-status-success: #10b981;
-  --theme-status-warning: #f59e0b;
-  --theme-status-error: #ef4444;
-  --theme-status-info: #3b82f6;
-  --theme-card-bg: #ffffff;
-  --theme-card-border: #e2e8f0; /* slate-200 - neutral border */
-  --theme-card-hover: #f1f5f9; /* slate-100 - neutral hover */
-  --theme-input-bg: #ffffff;
-  --theme-input-border: #e2e8f0; /* slate-200 - neutral border */
-  --theme-input-text: #1e293b;
-  --theme-input-placeholder: #94a3b8;
-  --theme-button-primary-bg: #f59e0b; /* amber-500 - primary action */
-  --theme-button-primary-text: #ffffff;
-  --theme-button-primary-hover: #d97706; /* amber-600 */
-  --theme-button-secondary-bg: #f1f5f9; /* slate-100 - neutral background */
-  --theme-button-secondary-text: #1e293b;
-  --theme-button-secondary-hover: #e2e8f0; /* slate-200 - neutral hover */
-  --theme-button-outline-border: #e2e8f0; /* slate-200 - neutral border */
-  --theme-button-outline-text: #475569; /* slate-600 - neutral text */
-  --theme-button-outline-hover: #f1f5f9; /* slate-100 - neutral hover */
-  --theme-button-ghost-text: #475569; /* slate-600 */
-  --theme-button-ghost-hover: #f1f5f9; /* slate-100 */
-  --theme-nav-active: #475569; /* slate-600 - neutral active color for light theme */
-  --theme-nav-active-border: #475569; /* slate-600 - border color for active nav */
-}
-
-/* Dark theme */
-[data-theme="dark"] {
-  --theme-bg-primary: #0f172a;
-  --theme-bg-secondary: #1e293b;
-  --theme-bg-tertiary: #334155;
-  --theme-text-primary: #f1f5f9;
-  --theme-text-secondary: #cbd5e1;
-  --theme-text-muted: #94a3b8;
-  --theme-border-default: #ffffff; /* white */
-  --theme-border-hover: #f1f5f9; /* slate-100 - light gray hover */
-  --theme-border-focus: #f59e0b;
-  --theme-accent-primary: #f59e0b;
-  --theme-accent-secondary: #fbbf24;
-  --theme-accent-hover: #fcd34d;
-  --theme-status-success: #10b981;
-  --theme-status-warning: #f59e0b;
-  --theme-status-error: #ef4444;
-  --theme-status-info: #3b82f6;
-  --theme-card-bg: #1e293b;
-  --theme-card-border: #ffffff; /* white */
-  --theme-card-hover: #334155;
-  --theme-input-bg: #1e293b;
-  --theme-input-border: #ffffff; /* white */
-  --theme-input-text: #f1f5f9;
-  --theme-input-placeholder: #64748b;
-  --theme-button-primary-bg: #f59e0b;
-  --theme-button-primary-text: #ffffff;
-  --theme-button-primary-hover: #d97706;
-  --theme-button-secondary-bg: #334155;
-  --theme-button-secondary-text: #f1f5f9;
-  --theme-button-secondary-hover: #475569;
-  --theme-button-outline-border: #f59e0b;
-  --theme-button-outline-text: #f59e0b;
-  --theme-button-outline-hover: #f59e0b;
-  --theme-button-ghost-text: #cbd5e1;
-  --theme-button-ghost-hover: #334155;
-  --theme-nav-active: #ffffff; /* white - active color for dark theme */
-  --theme-nav-active-border: #ffffff; /* white - border color for active nav */
-}
-
-/* Angel theme (Elesh Norn white-yellow with amber/orange accents) */
-[data-theme="angel"] {
   --theme-bg-primary: #fefcf8; /* angel.white */
   --theme-bg-secondary: #f5f0e8; /* angel.cream */
   --theme-bg-tertiary: #e0d8cc; /* lighter cream */
@@ -156,8 +76,48 @@
   --theme-button-outline-hover: #d97706; /* amber-600 - darker amber hover */
   --theme-button-ghost-text: #4a4a4a;
   --theme-button-ghost-hover: #fef3c7; /* amber-100 - light amber hover */
-  --theme-nav-active: #f59e0b; /* amber-500 - active color for angel theme */
+  --theme-nav-active: #f59e0b; /* amber-500 - active color for light theme */
   --theme-nav-active-border: #f59e0b; /* amber-500 - border color for active nav */
+}
+
+/* Dark theme (red/black gothic theme) */
+[data-theme="dark"] {
+  --theme-bg-primary: #0a0a0a; /* very dark gray (slightly lighter than pure black) */
+  --theme-bg-secondary: #1a1a1a; /* dark gray */
+  --theme-bg-tertiary: #2a2a2a; /* medium dark gray */
+  --theme-text-primary: #f1f5f9; /* white/light gray */
+  --theme-text-secondary: #cbd5e1; /* light gray */
+  --theme-text-muted: #94a3b8; /* muted gray */
+  --theme-border-default: #D3202A; /* vibrant red - MTG red */
+  --theme-border-hover: #ef4444; /* brighter red on hover */
+  --theme-border-focus: #D3202A; /* vibrant red focus */
+  --theme-accent-primary: #D3202A; /* vibrant red - MTG red */
+  --theme-accent-secondary: #ef4444; /* brighter red */
+  --theme-accent-hover: #b91c1c; /* darker red on hover */
+  --theme-status-success: #10b981;
+  --theme-status-warning: #f59e0b;
+  --theme-status-error: #ef4444;
+  --theme-status-info: #3b82f6;
+  --theme-card-bg: #0a0a0a; /* very dark gray */
+  --theme-card-border: #D3202A; /* vibrant red border */
+  --theme-card-hover: #1a1a1a; /* slightly lighter on hover */
+  --theme-input-bg: #0a0a0a; /* very dark gray */
+  --theme-input-border: #D3202A; /* vibrant red border */
+  --theme-input-text: #f1f5f9; /* white text */
+  --theme-input-placeholder: #64748b; /* muted gray */
+  --theme-button-primary-bg: #D3202A; /* vibrant red button */
+  --theme-button-primary-text: #ffffff; /* white text */
+  --theme-button-primary-hover: #b91c1c; /* darker red on hover */
+  --theme-button-secondary-bg: #1a1a1a; /* dark gray */
+  --theme-button-secondary-text: #f1f5f9; /* white text */
+  --theme-button-secondary-hover: #2a2a2a; /* lighter gray on hover */
+  --theme-button-outline-border: #D3202A; /* vibrant red border */
+  --theme-button-outline-text: #D3202A; /* vibrant red text */
+  --theme-button-outline-hover: #b91c1c; /* darker red on hover */
+  --theme-button-ghost-text: #cbd5e1; /* light gray */
+  --theme-button-ghost-hover: #1a1a1a; /* dark gray hover */
+  --theme-nav-active: #D3202A; /* vibrant red - active nav item */
+  --theme-nav-active-border: #D3202A; /* vibrant red - active nav border */
 }
 
 @theme inline {

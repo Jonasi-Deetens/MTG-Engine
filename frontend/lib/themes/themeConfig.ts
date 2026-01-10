@@ -1,7 +1,7 @@
 // Theme configuration system
 // Defines semantic color structure for all themes
 
-export type Theme = 'light' | 'dark' | 'angel';
+export type Theme = 'light' | 'dark';
 
 export interface ThemeColors {
   background: {
@@ -67,126 +67,6 @@ export interface ThemeColors {
 export const themes: Record<Theme, ThemeColors> = {
   light: {
     background: {
-      primary: '#ffffff',
-      secondary: '#f8f9fa',
-      tertiary: '#f1f3f5',
-    },
-    foreground: {
-      primary: '#1e293b',    // slate-800
-      secondary: '#475569',  // slate-600
-      muted: '#64748b',      // slate-500
-    },
-    border: {
-      default: '#e2e8f0',    // slate-200
-      hover: '#cbd5e1',     // slate-300
-      focus: '#f59e0b',     // amber-500
-    },
-    accent: {
-      primary: '#f59e0b',   // amber-500
-      secondary: '#fbbf24', // amber-400
-      hover: '#d97706',     // amber-600
-    },
-    status: {
-      success: '#10b981',   // green-500
-      warning: '#f59e0b',   // amber-500
-      error: '#ef4444',     // red-500
-      info: '#3b82f6',      // blue-500
-    },
-    card: {
-      background: '#ffffff',
-      border: '#e2e8f0',    // slate-200
-      hover: '#f1f5f9',     // slate-100
-    },
-    input: {
-      background: '#ffffff',
-      border: '#e2e8f0',    // slate-200
-      text: '#1e293b',      // slate-800
-      placeholder: '#94a3b8', // slate-400
-    },
-    button: {
-      primary: {
-        bg: '#f59e0b',      // amber-500 - only for primary actions
-        text: '#ffffff',
-        hover: '#d97706',   // amber-600
-      },
-      secondary: {
-        bg: '#f1f5f9',      // slate-100 - neutral background
-        text: '#1e293b',    // slate-800
-        hover: '#e2e8f0',   // slate-200 - neutral hover
-      },
-      outline: {
-        border: '#e2e8f0',  // slate-200 - neutral border
-        text: '#475569',    // slate-600 - neutral text
-        hover: '#f1f5f9',   // slate-100 - neutral hover
-      },
-      ghost: {
-        text: '#475569',    // slate-600
-        hover: '#f1f5f9',   // slate-100
-      },
-    },
-  },
-  dark: {
-    background: {
-      primary: '#0f172a',   // slate-900
-      secondary: '#1e293b', // slate-800
-      tertiary: '#334155',  // slate-700
-    },
-    foreground: {
-      primary: '#f1f5f9',   // slate-100
-      secondary: '#cbd5e1', // slate-300
-      muted: '#94a3b8',     // slate-400
-    },
-    border: {
-      default: '#334155',   // slate-700
-      hover: '#475569',     // slate-600
-      focus: '#f59e0b',     // amber-500
-    },
-    accent: {
-      primary: '#f59e0b',   // amber-500
-      secondary: '#fbbf24', // amber-400
-      hover: '#fcd34d',     // amber-300
-    },
-    status: {
-      success: '#10b981',   // green-500
-      warning: '#f59e0b',   // amber-500
-      error: '#ef4444',     // red-500
-      info: '#3b82f6',      // blue-500
-    },
-    card: {
-      background: '#1e293b', // slate-800
-      border: '#334155',     // slate-700
-      hover: '#334155',     // slate-700
-    },
-    input: {
-      background: '#1e293b', // slate-800
-      border: '#334155',     // slate-700
-      text: '#f1f5f9',      // slate-100
-      placeholder: '#64748b', // slate-500
-    },
-    button: {
-      primary: {
-        bg: '#f59e0b',      // amber-500
-        text: '#ffffff',
-        hover: '#d97706',   // amber-600
-      },
-      secondary: {
-        bg: '#334155',      // slate-700
-        text: '#f1f5f9',    // slate-100
-        hover: '#475569',   // slate-600
-      },
-      outline: {
-        border: '#f59e0b',  // amber-500
-        text: '#f59e0b',    // amber-500
-        hover: '#f59e0b',   // amber-500
-      },
-      ghost: {
-        text: '#cbd5e1',    // slate-300
-        hover: '#334155',   // slate-700
-      },
-    },
-  },
-  angel: {
-    background: {
       primary: '#fefcf8',   // angel.white
       secondary: '#f5f0e8', // angel.cream
       tertiary: '#e0d8cc',  // lighter cream
@@ -245,7 +125,67 @@ export const themes: Record<Theme, ThemeColors> = {
       },
     },
   },
+  dark: {
+    background: {
+      primary: '#0a0a0a',   // very dark gray (slightly lighter than pure black)
+      secondary: '#1a1a1a',  // dark gray
+      tertiary: '#2a2a2a',   // medium dark gray
+    },
+    foreground: {
+      primary: '#f1f5f9',   // white/light gray
+      secondary: '#cbd5e1', // light gray
+      muted: '#94a3b8',     // muted gray
+    },
+    border: {
+      default: '#D3202A',   // vibrant red - MTG red
+      hover: '#ef4444',     // brighter red on hover
+      focus: '#D3202A',     // vibrant red focus
+    },
+    accent: {
+      primary: '#D3202A',   // vibrant red - MTG red
+      secondary: '#ef4444', // brighter red
+      hover: '#b91c1c',     // darker red on hover
+    },
+    status: {
+      success: '#10b981',   // green-500
+      warning: '#f59e0b',   // amber-500
+      error: '#ef4444',     // red-500
+      info: '#3b82f6',      // blue-500
+    },
+    card: {
+      background: '#0a0a0a', // very dark gray
+      border: '#D3202A',     // vibrant red border
+      hover: '#1a1a1a',      // slightly lighter on hover
+    },
+    input: {
+      background: '#0a0a0a', // very dark gray
+      border: '#D3202A',     // vibrant red border
+      text: '#f1f5f9',      // white text
+      placeholder: '#64748b', // muted gray
+    },
+    button: {
+      primary: {
+        bg: '#D3202A',      // vibrant red button
+        text: '#ffffff',
+        hover: '#b91c1c',   // darker red on hover
+      },
+      secondary: {
+        bg: '#1a1a1a',      // dark gray
+        text: '#f1f5f9',    // white text
+        hover: '#2a2a2a',   // lighter gray on hover
+      },
+      outline: {
+        border: '#D3202A',  // vibrant red border
+        text: '#D3202A',    // vibrant red text
+        hover: '#b91c1c',   // darker red on hover
+      },
+      ghost: {
+        text: '#cbd5e1',    // light gray
+        hover: '#1a1a1a',   // dark gray hover
+      },
+    },
+  },
 };
 
-export const defaultTheme: Theme = 'angel';
+export const defaultTheme: Theme = 'light';
 

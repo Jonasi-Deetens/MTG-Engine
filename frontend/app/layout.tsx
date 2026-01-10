@@ -34,7 +34,12 @@ export default function RootLayout({
             __html: `
               (function() {
                 try {
-                  const theme = localStorage.getItem('mtg-engine-theme') || 'angel';
+                  let theme = localStorage.getItem('mtg-engine-theme') || 'light';
+                  // Migrate 'angel' theme to 'light' for backward compatibility
+                  if (theme === 'angel') {
+                    theme = 'light';
+                    localStorage.setItem('mtg-engine-theme', 'light');
+                  }
                   document.documentElement.setAttribute('data-theme', theme);
                 } catch (e) {}
               })();
