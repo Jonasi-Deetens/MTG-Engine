@@ -9,8 +9,19 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const page = searchParams.get('page') || '1';
     const page_size = searchParams.get('page_size') || '20';
+    const colors = searchParams.get('colors');
+    const type = searchParams.get('type');
+    const set_code = searchParams.get('set_code');
     
-    const url = `${API_URL}/api/cards?page=${page}&page_size=${page_size}`;
+    // Build URL with filter parameters
+    const urlParams = new URLSearchParams();
+    urlParams.set('page', page);
+    urlParams.set('page_size', page_size);
+    if (colors) urlParams.set('colors', colors);
+    if (type) urlParams.set('type', type);
+    if (set_code) urlParams.set('set_code', set_code);
+    
+    const url = `${API_URL}/api/cards?${urlParams.toString()}`;
     
     const response = await fetch(url, {
       method: 'GET',

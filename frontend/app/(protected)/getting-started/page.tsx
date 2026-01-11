@@ -55,7 +55,7 @@ export default function GettingStartedPage() {
                 <p className="text-[color:var(--theme-text-secondary)] mb-4">
                   Click on any card to see its full details, all printings, and any saved ability graphs. You can share card links with others.
                 </p>
-                <Link href="/browse">
+                <Link href="/search">
                   <Button variant="outline" size="sm">
                     Browse Cards →
                   </Button>

@@ -2,7 +2,8 @@
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, func
+from sqlalchemy import or_, func, cast, String, text
+from sqlalchemy.dialects.postgresql import JSONB
 from typing import Optional, List
 
 from db.connection import SessionLocal
@@ -117,13 +118,70 @@ def get_card(
 def list_cards(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),
+    colors: Optional[str] = Query(None, description="Comma-separated color filter (e.g., 'W,U' for white or blue)"),
+    type: Optional[str] = Query(None, description="Type filter (searches in type_line)"),
+    set_code: Optional[str] = Query(None, description="Set code filter"),
     db: Session = Depends(get_db),
     user: Optional[User] = Depends(get_optional_user)
 ):
-    """List cards with pagination."""
+    """List cards with pagination and optional filters."""
     query = db.query(Axis1CardModel)
     
-    # Get total count
+    # Filter by set_code (already indexed column)
+    if set_code:
+        query = query.filter(Axis1CardModel.set_code.ilike(f"%{set_code}%"))
+    
+    # Filter by colors (stored in JSON)
+    if colors:
+        color_list = [c.strip().upper() for c in colors.split(',') if c.strip()]
+        if color_list:
+            # Check if 'C' (colorless) is in the filter
+            has_colorless = 'C' in color_list
+            color_list_without_c = [c for c in color_list if c != 'C']
+            
+            # Build color filter conditions
+            color_conditions = []
+            
+            # For cards with colors: check if any of the card's colors match the filter
+            if color_list_without_c:
+                for color in color_list_without_c:
+                    # Use JSONB @> operator to check if array contains the color
+                    # Check in faces[0].colors or top-level colors
+                    # Note: color is validated (W, U, B, R, G) so safe to use in f-string
+                    color_json = f'["{color}"]'
+                    color_condition = or_(
+                        text(f"axis1_json->'faces'->0->'colors' @> '{color_json}'::jsonb"),
+                        text(f"axis1_json->'colors' @> '{color_json}'::jsonb")
+                    )
+                    color_conditions.append(color_condition)
+            
+            # For colorless cards: check if colors array is empty or null
+            if has_colorless:
+                colorless_condition = or_(
+                    text("axis1_json->'faces'->0->'colors' IS NULL"),
+                    text("axis1_json->'faces'->0->'colors' = '[]'::jsonb"),
+                    text("axis1_json->'colors' IS NULL"),
+                    text("axis1_json->'colors' = '[]'::jsonb"),
+                    text("NOT (axis1_json ? 'faces')"),
+                    text("NOT (axis1_json ? 'colors')")
+                )
+                color_conditions.append(colorless_condition)
+            
+            if color_conditions:
+                query = query.filter(or_(*color_conditions))
+    
+    # Filter by type (searches in type_line within JSON)
+    if type:
+        type_lower = type.lower()
+        # Search in faces[0].type_line or top-level type_line
+        # Use text() for safer JSON path access that handles missing keys
+        type_condition = or_(
+            text(f"LOWER(CAST(axis1_json->'faces'->0->>'type_line' AS TEXT)) LIKE '%{type_lower}%'"),
+            text(f"LOWER(CAST(axis1_json->>'type_line' AS TEXT)) LIKE '%{type_lower}%'")
+        )
+        query = query.filter(type_condition)
+    
+    # Get total count (before pagination)
     total = query.count()
     
     # Apply pagination

@@ -4,17 +4,19 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { decks, DeckResponse } from '@/lib/decks';
+import { decks, DeckResponse, DeckDetailResponse } from '@/lib/decks';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { DeckCard } from '@/components/decks/DeckCard';
+import { SearchInput } from '@/components/ui/SearchInput';
 import { BookOpen, SearchX } from 'lucide-react';
 import Link from 'next/link';
 
 export default function DecksPage() {
   const router = useRouter();
   const [decksList, setDecksList] = useState<DeckResponse[]>([]);
+  const [deckDetails, setDeckDetails] = useState<Record<number, DeckDetailResponse>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [formatFilter, setFormatFilter] = useState<string>('');
@@ -26,6 +28,20 @@ export default function DecksPage() {
     try {
       const response = await decks.getDecks(formatFilter || undefined);
       setDecksList(response);
+
+      // Fetch deck details for all decks to get commander/first card images
+      const allDeckDetails: Record<number, DeckDetailResponse> = {};
+      await Promise.all(
+        response.map(async (deck) => {
+          try {
+            const detail = await decks.getDeck(deck.id);
+            allDeckDetails[deck.id] = detail;
+          } catch (err) {
+            console.error(`Failed to load details for deck ${deck.id}:`, err);
+          }
+        })
+      );
+      setDeckDetails(allDeckDetails);
     } catch (err: any) {
       setError(err?.data?.detail || err?.message || 'Failed to load decks');
     } finally {
@@ -72,13 +88,11 @@ export default function DecksPage() {
 
       {/* Filters */}
       <div className="flex gap-4 items-center">
-        <div className="flex-1">
-          <input
-            type="text"
+        <div className="flex-1 max-w-2xl">
+          <SearchInput
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={setSearchQuery}
             placeholder="Search decks..."
-            className="w-full px-3 py-2 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none"
           />
         </div>
         <select
@@ -104,7 +118,7 @@ export default function DecksPage() {
 
       {loading ? (
         <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[color:var(--theme-accent-primary)] mx-auto"></div>
         </div>
       ) : filteredDecks.length === 0 ? (
         <Card variant="elevated">
@@ -126,14 +140,18 @@ export default function DecksPage() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredDecks.map((deck) => (
-            <DeckCard
-              key={deck.id}
-              deck={deck}
-              showActions={true}
-              onDelete={handleDelete}
-            />
-          ))}
+          {filteredDecks.map((deck) => {
+            const detail = deckDetails[deck.id];
+            return (
+              <DeckCard
+                key={deck.id}
+                deck={deck}
+                deckDetail={detail}
+                showActions={true}
+                onDelete={handleDelete}
+              />
+            );
+          })}
         </div>
       )}
     </div>

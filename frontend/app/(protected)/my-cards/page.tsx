@@ -103,7 +103,7 @@ export default function MyCardsPage() {
             <p className="text-[color:var(--theme-text-muted)] text-sm mt-2">
               Start adding cards to your favorites to see them here
             </p>
-            <Link href="/browse" className="mt-4 inline-block">
+            <Link href="/search" className="mt-4 inline-block">
               <Button variant="primary">Browse Cards</Button>
             </Link>
           </div>

@@ -3,7 +3,7 @@
 // frontend/components/dashboard/QuickActions.tsx
 
 import { QuickActionCard } from './QuickActionCard';
-import { Search, Plus, Code, Grid3x3 } from 'lucide-react';
+import { Search, Plus, Code } from 'lucide-react';
 
 interface QuickAction {
   href: string;
@@ -23,7 +23,7 @@ const defaultActions: QuickAction[] = [
     href: '/search',
     icon: Search,
     title: 'Search Cards',
-    description: 'Find cards by name or filters',
+    description: 'Search and browse all cards',
     color: 'amber',
   },
   {
@@ -39,13 +39,6 @@ const defaultActions: QuickAction[] = [
     title: 'Ability Builder',
     description: 'Create ability graphs',
     color: 'purple',
-  },
-  {
-    href: '/browse',
-    icon: Grid3x3,
-    title: 'Browse Cards',
-    description: 'Explore all cards',
-    color: 'green',
   },
 ];
 

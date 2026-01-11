@@ -88,36 +88,36 @@
   --theme-text-primary: #f1f5f9; /* white/light gray */
   --theme-text-secondary: #cbd5e1; /* light gray */
   --theme-text-muted: #94a3b8; /* muted gray */
-  --theme-border-default: #D3202A; /* vibrant red - MTG red */
-  --theme-border-hover: #ef4444; /* brighter red on hover */
-  --theme-border-focus: #D3202A; /* vibrant red focus */
-  --theme-accent-primary: #D3202A; /* vibrant red - MTG red */
-  --theme-accent-secondary: #ef4444; /* brighter red */
-  --theme-accent-hover: #b91c1c; /* darker red on hover */
+  --theme-border-default: #e5e7eb; /* bright whitish gray */
+  --theme-border-hover: #f3f4f6; /* lighter gray on hover */
+  --theme-border-focus: #e5e7eb; /* bright whitish gray focus */
+  --theme-accent-primary: #e5e7eb; /* bright whitish gray */
+  --theme-accent-secondary: #f3f4f6; /* lighter gray */
+  --theme-accent-hover: #d1d5db; /* slightly darker gray on hover */
   --theme-status-success: #10b981;
   --theme-status-warning: #f59e0b;
   --theme-status-error: #ef4444;
   --theme-status-info: #3b82f6;
   --theme-card-bg: #0a0a0a; /* very dark gray */
-  --theme-card-border: #D3202A; /* vibrant red border */
+  --theme-card-border: #e5e7eb; /* bright whitish gray border */
   --theme-card-hover: #1a1a1a; /* slightly lighter on hover */
   --theme-input-bg: #0a0a0a; /* very dark gray */
-  --theme-input-border: #D3202A; /* vibrant red border */
+  --theme-input-border: #e5e7eb; /* bright whitish gray border */
   --theme-input-text: #f1f5f9; /* white text */
   --theme-input-placeholder: #64748b; /* muted gray */
-  --theme-button-primary-bg: #D3202A; /* vibrant red button */
-  --theme-button-primary-text: #ffffff; /* white text */
-  --theme-button-primary-hover: #b91c1c; /* darker red on hover */
+  --theme-button-primary-bg: #e5e7eb; /* bright whitish gray button */
+  --theme-button-primary-text: #0a0a0a; /* dark text for contrast */
+  --theme-button-primary-hover: #d1d5db; /* slightly darker gray on hover */
   --theme-button-secondary-bg: #1a1a1a; /* dark gray */
   --theme-button-secondary-text: #f1f5f9; /* white text */
   --theme-button-secondary-hover: #2a2a2a; /* lighter gray on hover */
-  --theme-button-outline-border: #D3202A; /* vibrant red border */
-  --theme-button-outline-text: #D3202A; /* vibrant red text */
-  --theme-button-outline-hover: #b91c1c; /* darker red on hover */
+  --theme-button-outline-border: #e5e7eb; /* bright whitish gray border */
+  --theme-button-outline-text: #e5e7eb; /* bright whitish gray text */
+  --theme-button-outline-hover: #d1d5db; /* slightly darker gray on hover */
   --theme-button-ghost-text: #cbd5e1; /* light gray */
   --theme-button-ghost-hover: #1a1a1a; /* dark gray hover */
-  --theme-nav-active: #D3202A; /* vibrant red - active nav item */
-  --theme-nav-active-border: #D3202A; /* vibrant red - active nav border */
+  --theme-nav-active: #e5e7eb; /* bright whitish gray - active nav item */
+  --theme-nav-active-border: #e5e7eb; /* bright whitish gray - active nav border */
 }
 
 @theme inline {
@@ -164,6 +164,6 @@ body {
 }
 
 [data-theme="dark"] .card-elevated-shadow {
-  box-shadow: 0 4px 6px -1px rgba(211, 32, 42, 0.1), 
-              0 2px 4px -1px rgba(211, 32, 42, 0.06);
+  box-shadow: 0 4px 6px -1px rgba(229, 231, 235, 0.1), 
+              0 2px 4px -1px rgba(229, 231, 235, 0.06);
 }

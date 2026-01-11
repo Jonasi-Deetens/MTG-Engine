@@ -71,7 +71,7 @@ export default function FavoritesPage() {
             title="No favorites yet"
             description="Start adding cards to your favorites by clicking the heart icon on any card. Your favorite cards will appear here for easy access."
             actionLabel="Browse Cards"
-            actionHref="/browse"
+            actionHref="/search"
           />
         </Card>
       ) : (

@@ -24,12 +24,12 @@ export default function HomePage() {
       style={{
         backgroundImage: `url('${backgroundImage}')`,
         backgroundSize: 'cover',
-        backgroundPosition: 'center',
+        backgroundPosition: 'top center',
         backgroundRepeat: 'no-repeat',
       }}
     >
-      {/* Dark overlay for readability */}
-      <div className="absolute inset-0 bg-black/40" />
+      {/* Light overlay for readability */}
+      <div className="absolute inset-0 bg-black/10" />
 
       {/* Content */}
       <div className="relative z-10 flex flex-col h-full">

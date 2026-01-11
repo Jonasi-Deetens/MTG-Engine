@@ -137,14 +137,14 @@ export const themes: Record<Theme, ThemeColors> = {
       muted: '#94a3b8',     // muted gray
     },
     border: {
-      default: '#D3202A',   // vibrant red - MTG red
-      hover: '#ef4444',     // brighter red on hover
-      focus: '#D3202A',     // vibrant red focus
+      default: '#e5e7eb',   // bright whitish gray
+      hover: '#f3f4f6',     // lighter gray on hover
+      focus: '#e5e7eb',     // bright whitish gray focus
     },
     accent: {
-      primary: '#D3202A',   // vibrant red - MTG red
-      secondary: '#ef4444', // brighter red
-      hover: '#b91c1c',     // darker red on hover
+      primary: '#e5e7eb',   // bright whitish gray
+      secondary: '#f3f4f6', // lighter gray
+      hover: '#d1d5db',     // slightly darker gray on hover
     },
     status: {
       success: '#10b981',   // green-500
@@ -154,20 +154,20 @@ export const themes: Record<Theme, ThemeColors> = {
     },
     card: {
       background: '#0a0a0a', // very dark gray
-      border: '#D3202A',     // vibrant red border
+      border: '#e5e7eb',     // bright whitish gray border
       hover: '#1a1a1a',      // slightly lighter on hover
     },
     input: {
       background: '#0a0a0a', // very dark gray
-      border: '#D3202A',     // vibrant red border
+      border: '#e5e7eb',     // bright whitish gray border
       text: '#f1f5f9',      // white text
       placeholder: '#64748b', // muted gray
     },
     button: {
       primary: {
-        bg: '#D3202A',      // vibrant red button
-        text: '#ffffff',
-        hover: '#b91c1c',   // darker red on hover
+        bg: '#e5e7eb',      // bright whitish gray button
+        text: '#0a0a0a',    // dark text for contrast
+        hover: '#d1d5db',   // slightly darker gray on hover
       },
       secondary: {
         bg: '#1a1a1a',      // dark gray
@@ -175,9 +175,9 @@ export const themes: Record<Theme, ThemeColors> = {
         hover: '#2a2a2a',   // lighter gray on hover
       },
       outline: {
-        border: '#D3202A',  // vibrant red border
-        text: '#D3202A',    // vibrant red text
-        hover: '#b91c1c',   // darker red on hover
+        border: '#e5e7eb',  // bright whitish gray border
+        text: '#e5e7eb',    // bright whitish gray text
+        hover: '#d1d5db',   // slightly darker gray on hover
       },
       ghost: {
         text: '#cbd5e1',    // light gray

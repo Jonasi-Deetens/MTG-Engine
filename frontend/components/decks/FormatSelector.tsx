@@ -19,15 +19,15 @@ const FORMATS = [
 
 export function FormatSelector({ value, onChange, disabled = false }: FormatSelectorProps) {
   return (
-    <div className="space-y-2">
-      <label className="block text-sm font-medium text-[color:var(--theme-text-secondary)]">
+    <div>
+      <label className="block text-xs font-medium text-[color:var(--theme-text-secondary)] mb-1">
         Format
       </label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        className="w-full px-3 py-2 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none disabled:opacity-50"
+        className="w-full px-2 py-1.5 text-sm bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none disabled:opacity-50"
       >
         {FORMATS.map((format) => (
           <option key={format.value} value={format.value}>
@@ -35,11 +35,6 @@ export function FormatSelector({ value, onChange, disabled = false }: FormatSele
           </option>
         ))}
       </select>
-      {FORMATS.find(f => f.value === value) && (
-        <p className="text-xs text-[color:var(--theme-text-secondary)]">
-          {FORMATS.find(f => f.value === value)?.description}
-        </p>
-      )}
     </div>
   );
 }

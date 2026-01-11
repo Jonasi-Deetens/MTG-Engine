@@ -6,7 +6,8 @@ import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
-import { navItems, NavItem } from './navConfig';
+import { topLevelNavItems, navGroups, standaloneNavItems, NavItem } from './navConfig';
+import { NavDropdown } from './NavDropdown';
 import { ThemeSwitcher } from '@/components/ui/ThemeSwitcher';
 import { BookOpen, Menu, X, ChevronDown } from 'lucide-react';
 
@@ -20,9 +21,14 @@ export function TopNavbar({ variant = 'app', showSpacer = true }: TopNavbarProps
   const { user, logout, isAuthenticated } = useAuth();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [openMobileGroup, setOpenMobileGroup] = useState<string | null>(null);
 
   // Filter nav items based on authentication
-  const visibleNavItems = navItems.filter(item => !item.requiresAuth || isAuthenticated);
+  const visibleTopLevelItems = topLevelNavItems.filter(item => !item.requiresAuth || isAuthenticated);
+  const visibleNavGroups = navGroups.filter(group => 
+    group.items.some(item => !item.requiresAuth || isAuthenticated)
+  );
+  const visibleStandaloneItems = standaloneNavItems.filter(item => !item.requiresAuth || isAuthenticated);
 
   // Variant styles - theme-aware with glassmorphism
   const variantStyles = {
@@ -89,7 +95,18 @@ export function TopNavbar({ variant = 'app', showSpacer = true }: TopNavbarProps
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center gap-2 flex-1 justify-center">
-              {visibleNavItems.map((item) => (
+              {/* Top-level items */}
+              {visibleTopLevelItems.map((item) => (
+                <NavLink key={item.href} item={item} />
+              ))}
+              
+              {/* Grouped items (dropdowns) */}
+              {visibleNavGroups.map((group) => (
+                <NavDropdown key={group.label} group={group} variant={variant} />
+              ))}
+              
+              {/* Standalone items */}
+              {visibleStandaloneItems.map((item) => (
                 <NavLink key={item.href} item={item} />
               ))}
             </div>
@@ -163,9 +180,55 @@ export function TopNavbar({ variant = 'app', showSpacer = true }: TopNavbarProps
         {isMobileOpen && (
           <div className={`md:hidden border-t ${styles.mobileBorder} py-4`}>
             <div className="max-w-7xl mx-auto px-4 space-y-2">
-              {visibleNavItems.map((item) => (
+              {/* Top-level items */}
+              {visibleTopLevelItems.map((item) => (
                 <NavLink key={item.href} item={item} />
               ))}
+              
+              {/* Grouped items (expandable sections) */}
+              {visibleNavGroups.map((group) => {
+                const visibleGroupItems = group.items.filter(item => !item.requiresAuth || isAuthenticated);
+                if (visibleGroupItems.length === 0) return null;
+                
+                const isGroupOpen = openMobileGroup === group.label;
+                const GroupIcon = group.icon;
+                
+                return (
+                  <div key={group.label} className="space-y-1">
+                    <button
+                      onClick={() => setOpenMobileGroup(isGroupOpen ? null : group.label)}
+                      className={`
+                        w-full flex items-center justify-between px-4 py-2 rounded-lg transition-all
+                        ${styles.text} ${styles.hover}
+                      `}
+                    >
+                      <div className="flex items-center gap-2">
+                        {GroupIcon && <GroupIcon className="w-4 h-4" />}
+                        <span className="font-medium">{group.label}</span>
+                      </div>
+                      <ChevronDown
+                        className={`
+                          w-4 h-4 transition-transform
+                          ${isGroupOpen ? 'transform rotate-180' : ''}
+                        `}
+                      />
+                    </button>
+                    {isGroupOpen && (
+                      <div className="pl-6 space-y-1">
+                        {visibleGroupItems.map((item) => (
+                          <NavLink key={item.href} item={item} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              
+              {/* Standalone items */}
+              {visibleStandaloneItems.map((item) => (
+                <NavLink key={item.href} item={item} />
+              ))}
+              
               {!isAuthenticated && (
                 <Link
                   href="/register"

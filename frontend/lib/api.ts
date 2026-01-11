@@ -122,9 +122,29 @@ export const cards = {
   getById: async (cardId: string): Promise<any> => {
     return api.get(`/api/cards/${encodeURIComponent(cardId)}`);
   },
-  // List cards with pagination
-  list: async (page: number = 1, pageSize: number = 20): Promise<any> => {
-    return api.get(`/api/cards?page=${page}&page_size=${pageSize}`);
+  // List cards with pagination and optional filters
+  list: async (
+    page: number = 1, 
+    pageSize: number = 20, 
+    filters?: { colors?: string[], type?: string, set_code?: string }
+  ): Promise<any> => {
+    const params = new URLSearchParams();
+    params.set('page', page.toString());
+    params.set('page_size', pageSize.toString());
+    
+    if (filters) {
+      if (filters.colors && filters.colors.length > 0) {
+        params.set('colors', filters.colors.join(','));
+      }
+      if (filters.type) {
+        params.set('type', filters.type);
+      }
+      if (filters.set_code) {
+        params.set('set_code', filters.set_code);
+      }
+    }
+    
+    return api.get(`/api/cards?${params.toString()}`);
   },
   // Search cards by name
   search: async (query: string, page: number = 1, pageSize: number = 20): Promise<any> => {
