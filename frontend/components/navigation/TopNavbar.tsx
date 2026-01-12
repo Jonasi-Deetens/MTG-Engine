@@ -74,7 +74,7 @@ export function TopNavbar({ variant = 'app', showSpacer = true }: TopNavbarProps
     <>
       <nav
         className={`
-          fixed top-4 left-4 right-4 z-50
+          fixed top-4 left-4 right-4 sm:left-6 sm:right-6 lg:left-8 lg:right-8 z-50
           ${styles.container}
           rounded-2xl
           transition-all
@@ -83,7 +83,7 @@ export function TopNavbar({ variant = 'app', showSpacer = true }: TopNavbarProps
           boxShadow: `0 2px 8px -4px var(--theme-accent-primary)`,
         }}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2 flex-shrink-0">
@@ -179,7 +179,7 @@ export function TopNavbar({ variant = 'app', showSpacer = true }: TopNavbarProps
         {/* Mobile Menu */}
         {isMobileOpen && (
           <div className={`md:hidden border-t ${styles.mobileBorder} py-4`}>
-            <div className="max-w-7xl mx-auto px-4 space-y-2">
+            <div className="w-full px-4 space-y-2">
               {/* Top-level items */}
               {visibleTopLevelItems.map((item) => (
                 <NavLink key={item.href} item={item} />

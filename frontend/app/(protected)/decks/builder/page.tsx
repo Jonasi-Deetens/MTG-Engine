@@ -2,10 +2,9 @@
 
 // frontend/app/(protected)/decks/builder/page.tsx
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useDeckStore } from '@/store/deckStore';
-import { decks } from '@/lib/decks';
 import { cards, CardData } from '@/lib/api';
 import { useDebounce } from '@/lib/hooks';
 import { Button } from '@/components/ui/Button';
@@ -13,7 +12,6 @@ import { SearchInput } from '@/components/ui/SearchInput';
 import { Card } from '@/components/ui/Card';
 import { CardPreview } from '@/components/cards/CardPreview';
 import { CardModal } from '@/components/ui/CardModal';
-import { CardGridSkeleton } from '@/components/skeletons/CardSkeleton';
 import { DeckCardList } from '@/components/decks/DeckCardList';
 import { DeckCardResponse } from '@/lib/decks';
 import { CommanderSelector } from '@/components/decks/CommanderSelector';
@@ -22,7 +20,6 @@ import { DeckValidationPanel } from '@/components/decks/DeckValidationPanel';
 import { ManaCurveChart } from '@/components/decks/ManaCurveChart';
 import { CardTypeBreakdown } from '@/components/decks/CardTypeBreakdown';
 import { DeckImport } from '@/components/decks/DeckImport';
-import { Collapsible } from '@/components/ui/Collapsible';
 
 export default function DeckBuilderPage() {
   const router = useRouter();
@@ -59,9 +56,10 @@ export default function DeckBuilderPage() {
   const [searchResults, setSearchResults] = useState<CardData[]>([]);
   const [searching, setSearching] = useState(false);
   const debouncedQuery = useDebounce(searchQuery, 500);
-  
-  // Hovered card for preview
-  const [hoveredCard, setHoveredCard] = useState<DeckCardResponse | null>(null);
+
+  // Card preview: only update when hovering a card, don't clear on mouse leave.
+  const [previewCard, setPreviewCard] = useState<DeckCardResponse | null>(null);
+
   // Modal state
   const [modalCard, setModalCard] = useState<CardData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -181,6 +179,12 @@ export default function DeckBuilderPage() {
     } catch (err: any) {
       alert(err?.data?.detail || 'Failed to remove commander');
     }
+  };
+
+  // Handler for hovering a card in lists or commander
+  const handleCardHover = (card: DeckCardResponse | null) => {
+    if (card) setPreviewCard(card);
+    // Do not clear previewCard on mouse leave (card === null)
   };
 
   return (
@@ -363,7 +367,7 @@ export default function DeckBuilderPage() {
                       onRemove={handleRemoveCard}
                       showControls={true}
                       filterTypes={['Creature']}
-                      onCardHover={setHoveredCard}
+                      onCardHover={handleCardHover}
                       onCardClick={(deckCard) => {
                         setModalCard(deckCard.card);
                         setIsModalOpen(true);
@@ -379,7 +383,7 @@ export default function DeckBuilderPage() {
                       onRemove={handleRemoveCard}
                       showControls={true}
                       filterTypes={['Instant', 'Sorcery']}
-                      onCardHover={setHoveredCard}
+                      onCardHover={handleCardHover}
                       onCardClick={(deckCard) => {
                         setModalCard(deckCard.card);
                         setIsModalOpen(true);
@@ -403,8 +407,8 @@ export default function DeckBuilderPage() {
                             <div
                               key={commander.card.card_id}
                               className="flex items-center gap-2 px-1.5 py-0.5 hover:bg-[color:var(--theme-card-hover)] transition-colors text-sm cursor-pointer"
-                              onMouseEnter={() => setHoveredCard({ card: commander.card, quantity: 1, card_id: commander.card_id })}
-                              onMouseLeave={() => setHoveredCard(null)}
+                              onMouseEnter={() => setPreviewCard({ card: commander.card, quantity: 1, card_id: commander.card_id })}
+                              // onMouseLeave does nothing, so preview remains until new hover
                               onClick={() => {
                                 setModalCard(commander.card);
                                 setIsModalOpen(true);
@@ -442,28 +446,28 @@ export default function DeckBuilderPage() {
 
                   {/* Card Preview */}
                   <div className="flex items-start justify-center min-h-[300px]">
-                    {hoveredCard ? (
+                    {previewCard ? (
                       <div className="sticky top-4 w-[280px]">
-                        {hoveredCard.card.image_uris?.normal || hoveredCard.card.image_uris?.small || hoveredCard.card.image_uris?.large ? (
+                        {previewCard.card.image_uris?.normal || previewCard.card.image_uris?.small || previewCard.card.image_uris?.large ? (
                           <>
-                            <CardPreview card={hoveredCard.card} disableClick={true} />
-                            {hoveredCard.quantity > 1 && (
+                            <CardPreview card={previewCard.card} disableClick={true} />
+                            {previewCard.quantity > 1 && (
                               <div className="mt-2 text-center text-xs text-[color:var(--theme-text-secondary)]">
-                                Quantity: {hoveredCard.quantity}x
+                                Quantity: {previewCard.quantity}x
                               </div>
                             )}
                           </>
                         ) : (
                           <div className="aspect-[63/88] bg-[color:var(--theme-card-hover)] rounded-xl flex items-center justify-center text-[color:var(--theme-text-secondary)] text-sm p-4 text-center">
                             <div>
-                              <div className="font-medium mb-1">{hoveredCard.card.name}</div>
-                              {hoveredCard.card.mana_cost && (
+                              <div className="font-medium mb-1">{previewCard.card.name}</div>
+                              {previewCard.card.mana_cost && (
                                 <div className="text-xs font-mono text-[color:var(--theme-accent-primary)]">
-                                  {hoveredCard.card.mana_cost}
+                                  {previewCard.card.mana_cost}
                                 </div>
                               )}
-                              {hoveredCard.card.type_line && (
-                                <div className="text-xs mt-1">{hoveredCard.card.type_line}</div>
+                              {previewCard.card.type_line && (
+                                <div className="text-xs mt-1">{previewCard.card.type_line}</div>
                               )}
                             </div>
                           </div>
@@ -487,7 +491,7 @@ export default function DeckBuilderPage() {
                       onRemove={handleRemoveCard}
                       showControls={true}
                       filterTypes={['Artifact', 'Enchantment']}
-                      onCardHover={setHoveredCard}
+                      onCardHover={handleCardHover}
                       onCardClick={(deckCard) => {
                         setModalCard(deckCard.card);
                         setIsModalOpen(true);
@@ -503,7 +507,7 @@ export default function DeckBuilderPage() {
                       onRemove={handleRemoveCard}
                       showControls={true}
                       filterTypes={['Land', 'Planeswalker', 'Other']}
-                      onCardHover={setHoveredCard}
+                      onCardHover={handleCardHover}
                       onCardClick={(deckCard) => {
                         setModalCard(deckCard.card);
                         setIsModalOpen(true);

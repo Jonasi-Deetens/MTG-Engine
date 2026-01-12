@@ -2,7 +2,7 @@
 
 export function CardSkeleton() {
   return (
-    <div className="aspect-[63/88] bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] rounded-xl animate-pulse overflow-hidden">
+    <div className="aspect-[63/88] bg-[color:var(--theme-bg-secondary)] rounded-xl animate-pulse overflow-hidden">
       <div className="w-full h-full bg-[color:var(--theme-bg-secondary)] rounded-xl"></div>
     </div>
   );

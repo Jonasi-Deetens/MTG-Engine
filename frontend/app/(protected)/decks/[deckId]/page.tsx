@@ -13,6 +13,7 @@ import { DeckValidationPanel } from '@/components/decks/DeckValidationPanel';
 import { ManaCurveChart } from '@/components/decks/ManaCurveChart';
 import { CardTypeBreakdown } from '@/components/decks/CardTypeBreakdown';
 import { CardPreview } from '@/components/cards/CardPreview';
+import { DeckDetailSkeleton } from '@/components/skeletons/DeckDetailSkeleton';
 
 export default function DeckDetailPage() {
   const params = useParams();
@@ -30,10 +31,14 @@ export default function DeckDetailPage() {
   } = useDeckStore();
 
   const [exporting, setExporting] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   useEffect(() => {
     if (!isNaN(deckId)) {
-      loadDeck(deckId);
+      setIsInitialLoad(true);
+      loadDeck(deckId).finally(() => {
+        setIsInitialLoad(false);
+      });
     }
   }, [deckId, loadDeck]);
 
@@ -68,12 +73,8 @@ export default function DeckDetailPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-angel-white flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>
-      </div>
-    );
+  if (loading || (isInitialLoad && !currentDeck && !error)) {
+    return <DeckDetailSkeleton />;
   }
 
   if (error || !currentDeck) {

@@ -146,7 +146,7 @@ export function DeckCardList({ cards, onQuantityChange, onRemove, showControls =
                     {showControls && (
                       <div className="flex items-center gap-0.5 flex-shrink-0">
                         <button
-                          onClick={() => handleQuantityChange(deckCard.card_id, -1)}
+                          onClick={(e) => { e.stopPropagation(); handleQuantityChange(deckCard.card_id, -1); }}
                           disabled={deckCard.quantity <= 1}
                           className="w-5 h-5 flex items-center justify-center text-[color:var(--theme-text-secondary)] hover:text-[color:var(--theme-text-primary)] hover:bg-[color:var(--theme-card-hover)] rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-xs"
                           title="Decrease"
@@ -154,7 +154,7 @@ export function DeckCardList({ cards, onQuantityChange, onRemove, showControls =
                           −
                         </button>
                         <button
-                          onClick={() => handleQuantityChange(deckCard.card_id, 1)}
+                          onClick={(e) => { e.stopPropagation(); handleQuantityChange(deckCard.card_id, 1); }}
                           className="w-5 h-5 flex items-center justify-center text-[color:var(--theme-text-secondary)] hover:text-[color:var(--theme-text-primary)] hover:bg-[color:var(--theme-card-hover)] rounded transition-colors text-xs"
                           title="Increase"
                         >
@@ -162,7 +162,7 @@ export function DeckCardList({ cards, onQuantityChange, onRemove, showControls =
                         </button>
                         {onRemove && (
                           <button
-                            onClick={() => handleRemove(deckCard.card_id)}
+                            onClick={(e) => { e.stopPropagation(); handleRemove(deckCard.card_id); }}
                             className="w-5 h-5 flex items-center justify-center text-[color:var(--theme-status-error)] hover:bg-[color:var(--theme-status-error)]/20 rounded transition-colors text-xs"
                             title="Remove"
                           >

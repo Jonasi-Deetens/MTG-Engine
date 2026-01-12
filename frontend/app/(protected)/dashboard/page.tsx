@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { QuickActions } from '@/components/dashboard/QuickActions';
 import { DeckCard } from '@/components/decks/DeckCard';
+import { DashboardSkeleton } from '@/components/skeletons/DashboardSkeleton';
 import { BookOpen, Heart, Folder } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -85,11 +86,7 @@ export default function DashboardPage() {
   }, []);
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[color:var(--theme-bg-primary)] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[color:var(--theme-accent-primary)]"></div>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   return (

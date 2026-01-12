@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { DeckCard } from '@/components/decks/DeckCard';
 import { SearchInput } from '@/components/ui/SearchInput';
+import { DeckListSkeleton } from '@/components/skeletons/DeckListSkeleton';
 import { BookOpen, SearchX } from 'lucide-react';
 import Link from 'next/link';
 
@@ -117,9 +118,7 @@ export default function DecksPage() {
       )}
 
       {loading ? (
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[color:var(--theme-accent-primary)] mx-auto"></div>
-        </div>
+        <DeckListSkeleton />
       ) : filteredDecks.length === 0 ? (
         <Card variant="elevated">
           {decksList.length === 0 ? (

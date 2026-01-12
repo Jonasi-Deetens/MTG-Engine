@@ -16,8 +16,10 @@ function ProtectedLayoutContent({
   const isDeckBuilder = pathname === '/decks/builder';
   const isDashboard = pathname === '/dashboard';
   const isDecksPage = pathname?.startsWith('/decks') ?? false;
+  const isMyCardsPage = pathname?.startsWith('/my-cards') ?? false;
   const dashboardBackgroundImage = useThemeImage('dashboard');
   const decksBackgroundImage = useThemeImage('decks');
+  const collectionBackgroundImage = useThemeImage('collection');
   
   const getBackgroundStyle = () => {
     if (isDashboard) {
@@ -32,6 +34,15 @@ function ProtectedLayoutContent({
     if (isDecksPage) {
       return {
         backgroundImage: `url('${decksBackgroundImage}')`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'top center',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: 'fixed',
+      };
+    }
+    if (isMyCardsPage) {
+      return {
+        backgroundImage: `url('${collectionBackgroundImage}')`,
         backgroundSize: 'cover',
         backgroundPosition: 'top center',
         backgroundRepeat: 'no-repeat',
