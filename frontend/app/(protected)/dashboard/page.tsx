@@ -190,7 +190,7 @@ export default function DashboardPage() {
             {recentDecks.map((deck) => {
               const detail = deckDetails[deck.id];
               return (
-                <Link key={deck.id} href={`/decks/${deck.id}`} className="block">
+                <Link key={deck.id} href={`/decks/${deck.id}`} className="block flex">
                   <DeckCard
                     deck={deck}
                     deckDetail={detail}

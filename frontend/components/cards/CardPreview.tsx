@@ -5,6 +5,8 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { CardModal } from '@/components/ui/CardModal';
+import { Card } from '@/components/ui/Card';
+import { HoverShadow } from '@/components/ui/HoverShadow';
 import { CardVersionSelector } from './CardVersionSelector';
 import { cards } from '@/lib/api';
 
@@ -83,31 +85,31 @@ export function CardPreview({ card, onVersionChange, onAddToDeck, showAddButton 
 
   return (
     <>
-      <div className="aspect-[63/88] relative overflow-visible rounded-xl flex items-center justify-center group">
+      <Card
+        variant="bare"
+        className="aspect-[63/88] relative overflow-visible rounded-xl flex items-center justify-center"
+      >
+        <HoverShadow />
         <div 
-          className={`absolute inset-0 transition-all duration-300 ease-out hover:scale-105 ${disableClick ? '' : 'cursor-pointer'} rounded-xl group`}
+          className={`absolute inset-0 ${disableClick ? '' : 'hover:scale-105 cursor-pointer'} rounded-xl`}
           onClick={disableClick ? undefined : handleCardClick}
         >
           {imageUrl ? (
-            <Image
-              src={imageUrl}
-              alt={card.name}
-              fill
-              className="object-cover rounded-xl relative z-10"
-              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
-              unoptimized
-            />
+            <div className="relative w-full h-full rounded-xl">
+              <Image
+                src={imageUrl}
+                alt={card.name}
+                fill
+                className="object-cover rounded-xl"
+                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                unoptimized
+              />
+            </div>
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-[color:var(--theme-text-secondary)] text-xs text-center p-2 bg-[color:var(--theme-card-hover)] rounded-xl relative z-10">
+            <div className="w-full h-full flex items-center justify-center text-[color:var(--theme-text-secondary)] text-xs text-center p-2 bg-[color:var(--theme-card-hover)] rounded-xl">
               No Image
             </div>
           )}
-          {/* Theme-colored drop shadow on hover */}
-          <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-0" 
-               style={{
-                 boxShadow: `0 4px 12px -2px var(--theme-accent-primary)`,
-               }}
-          />
         </div>
 
         {/* Add to Deck Button Overlay */}
@@ -158,7 +160,7 @@ export function CardPreview({ card, onVersionChange, onAddToDeck, showAddButton 
             </svg>
           </button>
         )}
-      </div>
+      </Card>
 
       {/* Version Selector */}
       {onVersionChange && (

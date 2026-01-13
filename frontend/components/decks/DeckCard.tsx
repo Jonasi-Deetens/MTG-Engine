@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { DeckResponse, DeckDetailResponse } from '@/lib/decks';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/StatusBadge';
+import { Card } from '@/components/ui/Card';
+import { HoverShadow } from '@/components/ui/HoverShadow';
 import { BookOpen, Users, Globe, Lock } from 'lucide-react';
 
 interface DeckCardProps {
@@ -55,14 +57,14 @@ export function DeckCard({
   };
 
   return (
-    <div
-      className={`relative flex flex-col sm:flex-row items-stretch overflow-hidden group transition-shadow transition-transform duration-200 
-        hover:shadow-lg hover:scale-[1.02] rounded-lg shadow shadow-[color:var(--theme-card-border)] 
-        ${className || ''}`}
+    <Card
+      variant="bare"
+      className={`relative flex flex-col sm:flex-row items-stretch hover:scale-105 rounded-lg ${className || ''}`}
       tabIndex={0}
     >
+      <HoverShadow />
       {/* Side image panel (art) */}
-      <div className="w-full sm:w-40 shrink-0 h-48 sm:h-auto relative flex-none bg-neutral-900 aspect-[5/7]">
+      <div className="w-full sm:w-40 shrink-0 h-48 sm:h-auto relative rounded-lg flex-none bg-neutral-900 aspect-[5/7]">
         {artUrl ? (
           <img
             src={artUrl}
@@ -76,7 +78,6 @@ export function DeckCard({
             <BookOpen className="opacity-30 w-12 h-12" />
           </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-tr from-black/70 via-black/20 to-transparent pointer-events-none" />
       </div>
 
       {/* Content panel */}
@@ -181,14 +182,7 @@ export function DeckCard({
         </div>
       </div>
 
-      {/* Glow on hover */}
-      <div
-        className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-0"
-        style={{
-          boxShadow: `0 4px 20px -4px var(--theme-accent-primary)`,
-        }}
-      />
-    </div>
+    </Card>
   );
 }
 

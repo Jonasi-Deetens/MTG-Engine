@@ -4,6 +4,7 @@
 
 import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
+import { HoverShadow } from '@/components/ui/HoverShadow';
 import { LucideIcon } from 'lucide-react';
 
 interface QuickActionCardProps {
@@ -79,12 +80,7 @@ export function QuickActionCard({
           border-0
         `}
       >
-        {/* Theme-colored drop shadow on hover */}
-        <div className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none" 
-             style={{
-               boxShadow: `0 4px 20px -4px var(--theme-accent-primary)`,
-             }}
-        />
+        <HoverShadow />
         <div className="text-center relative z-10">
           <div
             className={`inline-flex p-3 rounded-xl ${colors.iconBg} mb-4 transition-colors`}

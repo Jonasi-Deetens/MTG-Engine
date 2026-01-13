@@ -4,6 +4,7 @@
 
 import { TriggeredAbility, ActivatedAbility, StaticAbility, ContinuousAbility, KeywordAbility } from '@/store/builderStore';
 import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
 import { formatEffect } from '@/lib/effectTypes';
 import { formatCondition } from '@/lib/conditionTypes';
 
@@ -86,7 +87,7 @@ export function AbilityCard({ ability, type, onEdit, onDelete }: AbilityCardProp
   const badgeColor = getTypeBadgeColor(type);
 
   return (
-    <div className="bg-[color:var(--theme-card-bg)] rounded-lg p-4 border border-[color:var(--theme-card-border)] hover:border-[color:var(--theme-border-hover)] transition-colors">
+    <Card variant="default" className="p-4">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2">
@@ -113,7 +114,7 @@ export function AbilityCard({ ability, type, onEdit, onDelete }: AbilityCardProp
           </Button>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }
 
