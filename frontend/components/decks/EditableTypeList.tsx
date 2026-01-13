@@ -60,17 +60,18 @@ export function EditableTypeList({
   showControls = true,
 }: EditableTypeListProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [editName, setEditName] = useState(list?.name || DEFAULT_TYPE_LABELS[type]);
+  const displayName = list?.name || DEFAULT_TYPE_LABELS[type];
+  const [editName, setEditName] = useState(displayName);
   
-  // Update editName when list name changes
+  // Update editName when list name or ID changes (but not while editing)
   useEffect(() => {
     if (!isEditing) {
-      setEditName(list?.name || DEFAULT_TYPE_LABELS[type]);
+      const newDisplayName = list?.name || DEFAULT_TYPE_LABELS[type];
+      setEditName(newDisplayName);
     }
-  }, [list?.name, type, isEditing]);
+  }, [list?.name, list?.id, type, isEditing]);
   
   const totalCount = cards.reduce((sum, card) => sum + card.quantity, 0);
-  const displayName = list?.name || DEFAULT_TYPE_LABELS[type];
 
   const handleQuantityChange = (cardId: string, delta: number) => {
     const card = cards.find(c => c.card_id === cardId);
@@ -106,21 +107,6 @@ export function EditableTypeList({
   };
 
   const dropId = list ? `list-${list.id}` : `type-${type}`;
-
-  if (cards.length === 0) {
-    return (
-      <DroppableList id={dropId} className="space-y-2">
-        <div className="space-y-0.5">
-          <div className="px-1.5 py-1 text-xs font-semibold text-[color:var(--theme-text-secondary)] uppercase tracking-wide border-b border-[color:var(--theme-card-border)]">
-            {displayName} (0)
-          </div>
-          <div className="text-center py-4 text-[color:var(--theme-text-secondary)] text-sm">
-            <p>No cards in this list</p>
-          </div>
-        </div>
-      </DroppableList>
-    );
-  }
 
   return (
     <DroppableList id={dropId} className="space-y-2">
@@ -158,8 +144,13 @@ export function EditableTypeList({
         </div>
         
         {/* Card List */}
-        <div className="min-w-0 overflow-hidden">
-          {cards.map((deckCard) => {
+        {cards.length === 0 ? (
+          <div className="text-center py-4 text-[color:var(--theme-text-secondary)] text-sm">
+            <p>No cards in this list</p>
+          </div>
+        ) : (
+          <div className="min-w-0 overflow-hidden">
+            {cards.map((deckCard) => {
             const manaCost = deckCard.card.mana_cost || '';
             
             return (
@@ -232,7 +223,8 @@ export function EditableTypeList({
               </div>
             );
           })}
-        </div>
+          </div>
+        )}
       </div>
     </DroppableList>
   );
