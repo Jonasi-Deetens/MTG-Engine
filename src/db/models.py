@@ -183,6 +183,7 @@ class Deck(Base):
     user = relationship("User", backref="decks")
     cards = relationship("DeckCard", back_populates="deck", cascade="all, delete-orphan")
     commanders = relationship("DeckCommander", back_populates="deck", cascade="all, delete-orphan")
+    custom_lists = relationship("DeckCustomList", back_populates="deck", cascade="all, delete-orphan")
     
     __table_args__ = (
         {"sqlite_autoincrement": True},
@@ -197,6 +198,7 @@ class DeckCard(Base):
     deck_id = Column(Integer, ForeignKey("decks.id"), nullable=False, index=True)
     card_id = Column(String, nullable=False, index=True)  # Reference to Axis1CardModel.card_id
     quantity = Column(Integer, default=1, nullable=False)
+    list_id = Column(Integer, ForeignKey("deck_custom_lists.id"), nullable=True, index=True)  # Custom list assignment
     
     created_at = Column(DateTime, default=datetime.utcnow)
     
@@ -223,6 +225,24 @@ class DeckCommander(Base):
     
     # Relationships
     deck = relationship("Deck", back_populates="commanders")
+    
+    __table_args__ = (
+        {"sqlite_autoincrement": True},
+    )
+
+
+class DeckCustomList(Base):
+    """Custom lists/categories for organizing deck cards."""
+    __tablename__ = "deck_custom_lists"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    deck_id = Column(Integer, ForeignKey("decks.id"), nullable=False, index=True)
+    name = Column(String, nullable=False)  # Custom list title
+    position = Column(Integer, default=0)  # Order of lists
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    deck = relationship("Deck", back_populates="custom_lists")
     
     __table_args__ = (
         {"sqlite_autoincrement": True},

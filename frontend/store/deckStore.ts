@@ -1,7 +1,7 @@
 // frontend/store/deckStore.ts
 
 import { create } from 'zustand';
-import { decks, DeckDetailResponse, DeckCardResponse, DeckCommanderResponse, DeckValidationResponse } from '@/lib/decks';
+import { decks, DeckDetailResponse, DeckCardResponse, DeckCommanderResponse, DeckValidationResponse, DeckCustomListResponse, DeckCustomListCreate, DeckCustomListUpdate } from '@/lib/decks';
 
 interface DeckState {
   // Current deck being edited
@@ -19,9 +19,10 @@ interface DeckState {
   deleteDeck: (deckId: number) => Promise<void>;
   
   // Card management
-  addCard: (deckId: number, cardId: string, quantity?: number) => Promise<void>;
+  addCard: (deckId: number, cardId: string, quantity?: number, listId?: number | null) => Promise<void>;
   updateCardQuantity: (deckId: number, cardId: string, quantity: number) => Promise<void>;
   removeCard: (deckId: number, cardId: string) => Promise<void>;
+  moveCardToList: (deckId: number, cardId: string, listId: number | null) => Promise<void>;
   
   // Commander management
   addCommander: (deckId: number, cardId: string, position?: number) => Promise<void>;
@@ -29,6 +30,11 @@ interface DeckState {
   
   // Validation
   validateDeck: (deckId: number) => Promise<void>;
+  
+  // Custom List management
+  createCustomList: (deckId: number, name: string, position?: number) => Promise<void>;
+  updateCustomList: (deckId: number, listId: number, updates: DeckCustomListUpdate) => Promise<void>;
+  deleteCustomList: (deckId: number, listId: number) => Promise<void>;
   
   // Utility
   clearDeck: () => void;
@@ -88,10 +94,10 @@ export const useDeckStore = create<DeckState>((set, get) => ({
     }
   },
 
-  addCard: async (deckId: number, cardId: string, quantity: number = 1) => {
+  addCard: async (deckId: number, cardId: string, quantity: number = 1, listId?: number | null) => {
     set({ loading: true, error: null });
     try {
-      await decks.addCard(deckId, { card_id: cardId, quantity });
+      await decks.addCard(deckId, { card_id: cardId, quantity, list_id: listId });
       await get().refreshDeck(deckId);
     } catch (err: any) {
       set({ error: err?.data?.detail || err?.message || 'Failed to add card', loading: false });
@@ -164,6 +170,50 @@ export const useDeckStore = create<DeckState>((set, get) => ({
       await get().validateDeck(deckId);
     } catch (err: any) {
       set({ error: err?.data?.detail || err?.message || 'Failed to refresh deck', loading: false });
+    }
+  },
+
+  moveCardToList: async (deckId: number, cardId: string, listId: number | null) => {
+    set({ loading: true, error: null });
+    try {
+      await decks.moveCardToList(deckId, cardId, { list_id: listId });
+      await get().refreshDeck(deckId);
+    } catch (err: any) {
+      set({ error: err?.data?.detail || err?.message || 'Failed to move card', loading: false });
+      throw err;
+    }
+  },
+
+  createCustomList: async (deckId: number, name: string, position?: number) => {
+    set({ loading: true, error: null });
+    try {
+      await decks.createCustomList(deckId, { name, position });
+      await get().refreshDeck(deckId);
+    } catch (err: any) {
+      set({ error: err?.data?.detail || err?.message || 'Failed to create custom list', loading: false });
+      throw err;
+    }
+  },
+
+  updateCustomList: async (deckId: number, listId: number, updates: DeckCustomListUpdate) => {
+    set({ loading: true, error: null });
+    try {
+      await decks.updateCustomList(deckId, listId, updates);
+      await get().refreshDeck(deckId);
+    } catch (err: any) {
+      set({ error: err?.data?.detail || err?.message || 'Failed to update custom list', loading: false });
+      throw err;
+    }
+  },
+
+  deleteCustomList: async (deckId: number, listId: number) => {
+    set({ loading: true, error: null });
+    try {
+      await decks.deleteCustomList(deckId, listId);
+      await get().refreshDeck(deckId);
+    } catch (err: any) {
+      set({ error: err?.data?.detail || err?.message || 'Failed to delete custom list', loading: false });
+      throw err;
     }
   },
 }));

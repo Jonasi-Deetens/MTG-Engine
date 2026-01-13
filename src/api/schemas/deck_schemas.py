@@ -10,6 +10,7 @@ class DeckCardResponse(BaseModel):
     card_id: str
     card: CardResponse
     quantity: int
+    list_id: Optional[int] = None
 
     class Config:
         from_attributes = True
@@ -61,6 +62,7 @@ class DeckDetailResponse(DeckResponse):
 class DeckCardAdd(BaseModel):
     card_id: str
     quantity: int = 1
+    list_id: Optional[int] = None
 
 
 class DeckCardUpdate(BaseModel):
@@ -97,4 +99,29 @@ class DeckExportResponse(BaseModel):
     data: str
     deck_name: str
     format_type: str
+
+
+class DeckCustomListCreate(BaseModel):
+    name: str
+    position: Optional[int] = 0
+
+
+class DeckCustomListUpdate(BaseModel):
+    name: Optional[str] = None
+    position: Optional[int] = None
+
+
+class DeckCustomListResponse(BaseModel):
+    id: int
+    deck_id: int
+    name: str
+    position: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class DeckCardListUpdate(BaseModel):
+    list_id: Optional[int] = None
 

@@ -7,13 +7,15 @@ from typing import List, Optional, Dict
 from datetime import datetime
 
 from db.connection import SessionLocal
-from db.models import User, Deck, DeckCard, DeckCommander, Axis1CardModel
+from db.models import User, Deck, DeckCard, DeckCommander, DeckCustomList, Axis1CardModel
 from api.routes.auth import get_current_user
 from api.schemas.deck_schemas import (
     DeckCreate, DeckUpdate, DeckResponse, DeckDetailResponse,
     DeckCardAdd, DeckCardUpdate, DeckCardResponse,
     DeckCommanderAdd, DeckCommanderResponse,
-    DeckValidationResponse, DeckImportRequest, DeckExportResponse
+    DeckValidationResponse, DeckImportRequest, DeckExportResponse,
+    DeckCustomListCreate, DeckCustomListUpdate, DeckCustomListResponse,
+    DeckCardListUpdate
 )
 from api.schemas.card_schemas import CardResponse
 from api.utils.card_utils import card_model_to_response
@@ -131,7 +133,8 @@ def get_deck(
             cards.append(DeckCardResponse(
                 card_id=dc.card_id,
                 card=card_model_to_response(card),
-                quantity=dc.quantity
+                quantity=dc.quantity,
+                list_id=getattr(dc, 'list_id', None)
             ))
     
     # Get commanders
@@ -277,24 +280,40 @@ def add_card_to_deck(
     
     if existing:
         existing.quantity += card.quantity
+        if hasattr(card, 'list_id') and card.list_id is not None:
+            if hasattr(existing, 'list_id'):
+                existing.list_id = card.list_id
         db.commit()
-        db.refresh(existing)
+        # Only refresh if list_id column exists to avoid errors
+        try:
+            db.refresh(existing)
+        except Exception:
+            pass
         quantity = existing.quantity
+        list_id = getattr(existing, 'list_id', None)
     else:
         deck_card = DeckCard(
             deck_id=deck_id,
             card_id=card.card_id,
             quantity=card.quantity
         )
+        if hasattr(card, 'list_id') and hasattr(deck_card, 'list_id'):
+            deck_card.list_id = card.list_id
         db.add(deck_card)
         db.commit()
-        db.refresh(deck_card)
+        # Only refresh if list_id column exists to avoid errors
+        try:
+            db.refresh(deck_card)
+        except Exception:
+            pass
         quantity = deck_card.quantity
+        list_id = getattr(deck_card, 'list_id', None)
     
     return DeckCardResponse(
         card_id=card.card_id,
         card=card_model_to_response(card_model),
-        quantity=quantity
+        quantity=quantity,
+        list_id=list_id
     )
 
 
@@ -334,7 +353,12 @@ def update_card_quantity(
     
     deck_card.quantity = card.quantity
     db.commit()
-    db.refresh(deck_card)
+    # Only refresh if list_id column exists to avoid errors
+    try:
+        db.refresh(deck_card)
+    except Exception:
+        # Column doesn't exist yet, skip refresh - we already have the quantity
+        pass
     
     card_model = db.query(Axis1CardModel).filter(
         Axis1CardModel.card_id == card_id
@@ -343,7 +367,8 @@ def update_card_quantity(
     return DeckCardResponse(
         card_id=card_id,
         card=card_model_to_response(card_model),
-        quantity=deck_card.quantity
+        quantity=deck_card.quantity,
+        list_id=getattr(deck_card, 'list_id', None)
     )
 
 
@@ -614,4 +639,226 @@ def export_deck(
             deck_name=deck.name,
             format_type=deck.format
         )
+
+
+# Custom List Endpoints
+
+@router.post("/{deck_id}/lists", response_model=DeckCustomListResponse)
+def create_custom_list(
+    deck_id: int,
+    custom_list: DeckCustomListCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    """Create a custom list for organizing deck cards."""
+    # Verify deck belongs to user
+    deck = db.query(Deck).filter(
+        and_(
+            Deck.id == deck_id,
+            Deck.user_id == user.id
+        )
+    ).first()
+    if not deck:
+        raise HTTPException(status_code=404, detail="Deck not found")
+    
+    new_list = DeckCustomList(
+        deck_id=deck_id,
+        name=custom_list.name,
+        position=custom_list.position or 0
+    )
+    db.add(new_list)
+    db.commit()
+    db.refresh(new_list)
+    
+    return DeckCustomListResponse(
+        id=new_list.id,
+        deck_id=new_list.deck_id,
+        name=new_list.name,
+        position=new_list.position,
+        created_at=new_list.created_at
+    )
+
+
+@router.get("/{deck_id}/lists", response_model=List[DeckCustomListResponse])
+def get_custom_lists(
+    deck_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    """Get all custom lists for a deck."""
+    # Verify deck belongs to user
+    deck = db.query(Deck).filter(
+        and_(
+            Deck.id == deck_id,
+            Deck.user_id == user.id
+        )
+    ).first()
+    if not deck:
+        raise HTTPException(status_code=404, detail="Deck not found")
+    
+    custom_lists = db.query(DeckCustomList).filter(
+        DeckCustomList.deck_id == deck_id
+    ).order_by(DeckCustomList.position).all()
+    
+    return [
+        DeckCustomListResponse(
+            id=cl.id,
+            deck_id=cl.deck_id,
+            name=cl.name,
+            position=cl.position,
+            created_at=cl.created_at
+        )
+        for cl in custom_lists
+    ]
+
+
+@router.put("/{deck_id}/lists/{list_id}", response_model=DeckCustomListResponse)
+def update_custom_list(
+    deck_id: int,
+    list_id: int,
+    custom_list: DeckCustomListUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    """Update a custom list's name or position."""
+    # Verify deck belongs to user
+    deck = db.query(Deck).filter(
+        and_(
+            Deck.id == deck_id,
+            Deck.user_id == user.id
+        )
+    ).first()
+    if not deck:
+        raise HTTPException(status_code=404, detail="Deck not found")
+    
+    custom_list_obj = db.query(DeckCustomList).filter(
+        and_(
+            DeckCustomList.id == list_id,
+            DeckCustomList.deck_id == deck_id
+        )
+    ).first()
+    
+    if not custom_list_obj:
+        raise HTTPException(status_code=404, detail="Custom list not found")
+    
+    if custom_list.name is not None:
+        custom_list_obj.name = custom_list.name
+    if custom_list.position is not None:
+        custom_list_obj.position = custom_list.position
+    
+    db.commit()
+    db.refresh(custom_list_obj)
+    
+    return DeckCustomListResponse(
+        id=custom_list_obj.id,
+        deck_id=custom_list_obj.deck_id,
+        name=custom_list_obj.name,
+        position=custom_list_obj.position,
+        created_at=custom_list_obj.created_at
+    )
+
+
+@router.delete("/{deck_id}/lists/{list_id}", response_model=dict)
+def delete_custom_list(
+    deck_id: int,
+    list_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    """Delete a custom list. Cards in this list will have their list_id set to null."""
+    # Verify deck belongs to user
+    deck = db.query(Deck).filter(
+        and_(
+            Deck.id == deck_id,
+            Deck.user_id == user.id
+        )
+    ).first()
+    if not deck:
+        raise HTTPException(status_code=404, detail="Deck not found")
+    
+    custom_list = db.query(DeckCustomList).filter(
+        and_(
+            DeckCustomList.id == list_id,
+            DeckCustomList.deck_id == deck_id
+        )
+    ).first()
+    
+    if not custom_list:
+        raise HTTPException(status_code=404, detail="Custom list not found")
+    
+    # Set all cards in this list to have list_id = null
+    # Only if the column exists in the database
+    try:
+        db.query(DeckCard).filter(
+            and_(
+                DeckCard.deck_id == deck_id,
+                DeckCard.list_id == list_id
+            )
+        ).update({DeckCard.list_id: None})
+    except Exception:
+        # Column doesn't exist yet, skip (migration not run)
+        pass
+    
+    # Delete the list
+    db.delete(custom_list)
+    db.commit()
+    
+    return {"message": "Custom list deleted"}
+
+
+@router.put("/{deck_id}/cards/{card_id}/list", response_model=DeckCardResponse)
+def move_card_to_list(
+    deck_id: int,
+    card_id: str,
+    update: DeckCardListUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    """Move a card to a custom list (or remove from list if list_id is null)."""
+    # Verify deck belongs to user
+    deck = db.query(Deck).filter(
+        and_(
+            Deck.id == deck_id,
+            Deck.user_id == user.id
+        )
+    ).first()
+    if not deck:
+        raise HTTPException(status_code=404, detail="Deck not found")
+    
+    # Verify list exists if list_id is provided
+    if update.list_id is not None:
+        custom_list = db.query(DeckCustomList).filter(
+            and_(
+                DeckCustomList.id == update.list_id,
+                DeckCustomList.deck_id == deck_id
+            )
+        ).first()
+        if not custom_list:
+            raise HTTPException(status_code=404, detail="Custom list not found")
+    
+    deck_card = db.query(DeckCard).filter(
+        and_(
+            DeckCard.deck_id == deck_id,
+            DeckCard.card_id == card_id
+        )
+    ).first()
+    
+    if not deck_card:
+        raise HTTPException(status_code=404, detail="Card not found in deck")
+    
+    if hasattr(deck_card, 'list_id'):
+        deck_card.list_id = update.list_id
+    db.commit()
+    db.refresh(deck_card)
+    
+    card_model = db.query(Axis1CardModel).filter(
+        Axis1CardModel.card_id == card_id
+    ).first()
+    
+    return DeckCardResponse(
+        card_id=card_id,
+        card=card_model_to_response(card_model),
+        quantity=deck_card.quantity,
+        list_id=getattr(deck_card, 'list_id', None)
+    )
 

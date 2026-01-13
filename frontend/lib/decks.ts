@@ -7,6 +7,7 @@ export interface DeckCardResponse {
   card_id: string;
   card: CardData;
   quantity: number;
+  list_id?: number | null;
 }
 
 export interface DeckCommanderResponse {
@@ -49,6 +50,7 @@ export interface DeckUpdate {
 export interface DeckCardAdd {
   card_id: string;
   quantity?: number;
+  list_id?: number | null;
 }
 
 export interface DeckCardUpdate {
@@ -85,6 +87,28 @@ export interface DeckExportResponse {
   data: string;
   deck_name: string;
   format_type: string;
+}
+
+export interface DeckCustomListResponse {
+  id: number;
+  deck_id: number;
+  name: string;
+  position: number;
+  created_at: string;
+}
+
+export interface DeckCustomListCreate {
+  name: string;
+  position?: number;
+}
+
+export interface DeckCustomListUpdate {
+  name?: string;
+  position?: number;
+}
+
+export interface DeckCardListUpdate {
+  list_id?: number | null;
 }
 
 export const decks = {
@@ -155,6 +179,27 @@ export const decks = {
   // Export deck
   exportDeck: async (deckId: number, format: 'text' | 'json' = 'text'): Promise<DeckExportResponse> => {
     return api.get<DeckExportResponse>(`/api/decks/${deckId}/export?format=${format}`);
+  },
+
+  // Custom Lists
+  createCustomList: async (deckId: number, customList: DeckCustomListCreate): Promise<DeckCustomListResponse> => {
+    return api.post<DeckCustomListResponse>(`/api/decks/${deckId}/lists`, customList);
+  },
+
+  getCustomLists: async (deckId: number): Promise<DeckCustomListResponse[]> => {
+    return api.get<DeckCustomListResponse[]>(`/api/decks/${deckId}/lists`);
+  },
+
+  updateCustomList: async (deckId: number, listId: number, update: DeckCustomListUpdate): Promise<DeckCustomListResponse> => {
+    return api.put<DeckCustomListResponse>(`/api/decks/${deckId}/lists/${listId}`, update);
+  },
+
+  deleteCustomList: async (deckId: number, listId: number): Promise<{ message: string }> => {
+    return api.delete<{ message: string }>(`/api/decks/${deckId}/lists/${listId}`);
+  },
+
+  moveCardToList: async (deckId: number, cardId: string, update: DeckCardListUpdate): Promise<DeckCardResponse> => {
+    return api.put<DeckCardResponse>(`/api/decks/${deckId}/cards/${encodeURIComponent(cardId)}/list`, update);
   },
 };
 
