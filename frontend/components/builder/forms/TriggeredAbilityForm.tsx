@@ -241,7 +241,7 @@ export function TriggeredAbilityForm({ abilityId, onSave, onCancel }: TriggeredA
               }}
               variant="link"
               size="xs"
-              className="text-amber-600 hover:text-amber-700"
+              className="text-[color:var(--theme-accent-primary)] hover:text-[color:var(--theme-accent-hover)]"
             >
               + Add Condition
             </Button>
@@ -270,14 +270,14 @@ export function TriggeredAbilityForm({ abilityId, onSave, onCancel }: TriggeredA
             onClick={handleAddEffect}
             variant="ghost"
             size="xs"
-            className="text-amber-600 hover:text-amber-700"
+            className="text-[color:var(--theme-accent-primary)] hover:text-[color:var(--theme-accent-hover)]"
           >
             + Add Effect
           </Button>
         </div>
         <div className="space-y-3">
           {effects.map((effect, index) => (
-            <div key={index} className="bg-amber-50/50 rounded p-3 border border-amber-200/50">
+            <div key={index} className="bg-[color:var(--theme-card-hover)] rounded p-3 border border-[color:var(--theme-card-border)]">
               <div className="flex items-start justify-between mb-2">
                 <span className="text-xs text-[color:var(--theme-text-secondary)]">Effect {index + 1}</span>
                 {effects.length > 1 && (
@@ -285,7 +285,7 @@ export function TriggeredAbilityForm({ abilityId, onSave, onCancel }: TriggeredA
                     onClick={() => handleRemoveEffect(index)}
                     variant="link"
                     size="xs"
-                    className="text-red-400 hover:text-red-300"
+                    className="text-[color:var(--theme-status-error)] hover:opacity-80"
                   >
                     Remove
                   </Button>
@@ -303,7 +303,7 @@ export function TriggeredAbilityForm({ abilityId, onSave, onCancel }: TriggeredA
       </div>
 
       {/* Actions */}
-      <div className="flex gap-3 pt-4 border-t border-amber-200/50">
+      <div className="flex gap-3 pt-4 border-t border-[color:var(--theme-border-default)]">
         <Button
           onClick={handleSave}
           variant="primary"

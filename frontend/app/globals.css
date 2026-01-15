@@ -38,6 +38,8 @@
   --theme-button-ghost-hover: #fef3c7; /* amber-100 - light amber hover */
   --theme-nav-active: #f59e0b; /* amber-500 - active color for default/light theme */
   --theme-nav-active-border: #f59e0b; /* amber-500 - border color for active nav */
+  --theme-overlay: rgba(0, 0, 0, 0.6);
+  --theme-overlay-strong: rgba(0, 0, 0, 0.85);
 }
 
 /* Light theme (Elesh Norn white-yellow with amber/orange accents) */
@@ -78,6 +80,8 @@
   --theme-button-ghost-hover: #fef3c7; /* amber-100 - light amber hover */
   --theme-nav-active: #f59e0b; /* amber-500 - active color for light theme */
   --theme-nav-active-border: #f59e0b; /* amber-500 - border color for active nav */
+  --theme-overlay: rgba(0, 0, 0, 0.6);
+  --theme-overlay-strong: rgba(0, 0, 0, 0.85);
 }
 
 /* Dark theme (red/black gothic theme) */
@@ -118,6 +122,8 @@
   --theme-button-ghost-hover: #1a1a1a; /* dark gray hover */
   --theme-nav-active: #e5e7eb; /* bright whitish gray - active nav item */
   --theme-nav-active-border: #e5e7eb; /* bright whitish gray - active nav border */
+  --theme-overlay: rgba(0, 0, 0, 0.8);
+  --theme-overlay-strong: rgba(0, 0, 0, 0.9);
 }
 
 @theme inline {

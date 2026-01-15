@@ -23,25 +23,29 @@ const FORMATS = [
   'premodern',
 ];
 
-const LEGALITY_COLORS: Record<string, { bg: string; text: string; label: string }> = {
+const LEGALITY_COLORS: Record<string, { bg: string; text: string; dot: string; label: string }> = {
   legal: {
-    bg: 'bg-green-600/20',
-    text: 'text-green-400',
+    bg: 'bg-[color:var(--theme-status-success)]/20',
+    text: 'text-[color:var(--theme-status-success)]',
+    dot: 'bg-[color:var(--theme-status-success)] border-[color:var(--theme-status-success)]',
     label: 'Legal',
   },
   banned: {
-    bg: 'bg-red-600/20',
-    text: 'text-red-400',
+    bg: 'bg-[color:var(--theme-status-error)]/20',
+    text: 'text-[color:var(--theme-status-error)]',
+    dot: 'bg-[color:var(--theme-status-error)] border-[color:var(--theme-status-error)]',
     label: 'Banned',
   },
   restricted: {
-    bg: 'bg-yellow-600/20',
-    text: 'text-yellow-400',
+    bg: 'bg-[color:var(--theme-status-warning)]/20',
+    text: 'text-[color:var(--theme-status-warning)]',
+    dot: 'bg-[color:var(--theme-status-warning)] border-[color:var(--theme-status-warning)]',
     label: 'Restricted',
   },
   not_legal: {
     bg: 'bg-[color:var(--theme-bg-secondary)]',
     text: 'text-[color:var(--theme-text-secondary)]',
+    dot: 'bg-[color:var(--theme-bg-tertiary)] border-[color:var(--theme-border-default)]',
     label: 'Not Legal',
   },
 };
@@ -81,7 +85,7 @@ export function LegalityDisplay({ legalities, className = '' }: LegalityDisplayP
               key={format}
               className={`flex items-center gap-2 px-2 py-1 rounded text-xs ${style.bg} ${style.text}`}
             >
-              <div className={`w-2 h-2 rounded-full ${style.bg.replace('/20', '')} border ${style.text.replace('text-', 'border-')}`} />
+              <div className={`w-2 h-2 rounded-full border ${style.dot}`} />
               <span className="font-medium capitalize">{format}</span>
               {legality && legality !== 'legal' && (
                 <span className="text-xs opacity-75">({style.label})</span>

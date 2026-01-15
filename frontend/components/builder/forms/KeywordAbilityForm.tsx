@@ -155,7 +155,7 @@ export function KeywordAbilityForm({ abilityId, onSave, onCancel }: KeywordAbili
                   type="checkbox"
                   checked={sacrificeCost}
                   onChange={(e) => setSacrificeCost(e.target.checked)}
-                  className="w-4 h-4 rounded border-[color:var(--theme-input-border)] bg-[color:var(--theme-input-bg)] text-amber-600 focus:ring-amber-500"
+                    className="w-4 h-4 rounded border-[color:var(--theme-input-border)] bg-[color:var(--theme-input-bg)] text-[color:var(--theme-accent-primary)] focus:ring-[color:var(--theme-border-focus)]"
                 />
                 <span className="text-sm font-medium text-[color:var(--theme-text-secondary)]">Requires Sacrifice Cost</span>
               </label>

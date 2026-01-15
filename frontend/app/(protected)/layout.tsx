@@ -85,8 +85,8 @@ export default function ProtectedLayout({
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-angel-white">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>
+      <div className="min-h-screen flex items-center justify-center bg-[color:var(--theme-bg-primary)]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[color:var(--theme-accent-primary)]"></div>
       </div>
     );
   }

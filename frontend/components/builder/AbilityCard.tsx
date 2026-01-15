@@ -5,6 +5,7 @@
 import { TriggeredAbility, ActivatedAbility, StaticAbility, ContinuousAbility, KeywordAbility } from '@/store/builderStore';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { StatusBadge } from '@/components/ui/StatusBadge';
 import { formatEffect } from '@/lib/effectTypes';
 import { formatCondition } from '@/lib/conditionTypes';
 
@@ -65,35 +66,37 @@ function getAbilitySummary(ability: any, type: string): string {
   }
 }
 
-function getTypeBadgeColor(type: string): string {
+function getTypeBadgeVariant(type: string): 'default' | 'success' | 'warning' | 'info' {
   switch (type) {
     case 'triggered':
-      return 'bg-blue-600';
+      return 'info';
     case 'activated':
-      return 'bg-purple-600';
+      return 'warning';
     case 'static':
-      return 'bg-green-600';
+      return 'success';
     case 'continuous':
-      return 'bg-teal-600';
+      return 'default';
     case 'keyword':
-      return 'bg-[color:var(--theme-accent-primary)]';
+      return 'default';
     default:
-      return 'bg-slate-600';
+      return 'default';
   }
 }
 
 export function AbilityCard({ ability, type, onEdit, onDelete }: AbilityCardProps) {
   const summary = getAbilitySummary(ability, type);
-  const badgeColor = getTypeBadgeColor(type);
+  const badgeVariant = getTypeBadgeVariant(type);
 
   return (
     <Card variant="default" className="p-4">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2">
-            <span className={`px-2 py-1 rounded text-xs font-semibold text-white ${badgeColor}`}>
-              {type.charAt(0).toUpperCase() + type.slice(1)}
-            </span>
+            <StatusBadge
+              label={type.charAt(0).toUpperCase() + type.slice(1)}
+              variant={badgeVariant}
+              size="sm"
+            />
           </div>
           <p className="text-sm text-[color:var(--theme-text-primary)] line-clamp-2">{summary}</p>
         </div>

@@ -10,8 +10,8 @@ export function CardGrid({ cards }: CardGridProps) {
   if (cards.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-slate-400 text-lg">No cards found</p>
-        <p className="text-slate-500 text-sm mt-2">Try adjusting your search</p>
+        <p className="text-[color:var(--theme-text-secondary)] text-lg">No cards found</p>
+        <p className="text-[color:var(--theme-text-muted)] text-sm mt-2">Try adjusting your search</p>
       </div>
     );
   }

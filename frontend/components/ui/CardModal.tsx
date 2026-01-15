@@ -41,7 +41,7 @@ export function CardModal({ isOpen, onClose, card, imageUrl }: CardModalProps) {
 
   const modalContent = (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/95 backdrop-blur-sm transition-opacity duration-200"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-[color:var(--theme-overlay-strong)] backdrop-blur-sm transition-opacity duration-200"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -75,7 +75,7 @@ export function CardModal({ isOpen, onClose, card, imageUrl }: CardModalProps) {
         </Link>
         <button
           onClick={onClose}
-          className="p-3 rounded-full bg-slate-900/90 hover:bg-slate-800/90 text-white transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-lg"
+          className="p-3 rounded-full bg-[color:var(--theme-bg-secondary)]/90 hover:bg-[color:var(--theme-bg-tertiary)] text-[color:var(--theme-text-primary)] transition-colors focus:outline-none focus:ring-2 focus:ring-[color:var(--theme-border-focus)] shadow-lg"
           aria-label="Close modal"
         >
           <svg
@@ -115,41 +115,41 @@ export function CardModal({ isOpen, onClose, card, imageUrl }: CardModalProps) {
         </div>
 
         {/* Card Details */}
-        <div className="flex-1 w-full lg:max-w-lg space-y-4 lg:space-y-6 text-white overflow-y-auto max-h-[60vh] lg:max-h-[90vh] pr-2">
+        <div className="flex-1 w-full lg:max-w-lg space-y-4 lg:space-y-6 text-[color:var(--theme-text-primary)] bg-[color:var(--theme-card-bg)]/95 border border-[color:var(--theme-card-border)] rounded-lg p-4 overflow-y-auto max-h-[60vh] lg:max-h-[90vh] pr-2">
           {/* Name and Mana Cost */}
           <div>
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4 mb-2">
               <div className="flex-1">
                 <div className="flex items-center gap-2 flex-wrap mb-2">
-                  <h1 className="font-heading text-2xl sm:text-3xl lg:text-4xl font-bold text-white leading-tight">
+                  <h1 className="font-heading text-2xl sm:text-3xl lg:text-4xl font-bold text-[color:var(--theme-text-primary)] leading-tight">
                     {card.name}
                   </h1>
                   {card.rarity && <RarityBadge rarity={card.rarity} />}
                 </div>
               </div>
               {card.mana_cost && (
-                <div className="text-xl sm:text-2xl text-slate-300 font-semibold whitespace-nowrap">
+                <div className="text-xl sm:text-2xl text-[color:var(--theme-text-secondary)] font-semibold whitespace-nowrap">
                   {card.mana_cost}
                 </div>
               )}
             </div>
             {card.type_line && (
-              <p className="text-base sm:text-lg text-slate-400 italic">
+              <p className="text-base sm:text-lg text-[color:var(--theme-text-muted)] italic">
                 {card.type_line}
               </p>
             )}
           </div>
 
           {/* Divider */}
-          <div className="h-px bg-gradient-to-r from-transparent via-slate-600 to-transparent" />
+          <div className="h-px bg-gradient-to-r from-transparent via-[color:var(--theme-border-default)] to-transparent" />
 
           {/* Oracle Text */}
           {card.oracle_text && (
             <div className="space-y-2">
-              <p className="text-xs text-slate-500 uppercase tracking-wider">
+              <p className="text-xs text-[color:var(--theme-text-muted)] uppercase tracking-wider">
                 Oracle Text
               </p>
-              <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-line">
+              <p className="text-sm text-[color:var(--theme-text-secondary)] leading-relaxed whitespace-pre-line">
                 {card.oracle_text}
               </p>
             </div>
@@ -160,20 +160,20 @@ export function CardModal({ isOpen, onClose, card, imageUrl }: CardModalProps) {
             <div className="flex items-center gap-4">
               {card.power && (
                 <div className="space-y-1">
-                  <p className="text-xs text-slate-500 uppercase tracking-wider">
+                  <p className="text-xs text-[color:var(--theme-text-muted)] uppercase tracking-wider">
                     Power
                   </p>
-                  <p className="text-lg text-slate-300 font-semibold">
+                  <p className="text-lg text-[color:var(--theme-text-secondary)] font-semibold">
                     {card.power}
                   </p>
                 </div>
               )}
               {card.toughness && (
                 <div className="space-y-1">
-                  <p className="text-xs text-slate-500 uppercase tracking-wider">
+                  <p className="text-xs text-[color:var(--theme-text-muted)] uppercase tracking-wider">
                     Toughness
                   </p>
-                  <p className="text-lg text-slate-300 font-semibold">
+                  <p className="text-lg text-[color:var(--theme-text-secondary)] font-semibold">
                     {card.toughness}
                   </p>
                 </div>
@@ -184,14 +184,14 @@ export function CardModal({ isOpen, onClose, card, imageUrl }: CardModalProps) {
           {/* Colors */}
           {card.colors && card.colors.length > 0 && (
             <div className="space-y-1">
-              <p className="text-xs text-slate-500 uppercase tracking-wider">
+              <p className="text-xs text-[color:var(--theme-text-muted)] uppercase tracking-wider">
                 Colors
               </p>
               <div className="flex gap-2">
                 {card.colors.map((color, idx) => (
                   <span
                     key={idx}
-                    className="px-2 py-1 text-xs font-semibold rounded bg-slate-700 text-slate-300"
+                    className="px-2 py-1 text-xs font-semibold rounded bg-[color:var(--theme-bg-tertiary)] text-[color:var(--theme-text-secondary)]"
                   >
                     {color}
                   </span>
@@ -203,13 +203,13 @@ export function CardModal({ isOpen, onClose, card, imageUrl }: CardModalProps) {
           {/* Set Information */}
           {card.set_code && (
             <div className="space-y-1">
-              <p className="text-xs text-slate-500 uppercase tracking-wider">
+              <p className="text-xs text-[color:var(--theme-text-muted)] uppercase tracking-wider">
                 Set
               </p>
-              <p className="text-sm text-slate-300 font-semibold">
+              <p className="text-sm text-[color:var(--theme-text-secondary)] font-semibold">
                 {card.set_code.toUpperCase()}
                 {card.collector_number && (
-                  <span className="text-slate-500 ml-2">
+                  <span className="text-[color:var(--theme-text-muted)] ml-2">
                     #{card.collector_number}
                   </span>
                 )}
@@ -220,7 +220,7 @@ export function CardModal({ isOpen, onClose, card, imageUrl }: CardModalProps) {
           {/* Prices */}
           {card.prices && (card.prices.usd || card.prices.eur || card.prices.usd_foil) && (
             <div className="space-y-1">
-              <p className="text-xs text-slate-500 uppercase tracking-wider">
+              <p className="text-xs text-[color:var(--theme-text-muted)] uppercase tracking-wider">
                 Prices
               </p>
               <div className="flex flex-wrap gap-3">
@@ -253,11 +253,11 @@ export function CardModal({ isOpen, onClose, card, imageUrl }: CardModalProps) {
           )}
 
           {/* Card ID */}
-          <div className="space-y-1 pt-4 border-t border-slate-700">
-            <p className="text-xs text-slate-500 uppercase tracking-wider">
+          <div className="space-y-1 pt-4 border-t border-[color:var(--theme-border-default)]">
+            <p className="text-xs text-[color:var(--theme-text-muted)] uppercase tracking-wider">
               Card ID
             </p>
-            <p className="text-xs text-slate-400 font-mono break-all">
+            <p className="text-xs text-[color:var(--theme-text-secondary)] font-mono break-all">
               {card.card_id}
             </p>
           </div>
@@ -265,7 +265,7 @@ export function CardModal({ isOpen, onClose, card, imageUrl }: CardModalProps) {
       </div>
 
       {/* Click outside to close hint */}
-      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-slate-400 text-sm z-[10000] pointer-events-none">
+      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-[color:var(--theme-text-muted)] text-sm z-[10000] pointer-events-none">
         Click outside or press ESC to close
       </div>
     </div>

@@ -47,7 +47,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-angel-white via-angel-cream to-angel-white px-4">
+    <div className="min-h-screen flex items-center justify-center bg-[color:var(--theme-bg-primary)] px-4">
       <div className="w-full max-w-md">
         <Card variant="elevated" className="p-8">
           <div className="text-center mb-8">
@@ -119,14 +119,14 @@ export default function RegisterPage() {
           <div className="mt-6 text-center text-sm text-[color:var(--theme-text-secondary)]">
             <p>
               Already have an account?{' '}
-              <Link href="/login" className="text-amber-600 hover:text-amber-500 underline">
+              <Link href="/login" className="text-[color:var(--theme-accent-primary)] hover:text-[color:var(--theme-accent-hover)] underline">
                 Sign in here
               </Link>
             </p>
           </div>
 
           <div className="mt-4 text-center">
-            <Link href="/" className="text-sm text-[color:var(--theme-text-secondary)] hover:text-amber-600">
+            <Link href="/" className="text-sm text-[color:var(--theme-text-secondary)] hover:text-[color:var(--theme-accent-primary)]">
               ← Back to home
             </Link>
           </div>

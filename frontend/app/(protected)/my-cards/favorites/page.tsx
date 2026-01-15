@@ -44,7 +44,7 @@ export default function FavoritesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <Link href="/my-cards" className="text-[color:var(--theme-text-secondary)] hover:text-amber-600 transition-colors mb-2 inline-block">
+          <Link href="/my-cards" className="text-[color:var(--theme-text-secondary)] hover:text-[color:var(--theme-accent-primary)] transition-colors mb-2 inline-block">
             ← Back to My Cards
           </Link>
           <h1 className="font-heading text-3xl font-bold text-[color:var(--theme-text-primary)] mb-2">

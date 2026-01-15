@@ -22,8 +22,8 @@ export default function GettingStartedPage() {
         <Card variant="elevated">
           <div className="p-6 space-y-4">
             <div className="flex items-start gap-4">
-              <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-                <span className="text-amber-500 font-bold">1</span>
+              <div className="w-8 h-8 rounded-full bg-[color:var(--theme-accent-primary)]/20 flex items-center justify-center flex-shrink-0">
+                <span className="text-[color:var(--theme-accent-primary)] font-bold">1</span>
               </div>
               <div>
                 <h3 className="text-xl font-semibold text-[color:var(--theme-text-primary)] mb-2">
@@ -45,8 +45,8 @@ export default function GettingStartedPage() {
         <Card variant="elevated">
           <div className="p-6 space-y-4">
             <div className="flex items-start gap-4">
-              <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-                <span className="text-amber-500 font-bold">2</span>
+              <div className="w-8 h-8 rounded-full bg-[color:var(--theme-accent-primary)]/20 flex items-center justify-center flex-shrink-0">
+                <span className="text-[color:var(--theme-accent-primary)] font-bold">2</span>
               </div>
               <div>
                 <h3 className="text-xl font-semibold text-[color:var(--theme-text-primary)] mb-2">
@@ -68,8 +68,8 @@ export default function GettingStartedPage() {
         <Card variant="elevated">
           <div className="p-6 space-y-4">
             <div className="flex items-start gap-4">
-              <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-                <span className="text-amber-500 font-bold">3</span>
+              <div className="w-8 h-8 rounded-full bg-[color:var(--theme-accent-primary)]/20 flex items-center justify-center flex-shrink-0">
+                <span className="text-[color:var(--theme-accent-primary)] font-bold">3</span>
               </div>
               <div>
                 <h3 className="text-xl font-semibold text-[color:var(--theme-text-primary)] mb-2">
@@ -91,8 +91,8 @@ export default function GettingStartedPage() {
         <Card variant="elevated">
           <div className="p-6 space-y-4">
             <div className="flex items-start gap-4">
-              <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-                <span className="text-amber-500 font-bold">4</span>
+              <div className="w-8 h-8 rounded-full bg-[color:var(--theme-accent-primary)]/20 flex items-center justify-center flex-shrink-0">
+                <span className="text-[color:var(--theme-accent-primary)] font-bold">4</span>
               </div>
               <div>
                 <h3 className="text-xl font-semibold text-[color:var(--theme-text-primary)] mb-2">

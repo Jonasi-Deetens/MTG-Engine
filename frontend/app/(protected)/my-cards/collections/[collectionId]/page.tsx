@@ -58,15 +58,15 @@ export default function CollectionDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-angel-white flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>
+      <div className="min-h-screen bg-[color:var(--theme-bg-primary)] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[color:var(--theme-accent-primary)]"></div>
       </div>
     );
   }
 
   if (error || !collection) {
     return (
-      <div className="min-h-screen bg-angel-white p-4">
+      <div className="min-h-screen bg-[color:var(--theme-bg-primary)] p-4">
         <div className="max-w-4xl mx-auto">
           <div className="bg-[color:var(--theme-status-error)]/20 border border-[color:var(--theme-status-error)]/50 rounded-lg p-6 text-[color:var(--theme-status-error)]">
             <h1 className="text-2xl font-bold mb-2">Error</h1>
@@ -85,7 +85,7 @@ export default function CollectionDetailPage() {
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/my-cards/collections" className="text-[color:var(--theme-text-secondary)] hover:text-amber-600 transition-colors mb-2 inline-block">
+        <Link href="/my-cards/collections" className="text-[color:var(--theme-text-secondary)] hover:text-[color:var(--theme-accent-primary)] transition-colors mb-2 inline-block">
           ← Back to Collections
         </Link>
         <div className="flex items-center justify-between">
