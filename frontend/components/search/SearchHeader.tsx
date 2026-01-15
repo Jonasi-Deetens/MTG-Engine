@@ -10,7 +10,6 @@ interface SearchHeaderProps {
 export function SearchHeader({ onRandomClick }: SearchHeaderProps) {
   return (
     <div className="flex items-center justify-between mb-6">
-      <h1 className="text-3xl font-bold text-[color:var(--theme-text-primary)]">Search Cards</h1>
       <Button
         onClick={onRandomClick}
         variant="outline"
