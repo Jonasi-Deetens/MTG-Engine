@@ -99,10 +99,6 @@ export default function PlayPage() {
     checkStackTargets();
   }, [gameState?.stack]);
 
-  useEffect(() => {
-    checkSelectionTargets();
-  }, [gameState, selectedHandId, selectedGraph, shouldUseStackTargets, filteredTargetableObjects, filteredTargetPlayers]);
-
   const replacementConflicts = useMemo(() => {
     if (!gameState) return [];
     const globalEffects = (gameState.replacement_effects ?? []).filter(
@@ -421,20 +417,20 @@ export default function PlayPage() {
   const applyAbilityGraphsToState = (graphsByCardId: Record<string, any>) => {
     if (Object.keys(graphsByCardId).length === 0) return;
     setAbilityGraphs((prev) => ({ ...prev, ...graphsByCardId }));
-    setGameState((prevState) => {
-      if (!prevState) return prevState;
-      const updatedObjects = prevState.objects.map((obj) => {
-        const objCardId = cardMap[obj.id]?.card_id;
+        setGameState((prevState) => {
+          if (!prevState) return prevState;
+          const updatedObjects = prevState.objects.map((obj) => {
+            const objCardId = cardMap[obj.id]?.card_id;
         const graph = objCardId ? graphsByCardId[objCardId] : undefined;
         if (!graph) return obj;
         if (obj.ability_graphs && obj.ability_graphs.length > 0) return obj;
-        return {
-          ...obj,
+              return {
+                ...obj,
           ability_graphs: [graph],
-        };
-      });
-      return { ...prevState, objects: updatedObjects };
-    });
+              };
+          });
+          return { ...prevState, objects: updatedObjects };
+        });
   };
 
   const loadAbilityGraphForObject = async (objectId: string) => {
@@ -510,6 +506,10 @@ export default function PlayPage() {
   const shouldUseStackTargets = selectedGraph?.nodes?.some(
     (node: any) => node?.type === 'EFFECT' && node?.data?.target === 'spell'
   );
+
+  useEffect(() => {
+    checkSelectionTargets();
+  }, [gameState, selectedHandId, selectedGraph, shouldUseStackTargets, filteredTargetableObjects, filteredTargetPlayers]);
   const selectedBattlefieldObject = gameState?.objects.find((obj) => obj.id === selectedBattlefieldId);
   const hasActivatedAbility =
     selectedBattlefieldObject?.ability_graphs && selectedBattlefieldObject.ability_graphs.length > 0;
@@ -774,6 +774,16 @@ export default function PlayPage() {
     return { errors, totalRequired };
   };
 
+  const isComplexCost = useMemo(() => {
+    if (!preparedCast || preparedCast.objectId !== selectedHandId) return false;
+    const cost = preparedCast.cost;
+    return Boolean(
+      (cost.hybrids && cost.hybrids.length) ||
+        (cost.two_brids && cost.two_brids.length) ||
+        (cost.phyrexian && cost.phyrexian.length)
+    );
+  }, [preparedCast, selectedHandId]);
+
   useEffect(() => {
     if (!preparedCast || preparedCast.objectId !== selectedHandId) return;
     if (!autoPayMana) return;
@@ -802,16 +812,6 @@ export default function PlayPage() {
     }
     return getManaPaymentErrors(preparedCast.cost, manaPayment, manaPool);
   }, [preparedCast, selectedHandId, manaPayment, manaPool, isComplexCost, manaPaymentDetail]);
-
-  const isComplexCost = useMemo(() => {
-    if (!preparedCast || preparedCast.objectId !== selectedHandId) return false;
-    const cost = preparedCast.cost;
-    return Boolean(
-      (cost.hybrids && cost.hybrids.length) ||
-        (cost.two_brids && cost.two_brids.length) ||
-        (cost.phyrexian && cost.phyrexian.length)
-    );
-  }, [preparedCast, selectedHandId]);
 
   const costLabel = useMemo(() => {
     if (!preparedCast || preparedCast.objectId !== selectedHandId) return '';
@@ -1064,7 +1064,7 @@ export default function PlayPage() {
                     {(preparedCast.cost.hybrids ?? []).map(([colorA, colorB]: [string, string], index: number) => (
                       <label key={`hybrid-${index}`} className="flex items-center gap-2">
                         <span className="text-[color:var(--theme-text-secondary)]">Hybrid</span>
-                        <select
+                <select
                           value={manaPaymentDetail.hybrid_choices[index] ?? colorA}
                           onChange={(e) =>
                             setManaPaymentDetail((prev) => {
@@ -1074,7 +1074,7 @@ export default function PlayPage() {
                             })
                           }
                           className="flex-1 px-2 py-1 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none"
-                        >
+                >
                           <option value={colorA}>{colorA}</option>
                           <option value={colorB}>{colorB}</option>
                         </select>
@@ -1097,7 +1097,7 @@ export default function PlayPage() {
                           >
                             <option value="color">{color}</option>
                             <option value="generic">{genericValue} generic</option>
-                          </select>
+                </select>
                         </label>
                       )
                     )}
@@ -1120,7 +1120,7 @@ export default function PlayPage() {
                         </select>
                       </label>
                     ))}
-                  </div>
+              </div>
                 )}
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
                   {['W', 'U', 'B', 'R', 'G', 'C'].map((color) => (
@@ -1192,7 +1192,7 @@ export default function PlayPage() {
                         ({entry.fromLabel} → {entry.toLabel})
                       </span>
                     </div>
-                    <select
+                <select
                       value={replacementChoices[entry.key] || ''}
                       onChange={(e) =>
                         setReplacementChoices((prev) => ({
@@ -1201,18 +1201,18 @@ export default function PlayPage() {
                         }))
                       }
                       className="px-2 py-1 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none text-xs"
-                    >
+                >
                       <option value="">Auto (most recent)</option>
                       {entry.options.map((effect) => (
                         <option key={effect.effect_id} value={effect.effect_id}>
                           {effect.replacement_zone}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ))}
+                    </option>
+                  ))}
+                </select>
               </div>
-            </Card>
+                ))}
+            </div>
+          </Card>
           )}
 
           <StackView

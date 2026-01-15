@@ -46,7 +46,7 @@ const renderCard = (
           title={statusDetail || undefined}
         >
           <div className="flex items-center justify-between">
-            <div className="font-semibold text-[color:var(--theme-text-primary)]">{obj.name}</div>
+          <div className="font-semibold text-[color:var(--theme-text-primary)]">{obj.name}</div>
             {statusLabel && (
               <span className="text-[10px] text-[color:var(--theme-text-secondary)]">{statusLabel}</span>
             )}
@@ -69,7 +69,7 @@ const renderCard = (
       title={statusDetail || undefined}
     >
       <div className="space-y-1">
-        <CardPreview card={card as CardData} disableClick />
+      <CardPreview card={card as CardData} disableClick />
         {statusLabel && (
           <div className="text-[10px] text-[color:var(--theme-text-secondary)] text-center">{statusLabel}</div>
         )}

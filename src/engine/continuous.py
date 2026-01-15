@@ -144,12 +144,12 @@ def _gather_static_layer_effects(game_state: GameState, effect_types: Optional[s
 def _reset_characteristics(obj) -> None:
     if obj.base_controller_id is not None:
         obj.controller_id = obj.base_controller_id
-    if obj.base_power is not None:
-        obj.power = obj.base_power
-    if obj.base_toughness is not None:
-        obj.toughness = obj.base_toughness
-    if obj.base_keywords is not None:
-        obj.keywords = set(obj.base_keywords)
+        if obj.base_power is not None:
+            obj.power = obj.base_power
+        if obj.base_toughness is not None:
+            obj.toughness = obj.base_toughness
+        if obj.base_keywords is not None:
+            obj.keywords = set(obj.base_keywords)
     if getattr(obj, "base_types", None):
         obj.types = list(obj.base_types)
     if getattr(obj, "base_colors", None):
@@ -305,24 +305,24 @@ def _apply_layer_7a_cda(obj) -> None:
 
 def _apply_layer_7b_set_pt(obj) -> None:
     for effect in _effects_of_type(obj.temporary_effects, "set_power_toughness"):
-        obj.power = int(effect.get("power", obj.power or 0))
-        obj.toughness = int(effect.get("toughness", obj.toughness or 0))
+                obj.power = int(effect.get("power", obj.power or 0))
+                obj.toughness = int(effect.get("toughness", obj.toughness or 0))
 
 
 def _apply_layer_7c_modify_pt(obj) -> None:
     for effect in _effects_of_type(obj.temporary_effects, "modify_power_toughness"):
-        obj.power = (obj.power or 0) + int(effect.get("power", 0))
-        obj.toughness = (obj.toughness or 0) + int(effect.get("toughness", 0))
+                obj.power = (obj.power or 0) + int(effect.get("power", 0))
+                obj.toughness = (obj.toughness or 0) + int(effect.get("toughness", 0))
 
 
 def _apply_layer_7d_counters(obj) -> None:
-    counters: Dict[str, int] = obj.counters or {}
-    if "+1/+1" in counters:
-        obj.power = (obj.power or 0) + counters["+1/+1"]
-        obj.toughness = (obj.toughness or 0) + counters["+1/+1"]
-    if "-1/-1" in counters:
-        obj.power = (obj.power or 0) - counters["-1/-1"]
-        obj.toughness = (obj.toughness or 0) - counters["-1/-1"]
+        counters: Dict[str, int] = obj.counters or {}
+        if "+1/+1" in counters:
+            obj.power = (obj.power or 0) + counters["+1/+1"]
+            obj.toughness = (obj.toughness or 0) + counters["+1/+1"]
+        if "-1/-1" in counters:
+            obj.power = (obj.power or 0) - counters["-1/-1"]
+            obj.toughness = (obj.toughness or 0) - counters["-1/-1"]
 
 
 def apply_continuous_effects(game_state: GameState) -> None:

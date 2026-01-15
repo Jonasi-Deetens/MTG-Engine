@@ -111,7 +111,7 @@ export function StackView({ stack, objects, cardMap, targetChecks }: StackViewPr
       {stack.map((item, index) => (
         <div key={`${item.kind}-${index}`} className="text-xs text-[color:var(--theme-text-secondary)] space-y-1">
           <div>
-            {getStackLabel(item)} · controller {item.controller_id ?? 'N/A'}
+          {getStackLabel(item)} · controller {item.controller_id ?? 'N/A'}
           </div>
           {getTargetSummary(item) && (
             <div className="text-[color:var(--theme-text-secondary)]">{getTargetSummary(item)}</div>

@@ -74,20 +74,20 @@ class EffectResolver:
         results: List[Dict[str, Any]] = []
         if target_type in ("player", "any"):
             for player_id in _resolve_target_players(context, context.controller_id):
-            if player_id is not None and context.source_id:
-                source = self.game_state.objects.get(context.source_id)
-                if source:
-                    apply_damage_to_player(self.game_state, source, player_id, amount)
+                if player_id is not None and context.source_id:
+                    source = self.game_state.objects.get(context.source_id)
+                    if source:
+                        apply_damage_to_player(self.game_state, source, player_id, amount)
                         results.append({"player_id": player_id, "amount": amount})
         if target_type in ("any", "target", "target_permanent", "target_creature", "target_artifact", "target_enchantment"):
             for obj in _resolve_target_objects(self.game_state, context, target_type):
                 if context.source_id:
-            source = self.game_state.objects.get(context.source_id)
-            if source:
-                apply_damage_to_object(self.game_state, source, obj, amount)
+                    source = self.game_state.objects.get(context.source_id)
+                    if source:
+                        apply_damage_to_object(self.game_state, source, obj, amount)
                         results.append({"object_id": obj.id, "amount": amount})
         if not results:
-        return {"type": "damage", "status": "no_target"}
+            return {"type": "damage", "status": "no_target"}
         return {"type": "damage", "results": results}
 
     def _handle_draw(self, effect: Dict[str, Any], context: ResolveContext) -> Dict[str, Any]:
@@ -254,7 +254,7 @@ class EffectResolver:
         results: List[Dict[str, Any]] = []
         protection_type = effect.get("protectionType", "any")
         for obj in _resolve_target_objects(self.game_state, context, effect.get("target", "target_permanent")):
-        obj.protections.add(protection_type)
+            obj.protections.add(protection_type)
             results.append({"object_id": obj.id, "protection": protection_type})
         if not results:
             return {"type": "protection", "status": "no_target"}
@@ -443,7 +443,7 @@ class EffectResolver:
                 "duration": duration,
             })
         else:
-        obj.controller_id = int(new_controller)
+            obj.controller_id = int(new_controller)
             obj.base_controller_id = int(new_controller)
         return {"type": "change_control", "object_id": obj.id, "controller_id": int(new_controller)}
 

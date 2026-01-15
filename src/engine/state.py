@@ -23,7 +23,6 @@ class GameObject:
     name: str
     owner_id: int
     controller_id: int
-    base_controller_id: Optional[int] = None
     types: List[str]
     zone: str
     mana_cost: Optional[str] = None
@@ -56,6 +55,7 @@ class GameObject:
     regenerate_shield: bool = False
     temporary_effects: List[Dict[str, Any]] = field(default_factory=list)
     ability_graphs: List[Dict[str, Any]] = field(default_factory=list)
+    base_controller_id: Optional[int] = None
 
 
 @dataclass
