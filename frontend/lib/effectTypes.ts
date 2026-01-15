@@ -20,6 +20,16 @@ export interface EffectTypeOption {
   requiresTwoTargets?: boolean; // For fight, redirect damage effects
   requiresDiscardType?: boolean; // For discard effects
   requiresPosition?: boolean; // For look at effects
+  requiresTypeList?: boolean;
+  requiresTypeName?: boolean;
+  requiresColorList?: boolean;
+  requiresColor?: boolean;
+  requiresCdaSource?: boolean;
+  requiresCdaSet?: boolean;
+  requiresFromZone?: boolean;
+  requiresToZone?: boolean;
+  requiresReplacementZone?: boolean;
+  requiresUses?: boolean;
 }
 
 export const EFFECT_TYPE_OPTIONS: EffectTypeOption[] = [
@@ -50,6 +60,7 @@ export const EFFECT_TYPE_OPTIONS: EffectTypeOption[] = [
   { value: 'look_at', label: 'Look At', requiresAmount: true, requiresZone: true, requiresPosition: true },
   { value: 'reveal', label: 'Reveal', requiresTarget: true },
   { value: 'copy_spell', label: 'Copy Spell', requiresTarget: true },
+  { value: 'counter_spell', label: 'Counter Spell', requiresTarget: true },
   { value: 'regenerate', label: 'Regenerate', requiresTarget: true },
   { value: 'phase_out', label: 'Phase Out', requiresTarget: true },
   { value: 'transform', label: 'Transform', requiresTarget: true },
@@ -57,6 +68,23 @@ export const EFFECT_TYPE_OPTIONS: EffectTypeOption[] = [
   { value: 'change_control', label: 'Change Control', requiresTarget: true, requiresDuration: true },
   { value: 'prevent_damage', label: 'Prevent Damage', requiresTarget: true, requiresAmount: true },
   { value: 'redirect_damage', label: 'Redirect Damage', requiresTwoTargets: true, requiresAmount: true },
+  { value: 'set_types', label: 'Set Types', requiresTarget: true, requiresTypeList: true, requiresDuration: true },
+  { value: 'add_type', label: 'Add Type', requiresTarget: true, requiresTypeName: true, requiresDuration: true },
+  { value: 'remove_type', label: 'Remove Type', requiresTarget: true, requiresTypeName: true, requiresDuration: true },
+  { value: 'set_colors', label: 'Set Colors', requiresTarget: true, requiresColorList: true, requiresDuration: true },
+  { value: 'add_color', label: 'Add Color', requiresTarget: true, requiresColor: true, requiresDuration: true },
+  { value: 'remove_color', label: 'Remove Color', requiresTarget: true, requiresColor: true, requiresDuration: true },
+  { value: 'cda_power_toughness', label: 'CDA Power/Toughness', requiresCdaSource: true, requiresCdaSet: true },
+  {
+    value: 'replace_zone_change',
+    label: 'Replace Zone Change',
+    requiresTarget: true,
+    requiresDuration: true,
+    requiresFromZone: true,
+    requiresToZone: true,
+    requiresReplacementZone: true,
+    requiresUses: true,
+  },
 ];
 
 export const TARGET_OPTIONS = [
@@ -85,6 +113,16 @@ export const SEARCH_ZONE_OPTIONS = [
   { value: 'graveyard', label: 'Graveyard' },
   { value: 'hand', label: 'Hand' },
   { value: 'exile', label: 'Exile' },
+];
+
+export const ZONE_OPTIONS = [
+  { value: 'battlefield', label: 'Battlefield' },
+  { value: 'graveyard', label: 'Graveyard' },
+  { value: 'hand', label: 'Hand' },
+  { value: 'library', label: 'Library' },
+  { value: 'exile', label: 'Exile' },
+  { value: 'command', label: 'Command' },
+  { value: 'stack', label: 'Stack' },
 ];
 
 export const CARD_TYPE_FILTERS = [
@@ -119,6 +157,14 @@ export const MANA_TYPE_OPTIONS = [
   { value: 'any', label: 'Any Color' },
 ];
 
+export const COLOR_OPTIONS = [
+  { value: 'W', label: 'White (W)' },
+  { value: 'U', label: 'Blue (U)' },
+  { value: 'B', label: 'Black (B)' },
+  { value: 'R', label: 'Red (R)' },
+  { value: 'G', label: 'Green (G)' },
+];
+
 export const UNTAP_TARGET_OPTIONS = [
   { value: 'self', label: 'This Permanent' },
   { value: 'target_creature', label: 'Target Creature' },
@@ -132,6 +178,60 @@ export const DURATION_OPTIONS = [
   { value: 'until_end_of_your_next_turn', label: 'Until End of Your Next Turn' },
   { value: 'until_end_of_combat', label: 'Until End of Combat' },
   { value: 'until_your_next_upkeep', label: 'Until Your Next Upkeep' },
+];
+
+export const CDA_SOURCE_OPTIONS = [
+  { value: 'controlled', label: 'Count permanents you control' },
+  { value: 'zone', label: 'Count cards in a zone' },
+];
+
+export const CDA_TYPE_OPTIONS = [
+  { value: 'Permanent', label: 'Permanent' },
+  { value: 'Creature', label: 'Creature' },
+  { value: 'Land', label: 'Land' },
+  { value: 'Artifact', label: 'Artifact' },
+  { value: 'Enchantment', label: 'Enchantment' },
+  { value: 'Planeswalker', label: 'Planeswalker' },
+];
+
+export const CDA_ZONE_OPTIONS = [
+  { value: 'hand', label: 'Your hand' },
+  { value: 'graveyard', label: 'Your graveyard' },
+  { value: 'all_graveyards', label: 'All graveyards' },
+];
+
+export const CDA_SET_OPTIONS = [
+  { value: 'both', label: 'Power and Toughness' },
+  { value: 'power', label: 'Power only' },
+  { value: 'toughness', label: 'Toughness only' },
+];
+
+export const CDA_TEMPLATE_OPTIONS = [
+  {
+    value: 'creatures_you_control',
+    label: 'Creatures you control',
+    config: { cdaSource: 'controlled', cdaType: 'Creature', cdaSet: 'both' },
+  },
+  {
+    value: 'permanents_you_control',
+    label: 'Permanents you control',
+    config: { cdaSource: 'controlled', cdaType: 'Permanent', cdaSet: 'both' },
+  },
+  {
+    value: 'cards_in_hand',
+    label: 'Cards in your hand',
+    config: { cdaSource: 'zone', cdaZone: 'hand', cdaSet: 'both' },
+  },
+  {
+    value: 'cards_in_graveyard',
+    label: 'Cards in your graveyard',
+    config: { cdaSource: 'zone', cdaZone: 'graveyard', cdaSet: 'both' },
+  },
+  {
+    value: 'cards_in_all_graveyards',
+    label: 'Cards in all graveyards',
+    config: { cdaSource: 'zone', cdaZone: 'all_graveyards', cdaSet: 'both' },
+  },
 ];
 
 export const CHOICE_TYPE_OPTIONS = [
@@ -186,8 +286,9 @@ export function formatDuration(duration: string | undefined): string {
 }
 
 export function formatEffect(effect: any): string {
+  const maxTargetsText = effect.maxTargets ? ` (up to ${effect.maxTargets})` : '';
   if (effect.type === 'damage') {
-    return `Deal ${effect.amount || 0} damage${effect.target ? ` to ${effect.target}` : ''}`;
+    return `Deal ${effect.amount || 0} damage${effect.target ? ` to ${effect.target}` : ''}${maxTargetsText}`;
   }
   if (effect.type === 'draw') {
     return `Draw ${effect.amount || 1} card${(effect.amount || 1) > 1 ? 's' : ''}`;
@@ -196,7 +297,7 @@ export function formatEffect(effect: any): string {
     return `Create ${effect.amount || 1} token${(effect.amount || 1) > 1 ? 's' : ''}`;
   }
   if (effect.type === 'counters') {
-    return `Put ${effect.amount || 1} +1/+1 counter${(effect.amount || 1) > 1 ? 's' : ''}`;
+    return `Put ${effect.amount || 1} +1/+1 counter${(effect.amount || 1) > 1 ? 's' : ''}${maxTargetsText}`;
   }
   if (effect.type === 'life') {
     return `Gain ${effect.amount || 0} life`;
@@ -210,28 +311,28 @@ export function formatEffect(effect: any): string {
   if (effect.type === 'untap') {
     const target = effect.untapTarget || 'self';
     if (target === 'self') {
-      return 'Untap this permanent';
+      return `Untap this permanent${maxTargetsText}`;
     }
-      return `Untap ${target.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}`;
+      return `Untap ${target.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}${maxTargetsText}`;
     }
     if (effect.type === 'tap') {
       const target = effect.untapTarget || 'self';
       if (target === 'self') {
-        return 'Tap this permanent';
+        return `Tap this permanent${maxTargetsText}`;
       }
-      return `Tap ${target.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}`;
+      return `Tap ${target.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}${maxTargetsText}`;
   }
   if (effect.type === 'destroy') {
-    return `Destroy ${effect.target || 'target'}`;
+    return `Destroy ${effect.target || 'target'}${maxTargetsText}`;
   }
   if (effect.type === 'exile') {
-    return `Exile ${effect.target || 'target'}`;
+    return `Exile ${effect.target || 'target'}${maxTargetsText}`;
   }
   if (effect.type === 'return') {
-    return `Return ${effect.target || 'target'} to hand`;
+    return `Return ${effect.target || 'target'} to hand${maxTargetsText}`;
   }
   if (effect.type === 'sacrifice') {
-    return `Sacrifice ${effect.target || 'target'}`;
+    return `Sacrifice ${effect.target || 'target'}${maxTargetsText}`;
   }
   if (effect.type === 'search') {
     const zone = effect.zone || 'library';
@@ -294,7 +395,7 @@ export function formatEffect(effect: any): string {
     const protectionLabel = PROTECTION_TYPE_OPTIONS.find(opt => opt.value === protectionType)?.label || protectionType;
     const duration = formatDuration(effect.duration);
     const choiceText = effect.choice ? ` (player chooses ${effect.choice})` : '';
-    return `Target ${target} gains protection from ${protectionLabel}${duration ? ` ${duration}` : ''}${choiceText}`;
+    return `Target ${target} gains protection from ${protectionLabel}${duration ? ` ${duration}` : ''}${choiceText}${maxTargetsText}`;
   }
   
   // Gain Keyword
@@ -302,7 +403,7 @@ export function formatEffect(effect: any): string {
     const target = effect.target || 'target creature';
     const keyword = effect.keyword || 'keyword';
     const duration = formatDuration(effect.duration);
-    return `Target ${target} gains ${keyword}${duration ? ` ${duration}` : ''}`;
+    return `Target ${target} gains ${keyword}${duration ? ` ${duration}` : ''}${maxTargetsText}`;
   }
   
   // Change Power/Toughness
@@ -313,7 +414,31 @@ export function formatEffect(effect: any): string {
     const powerSign = powerChange >= 0 ? '+' : '';
     const toughnessSign = toughnessChange >= 0 ? '+' : '';
     const duration = formatDuration(effect.duration);
-    return `Target ${target} gets ${powerSign}${powerChange}/${toughnessSign}${toughnessChange}${duration ? ` ${duration}` : ''}`;
+    return `Target ${target} gets ${powerSign}${powerChange}/${toughnessSign}${toughnessChange}${duration ? ` ${duration}` : ''}${maxTargetsText}`;
+  }
+
+  if (effect.type === 'cda_power_toughness') {
+    const cdaSet = effect.cdaSet || 'both';
+    const setLabel = cdaSet === 'power'
+      ? 'Power is'
+      : cdaSet === 'toughness'
+      ? 'Toughness is'
+      : 'Power and toughness are each';
+    if (effect.cdaSource === 'zone') {
+      const zoneLabel = CDA_ZONE_OPTIONS.find(opt => opt.value === effect.cdaZone)?.label || 'your hand';
+      return `${setLabel} equal to the number of cards in ${zoneLabel.toLowerCase()}`;
+    }
+    const typeLabel = CDA_TYPE_OPTIONS.find(opt => opt.value === effect.cdaType)?.label || 'permanents';
+    return `${setLabel} equal to the number of ${typeLabel.toLowerCase()} you control`;
+  }
+
+  if (effect.type === 'replace_zone_change') {
+    const fromZone = ZONE_OPTIONS.find(opt => opt.value === effect.fromZone)?.label || 'Battlefield';
+    const toZone = ZONE_OPTIONS.find(opt => opt.value === effect.toZone)?.label || 'Graveyard';
+    const replacement = ZONE_OPTIONS.find(opt => opt.value === effect.replacementZone)?.label || 'Exile';
+    const usesText = effect.uses ? ` (next ${effect.uses})` : '';
+    const duration = formatDuration(effect.duration);
+    return `If it would move from ${fromZone} to ${toZone}, put it into ${replacement} instead${duration ? ` ${duration}` : ''}${usesText}`;
   }
   
   // Fight
@@ -327,7 +452,7 @@ export function formatEffect(effect: any): string {
   if (effect.type === 'mill') {
     const target = effect.target || 'target player';
     const amount = effect.amount || 1;
-    return `Target ${target} mills ${amount} card${amount > 1 ? 's' : ''}`;
+    return `Target ${target} mills ${amount} card${amount > 1 ? 's' : ''}${maxTargetsText}`;
   }
   
   // Discard
@@ -336,7 +461,7 @@ export function formatEffect(effect: any): string {
     const amount = effect.amount || 1;
     const discardType = effect.discardType || 'chosen';
     const discardTypeLabel = DISCARD_TYPE_OPTIONS.find(opt => opt.value === discardType)?.label || discardType;
-    return `Target ${target} discards ${amount} card${amount > 1 ? 's' : ''} (${discardTypeLabel})`;
+    return `Target ${target} discards ${amount} card${amount > 1 ? 's' : ''} (${discardTypeLabel})${maxTargetsText}`;
   }
   
   // Scry
@@ -358,52 +483,92 @@ export function formatEffect(effect: any): string {
   // Reveal
   if (effect.type === 'reveal') {
     const target = effect.target || 'target';
-    return `Reveal ${target}`;
+    return `Reveal ${target}${maxTargetsText}`;
   }
   
   // Copy Spell
   if (effect.type === 'copy_spell') {
     const target = effect.target || 'target spell';
-    return `Copy ${target}`;
+    return `Copy ${target}${maxTargetsText}`;
+  }
+  if (effect.type === 'counter_spell') {
+    const target = effect.target || 'target spell';
+    return `Counter ${target}${maxTargetsText}`;
   }
   
   // Regenerate
   if (effect.type === 'regenerate') {
     const target = effect.target || 'target creature';
-    return `Regenerate ${target}`;
+    return `Regenerate ${target}${maxTargetsText}`;
   }
   
   // Phase Out
   if (effect.type === 'phase_out') {
     const target = effect.target || 'target permanent';
-    return `Target ${target} phases out`;
+    return `Target ${target} phases out${maxTargetsText}`;
   }
   
   // Transform
   if (effect.type === 'transform') {
     const target = effect.target || 'target permanent';
-    return `Transform ${target}`;
+    return `Transform ${target}${maxTargetsText}`;
   }
   
   // Flicker
   if (effect.type === 'flicker') {
     const target = effect.target || 'target permanent';
     const ownerText = effect.returnUnderOwner ? " under its owner's control" : '';
-    return `Exile ${target}, then return it to the battlefield${ownerText}`;
+    return `Exile ${target}, then return it to the battlefield${ownerText}${maxTargetsText}`;
   }
   
   // Change Control
   if (effect.type === 'change_control') {
     const target = effect.target || 'target permanent';
     const duration = formatDuration(effect.duration);
-    return `Gain control of ${target}${duration ? ` ${duration}` : ''}`;
+    return `Gain control of ${target}${duration ? ` ${duration}` : ''}${maxTargetsText}`;
   }
   
   // Prevent Damage
   if (effect.type === 'prevent_damage') {
     const target = effect.target || 'target';
     const amount = effect.amount || 1;
-    return `Prevent the next ${amount} damage that would be dealt to ${target} this turn`;
+    return `Prevent the next ${amount} damage that would be dealt to ${target} this turn${maxTargetsText}`;
+  }
+  if (effect.type === 'set_types') {
+    const target = effect.target || 'target permanent';
+    const types = Array.isArray(effect.types) ? effect.types.join(', ') : 'types';
+    const duration = formatDuration(effect.duration);
+    return `Target ${target} becomes ${types}${duration ? ` ${duration}` : ''}${maxTargetsText}`;
+  }
+  if (effect.type === 'add_type') {
+    const target = effect.target || 'target permanent';
+    const typeName = effect.typeName || 'type';
+    const duration = formatDuration(effect.duration);
+    return `Target ${target} gains ${typeName}${duration ? ` ${duration}` : ''}${maxTargetsText}`;
+  }
+  if (effect.type === 'remove_type') {
+    const target = effect.target || 'target permanent';
+    const typeName = effect.typeName || 'type';
+    const duration = formatDuration(effect.duration);
+    return `Target ${target} loses ${typeName}${duration ? ` ${duration}` : ''}${maxTargetsText}`;
+  }
+  if (effect.type === 'set_colors') {
+    const target = effect.target || 'target permanent';
+    const colors = Array.isArray(effect.colors) ? effect.colors.join(', ') : 'colors';
+    const duration = formatDuration(effect.duration);
+    return `Target ${target} becomes ${colors}${duration ? ` ${duration}` : ''}${maxTargetsText}`;
+  }
+  if (effect.type === 'add_color') {
+    const target = effect.target || 'target permanent';
+    const color = effect.color || 'color';
+    const duration = formatDuration(effect.duration);
+    return `Target ${target} gains ${color}${duration ? ` ${duration}` : ''}${maxTargetsText}`;
+  }
+  if (effect.type === 'remove_color') {
+    const target = effect.target || 'target permanent';
+    const color = effect.color || 'color';
+    const duration = formatDuration(effect.duration);
+    return `Target ${target} loses ${color}${duration ? ` ${duration}` : ''}${maxTargetsText}`;
   }
   
   // Redirect Damage

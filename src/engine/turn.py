@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Tuple
+from typing import List, Optional, Tuple
+
+from .combat import CombatState
 
 
 class Phase(str, Enum):
@@ -50,3 +52,8 @@ class TurnState:
     active_player_index: int = 0
     phase: Phase = Phase.BEGINNING
     step: Step = Step.UNTAP
+    land_plays_this_turn: int = 0
+    combat_state: Optional[CombatState] = None
+    priority_current_index: int = 0
+    priority_pass_count: int = 0
+    priority_last_passed_player_id: Optional[int] = None

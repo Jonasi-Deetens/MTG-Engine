@@ -18,6 +18,7 @@ export function ActivatedAbilityForm({ abilityId, onSave, onCancel }: ActivatedA
   const { activatedAbilities, addActivatedAbility, updateActivatedAbility } = useBuilderStore();
   
   const existingAbility = abilityId ? activatedAbilities.find((a) => a.id === abilityId) : null;
+  const nodeId = abilityId || existingAbility?.id;
   
   const [cost, setCost] = useState(existingAbility?.cost || '{T}');
   const [effectType, setEffectType] = useState(existingAbility?.effect.type || 'damage');
@@ -206,6 +207,7 @@ export function ActivatedAbilityForm({ abilityId, onSave, onCancel }: ActivatedA
             sourceTarget: effectSourceTarget,
             redirectTarget: effectRedirectTarget,
           }]}
+          nodeId={nodeId ? `activated-${nodeId}` : undefined}
           onUpdate={(field, value) => {
             switch (field) {
               case 'type':

@@ -15,6 +15,8 @@ from api.schemas.ability_schemas import (
     ValidationError,
     NormalizedAbility,
     CardAbilityGraphResponse,
+    CardAbilityGraphBulkRequest,
+    CardAbilityGraphBulkResponse,
 )
 from api.routes.auth import get_current_user
 from db.models import User, CardAbilityGraph
@@ -45,6 +47,46 @@ def validate_graph(graph: AbilityGraph, card_colors: Optional[List[str]] = None)
     """Validate an ability graph structure."""
     errors: List[ValidationError] = []
     warnings: List[ValidationError] = []
+
+    def _get_effect_payload(node: AbilityNode) -> Dict[str, Any]:
+        if node.type == "ACTIVATED" and isinstance(node.data.get("effect"), dict):
+            return node.data.get("effect")
+        return node.data
+
+    def _get_effect_type(node: AbilityNode) -> str:
+        payload = _get_effect_payload(node)
+        if isinstance(payload, dict):
+            return payload.get("type") or ""
+        return ""
+
+    max_targets_allowed = {
+        "damage",
+        "counters",
+        "tap",
+        "untap",
+        "destroy",
+        "exile",
+        "return",
+        "sacrifice",
+        "attach",
+        "put_onto_battlefield",
+        "protection",
+        "gain_keyword",
+        "change_power_toughness",
+        "fight",
+        "mill",
+        "discard",
+        "reveal",
+        "copy_spell",
+        "redirect_damage",
+        "counter_spell",
+        "regenerate",
+        "phase_out",
+        "transform",
+        "flicker",
+        "change_control",
+        "prevent_damage",
+    }
     
     # Check for at least one root node (trigger, activated, or keyword)
     trigger_nodes = [n for n in graph.nodes if n.type == "TRIGGER"]
@@ -67,7 +109,10 @@ def validate_graph(graph: AbilityGraph, card_colors: Optional[List[str]] = None)
         ))
     
     # Check for at least one effect node (unless we have a keyword node, which is self-contained)
-    effect_nodes = [n for n in graph.nodes if n.type == "EFFECT"]
+    effect_nodes = [
+        n for n in graph.nodes
+        if n.type == "EFFECT" or (n.type == "ACTIVATED" and isinstance(n.data.get("effect"), dict))
+    ]
     if len(effect_nodes) == 0 and len(keyword_nodes) == 0:
         errors.append(ValidationError(
             type="error",
@@ -108,10 +153,160 @@ def validate_graph(graph: AbilityGraph, card_colors: Optional[List[str]] = None)
                     nodeId=edge.from_
                 ))
     
+    # Check for invalid maxTargets values
+    for node in effect_nodes:
+        payload = _get_effect_payload(node)
+        max_targets = payload.get("maxTargets")
+        if max_targets is None:
+            continue
+        try:
+            max_targets_int = int(max_targets)
+        except (TypeError, ValueError):
+            errors.append(ValidationError(
+                type="error",
+                message=f"Effect {node.id} has invalid maxTargets value",
+                nodeId=node.id
+            ))
+            continue
+        if max_targets_int < 1:
+            errors.append(ValidationError(
+                type="error",
+                message=f"Effect {node.id} must have maxTargets >= 1",
+                nodeId=node.id
+            ))
+        effect_type = _get_effect_type(node)
+        if effect_type and effect_type not in max_targets_allowed:
+            errors.append(ValidationError(
+                type="error",
+                message=f"Effect {node.id} does not support maxTargets",
+                nodeId=node.id
+            ))
+        if max_targets_int > 10:
+            warnings.append(ValidationError(
+                type="warning",
+                message=f"Effect {node.id} has a large maxTargets value",
+                nodeId=node.id
+            ))
+
+    # Validate type/color inputs for new layer effects
+    valid_colors = {"W", "U", "B", "R", "G"}
+    valid_types = {
+        "Creature", "Artifact", "Enchantment", "Land", "Planeswalker",
+        "Instant", "Sorcery", "Battle", "Tribal", "Legendary",
+    }
+    for node in effect_nodes:
+        payload = _get_effect_payload(node)
+        effect_type = _get_effect_type(node)
+        if node.type == "EFFECT":
+            ability_type = node.data.get("abilityType")
+            if ability_type in ("static", "continuous"):
+                if effect_type and effect_type not in {
+                    "set_types",
+                    "add_type",
+                    "remove_type",
+                    "set_colors",
+                    "add_color",
+                    "remove_color",
+                    "gain_keyword",
+                    "change_power_toughness",
+                    "change_control",
+                    "cda_power_toughness",
+                }:
+                    errors.append(ValidationError(
+                        type="error",
+                        message=f"Effect {node.id} is not allowed for {ability_type} abilities",
+                        nodeId=node.id
+                    ))
+        if effect_type in ("set_types", "add_type", "remove_type"):
+            types = payload.get("types") if effect_type == "set_types" else [payload.get("typeName")]
+            if not types or not all(isinstance(t, str) for t in types):
+                errors.append(ValidationError(
+                    type="error",
+                    message=f"Effect {node.id} must specify valid types",
+                    nodeId=node.id
+                ))
+                continue
+            invalid = [t for t in types if t not in valid_types]
+            if invalid:
+                errors.append(ValidationError(
+                    type="error",
+                    message=f"Effect {node.id} has invalid types: {', '.join(invalid)}",
+                    nodeId=node.id
+                ))
+        if effect_type in ("set_colors", "add_color", "remove_color"):
+            colors = payload.get("colors") if effect_type == "set_colors" else [payload.get("color")]
+            if not colors or not all(isinstance(c, str) for c in colors):
+                errors.append(ValidationError(
+                    type="error",
+                    message=f"Effect {node.id} must specify valid colors",
+                    nodeId=node.id
+                ))
+                continue
+            invalid = [c for c in colors if c not in valid_colors]
+            if invalid:
+                errors.append(ValidationError(
+                    type="error",
+                    message=f"Effect {node.id} has invalid colors: {', '.join(invalid)}",
+                    nodeId=node.id
+                ))
+        if effect_type == "cda_power_toughness":
+            source = payload.get("cdaSource")
+            cda_set = payload.get("cdaSet", "both")
+            if source not in ("controlled", "zone"):
+                errors.append(ValidationError(
+                    type="error",
+                    message=f"Effect {node.id} must define cdaSource",
+                    nodeId=node.id
+                ))
+            if source == "controlled":
+                cda_type = payload.get("cdaType")
+                if not isinstance(cda_type, str):
+                    errors.append(ValidationError(
+                        type="error",
+                        message=f"Effect {node.id} must define cdaType",
+                        nodeId=node.id
+                    ))
+            if source == "zone":
+                cda_zone = payload.get("cdaZone")
+                if cda_zone not in ("hand", "graveyard", "all_graveyards"):
+                    errors.append(ValidationError(
+                        type="error",
+                        message=f"Effect {node.id} must define cdaZone",
+                        nodeId=node.id
+                    ))
+            if cda_set not in ("both", "power", "toughness"):
+                errors.append(ValidationError(
+                    type="error",
+                    message=f"Effect {node.id} has invalid cdaSet value",
+                    nodeId=node.id
+                ))
+        if effect_type == "replace_zone_change":
+            replacement_zone = payload.get("replacementZone")
+            if not isinstance(replacement_zone, str):
+                errors.append(ValidationError(
+                    type="error",
+                    message=f"Effect {node.id} must define replacementZone",
+                    nodeId=node.id
+                ))
+            from_zone = payload.get("fromZone")
+            to_zone = payload.get("toZone")
+            if from_zone is not None and not isinstance(from_zone, str):
+                errors.append(ValidationError(
+                    type="error",
+                    message=f"Effect {node.id} has invalid fromZone",
+                    nodeId=node.id
+                ))
+            if to_zone is not None and not isinstance(to_zone, str):
+                errors.append(ValidationError(
+                    type="error",
+                    message=f"Effect {node.id} has invalid toZone",
+                    nodeId=node.id
+                ))
+
     # Check color-pie restrictions
     if card_colors:
         for node in effect_nodes:
-            effect_type = node.data.get("effect", "")
+            effect_type = _get_effect_type(node)
             # Check if effect is allowed for any of the card's colors
             allowed = False
             for color in card_colors:
@@ -636,21 +831,18 @@ def save_card_ability_graph(
         raise HTTPException(status_code=500, detail=f"Failed to save ability graph: {str(e)}")
 
 
-@router.get("/cards/{card_id}/graph", response_model=CardAbilityGraphResponse)
-def get_card_ability_graph(
+def _find_card_ability_graph(
+    db: Session,
+    user: User,
     card_id: str,
-    db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
-):
-    """Get the ability graph for a specific card, checking all versions if not found."""
+) -> Optional[CardAbilityGraphResponse]:
     print(f"[DEBUG] Loading graph for card_id: {card_id}, user_id: {user.id}")
-    
-    # First try to get graph for this specific card_id
+
     graph = db.query(CardAbilityGraph).filter(
         CardAbilityGraph.card_id == card_id,
         CardAbilityGraph.user_id == user.id
     ).first()
-    
+
     if graph:
         print(f"[DEBUG] Found graph for card_id: {graph.card_id}, id: {graph.id}")
         return CardAbilityGraphResponse(
@@ -660,26 +852,18 @@ def get_card_ability_graph(
             created_at=graph.created_at.isoformat(),
             updated_at=graph.updated_at.isoformat()
         )
-    
-    # If not found, check other versions
+
     print(f"[DEBUG] No graph found for card_id: {card_id}, checking other versions...")
     from db.models import Axis1CardModel
     card = db.query(Axis1CardModel).filter(Axis1CardModel.card_id == card_id).first()
-    if not card:
-        raise HTTPException(status_code=404, detail="Card not found")
-    
-    card_name = card.name
-    if not card_name:
-        raise HTTPException(status_code=404, detail="Card name not found")
-    
-    # Find all cards with the same name
+    if not card or not card.name:
+        return None
+
     all_versions = db.query(Axis1CardModel).filter(
-        Axis1CardModel.name == card_name
+        Axis1CardModel.name == card.name
     ).all()
-    
+
     print(f"[DEBUG] Checking {len(all_versions)} versions for saved graph...")
-    
-    # Check each version for a saved graph
     for version in all_versions:
         graph = db.query(CardAbilityGraph).filter(
             CardAbilityGraph.card_id == version.card_id,
@@ -687,17 +871,47 @@ def get_card_ability_graph(
         ).first()
         if graph:
             print(f"[DEBUG] Found graph for version card_id: {graph.card_id}, returning with requested card_id: {card_id}")
-            # Return it, but with the requested card_id
             return CardAbilityGraphResponse(
                 id=graph.id,
-                card_id=card_id,  # Use requested card_id, not the one that had the graph
+                card_id=card_id,
                 ability_graph=AbilityGraph(**graph.ability_graph_json),
                 created_at=graph.created_at.isoformat(),
                 updated_at=graph.updated_at.isoformat()
             )
-    
-    print(f"[DEBUG] No graph found for any version of card '{card_name}'")
-    raise HTTPException(status_code=404, detail="Ability graph not found for this card or any of its versions")
+
+    print(f"[DEBUG] No graph found for any version of card '{card.name}'")
+    return None
+
+
+@router.get("/cards/{card_id}/graph", response_model=CardAbilityGraphResponse)
+def get_card_ability_graph(
+    card_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    """Get the ability graph for a specific card, checking all versions if not found."""
+    response = _find_card_ability_graph(db, user, card_id)
+    if response is None:
+        raise HTTPException(status_code=404, detail="Ability graph not found for this card or any of its versions")
+    return response
+
+
+@router.post("/cards/graphs", response_model=CardAbilityGraphBulkResponse)
+def get_card_ability_graphs(
+    payload: CardAbilityGraphBulkRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    """Get ability graphs for multiple card IDs."""
+    graphs: List[CardAbilityGraphResponse] = []
+    missing: List[str] = []
+    for card_id in payload.card_ids:
+        response = _find_card_ability_graph(db, user, card_id)
+        if response is None:
+            missing.append(card_id)
+        else:
+            graphs.append(response)
+    return CardAbilityGraphBulkResponse(graphs=graphs, missing=missing)
 
 
 @router.delete("/cards/{card_id}/graph")

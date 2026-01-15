@@ -9,13 +9,25 @@ export interface EngineGameObjectSnapshot {
   controller_id: number;
   types: string[];
   zone: string;
+  mana_cost?: string | null;
+  base_types?: string[];
+  colors?: string[];
+  base_colors?: string[];
+  type_line?: string | null;
+  oracle_text?: string | null;
   mana_value?: number | null;
   power?: number | null;
   toughness?: number | null;
+  base_power?: number | null;
+  base_toughness?: number | null;
+  cda_power?: number | null;
+  cda_toughness?: number | null;
+  entered_turn?: number | null;
   tapped: boolean;
   damage: number;
   counters: Record<string, number>;
   keywords: string[];
+  base_keywords?: string[];
   protections: string[];
   attached_to?: string | null;
   is_token: boolean;
@@ -25,6 +37,8 @@ export interface EngineGameObjectSnapshot {
   phased_out: boolean;
   transformed: boolean;
   regenerate_shield: boolean;
+  ability_graphs?: Array<Record<string, any>>;
+  temporary_effects?: Array<Record<string, any>>;
 }
 
 export interface EnginePlayerSnapshot {
@@ -47,6 +61,18 @@ export interface EngineTurnSnapshot {
   active_player_index: number;
   phase: string;
   step: string;
+  land_plays_this_turn?: number;
+  combat_state?: EngineCombatStateSnapshot | null;
+  priority_current_index?: number;
+  priority_pass_count?: number;
+  priority_last_passed_player_id?: number | null;
+}
+
+export interface EngineCombatStateSnapshot {
+  attacking_player_id?: number | null;
+  defending_player_id?: number | null;
+  attackers: string[];
+  blockers: Record<string, string[]>;
 }
 
 export interface EngineStackItemSnapshot {
@@ -61,6 +87,9 @@ export interface EngineGameStateSnapshot {
   stack: EngineStackItemSnapshot[];
   turn: EngineTurnSnapshot;
   debug_log: string[];
+  replacement_effects?: Array<Record<string, any>>;
+  replacement_choices?: Record<string, string>;
+  prepared_casts?: Record<number, Record<string, any>>;
 }
 
 export interface EngineResolveContextSnapshot {
@@ -75,11 +104,38 @@ export interface EngineResolveContextSnapshot {
 }
 
 export interface EngineActionRequest {
-  action: 'resolve_graph' | 'advance_turn' | 'pass_priority';
+  action:
+    | 'resolve_graph'
+    | 'advance_turn'
+    | 'pass_priority'
+    | 'activate_mana_ability'
+    | 'activate_ability'
+    | 'play_land'
+    | 'prepare_cast'
+    | 'finalize_cast'
+    | 'cast_spell'
+    | 'check_targets'
+    | 'declare_attackers'
+    | 'declare_blockers'
+    | 'assign_combat_damage';
   game_state: EngineGameStateSnapshot;
   ability_graph?: Record<string, any>;
   context?: EngineResolveContextSnapshot;
   player_id?: number;
+  object_id?: string;
+  ability_index?: number;
+  attackers?: string[];
+  blockers?: Record<string, string[]>;
+  defending_player_id?: number | null;
+  damage_assignments?: Record<string, Record<string, number>>;
+  mana_payment?: Record<string, number>;
+  mana_payment_detail?: {
+    hybrid_choices?: string[];
+    two_brid_choices?: boolean[];
+    phyrexian_choices?: boolean[];
+  };
+  contexts?: EngineResolveContextSnapshot[];
+  x_value?: number | null;
 }
 
 export interface EngineActionResponse {
@@ -102,6 +158,41 @@ const parseTypes = (typeLine?: string): string[] => {
   if (!typeLine) return [];
   const parts = typeLine.split('—');
   return parts[0].trim().split(/\s+/).filter(Boolean);
+};
+
+const parseKeywords = (oracleText?: string): string[] => {
+  if (!oracleText) return [];
+  const keywords = [
+    'Flying',
+    'First strike',
+    'Double strike',
+    'Trample',
+    'Haste',
+    'Vigilance',
+    'Lifelink',
+    'Deathtouch',
+    'Reach',
+    'Hexproof',
+    'Indestructible',
+    'Ward',
+  ];
+  const found: string[] = [];
+  keywords.forEach((keyword) => {
+    if (oracleText.includes(keyword)) {
+      found.push(keyword);
+    }
+  });
+  return found;
+};
+
+const parseProtections = (oracleText?: string): string[] => {
+  if (!oracleText) return [];
+  const matches = oracleText.match(/Protection from ([^\n]+)/gi) || [];
+  return matches
+    .map((match) => match.replace(/Protection from /i, '').trim())
+    .flatMap((value) => value.split(/\s+and\s+|,|\s+or\s+/i))
+    .map((token) => token.trim())
+    .filter(Boolean);
 };
 
 const parseStat = (value?: string): number | null => {
@@ -133,14 +224,24 @@ const expandDeckCards = (deck: DeckDetailResponse, playerId: number) => {
         controller_id: playerId,
         types: parseTypes(entry.card.type_line),
         zone: 'library',
+        mana_cost: entry.card.mana_cost ?? null,
+        base_types: parseTypes(entry.card.type_line),
+        colors: entry.card.colors ?? [],
+        base_colors: entry.card.colors ?? [],
+        type_line: entry.card.type_line ?? null,
+        oracle_text: entry.card.oracle_text ?? null,
         mana_value: entry.card.mana_value ?? null,
         power: parseStat(entry.card.power),
         toughness: parseStat(entry.card.toughness),
+        base_power: parseStat(entry.card.power),
+        base_toughness: parseStat(entry.card.toughness),
+        entered_turn: null,
         tapped: false,
         damage: 0,
         counters: {},
-        keywords: [],
-        protections: [],
+        keywords: parseKeywords(entry.card.oracle_text),
+        base_keywords: parseKeywords(entry.card.oracle_text),
+        protections: parseProtections(entry.card.oracle_text),
         attached_to: null,
         is_token: false,
         was_cast: false,
@@ -149,6 +250,8 @@ const expandDeckCards = (deck: DeckDetailResponse, playerId: number) => {
         phased_out: false,
         transformed: false,
         regenerate_shield: false,
+        ability_graphs: [],
+        temporary_effects: [],
       });
       zones.library.push(objectId);
       cardMap[objectId] = entry.card;
@@ -164,14 +267,24 @@ const expandDeckCards = (deck: DeckDetailResponse, playerId: number) => {
       controller_id: playerId,
       types: parseTypes(commander.card.type_line),
       zone: 'command',
+      mana_cost: commander.card.mana_cost ?? null,
+      base_types: parseTypes(commander.card.type_line),
+      colors: commander.card.colors ?? [],
+      base_colors: commander.card.colors ?? [],
+      type_line: commander.card.type_line ?? null,
+      oracle_text: commander.card.oracle_text ?? null,
       mana_value: commander.card.mana_value ?? null,
       power: parseStat(commander.card.power),
       toughness: parseStat(commander.card.toughness),
+      base_power: parseStat(commander.card.power),
+      base_toughness: parseStat(commander.card.toughness),
+      entered_turn: null,
       tapped: false,
       damage: 0,
       counters: {},
-      keywords: [],
-      protections: [],
+      keywords: parseKeywords(commander.card.oracle_text),
+      base_keywords: parseKeywords(commander.card.oracle_text),
+      protections: parseProtections(commander.card.oracle_text),
       attached_to: null,
       is_token: false,
       was_cast: false,
@@ -180,6 +293,8 @@ const expandDeckCards = (deck: DeckDetailResponse, playerId: number) => {
       phased_out: false,
       transformed: false,
       regenerate_shield: false,
+      ability_graphs: [],
+      temporary_effects: [],
     });
     zones.command.push(objectId);
     cardMap[objectId] = commander.card;
@@ -234,8 +349,14 @@ export const buildGameSnapshot = (decks: DeckDetailResponse[], handSize: number 
         active_player_index: 0,
         phase: 'beginning',
         step: 'untap',
+        land_plays_this_turn: 0,
+        combat_state: null,
+        priority_current_index: 0,
+        priority_pass_count: 0,
+        priority_last_passed_player_id: null,
       },
       debug_log: [],
+      prepared_casts: {},
     } as EngineGameStateSnapshot,
     cardMap,
   };

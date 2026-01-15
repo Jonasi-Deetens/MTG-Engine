@@ -45,6 +45,15 @@ export interface CardAbilityGraphResponse {
   updated_at: string;
 }
 
+export interface CardAbilityGraphBulkRequest {
+  card_ids: string[];
+}
+
+export interface CardAbilityGraphBulkResponse {
+  graphs: CardAbilityGraphResponse[];
+  missing: string[];
+}
+
 export const abilities = {
   // Validate an ability graph
   validate: async (graph: AbilityGraph, cardColors?: string[]): Promise<ValidationResponse> => {
@@ -82,6 +91,13 @@ export const abilities = {
   // Get card ability graph
   getCardGraph: async (cardId: string): Promise<CardAbilityGraphResponse> => {
     return api.get<CardAbilityGraphResponse>(`/api/abilities/cards/${cardId}/graph`);
+  },
+
+  // Get multiple card ability graphs
+  getCardGraphs: async (cardIds: string[]): Promise<CardAbilityGraphBulkResponse> => {
+    return api.post<CardAbilityGraphBulkResponse>('/api/abilities/cards/graphs', {
+      card_ids: cardIds,
+    } satisfies CardAbilityGraphBulkRequest);
   },
 
   // Delete card ability graph

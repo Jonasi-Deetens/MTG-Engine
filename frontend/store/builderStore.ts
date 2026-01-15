@@ -60,12 +60,14 @@ export interface StaticAbility {
   id: string;
   appliesTo: string; // e.g., "self", "creatures_you_control", "enchanted_creature"
   effect: string; // Description of the static effect
+  effectData?: Effect;
 }
 
 export interface ContinuousAbility {
   id: string;
   appliesTo: string;
   effect: string; // Description of the continuous effect
+  effectData?: Effect;
 }
 
 export interface KeywordAbility {
@@ -84,6 +86,7 @@ export interface Effect {
   type: string; // e.g., "damage", "draw", "token", "counters", "life", "search", "put_onto_battlefield", "attach", "shuffle"
   amount?: number;
   target?: string;
+  maxTargets?: number;
   manaType?: string;
   untapTarget?: string;
   zone?: string; // For search (library, graveyard, hand, exile)
@@ -112,6 +115,14 @@ export interface Effect {
   returnUnderOwner?: boolean; // For flicker effects
   sourceTarget?: string; // For redirect damage effects
   redirectTarget?: string; // For redirect damage effects
+  cdaSource?: string;
+  cdaType?: string;
+  cdaZone?: string;
+  cdaSet?: string;
+  fromZone?: string;
+  toZone?: string;
+  replacementZone?: string;
+  uses?: number;
   [key: string]: any; // Additional effect-specific data
 }
 
@@ -411,12 +422,13 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
         abilityType = 'static';
       }
       
+      const effectPayload = ability.effectData ?? ability.effect;
       nodes.push({
         id: staticId,
         type: 'EFFECT',
         data: {
           appliesTo: ability.appliesTo,
-          effect: ability.effect,
+          effect: effectPayload,
           abilityType: 'static',
         },
       });
@@ -430,12 +442,13 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
         abilityType = 'static'; // Continuous abilities are a type of static
       }
       
+      const effectPayload = ability.effectData ?? ability.effect;
       nodes.push({
         id: continuousId,
         type: 'EFFECT',
         data: {
           appliesTo: ability.appliesTo,
-          effect: ability.effect,
+          effect: effectPayload,
           abilityType: 'continuous',
         },
       });
@@ -615,7 +628,8 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
           staticAbilities.push({
             id: abilityId,
             appliesTo: data.appliesTo || '',
-            effect: data.effect || '',
+            effect: typeof data.effect === 'string' ? data.effect : '',
+            effectData: typeof data.effect === 'object' ? data.effect : undefined,
           });
           processedNodes.add(staticNode.id);
         }
@@ -634,7 +648,8 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
           continuousAbilities.push({
             id: abilityId,
             appliesTo: data.appliesTo || '',
-            effect: data.effect || '',
+            effect: typeof data.effect === 'string' ? data.effect : '',
+            effectData: typeof data.effect === 'object' ? data.effect : undefined,
           });
           processedNodes.add(continuousNode.id);
         }

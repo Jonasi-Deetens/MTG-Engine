@@ -3,7 +3,7 @@
 // frontend/components/builder/forms/EffectFields.tsx
 // Reusable effect field components for all ability forms
 
-import { Effect } from '@/store/builderStore';
+import { Effect, useBuilderStore, ValidationError } from '@/store/builderStore';
 import { 
   EFFECT_TYPE_OPTIONS, 
   TARGET_OPTIONS, 
@@ -17,7 +17,14 @@ import {
   CHOICE_TYPE_OPTIONS,
   PROTECTION_TYPE_OPTIONS,
   DISCARD_TYPE_OPTIONS,
-  LOOK_AT_POSITION_OPTIONS
+  LOOK_AT_POSITION_OPTIONS,
+  COLOR_OPTIONS,
+  CDA_SOURCE_OPTIONS,
+  CDA_TYPE_OPTIONS,
+  CDA_ZONE_OPTIONS,
+  CDA_SET_OPTIONS,
+  CDA_TEMPLATE_OPTIONS,
+  ZONE_OPTIONS
 } from '@/lib/effectTypes';
 import { useEffect, useState } from 'react';
 import { abilities } from '@/lib/abilities';
@@ -26,12 +33,50 @@ interface EffectFieldsProps {
   effect: Effect;
   index: number;
   allEffects: Effect[];
+  nodeId?: string;
+  allowedEffectTypes?: string[];
   onUpdate: (field: string, value: any) => void;
 }
 
-export function EffectFields({ effect, index, allEffects, onUpdate }: EffectFieldsProps) {
-  const selectedEffectType = EFFECT_TYPE_OPTIONS.find((opt) => opt.value === effect.type);
+export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectTypes, onUpdate }: EffectFieldsProps) {
+  const filteredEffectTypes = allowedEffectTypes
+    ? EFFECT_TYPE_OPTIONS.filter((opt) => allowedEffectTypes.includes(opt.value))
+    : EFFECT_TYPE_OPTIONS;
+  const selectedEffectType = filteredEffectTypes.find((opt) => opt.value === effect.type);
+  const shouldShowMaxTargets = !!(
+    selectedEffectType?.requiresTarget ||
+    selectedEffectType?.requiresUntapTarget ||
+    selectedEffectType?.requiresTwoTargets
+  );
+  const { validationErrors } = useBuilderStore();
   const [keywords, setKeywords] = useState<Array<{ value: string; label: string }>>([]);
+
+  const parseList = (value: string) =>
+    value
+      .split(',')
+      .map((token) => token.trim())
+      .filter(Boolean);
+
+  const normalizeTypeList = (value: string) =>
+    parseList(value).map((token) => token.charAt(0).toUpperCase() + token.slice(1).toLowerCase());
+
+  const normalizeColorList = (value: string) =>
+    parseList(value).map((token) => token.toUpperCase());
+
+  const getNodeErrors = (errors: ValidationError[], id?: string) =>
+    id ? errors.filter((error) => error.nodeId === id) : [];
+
+  const nodeErrors = getNodeErrors(validationErrors, nodeId);
+
+  const getFieldErrors = (keyword: string) =>
+    nodeErrors.filter((error) => error.message.toLowerCase().includes(keyword));
+
+  const getCdaTemplateValue = (current: Effect) => {
+    const match = CDA_TEMPLATE_OPTIONS.find((opt) =>
+      Object.entries(opt.config).every(([field, value]) => current[field] === value)
+    );
+    return match?.value || 'custom';
+  };
 
   // Fetch keywords for gain_keyword effect
   useEffect(() => {
@@ -44,6 +89,12 @@ export function EffectFields({ effect, index, allEffects, onUpdate }: EffectFiel
     }
   }, [selectedEffectType?.requiresKeyword]);
 
+  useEffect(() => {
+    if (!allowedEffectTypes || allowedEffectTypes.length === 0) return;
+    if (allowedEffectTypes.includes(effect.type)) return;
+    onUpdate('type', allowedEffectTypes[0]);
+  }, [allowedEffectTypes, effect.type, onUpdate]);
+
   return (
     <div className="space-y-3">
       {/* Effect Type */}
@@ -51,10 +102,30 @@ export function EffectFields({ effect, index, allEffects, onUpdate }: EffectFiel
         <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Type</label>
         <select
           value={effect.type || 'damage'}
-          onChange={(e) => onUpdate('type', e.target.value)}
+          onChange={(e) => {
+            const nextType = e.target.value;
+            onUpdate('type', nextType);
+            if (nextType === 'counter_spell') {
+              onUpdate('target', 'spell');
+            }
+            if (nextType === 'cda_power_toughness') {
+              onUpdate('cdaSource', 'controlled');
+              onUpdate('cdaType', 'Permanent');
+              onUpdate('cdaSet', 'both');
+            }
+            const nextEffectType = EFFECT_TYPE_OPTIONS.find((opt) => opt.value === nextType);
+            const supportsMaxTargets = !!(
+              nextEffectType?.requiresTarget ||
+              nextEffectType?.requiresUntapTarget ||
+              nextEffectType?.requiresTwoTargets
+            );
+            if (!supportsMaxTargets) {
+              onUpdate('maxTargets', undefined);
+            }
+          }}
           className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
         >
-          {EFFECT_TYPE_OPTIONS.map((opt) => (
+          {filteredEffectTypes.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
             </option>
@@ -115,12 +186,282 @@ export function EffectFields({ effect, index, allEffects, onUpdate }: EffectFiel
             onChange={(e) => onUpdate('target', e.target.value)}
             className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
           >
-            {TARGET_OPTIONS.map((opt) => (
+            {(effect.type === 'counter_spell'
+              ? TARGET_OPTIONS.filter((opt) => opt.value === 'spell')
+              : TARGET_OPTIONS
+            ).map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
               </option>
             ))}
           </select>
+        </div>
+      )}
+
+      {selectedEffectType?.requiresTypeList && (
+        <div>
+          <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Types (comma-separated)</label>
+          <input
+            type="text"
+            value={Array.isArray(effect.types) ? effect.types.join(', ') : ''}
+            onChange={(e) => onUpdate('types', normalizeTypeList(e.target.value))}
+            placeholder="Creature, Artifact"
+            className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+          />
+          {getFieldErrors('type').map((error, idx) => (
+            <div key={`type-error-${idx}`} className="text-xs text-[color:var(--theme-status-error)]">
+              {error.message}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {selectedEffectType?.requiresTypeName && (
+        <div>
+          <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Type</label>
+          <select
+            value={effect.typeName || 'creature'}
+            onChange={(e) => onUpdate('typeName', e.target.value)}
+            className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+          >
+            {CARD_TYPE_FILTERS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          {getFieldErrors('type').map((error, idx) => (
+            <div key={`type-name-error-${idx}`} className="text-xs text-[color:var(--theme-status-error)]">
+              {error.message}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {selectedEffectType?.requiresColorList && (
+        <div>
+          <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Colors (comma-separated)</label>
+          <input
+            type="text"
+            value={Array.isArray(effect.colors) ? effect.colors.join(', ') : ''}
+            onChange={(e) => onUpdate('colors', normalizeColorList(e.target.value))}
+            placeholder="W, U"
+            className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+          />
+          {getFieldErrors('color').map((error, idx) => (
+            <div key={`color-error-${idx}`} className="text-xs text-[color:var(--theme-status-error)]">
+              {error.message}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {selectedEffectType?.requiresColor && (
+        <div>
+          <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Color</label>
+          <select
+            value={effect.color || 'W'}
+            onChange={(e) => onUpdate('color', e.target.value)}
+            className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+          >
+            {COLOR_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          {getFieldErrors('color').map((error, idx) => (
+            <div key={`color-name-error-${idx}`} className="text-xs text-[color:var(--theme-status-error)]">
+              {error.message}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {selectedEffectType?.requiresCdaSource && (
+        <div className="space-y-2">
+          <div>
+            <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Template</label>
+            <select
+              value={getCdaTemplateValue(effect)}
+              onChange={(e) => {
+                const selected = CDA_TEMPLATE_OPTIONS.find((opt) => opt.value === e.target.value);
+                if (!selected) return;
+                Object.entries(selected.config).forEach(([field, value]) => onUpdate(field, value));
+              }}
+              className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+            >
+              <option value="custom">Custom</option>
+              {CDA_TEMPLATE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">CDA Source</label>
+            <select
+              value={effect.cdaSource || 'controlled'}
+              onChange={(e) => {
+                const nextSource = e.target.value;
+                onUpdate('cdaSource', nextSource);
+                if (nextSource === 'controlled' && !effect.cdaType) {
+                  onUpdate('cdaType', 'Permanent');
+                }
+                if (nextSource === 'zone' && !effect.cdaZone) {
+                  onUpdate('cdaZone', 'hand');
+                }
+              }}
+              className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+            >
+              {CDA_SOURCE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          {effect.cdaSource === 'controlled' && (
+            <div>
+              <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Count Type</label>
+              <select
+                value={effect.cdaType || 'Permanent'}
+                onChange={(e) => onUpdate('cdaType', e.target.value)}
+                className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+              >
+                {CDA_TYPE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          {effect.cdaSource === 'zone' && (
+            <div>
+              <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Zone</label>
+              <select
+                value={effect.cdaZone || 'hand'}
+                onChange={(e) => onUpdate('cdaZone', e.target.value)}
+                className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+              >
+                {CDA_ZONE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          <div>
+            <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Sets</label>
+            <select
+              value={effect.cdaSet || 'both'}
+              onChange={(e) => onUpdate('cdaSet', e.target.value)}
+              className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+            >
+              {CDA_SET_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
+
+      {selectedEffectType?.requiresReplacementZone && (
+        <div className="space-y-2">
+          <div>
+            <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">From Zone</label>
+            <select
+              value={effect.fromZone || 'battlefield'}
+              onChange={(e) => onUpdate('fromZone', e.target.value)}
+              className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+            >
+              {ZONE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">To Zone</label>
+            <select
+              value={effect.toZone || 'graveyard'}
+              onChange={(e) => onUpdate('toZone', e.target.value)}
+              className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+            >
+              {ZONE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Replacement Zone</label>
+            <select
+              value={effect.replacementZone || 'exile'}
+              onChange={(e) => onUpdate('replacementZone', e.target.value)}
+              className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+            >
+              {ZONE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
+
+      {selectedEffectType?.requiresUses && (
+        <div>
+          <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">
+            Uses <span className="text-[color:var(--theme-text-muted)]">(optional)</span>
+          </label>
+          <input
+            type="number"
+            value={effect.uses || ''}
+            onChange={(e) => {
+              const value = e.target.value ? parseInt(e.target.value, 10) : undefined;
+              onUpdate('uses', value);
+            }}
+            min="1"
+            placeholder="Unlimited"
+            className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+          />
+        </div>
+      )}
+
+      {shouldShowMaxTargets && (
+        <div>
+          <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">
+            Max Targets <span className="text-[color:var(--theme-text-muted)]">(optional)</span>
+          </label>
+          <input
+            type="number"
+            value={effect.maxTargets || ''}
+            onChange={(e) => {
+              const value = e.target.value ? parseInt(e.target.value, 10) : undefined;
+              onUpdate('maxTargets', value);
+            }}
+            min="1"
+            placeholder="Leave blank for unlimited"
+            className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+          />
+          {effect.maxTargets !== undefined &&
+            (!Number.isFinite(effect.maxTargets) || effect.maxTargets < 1) && (
+              <div className="text-xs text-[color:var(--theme-status-error)]">Must be at least 1.</div>
+            )}
+          {typeof effect.maxTargets === 'number' && effect.maxTargets > 10 && (
+            <div className="text-xs text-[color:var(--theme-text-muted)]">
+              Large target counts can be hard to resolve in play.
+            </div>
+          )}
         </div>
       )}
 

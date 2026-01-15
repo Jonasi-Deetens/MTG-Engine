@@ -3,8 +3,9 @@
 // frontend/components/builder/forms/StaticAbilityForm.tsx
 
 import { useState } from 'react';
-import { useBuilderStore, StaticAbility } from '@/store/builderStore';
+import { useBuilderStore, StaticAbility, ValidationError, Effect } from '@/store/builderStore';
 import { Button } from '@/components/ui/Button';
+import { EffectFields } from './EffectFields';
 
 interface StaticAbilityFormProps {
   abilityId?: string;
@@ -22,18 +23,44 @@ const APPLIES_TO_OPTIONS = [
 ];
 
 export function StaticAbilityForm({ abilityId, onSave, onCancel }: StaticAbilityFormProps) {
-  const { staticAbilities, addStaticAbility, updateStaticAbility } = useBuilderStore();
+  const { staticAbilities, addStaticAbility, updateStaticAbility, validationErrors } = useBuilderStore();
   
   const existingAbility = abilityId ? staticAbilities.find((a) => a.id === abilityId) : null;
+  const nodeId = abilityId || existingAbility?.id;
+  const nodeErrors = nodeId
+    ? validationErrors.filter((error: ValidationError) => error.nodeId === `static-${nodeId}`)
+    : [];
   
   const [appliesTo, setAppliesTo] = useState(existingAbility?.appliesTo || 'self');
   const [effect, setEffect] = useState(existingAbility?.effect || '');
+  const [useStructured, setUseStructured] = useState(!!existingAbility?.effectData);
+  const [effectData, setEffectData] = useState<Effect>(
+    existingAbility?.effectData || {
+      type: 'set_types',
+      target: 'permanent',
+      types: ['Creature'],
+      duration: 'permanent',
+    }
+  );
+  const allowedEffectTypes = [
+    'set_types',
+    'add_type',
+    'remove_type',
+    'set_colors',
+    'add_color',
+    'remove_color',
+    'gain_keyword',
+    'change_power_toughness',
+    'change_control',
+    'cda_power_toughness',
+  ];
 
   const handleSave = () => {
     const ability: StaticAbility = {
       id: abilityId || `static-${Date.now()}`,
       appliesTo,
       effect,
+      effectData: useStructured ? effectData : undefined,
     };
 
     if (abilityId) {
@@ -69,13 +96,38 @@ export function StaticAbilityForm({ abilityId, onSave, onCancel }: StaticAbility
         <label className="block text-sm font-medium text-[color:var(--theme-text-secondary)] mb-2">
           Effect Description *
         </label>
-        <textarea
-          value={effect}
-          onChange={(e) => setEffect(e.target.value)}
-          placeholder="e.g., gets +1/+1, has flying, can't be blocked"
-          rows={4}
-          className="w-full px-3 py-2 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none resize-none"
-        />
+        <label className="flex items-center gap-2 mb-2">
+          <input
+            type="checkbox"
+            checked={useStructured}
+            onChange={(e) => setUseStructured(e.target.checked)}
+            className="w-4 h-4 rounded border-[color:var(--theme-input-border)] bg-[color:var(--theme-input-bg)] text-[color:var(--theme-accent-primary)] focus:ring-[color:var(--theme-border-focus)]"
+          />
+          <span className="text-xs text-[color:var(--theme-text-secondary)]">Use structured effect</span>
+        </label>
+        {useStructured ? (
+          <EffectFields
+            effect={effectData}
+            index={0}
+            allEffects={[effectData]}
+            nodeId={nodeId ? `static-${nodeId}` : undefined}
+            allowedEffectTypes={allowedEffectTypes}
+            onUpdate={(field, value) => setEffectData((prev) => ({ ...prev, [field]: value }))}
+          />
+        ) : (
+          <textarea
+            value={effect}
+            onChange={(e) => setEffect(e.target.value)}
+            placeholder="e.g., gets +1/+1, has flying, can't be blocked"
+            rows={4}
+            className="w-full px-3 py-2 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none resize-none"
+          />
+        )}
+        {nodeErrors.map((error, idx) => (
+          <div key={`static-error-${idx}`} className="text-xs text-[color:var(--theme-status-error)] mt-1">
+            {error.message}
+          </div>
+        ))}
       </div>
 
       {/* Actions */}

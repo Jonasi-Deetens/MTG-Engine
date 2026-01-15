@@ -295,6 +295,7 @@ export function TriggeredAbilityForm({ abilityId, onSave, onCancel }: TriggeredA
                 effect={effect}
                 index={index}
                 allEffects={effects}
+                nodeId={abilityId ? `effect-${abilityId}-${index}` : undefined}
                 onUpdate={(field, value) => handleUpdateEffect(index, field, value)}
               />
             </div>
