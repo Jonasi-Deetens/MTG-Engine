@@ -1,0 +1,6 @@
+ZONE_LIBRARY = "library"
+ZONE_HAND = "hand"
+ZONE_BATTLEFIELD = "battlefield"
+ZONE_GRAVEYARD = "graveyard"
+ZONE_EXILE = "exile"
+ZONE_COMMAND = "command"
