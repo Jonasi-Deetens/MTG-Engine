@@ -42,7 +42,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[color:var(--theme-bg-primary)] px-4">
+    <div className="h-screen flex items-center justify-center px-4 overflow-hidden">
       <div className="w-full max-w-md">
         <Card variant="elevated" className="p-8">
           <div className="text-center mb-8">
