@@ -79,14 +79,14 @@ export function CardTypeBreakdown({ cards }: CardTypeBreakdownProps) {
   
   const total = typeData.reduce((sum, item) => sum + item.count, 0);
   const colors = [
-    'bg-blue-500',
-    'bg-green-500',
-    'bg-red-500',
-    'bg-yellow-500',
-    'bg-purple-500',
-    'bg-cyan-500',
-    'bg-orange-500',
-    'bg-pink-500',
+    'bg-[color:var(--theme-accent-primary)]',
+    'bg-[color:var(--theme-accent-secondary)]',
+    'bg-[color:var(--theme-status-success)]',
+    'bg-[color:var(--theme-status-info)]',
+    'bg-[color:var(--theme-status-warning)]',
+    'bg-[color:var(--theme-status-error)]',
+    'bg-[color:var(--theme-text-secondary)]',
+    'bg-[color:var(--theme-text-muted)]',
   ];
   
   return (

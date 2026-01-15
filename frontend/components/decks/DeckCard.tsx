@@ -64,7 +64,7 @@ export function DeckCard({
     >
       <HoverShadow />
       {/* Side image panel (art) */}
-      <div className="w-full sm:w-40 shrink-0 h-48 sm:h-auto relative rounded-lg flex-none bg-neutral-900 aspect-[5/7]">
+      <div className="w-full sm:w-40 shrink-0 h-48 sm:h-auto relative rounded-lg flex-none bg-[color:var(--theme-bg-tertiary)] aspect-[5/7]">
         {artUrl ? (
           <img
             src={artUrl}
@@ -74,8 +74,8 @@ export function DeckCard({
             loading="lazy"
           />
         ) : (
-          <div className="w-full h-full bg-black/40 flex items-center justify-center sm:rounded-l-lg rounded-t-lg sm:rounded-tr-none">
-            <BookOpen className="opacity-30 w-12 h-12" />
+          <div className="w-full h-full bg-[color:var(--theme-bg-secondary)]/60 flex items-center justify-center sm:rounded-l-lg rounded-t-lg sm:rounded-tr-none">
+            <BookOpen className="opacity-60 w-12 h-12 text-[color:var(--theme-text-muted)]" />
           </div>
         )}
       </div>
@@ -116,7 +116,7 @@ export function DeckCard({
                 {deck.commander_count} commander{deck.commander_count > 1 ? 's' : ''}
               </span>
             )}
-            <span className="flex items-center gap-1 text-xs px-2 py-0.5 bg-[color:var(--theme-card-background)] text-[color:var(--theme-text-secondary)] rounded font-medium">
+            <span className="flex items-center gap-1 text-xs px-2 py-0.5 bg-[color:var(--theme-card-bg)] text-[color:var(--theme-text-secondary)] rounded font-medium">
               <BookOpen className="w-3.5 h-3.5" />
               {deck.card_count} cards
             </span>

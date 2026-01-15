@@ -38,7 +38,7 @@ export function TopNavbar({ variant = 'app', showSpacer = true }: TopNavbarProps
       hover: '',
       active: 'text-[color:var(--theme-nav-active)] font-semibold border-b-2 border-[color:var(--theme-nav-active-border)] pb-2',
       logo: 'text-[color:var(--theme-text-primary)]',
-      mobileBorder: 'border-white/20',
+      mobileBorder: 'border-[color:var(--theme-border-default)]/30',
     },
     app: {
       container: 'bg-[color:var(--theme-card-bg)]/70 backdrop-blur-md',
@@ -46,7 +46,7 @@ export function TopNavbar({ variant = 'app', showSpacer = true }: TopNavbarProps
       hover: '',
       active: 'text-[color:var(--theme-nav-active)] font-semibold border-b-2 border-[color:var(--theme-nav-active-border)] pb-2',
       logo: 'text-[color:var(--theme-text-primary)]',
-      mobileBorder: 'border-white/20',
+      mobileBorder: 'border-[color:var(--theme-border-default)]/30',
     },
   };
 

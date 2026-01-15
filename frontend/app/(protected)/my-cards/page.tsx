@@ -66,7 +66,7 @@ export default function MyCardsPage() {
                 <h3 className="text-xl font-semibold text-[color:var(--theme-text-primary)] mb-1">Favorites</h3>
                 <p className="text-[color:var(--theme-text-secondary)] text-sm">{favorites.length} cards</p>
               </div>
-              <svg className="w-8 h-8 text-amber-500" fill="currentColor" viewBox="0 0 24 24">
+              <svg className="w-8 h-8 text-[color:var(--theme-accent-primary)]" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
               </svg>
             </div>
@@ -80,7 +80,7 @@ export default function MyCardsPage() {
                 <h3 className="text-xl font-semibold text-[color:var(--theme-text-primary)] mb-1">Collections</h3>
                 <p className="text-[color:var(--theme-text-secondary)] text-sm">Organize your cards</p>
               </div>
-              <svg className="w-8 h-8 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-8 h-8 text-[color:var(--theme-accent-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
               </svg>
             </div>

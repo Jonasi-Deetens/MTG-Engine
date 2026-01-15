@@ -9,34 +9,34 @@ interface RarityBadgeProps {
 
 const RARITY_STYLES: Record<string, { bg: string; text: string; border: string }> = {
   common: {
-    bg: 'bg-slate-600/80',
-    text: 'text-white',
-    border: 'border-slate-500',
+    bg: 'bg-[color:var(--theme-bg-tertiary)]/80',
+    text: 'text-[color:var(--theme-text-primary)]',
+    border: 'border-[color:var(--theme-border-default)]',
   },
   uncommon: {
-    bg: 'bg-slate-400/80',
-    text: 'text-white',
-    border: 'border-slate-300',
+    bg: 'bg-[color:var(--theme-bg-secondary)]/80',
+    text: 'text-[color:var(--theme-text-primary)]',
+    border: 'border-[color:var(--theme-border-default)]',
   },
   rare: {
     bg: 'bg-[color:var(--theme-accent-primary)]/80',
-    text: 'text-white',
+    text: 'text-[color:var(--theme-button-primary-text)]',
     border: 'border-[color:var(--theme-accent-secondary)]',
   },
   mythic: {
-    bg: 'bg-orange-600/80',
-    text: 'text-white',
-    border: 'border-orange-500',
+    bg: 'bg-[color:var(--theme-status-warning)]/80',
+    text: 'text-[color:var(--theme-button-primary-text)]',
+    border: 'border-[color:var(--theme-status-warning)]',
   },
   special: {
-    bg: 'bg-purple-600/80',
-    text: 'text-white',
-    border: 'border-purple-500',
+    bg: 'bg-[color:var(--theme-status-info)]/80',
+    text: 'text-[color:var(--theme-button-primary-text)]',
+    border: 'border-[color:var(--theme-status-info)]',
   },
   bonus: {
-    bg: 'bg-blue-600/80',
-    text: 'text-white',
-    border: 'border-blue-500',
+    bg: 'bg-[color:var(--theme-status-success)]/80',
+    text: 'text-[color:var(--theme-button-primary-text)]',
+    border: 'border-[color:var(--theme-status-success)]',
   },
 };
 

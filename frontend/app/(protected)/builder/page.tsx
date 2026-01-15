@@ -144,7 +144,7 @@ export default function BuilderPage() {
   }, [searchParams, currentCard, setCurrentCard, clearAll]);
 
   return (
-    <div className="min-h-screen bg-[color:var(--theme-bg-primary)] p-4">
+    <div className="p-4">
       <div className="max-w-7xl mx-auto space-y-4">
         {/* Top Section: Card Preview */}
         <div className="bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] rounded-lg p-6">

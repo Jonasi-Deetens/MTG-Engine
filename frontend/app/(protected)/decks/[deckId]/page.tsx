@@ -79,7 +79,7 @@ export default function DeckDetailPage() {
 
   if (error || !currentDeck) {
     return (
-      <div className="min-h-screen bg-angel-white p-4">
+      <div className="min-h-screen bg-[color:var(--theme-bg-primary)] p-4">
         <div className="max-w-4xl mx-auto">
           <div className="bg-[color:var(--theme-status-error)]/20 border border-[color:var(--theme-status-error)]/50 rounded-lg p-6 text-[color:var(--theme-status-error)]">
             <h1 className="text-2xl font-bold mb-2">Error</h1>
@@ -227,11 +227,11 @@ export default function DeckDetailPage() {
                       <div className="text-sm text-[color:var(--theme-text-secondary)] mb-1">
                         Total Deck Price
                       </div>
-                      <div className="text-2xl font-bold text-amber-600">
+                      <div className="text-2xl font-bold text-[color:var(--theme-accent-primary)]">
                         ${totalPrice.toFixed(2)}
                       </div>
                     </div>
-                    <div className="pt-2 border-t border-amber-200/50">
+                    <div className="pt-2 border-t border-[color:var(--theme-border-default)]/50">
                       <div className="text-sm text-[color:var(--theme-text-secondary)] mb-1">
                         Average Card Price
                       </div>
@@ -240,7 +240,7 @@ export default function DeckDetailPage() {
                       </div>
                     </div>
                     {mostExpensive.length > 0 && (
-                      <div className="pt-2 border-t border-amber-200/50">
+                      <div className="pt-2 border-t border-[color:var(--theme-border-default)]/50">
                         <div className="text-sm text-[color:var(--theme-text-secondary)] mb-2">
                           Most Expensive Cards
                         </div>
@@ -253,7 +253,7 @@ export default function DeckDetailPage() {
                               <span className="text-[color:var(--theme-text-secondary)] truncate flex-1">
                                 {dc.card.name}
                               </span>
-                              <span className="text-amber-600 font-semibold ml-2">
+                              <span className="text-[color:var(--theme-accent-primary)] font-semibold ml-2">
                                 ${parseFloat(dc.card.prices!.usd!).toFixed(2)}
                               </span>
                             </div>

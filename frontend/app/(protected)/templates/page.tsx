@@ -56,8 +56,8 @@ export default function TemplatesPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-angel-white flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>
+      <div className="min-h-screen bg-[color:var(--theme-bg-primary)] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[color:var(--theme-accent-primary)]"></div>
       </div>
     );
   }
@@ -100,7 +100,7 @@ export default function TemplatesPage() {
                     {template.description}
                   </p>
                 </div>
-                <div className="pt-4 border-t border-amber-200/50">
+                <div className="pt-4 border-t border-[color:var(--theme-border-default)]/50">
                   <Button
                     onClick={() => handleUseTemplate(template)}
                     disabled={usingTemplate === template.id}

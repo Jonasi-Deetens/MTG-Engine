@@ -17,9 +17,13 @@ function ProtectedLayoutContent({
   const isDashboard = pathname === '/dashboard';
   const isDecksPage = pathname?.startsWith('/decks') ?? false;
   const isMyCardsPage = pathname?.startsWith('/my-cards') ?? false;
+  const isBuilderPage = pathname === '/builder';
+  const isTemplatesPage = pathname === '/templates';
   const dashboardBackgroundImage = useThemeImage('dashboard');
   const decksBackgroundImage = useThemeImage('decks');
   const collectionBackgroundImage = useThemeImage('collection');
+  const builderBackgroundImage = useThemeImage('builder');
+  const templatesBackgroundImage = useThemeImage('templates');
   
   const getBackgroundStyle = () => {
     if (isDashboard) {
@@ -43,6 +47,24 @@ function ProtectedLayoutContent({
     if (isMyCardsPage) {
       return {
         backgroundImage: `url('${collectionBackgroundImage}')`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'top center',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: 'fixed',
+      };
+    }
+    if (isBuilderPage) {
+      return {
+        backgroundImage: `url('${builderBackgroundImage}')`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'top center',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: 'fixed',
+      };
+    }
+    if (isTemplatesPage) {
+      return {
+        backgroundImage: `url('${templatesBackgroundImage}')`,
         backgroundSize: 'cover',
         backgroundPosition: 'top center',
         backgroundRepeat: 'no-repeat',
@@ -85,8 +107,8 @@ export default function ProtectedLayout({
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-angel-white">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>
+      <div className="min-h-screen flex items-center justify-center bg-[color:var(--theme-bg-primary)]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[color:var(--theme-accent-primary)]"></div>
       </div>
     );
   }

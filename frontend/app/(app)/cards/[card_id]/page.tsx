@@ -127,15 +127,15 @@ export default function CardDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-angel-white flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>
+      <div className="min-h-screen bg-[color:var(--theme-bg-primary)] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[color:var(--theme-accent-primary)]"></div>
       </div>
     );
   }
 
   if (error || !card) {
     return (
-      <div className="min-h-screen bg-angel-white p-4">
+      <div className="min-h-screen bg-[color:var(--theme-bg-primary)] p-4">
         <div className="max-w-4xl mx-auto">
           <div className="bg-[color:var(--theme-status-error)]/20 border border-[color:var(--theme-status-error)]/50 rounded-lg p-6 text-[color:var(--theme-status-error)]">
             <h1 className="text-2xl font-bold mb-2">Error</h1>
@@ -157,7 +157,7 @@ export default function CardDetailPage() {
     <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <Link href="/search" className="text-[color:var(--theme-text-secondary)] hover:text-amber-600 transition-colors">
+          <Link href="/search" className="text-[color:var(--theme-text-secondary)] hover:text-[color:var(--theme-accent-primary)] transition-colors">
             ← Back to Search
           </Link>
           <div className="flex items-center gap-2">
@@ -219,7 +219,7 @@ export default function CardDetailPage() {
                     {card.rarity && <RarityBadge rarity={card.rarity} />}
                   </div>
                   {card.mana_cost && (
-                    <p className="text-xl font-mono text-amber-400">{card.mana_cost}</p>
+                    <p className="text-xl font-mono text-[color:var(--theme-accent-secondary)]">{card.mana_cost}</p>
                   )}
                 </div>
                 {isAuthenticated && <FavoriteButton cardId={card.card_id} size="lg" />}
@@ -282,7 +282,7 @@ export default function CardDetailPage() {
                     {card.prices.usd && (
                       <div>
                         <span className="text-sm text-[color:var(--theme-text-secondary)]">USD:</span>{' '}
-                        <span className="text-base text-amber-600 font-semibold">
+                        <span className="text-base text-[color:var(--theme-accent-primary)] font-semibold">
                           ${parseFloat(card.prices.usd).toFixed(2)}
                         </span>
                       </div>
@@ -290,7 +290,7 @@ export default function CardDetailPage() {
                     {card.prices.usd_foil && (
                       <div>
                         <span className="text-sm text-[color:var(--theme-text-secondary)]">USD Foil:</span>{' '}
-                        <span className="text-base text-amber-600 font-semibold">
+                        <span className="text-base text-[color:var(--theme-accent-primary)] font-semibold">
                           ${parseFloat(card.prices.usd_foil).toFixed(2)}
                         </span>
                       </div>
@@ -298,7 +298,7 @@ export default function CardDetailPage() {
                     {card.prices.eur && (
                       <div>
                         <span className="text-sm text-[color:var(--theme-text-secondary)]">EUR:</span>{' '}
-                        <span className="text-base text-amber-600 font-semibold">
+                        <span className="text-base text-[color:var(--theme-accent-primary)] font-semibold">
                           €{parseFloat(card.prices.eur).toFixed(2)}
                         </span>
                       </div>
@@ -390,7 +390,7 @@ export default function CardDetailPage() {
                   href={`/cards/${version.card_id}`}
                   className={`aspect-[63/88] relative rounded-lg overflow-hidden transition-all ${
                     version.card_id === card.card_id
-                      ? 'ring-2 ring-amber-500'
+                      ? 'ring-2 ring-[color:var(--theme-accent-primary)]'
                       : 'hover:scale-105 hover:shadow-lg'
                   }`}
                 >

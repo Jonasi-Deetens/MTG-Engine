@@ -249,12 +249,12 @@ export function EffectFields({ effect, index, allEffects, onUpdate }: EffectFiel
                     onUpdate('differentName', false);
                   }
                 }}
-                className="w-4 h-4 rounded border-[color:var(--theme-input-border)] bg-[color:var(--theme-input-bg)] text-[color:var(--theme-accent-primary)] focus:ring-amber-500"
+                className="w-4 h-4 rounded border-[color:var(--theme-input-border)] bg-[color:var(--theme-input-bg)] text-[color:var(--theme-accent-primary)] focus:ring-[color:var(--theme-border-focus)]"
               />
               <span className="text-xs text-[color:var(--theme-text-secondary)]">Different name check</span>
             </label>
             {((typeof effect.differentName === 'object' && effect.differentName.enabled) || effect.differentName === true) && (
-              <div className="pl-6 space-y-2 border-l-2 border-amber-200/50">
+              <div className="pl-6 space-y-2 border-l-2 border-[color:var(--theme-border-default)]">
                 <div>
                   <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">
                     Compare Against Type <span className="text-[color:var(--theme-text-muted)]">(optional)</span>
@@ -556,7 +556,7 @@ export function EffectFields({ effect, index, allEffects, onUpdate }: EffectFiel
               type="checkbox"
               checked={effect.returnUnderOwner || false}
               onChange={(e) => onUpdate('returnUnderOwner', e.target.checked)}
-              className="w-4 h-4 rounded border-[color:var(--theme-input-border)] bg-[color:var(--theme-input-bg)] text-[color:var(--theme-accent-primary)] focus:ring-amber-500"
+              className="w-4 h-4 rounded border-[color:var(--theme-input-border)] bg-[color:var(--theme-input-bg)] text-[color:var(--theme-accent-primary)] focus:ring-[color:var(--theme-border-focus)]"
             />
             <span className="text-xs text-[color:var(--theme-text-secondary)]">Return under owner's control</span>
           </label>

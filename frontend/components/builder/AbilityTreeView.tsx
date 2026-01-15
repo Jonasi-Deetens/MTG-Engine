@@ -36,8 +36,8 @@ export function AbilityTreeView() {
       {/* Triggered Abilities */}
       {triggeredAbilities.length > 0 && (
         <div>
-          <h3 className="text-sm font-semibold text-blue-600 mb-3 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+          <h3 className="text-sm font-semibold text-[color:var(--theme-status-info)] mb-3 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[color:var(--theme-status-info)]"></span>
             Triggered Abilities ({triggeredAbilities.length})
           </h3>
           <div className="space-y-4 ml-4">
@@ -67,7 +67,7 @@ export function AbilityTreeView() {
                   </div>
                 )}
                 <div className="ml-4 border-l-2 border-[color:var(--theme-accent-primary)] pl-3 space-y-1">
-                  <span className="text-xs text-amber-600">Effects:</span>
+                  <span className="text-xs text-[color:var(--theme-accent-primary)]">Effects:</span>
                   {ability.effects.map((effect, idx) => (
                     <div key={idx} className="text-sm text-[color:var(--theme-text-primary)]">
                       • {formatEffect(effect)}
@@ -83,8 +83,8 @@ export function AbilityTreeView() {
       {/* Activated Abilities */}
       {activatedAbilities.length > 0 && (
         <div>
-          <h3 className="text-sm font-semibold text-purple-600 mb-3 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+          <h3 className="text-sm font-semibold text-[color:var(--theme-status-warning)] mb-3 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[color:var(--theme-status-warning)]"></span>
             Activated Abilities ({activatedAbilities.length})
           </h3>
           <div className="space-y-4 ml-4">
@@ -95,7 +95,7 @@ export function AbilityTreeView() {
                   <span className="text-sm text-[color:var(--theme-text-primary)] font-mono">{ability.cost}</span>
                 </div>
                 <div className="ml-4 border-l-2 border-[color:var(--theme-accent-primary)] pl-3">
-                  <span className="text-xs text-amber-600">Effect:</span>
+                  <span className="text-xs text-[color:var(--theme-accent-primary)]">Effect:</span>
                   <div className="text-sm text-[color:var(--theme-text-primary)] mt-1">{formatEffect(ability.effect)}</div>
                 </div>
               </div>
@@ -107,8 +107,8 @@ export function AbilityTreeView() {
       {/* Static Abilities */}
       {staticAbilities.length > 0 && (
         <div>
-          <h3 className="text-sm font-semibold text-green-600 mb-3 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-green-500"></span>
+          <h3 className="text-sm font-semibold text-[color:var(--theme-status-success)] mb-3 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[color:var(--theme-status-success)]"></span>
             Static Abilities ({staticAbilities.length})
           </h3>
           <div className="space-y-4 ml-4">
@@ -120,7 +120,7 @@ export function AbilityTreeView() {
                     {ability.appliesTo.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
                   </span>
                 </div>
-                <div className="ml-4 border-l-2 border-green-500 pl-3">
+                <div className="ml-4 border-l-2 border-[color:var(--theme-status-success)] pl-3">
                   <span className="text-sm text-[color:var(--theme-text-primary)]">{ability.effect}</span>
                 </div>
               </div>
@@ -132,8 +132,8 @@ export function AbilityTreeView() {
       {/* Continuous Abilities */}
       {continuousAbilities.length > 0 && (
         <div>
-          <h3 className="text-sm font-semibold text-teal-600 mb-3 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-teal-500"></span>
+          <h3 className="text-sm font-semibold text-[color:var(--theme-accent-secondary)] mb-3 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[color:var(--theme-accent-secondary)]"></span>
             Continuous Abilities ({continuousAbilities.length})
           </h3>
           <div className="space-y-4 ml-4">
@@ -145,7 +145,7 @@ export function AbilityTreeView() {
                     {ability.appliesTo.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
                   </span>
                 </div>
-                <div className="ml-4 border-l-2 border-teal-500 pl-3">
+                <div className="ml-4 border-l-2 border-[color:var(--theme-accent-secondary)] pl-3">
                   <span className="text-sm text-[color:var(--theme-text-primary)]">{ability.effect}</span>
                 </div>
               </div>
@@ -157,8 +157,8 @@ export function AbilityTreeView() {
       {/* Keywords */}
       {keywords.length > 0 && (
         <div>
-          <h3 className="text-sm font-semibold text-amber-600 mb-3 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+          <h3 className="text-sm font-semibold text-[color:var(--theme-accent-primary)] mb-3 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[color:var(--theme-accent-primary)]"></span>
             Keywords ({keywords.length})
           </h3>
           <div className="space-y-3 ml-4">

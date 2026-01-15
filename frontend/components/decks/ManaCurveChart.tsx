@@ -64,7 +64,7 @@ export function ManaCurveChart({ cards }: ManaCurveChartProps) {
                 <div className="w-full h-full flex flex-col justify-end">
                   {data.count > 0 && (
                     <div
-                      className="w-full bg-amber-500 rounded-t transition-all hover:bg-amber-400"
+                      className="w-full bg-[color:var(--theme-accent-primary)] rounded-t transition-all hover:bg-[color:var(--theme-accent-hover)]"
                       style={{ 
                         height: `${finalHeightPercent}%`,
                       }}

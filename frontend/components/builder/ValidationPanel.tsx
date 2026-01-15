@@ -191,11 +191,13 @@ export function ValidationPanel() {
       </div>
       
       {saveMessage && (
-        <div className={`mb-4 p-3 rounded text-sm ${
-          saveMessage.type === 'success' 
-            ? 'bg-green-900/50 text-green-200 border border-green-600' 
-            : 'bg-red-900/50 text-red-200 border border-red-600'
-        }`}>
+        <div
+          className={`mb-4 p-3 rounded text-sm ${
+            saveMessage.type === 'success'
+              ? 'bg-[color:var(--theme-status-success)]/20 text-[color:var(--theme-status-success)] border border-[color:var(--theme-status-success)]/50'
+              : 'bg-[color:var(--theme-status-error)]/20 text-[color:var(--theme-status-error)] border border-[color:var(--theme-status-error)]/50'
+          }`}
+        >
           {saveMessage.type === 'success' ? '✓' : '✗'} {saveMessage.text}
         </div>
       )}
@@ -213,18 +215,18 @@ export function ValidationPanel() {
           )}
           
           {totalAbilities > 0 && isValid && (
-            <div className="p-3 bg-green-900/30 border border-green-600 rounded text-sm text-green-200">
+            <div className="p-3 bg-[color:var(--theme-status-success)]/20 border border-[color:var(--theme-status-success)]/50 rounded text-sm text-[color:var(--theme-status-success)]">
               ✓ All abilities are valid
             </div>
           )}
           
           {validationErrors.length > 0 && (
             <div className="space-y-2">
-              <h4 className="text-sm font-medium text-red-300">Errors</h4>
+              <h4 className="text-sm font-medium text-[color:var(--theme-status-error)]">Errors</h4>
               {validationErrors.map((error, index) => (
                 <div
                   key={index}
-                  className="p-3 bg-red-900/30 border border-red-600 rounded text-sm text-red-200"
+                  className="p-3 bg-[color:var(--theme-status-error)]/20 border border-[color:var(--theme-status-error)]/50 rounded text-sm text-[color:var(--theme-status-error)]"
                 >
                   ✗ {error.message}
                 </div>
@@ -234,11 +236,11 @@ export function ValidationPanel() {
           
           {validationWarnings.length > 0 && (
             <div className="space-y-2">
-              <h4 className="text-sm font-medium text-yellow-300">Warnings</h4>
+              <h4 className="text-sm font-medium text-[color:var(--theme-status-warning)]">Warnings</h4>
               {validationWarnings.map((warning, index) => (
                 <div
                   key={index}
-                  className="p-3 bg-yellow-900/30 border border-yellow-600 rounded text-sm text-yellow-200"
+                  className="p-3 bg-[color:var(--theme-status-warning)]/20 border border-[color:var(--theme-status-warning)]/50 rounded text-sm text-[color:var(--theme-status-warning)]"
                 >
                   ⚠ {warning.message}
                 </div>
