@@ -14,6 +14,8 @@ class RuntimeAbility:
     trigger: Optional[str]
     cost: Optional[str]
     keyword: Optional[str]
+    timing: Optional[str]
+    activation_limit: Optional[Dict[str, Any]]
     conditions: List[Dict[str, Any]]
     effects: List[Dict[str, Any]]
 
@@ -38,11 +40,15 @@ class AbilityGraphRuntimeAdapter:
         trigger = None
         cost = None
         keyword = None
+        timing = None
+        activation_limit = None
         if root_node:
             if root_node["type"] == "TRIGGER":
                 trigger = root_node["data"].get("event")
             elif root_node["type"] == "ACTIVATED":
                 cost = root_node["data"].get("cost")
+                timing = root_node["data"].get("timing")
+                activation_limit = root_node["data"].get("limit")
             elif root_node["type"] == "KEYWORD":
                 keyword = root_node["data"].get("keyword")
 
@@ -77,6 +83,8 @@ class AbilityGraphRuntimeAdapter:
             trigger=trigger,
             cost=cost,
             keyword=keyword,
+            timing=timing,
+            activation_limit=activation_limit,
             conditions=conditions,
             effects=effects,
         )

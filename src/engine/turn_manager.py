@@ -72,11 +72,19 @@ class TurnManager:
                     self.gs.log(f"Spell fizzles (illegal targets): {obj_id}")
                 else:
                     if destination_zone:
-                        self.gs.move_object(obj.id, destination_zone)
+                        resolved_destination = destination_zone
                     elif "Instant" in obj.types or "Sorcery" in obj.types:
-                        self.gs.move_object(obj.id, ZONE_GRAVEYARD)
+                        resolved_destination = ZONE_GRAVEYARD
                     else:
-                        self.gs.move_object(obj.id, ZONE_BATTLEFIELD)
+                        resolved_destination = ZONE_BATTLEFIELD
+                    if resolved_destination == ZONE_BATTLEFIELD:
+                        enter_copy_of = context.choices.get("enter_copy_of")
+                        if enter_copy_of:
+                            self.gs._apply_enter_copy(obj, enter_copy_of)
+                        enter_choices = context.choices.get("enter_choices")
+                        if isinstance(enter_choices, dict):
+                            self.gs._apply_enter_choices(obj, enter_choices)
+                    self.gs.move_object(obj.id, resolved_destination)
                     obj.was_cast = False
                     self.gs.event_bus.publish(Event(
                         type="spell_resolved",
@@ -91,17 +99,26 @@ class TurnManager:
             context_data = payload.get("context") or {}
             context = ResolveContext(**context_data)
             from engine.targets import normalize_targets, validate_targets
+            from engine.choices import validate_enter_choices
             try:
                 normalize_targets(self.gs, context)
                 validate_targets(self.gs, context)
                 adapter = AbilityGraphRuntimeAdapter(self.gs)
                 if graph:
+                    validate_enter_choices(graph, context.__dict__)
                     adapter.resolve(graph, context)
                 source_id = payload.get("source_object_id")
                 destination_zone = payload.get("destination_zone")
                 if source_id and destination_zone:
                     obj = self.gs.objects.get(source_id)
                     if obj:
+                        if destination_zone == ZONE_BATTLEFIELD:
+                            enter_copy_of = context.choices.get("enter_copy_of")
+                            if enter_copy_of:
+                                self.gs._apply_enter_copy(obj, enter_copy_of)
+                            enter_choices = context.choices.get("enter_choices")
+                            if isinstance(enter_choices, dict):
+                                self.gs._apply_enter_choices(obj, enter_choices)
                         self.gs.move_object(obj.id, destination_zone)
                         obj.was_cast = False
                 if context.source_id:
@@ -136,6 +153,13 @@ class TurnManager:
         self.priority.pass_count = 0
         self._persist_priority()
 
+    def after_mana_ability(self, player_id: int) -> None:
+        if player_id != self.priority.current and player_id not in self.gs.prepared_casts:
+            return
+        apply_continuous_effects(self.gs)
+        apply_state_based_actions(self.gs)
+        self._persist_priority()
+
     def current_active_player_id(self) -> int:
         return self.gs.players[self.state.active_player_index].id
 
@@ -153,10 +177,13 @@ class TurnManager:
                 "turn_number": self.state.turn_number,
             }
         ))
+        self._reset_activation_limits("phase")
         if self.state.step == Step.UPKEEP:
             self._expire_temporary_effects(self.state.step)
         if self.state.step == Step.UPKEEP:
             self.gs.event_bus.publish(Event(type="upkeep", payload={"player_id": self.current_active_player_id()}))
+        if self.state.step == Step.BEGIN_COMBAT:
+            self._reset_activation_limits("combat")
         if self.state.step == Step.DRAW:
             self.gs.event_bus.publish(Event(type="draw_step", payload={"player_id": self.current_active_player_id()}))
         if self.state.step == Step.END:
@@ -216,6 +243,7 @@ class TurnManager:
         self.state.active_player_index = (self.state.active_player_index + 1) % len(self.gs.players)
         self.state.land_plays_this_turn = 0
         self.state.combat_state = None
+        self._reset_activation_limits("turn")
         first_phase, first_step = PHASE_STEP_ORDER[0]
         self._set_phase_step(first_phase, first_step)
         self._begin_step()
@@ -291,3 +319,11 @@ class TurnManager:
                 return
             card_id = player.library.pop(0)
             player.hand.append(card_id)
+
+    def _reset_activation_limits(self, scope: str) -> None:
+        for obj in self.gs.objects.values():
+            if not obj.activation_limits:
+                continue
+            to_remove = [key for key in obj.activation_limits if key.endswith(f":{scope}")]
+            for key in to_remove:
+                obj.activation_limits.pop(key, None)

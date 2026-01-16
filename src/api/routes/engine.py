@@ -68,11 +68,16 @@ def _build_game_state(snapshot: GameStateSnapshot) -> GameState:
             types=list(obj.types),
             zone=obj.zone,
             mana_cost=obj.mana_cost,
+            base_name=getattr(obj, "base_name", None),
+            base_mana_cost=getattr(obj, "base_mana_cost", None),
+            base_mana_value=getattr(obj, "base_mana_value", None),
             base_types=list(obj.base_types) if hasattr(obj, "base_types") else list(obj.types),
             colors=list(obj.colors),
             base_colors=list(obj.base_colors) if hasattr(obj, "base_colors") else list(obj.colors),
             type_line=obj.type_line,
+            base_type_line=getattr(obj, "base_type_line", None),
             oracle_text=obj.oracle_text,
+            base_oracle_text=getattr(obj, "base_oracle_text", None),
             mana_value=obj.mana_value,
             power=obj.power,
             toughness=obj.toughness,
@@ -96,7 +101,10 @@ def _build_game_state(snapshot: GameStateSnapshot) -> GameState:
             transformed=obj.transformed,
             regenerate_shield=obj.regenerate_shield,
             ability_graphs=list(obj.ability_graphs),
+            base_ability_graphs=list(getattr(obj, "base_ability_graphs", [])),
             temporary_effects=list(getattr(obj, "temporary_effects", [])),
+            activation_limits=dict(getattr(obj, "activation_limits", {})),
+            etb_choices=dict(getattr(obj, "etb_choices", {})),
         )
 
     game_state.stack.items = [
@@ -172,11 +180,16 @@ def _serialize_game_state(game_state: GameState) -> GameStateSnapshot:
                 "types": obj.types,
                 "zone": obj.zone,
                 "mana_cost": obj.mana_cost,
+                "base_name": getattr(obj, "base_name", None),
+                "base_mana_cost": getattr(obj, "base_mana_cost", None),
+                "base_mana_value": getattr(obj, "base_mana_value", None),
                 "base_types": list(obj.base_types) if hasattr(obj, "base_types") else list(obj.types),
                 "colors": list(obj.colors),
                 "base_colors": list(obj.base_colors) if hasattr(obj, "base_colors") else list(obj.colors),
                 "type_line": obj.type_line,
+                "base_type_line": getattr(obj, "base_type_line", None),
                 "oracle_text": obj.oracle_text,
+                "base_oracle_text": getattr(obj, "base_oracle_text", None),
                 "mana_value": obj.mana_value,
                 "power": obj.power,
                 "toughness": obj.toughness,
@@ -200,7 +213,10 @@ def _serialize_game_state(game_state: GameState) -> GameStateSnapshot:
                 "transformed": obj.transformed,
                 "regenerate_shield": obj.regenerate_shield,
                 "ability_graphs": list(obj.ability_graphs),
+                "base_ability_graphs": list(getattr(obj, "base_ability_graphs", [])),
                 "temporary_effects": list(getattr(obj, "temporary_effects", [])),
+                "activation_limits": dict(getattr(obj, "activation_limits", {})),
+                "etb_choices": dict(getattr(obj, "etb_choices", {})),
             }
             for obj in game_state.objects.values()
         ],
@@ -255,9 +271,11 @@ def execute_engine_action(
                 previous_results=payload.context.previous_results,
             )
         from engine.targets import normalize_targets, validate_targets
+        from engine.choices import validate_enter_choices
         try:
             normalize_targets(game_state, context)
             validate_targets(game_state, context)
+            validate_enter_choices(payload.ability_graph.model_dump() if payload.ability_graph else None, context.__dict__)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
         adapter = AbilityGraphRuntimeAdapter(game_state)
@@ -380,7 +398,21 @@ def execute_engine_action(
                 raise ValueError("No prepared cast found for player.")
             if prepared_cast.get("object_id") != payload.object_id:
                 raise ValueError("Prepared cast does not match selected card.")
-            context = prepared_cast.get("context") or (payload.context.model_dump() if payload.context else None)
+            prepared_context = prepared_cast.get("context") or {}
+            payload_context = payload.context.model_dump() if payload.context else {}
+            merged_context = {
+                **prepared_context,
+                **payload_context,
+                "targets": {
+                    **(prepared_context.get("targets") or {}),
+                    **(payload_context.get("targets") or {}),
+                },
+                "choices": {
+                    **(prepared_context.get("choices") or {}),
+                    **(payload_context.get("choices") or {}),
+                },
+            }
+            context = merged_context if merged_context else None
             x_value = prepared_cast.get("x_value") or 0
             cast_spell(
                 game_state,

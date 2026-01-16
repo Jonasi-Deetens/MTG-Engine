@@ -144,6 +144,16 @@ def _gather_static_layer_effects(game_state: GameState, effect_types: Optional[s
 def _reset_characteristics(obj) -> None:
     if obj.base_controller_id is not None:
         obj.controller_id = obj.base_controller_id
+    if getattr(obj, "base_name", None) is not None:
+        obj.name = obj.base_name
+    if getattr(obj, "base_mana_cost", None) is not None:
+        obj.mana_cost = obj.base_mana_cost
+    if getattr(obj, "base_mana_value", None) is not None:
+        obj.mana_value = obj.base_mana_value
+    if getattr(obj, "base_type_line", None) is not None:
+        obj.type_line = obj.base_type_line
+    if getattr(obj, "base_oracle_text", None) is not None:
+        obj.oracle_text = obj.base_oracle_text
         if obj.base_power is not None:
             obj.power = obj.base_power
         if obj.base_toughness is not None:
@@ -154,6 +164,8 @@ def _reset_characteristics(obj) -> None:
         obj.types = list(obj.base_types)
     if getattr(obj, "base_colors", None):
         obj.colors = list(obj.base_colors)
+    if getattr(obj, "base_ability_graphs", None):
+        obj.ability_graphs = list(obj.base_ability_graphs)
 
 
 def _reset_layer_2_control(obj) -> None:
@@ -340,11 +352,12 @@ def apply_continuous_effects(game_state: GameState) -> None:
         signature_fn=None,
         reset_fn=None,
         pre_apply_fn=None,
+        include_static: bool = True,
     ) -> None:
         previous_signature = None
         max_iterations = 5
         for _ in range(max_iterations):
-            static_effects = _gather_static_layer_effects(game_state, effect_types)
+            static_effects = _gather_static_layer_effects(game_state, effect_types) if include_static else {}
             for obj in battlefield:
                 base_effects = list(obj.temporary_effects)
                 if obj.id in static_effects:
@@ -365,6 +378,38 @@ def apply_continuous_effects(game_state: GameState) -> None:
                 break
             previous_signature = signature
 
+    def _apply_layer_1_copy(obj) -> None:
+        for effect in _effects_of_type(obj.temporary_effects, "copy_object"):
+            source_id = effect.get("source_id")
+            if not source_id:
+                continue
+            source = game_state.objects.get(source_id)
+            if not source:
+                continue
+            obj.name = source.base_name or source.name
+            obj.mana_cost = source.base_mana_cost or source.mana_cost
+            obj.mana_value = source.base_mana_value if source.base_mana_value is not None else source.mana_value
+            obj.type_line = source.base_type_line or source.type_line
+            obj.oracle_text = source.base_oracle_text or source.oracle_text
+            if getattr(source, "base_types", None):
+                obj.types = list(source.base_types)
+            if getattr(source, "base_colors", None):
+                obj.colors = list(source.base_colors)
+            if source.base_power is not None:
+                obj.power = source.base_power
+            if source.base_toughness is not None:
+                obj.toughness = source.base_toughness
+            if source.base_keywords is not None:
+                obj.keywords = set(source.base_keywords)
+            if getattr(source, "base_ability_graphs", None):
+                obj.ability_graphs = list(source.base_ability_graphs)
+            return
+
+    apply_layer(
+        {"copy_permanent"},
+        _apply_layer_1_copy,
+        include_static=False,
+    )
     apply_layer(
         {"change_control"},
         _apply_layer_2_control,

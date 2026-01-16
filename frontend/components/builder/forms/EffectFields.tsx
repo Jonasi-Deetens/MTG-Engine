@@ -699,7 +699,10 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
           <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Player Choice</label>
           <select
             value={effect.choice || 'color'}
-            onChange={(e) => onUpdate('choice', e.target.value)}
+            onChange={(e) => {
+              onUpdate('choice', e.target.value);
+              onUpdate('choiceValue', undefined);
+            }}
             className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
           >
             {CHOICE_TYPE_OPTIONS.map((opt) => (
@@ -711,6 +714,45 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
           <p className="text-xs text-[color:var(--theme-text-muted)] mt-1">
             Player will choose this at runtime
           </p>
+        </div>
+      )}
+
+      {selectedEffectType?.requiresChoiceValue && (
+        <div>
+          <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Choice Value</label>
+          {effect.choice === 'color' ? (
+            <select
+              value={effect.choiceValue || 'W'}
+              onChange={(e) => onUpdate('choiceValue', e.target.value)}
+              className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+            >
+              {COLOR_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          ) : effect.choice === 'card_type' ? (
+            <select
+              value={effect.choiceValue || 'creature'}
+              onChange={(e) => onUpdate('choiceValue', e.target.value)}
+              className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+            >
+              {CARD_TYPE_FILTERS.filter((opt) => opt.value !== 'any').map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              type="text"
+              value={effect.choiceValue || ''}
+              onChange={(e) => onUpdate('choiceValue', e.target.value)}
+              placeholder={effect.choice === 'creature_type' ? 'Elf' : 'Choice value'}
+              className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+            />
+          )}
         </div>
       )}
 

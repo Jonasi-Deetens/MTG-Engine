@@ -78,45 +78,16 @@ def _apply_planeswalker_uniqueness(game_state: GameState) -> None:
 
 
 def _apply_attachment_checks(game_state: GameState) -> None:
-    for obj in game_state.objects.values():
+    for obj in list(game_state.objects.values()):
         if obj.zone != ZONE_BATTLEFIELD:
             continue
-        if not obj.attached_to:
+        moved = game_state._enforce_attachment_legality(obj)
+        if moved:
             continue
-        attached = game_state.objects.get(obj.attached_to)
-        if not attached or attached.zone != ZONE_BATTLEFIELD:
-            obj.attached_to = None
-            continue
-        if "Aura" in obj.types:
-            if "Creature" in attached.types:
-                if attached.phased_out:
-                    obj.attached_to = None
-                    game_state.move_object(obj.id, "graveyard")
-                    continue
-                continue
-            if _is_illegal_attachment(game_state, obj, attached):
-                obj.attached_to = None
-                game_state.move_object(obj.id, "graveyard")
-                continue
-            obj.attached_to = None
-            game_state.move_object(obj.id, "graveyard")
-            continue
-        if "Equipment" in obj.types:
-            if "Creature" in attached.types:
-                if attached.phased_out:
-                    obj.attached_to = None
-                    continue
-                continue
-            obj.attached_to = None
 
 
 def _is_illegal_attachment(game_state: GameState, aura, attached) -> bool:
-    if "Hexproof" in attached.keywords and aura.controller_id != attached.controller_id:
-        return True
-    if attached.protections and aura.colors:
-        if any(color in attached.protections for color in aura.colors):
-            return True
-    return False
+    return game_state._is_illegal_attachment(aura, attached)
 
 
 def _cleanup_tokens_in_zones(game_state: GameState) -> None:

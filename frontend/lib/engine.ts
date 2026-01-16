@@ -10,11 +10,16 @@ export interface EngineGameObjectSnapshot {
   types: string[];
   zone: string;
   mana_cost?: string | null;
+  base_name?: string | null;
+  base_mana_cost?: string | null;
+  base_mana_value?: number | null;
   base_types?: string[];
   colors?: string[];
   base_colors?: string[];
   type_line?: string | null;
+  base_type_line?: string | null;
   oracle_text?: string | null;
+  base_oracle_text?: string | null;
   mana_value?: number | null;
   power?: number | null;
   toughness?: number | null;
@@ -38,7 +43,10 @@ export interface EngineGameObjectSnapshot {
   transformed: boolean;
   regenerate_shield: boolean;
   ability_graphs?: Array<Record<string, any>>;
+  base_ability_graphs?: Array<Record<string, any>>;
   temporary_effects?: Array<Record<string, any>>;
+  activation_limits?: Record<string, number>;
+  etb_choices?: Record<string, any>;
 }
 
 export interface EnginePlayerSnapshot {
@@ -229,12 +237,17 @@ const expandDeckCards = (deck: DeckDetailResponse, playerId: number) => {
         colors: entry.card.colors ?? [],
         base_colors: entry.card.colors ?? [],
         type_line: entry.card.type_line ?? null,
+        base_type_line: entry.card.type_line ?? null,
         oracle_text: entry.card.oracle_text ?? null,
+        base_oracle_text: entry.card.oracle_text ?? null,
         mana_value: entry.card.mana_value ?? null,
         power: parseStat(entry.card.power),
         toughness: parseStat(entry.card.toughness),
         base_power: parseStat(entry.card.power),
         base_toughness: parseStat(entry.card.toughness),
+        base_name: entry.card.name ?? null,
+        base_mana_cost: entry.card.mana_cost ?? null,
+        base_mana_value: entry.card.mana_value ?? null,
         entered_turn: null,
         tapped: false,
         damage: 0,
@@ -251,7 +264,9 @@ const expandDeckCards = (deck: DeckDetailResponse, playerId: number) => {
         transformed: false,
         regenerate_shield: false,
         ability_graphs: [],
+        base_ability_graphs: [],
         temporary_effects: [],
+        etb_choices: {},
       });
       zones.library.push(objectId);
       cardMap[objectId] = entry.card;
@@ -272,12 +287,17 @@ const expandDeckCards = (deck: DeckDetailResponse, playerId: number) => {
       colors: commander.card.colors ?? [],
       base_colors: commander.card.colors ?? [],
       type_line: commander.card.type_line ?? null,
+      base_type_line: commander.card.type_line ?? null,
       oracle_text: commander.card.oracle_text ?? null,
+      base_oracle_text: commander.card.oracle_text ?? null,
       mana_value: commander.card.mana_value ?? null,
       power: parseStat(commander.card.power),
       toughness: parseStat(commander.card.toughness),
       base_power: parseStat(commander.card.power),
       base_toughness: parseStat(commander.card.toughness),
+      base_name: commander.card.name ?? null,
+      base_mana_cost: commander.card.mana_cost ?? null,
+      base_mana_value: commander.card.mana_value ?? null,
       entered_turn: null,
       tapped: false,
       damage: 0,
@@ -294,7 +314,9 @@ const expandDeckCards = (deck: DeckDetailResponse, playerId: number) => {
       transformed: false,
       regenerate_shield: false,
       ability_graphs: [],
+      base_ability_graphs: [],
       temporary_effects: [],
+      etb_choices: {},
     });
     zones.command.push(objectId);
     cardMap[objectId] = commander.card;

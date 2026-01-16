@@ -14,11 +14,16 @@ class GameObjectSnapshot(BaseModel):
     types: List[str]
     zone: str
     mana_cost: Optional[str] = None
+    base_name: Optional[str] = None
+    base_mana_cost: Optional[str] = None
+    base_mana_value: Optional[int] = None
     base_types: List[str] = Field(default_factory=list)
     colors: List[str] = Field(default_factory=list)
     base_colors: List[str] = Field(default_factory=list)
     type_line: Optional[str] = None
+    base_type_line: Optional[str] = None
     oracle_text: Optional[str] = None
+    base_oracle_text: Optional[str] = None
     mana_value: Optional[int] = None
     power: Optional[int] = None
     toughness: Optional[int] = None
@@ -42,7 +47,10 @@ class GameObjectSnapshot(BaseModel):
     transformed: bool = False
     regenerate_shield: bool = False
     ability_graphs: List[Dict[str, Any]] = Field(default_factory=list)
+    base_ability_graphs: List[Dict[str, Any]] = Field(default_factory=list)
     temporary_effects: List[Dict[str, Any]] = Field(default_factory=list)
+    activation_limits: Dict[str, int] = Field(default_factory=dict)
+    etb_choices: Dict[str, Any] = Field(default_factory=dict)
 
 
 class PlayerStateSnapshot(BaseModel):

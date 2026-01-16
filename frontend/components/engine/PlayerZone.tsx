@@ -137,6 +137,19 @@ export function PlayerZone({
       .join(', ');
   };
 
+  const getEtbChoiceDetail = (obj: EngineGameObjectSnapshot) => {
+    const choices = obj.etb_choices || {};
+    const entries = Object.entries(choices);
+    if (entries.length === 0) return null;
+    const formatted = entries
+      .map(([key, value]) => {
+        if (typeof value === 'string') return `${key}: ${value}`;
+        return `${key}: ${JSON.stringify(value)}`;
+      })
+      .join(', ');
+    return `Choices: ${formatted}`;
+  };
+
   return (
     <Card variant="bordered" className="p-4 space-y-4">
       <div className="flex items-center justify-between">
@@ -182,7 +195,7 @@ export function PlayerZone({
                 ? selectedBattlefieldIds?.has(obj.id)
                 : selectedBattlefieldId === obj.id,
               statusLabel: getTemporaryStatus(obj),
-              statusDetail: getTemporaryDetail(obj),
+              statusDetail: [getTemporaryDetail(obj), getEtbChoiceDetail(obj)].filter(Boolean).join(' · ') || null,
             })
           )}
         </div>

@@ -78,6 +78,8 @@ def validate_graph(graph: AbilityGraph, card_colors: Optional[List[str]] = None)
         "discard",
         "reveal",
         "copy_spell",
+        "copy_permanent",
+        "enter_copy",
         "redirect_damage",
         "counter_spell",
         "regenerate",
@@ -302,6 +304,30 @@ def validate_graph(graph: AbilityGraph, card_colors: Optional[List[str]] = None)
                     message=f"Effect {node.id} has invalid toZone",
                     nodeId=node.id
                 ))
+        if effect_type == "enter_choice":
+            choice_type = payload.get("choice")
+            if choice_type not in ("color", "creature_type", "card_type", "target"):
+                errors.append(ValidationError(
+                    type="error",
+                    message=f"Effect {node.id} must define a valid choice type",
+                    nodeId=node.id
+                ))
+            choice_value = payload.get("choiceValue")
+            if choice_type == "color" and choice_value:
+                if choice_value not in valid_colors:
+                    errors.append(ValidationError(
+                        type="error",
+                        message=f"Effect {node.id} has invalid choice color: {choice_value}",
+                        nodeId=node.id
+                    ))
+            if choice_type == "card_type" and isinstance(choice_value, str) and choice_value:
+                normalized = choice_value[:1].upper() + choice_value[1:].lower()
+                if normalized not in valid_types:
+                    errors.append(ValidationError(
+                        type="error",
+                        message=f"Effect {node.id} has invalid choice card type: {choice_value}",
+                        nodeId=node.id
+                    ))
 
     # Check color-pie restrictions
     if card_colors:

@@ -223,6 +223,14 @@ class EffectResolver:
             if target_id:
                 card_ids = [target_id]
         for obj_id in card_ids:
+            obj = self.game_state.objects.get(obj_id)
+            if obj:
+                enter_copy_of = context.choices.get("enter_copy_of")
+                if enter_copy_of:
+                    self.game_state._apply_enter_copy(obj, enter_copy_of)
+                enter_choices = context.choices.get("enter_choices")
+                if isinstance(enter_choices, dict):
+                    self.game_state._apply_enter_choices(obj, enter_choices)
             self.game_state.move_object(obj_id, ZONE_BATTLEFIELD)
         return {"type": "put_onto_battlefield", "cards": card_ids}
 
@@ -370,6 +378,40 @@ class EffectResolver:
             StackItem(kind="spell", payload={"copy_of": target_spell}, controller_id=context.controller_id)
         )
         return {"type": "copy_spell", "copy_of": target_spell}
+
+    def _handle_copy_permanent(self, effect: Dict[str, Any], context: ResolveContext) -> Dict[str, Any]:
+        target = _resolve_target_object(self.game_state, context, effect.get("target", "target_permanent"))
+        source_id = context.source_id
+        if not target or not source_id:
+            return {"type": "copy_permanent", "status": "no_target"}
+        source = self.game_state.objects.get(source_id)
+        if not source:
+            return {"type": "copy_permanent", "status": "no_source"}
+        self._add_temporary_effect(source, {
+            "type": "copy_object",
+            "source_id": target.id,
+            "duration": effect.get("duration"),
+        })
+        return {"type": "copy_permanent", "source_id": source.id, "target_id": target.id}
+
+    def _handle_enter_copy(self, effect: Dict[str, Any], context: ResolveContext) -> Dict[str, Any]:
+        target = _resolve_target_object(self.game_state, context, effect.get("target", "target_permanent"))
+        if not target:
+            return {"type": "enter_copy", "status": "no_target"}
+        context.choices["enter_copy_of"] = target.id
+        return {"type": "enter_copy", "target_id": target.id}
+
+    def _handle_enter_choice(self, effect: Dict[str, Any], context: ResolveContext) -> Dict[str, Any]:
+        choice_type = effect.get("choice")
+        if not choice_type:
+            return {"type": "enter_choice", "status": "no_choice"}
+        choice_value = effect.get("choiceValue")
+        enter_choices = context.choices.get("enter_choices")
+        if not isinstance(enter_choices, dict):
+            enter_choices = {}
+            context.choices["enter_choices"] = enter_choices
+        enter_choices[choice_type] = choice_value
+        return {"type": "enter_choice", "choice": choice_type, "value": choice_value}
 
     def _handle_counter_spell(self, effect: Dict[str, Any], context: ResolveContext) -> Dict[str, Any]:
         target_spell = resolve_object_id(context, "target", None)

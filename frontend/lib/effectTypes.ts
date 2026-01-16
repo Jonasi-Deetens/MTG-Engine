@@ -14,6 +14,7 @@ export interface EffectTypeOption {
   requiresZone?: boolean; // For search effects
   requiresDuration?: boolean; // For temporary effects
   requiresChoice?: boolean; // For effects requiring player choice
+  requiresChoiceValue?: boolean; // For fixed choice values
   requiresProtectionType?: boolean; // For protection effects
   requiresKeyword?: boolean; // For gain keyword effects
   requiresPowerToughness?: boolean; // For change power/toughness effects
@@ -30,6 +31,7 @@ export interface EffectTypeOption {
   requiresToZone?: boolean;
   requiresReplacementZone?: boolean;
   requiresUses?: boolean;
+  requiresCopyDuration?: boolean;
 }
 
 export const EFFECT_TYPE_OPTIONS: EffectTypeOption[] = [
@@ -60,6 +62,9 @@ export const EFFECT_TYPE_OPTIONS: EffectTypeOption[] = [
   { value: 'look_at', label: 'Look At', requiresAmount: true, requiresZone: true, requiresPosition: true },
   { value: 'reveal', label: 'Reveal', requiresTarget: true },
   { value: 'copy_spell', label: 'Copy Spell', requiresTarget: true },
+  { value: 'enter_copy', label: 'As Enters Copy Target', requiresTarget: true },
+  { value: 'enter_choice', label: 'As Enters Choose', requiresChoice: true, requiresChoiceValue: true },
+  { value: 'copy_permanent', label: 'Copy Permanent (this becomes a copy)', requiresTarget: true, requiresDuration: true },
   { value: 'counter_spell', label: 'Counter Spell', requiresTarget: true },
   { value: 'regenerate', label: 'Regenerate', requiresTarget: true },
   { value: 'phase_out', label: 'Phase Out', requiresTarget: true },
@@ -490,6 +495,20 @@ export function formatEffect(effect: any): string {
   if (effect.type === 'copy_spell') {
     const target = effect.target || 'target spell';
     return `Copy ${target}${maxTargetsText}`;
+  }
+  if (effect.type === 'enter_copy') {
+    const target = effect.target || 'target permanent';
+    return `As this enters, it becomes a copy of ${target}${maxTargetsText}`;
+  }
+  if (effect.type === 'enter_choice') {
+    const choice = effect.choice || 'choice';
+    const value = effect.choiceValue ? ` (${effect.choiceValue})` : '';
+    return `As this enters, choose ${choice}${value}`;
+  }
+  if (effect.type === 'copy_permanent') {
+    const target = effect.target || 'target permanent';
+    const duration = formatDuration(effect.duration);
+    return `This becomes a copy of ${target}${duration ? ` ${duration}` : ''}${maxTargetsText}`;
   }
   if (effect.type === 'counter_spell') {
     const target = effect.target || 'target spell';

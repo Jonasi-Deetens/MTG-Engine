@@ -54,6 +54,8 @@ export interface ActivatedAbility {
   id: string;
   cost: string; // e.g., "{T}", "{1}{R}", "Sacrifice a creature"
   effect: Effect;
+  timing?: string;
+  limit?: { scope: string; max: number };
 }
 
 export interface StaticAbility {
@@ -104,6 +106,7 @@ export interface Effect {
   // New fields for additional effect types
   duration?: string; // For temporary effects (until_end_of_turn, permanent, etc.)
   choice?: string; // For effects requiring player choice (color, creature_type, etc.)
+  choiceValue?: string; // Optional fixed choice value
   protectionType?: string; // For protection effects
   keyword?: string; // For gain keyword effects
   powerChange?: number; // For change power/toughness effects
@@ -389,7 +392,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
       nodes.push({
         id: activatedId,
         type: 'ACTIVATED',
-        data: { cost: ability.cost, effect: ability.effect },
+        data: { cost: ability.cost, timing: ability.timing, limit: ability.limit, effect: ability.effect },
       });
     });
     
@@ -588,6 +591,8 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
         activatedAbilities.push({
           id: abilityId,
           cost,
+          timing: activatedNode.data.timing,
+          limit: activatedNode.data.limit,
           effect,
         });
         
