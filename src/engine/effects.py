@@ -46,6 +46,40 @@ def _resolve_target_players(context: ResolveContext, fallback_controller_id: Opt
     return players
 
 
+def _resolve_enter_choice_value(game_state: GameState, context: ResolveContext, choice_key: str) -> Optional[str]:
+    choices = context.choices or {}
+    enter_choices = choices.get("enter_choices") if isinstance(choices, dict) else None
+    if isinstance(enter_choices, dict):
+        value = enter_choices.get(choice_key)
+        if value:
+            return value
+    source_id = context.source_id
+    if source_id:
+        obj = game_state.objects.get(source_id)
+        if obj and getattr(obj, "etb_choices", None):
+            value = obj.etb_choices.get(choice_key)
+            if value:
+                return value
+    return None
+
+
+def _normalize_card_type(value: str) -> str:
+    lowered = value.strip().lower()
+    mapping = {
+        "creature": "Creature",
+        "artifact": "Artifact",
+        "enchantment": "Enchantment",
+        "land": "Land",
+        "planeswalker": "Planeswalker",
+        "instant": "Instant",
+        "sorcery": "Sorcery",
+        "battle": "Battle",
+        "tribal": "Tribal",
+        "legendary": "Legendary",
+    }
+    return mapping.get(lowered, value)
+
+
 class EffectResolver:
     def __init__(self, game_state: GameState):
         self.game_state = game_state
@@ -261,8 +295,20 @@ class EffectResolver:
     def _handle_protection(self, effect: Dict[str, Any], context: ResolveContext) -> Dict[str, Any]:
         results: List[Dict[str, Any]] = []
         protection_type = effect.get("protectionType", "any")
+        if protection_type == "chosen_color":
+            chosen = _resolve_enter_choice_value(self.game_state, context, "color")
+            if not chosen:
+                return {"type": "protection", "status": "missing_choice"}
+            protection_type = chosen
+        duration = effect.get("duration")
         for obj in _resolve_target_objects(self.game_state, context, effect.get("target", "target_permanent")):
             obj.protections.add(protection_type)
+            if duration and duration != "permanent":
+                self._add_temporary_effect(obj, {
+                    "type": "add_protection",
+                    "protection": protection_type,
+                    "duration": duration,
+                })
             results.append({"object_id": obj.id, "protection": protection_type})
         if not results:
             return {"type": "protection", "status": "no_target"}
@@ -493,11 +539,20 @@ class EffectResolver:
         types = effect.get("types")
         if not isinstance(types, list):
             return {"type": "set_types", "status": "invalid_types"}
+        resolved_types = []
+        for type_name in types:
+            if type_name == "chosen_card_type":
+                chosen = _resolve_enter_choice_value(self.game_state, context, "card_type")
+                if not chosen:
+                    return {"type": "set_types", "status": "missing_choice"}
+                resolved_types.append(_normalize_card_type(chosen))
+            else:
+                resolved_types.append(type_name)
         results: List[Dict[str, Any]] = []
         for obj in _resolve_target_objects(self.game_state, context, effect.get("target", "target_permanent")):
             self._add_temporary_effect(obj, {
                 "type": "set_types",
-                "types": types,
+                "types": resolved_types,
                 "duration": effect.get("duration"),
             })
             results.append({"object_id": obj.id})
@@ -509,6 +564,11 @@ class EffectResolver:
         type_name = effect.get("typeName")
         if not type_name:
             return {"type": "add_type", "status": "invalid_type"}
+        if type_name == "chosen_card_type":
+            chosen = _resolve_enter_choice_value(self.game_state, context, "card_type")
+            if not chosen:
+                return {"type": "add_type", "status": "missing_choice"}
+            type_name = _normalize_card_type(chosen)
         results: List[Dict[str, Any]] = []
         for obj in _resolve_target_objects(self.game_state, context, effect.get("target", "target_permanent")):
             self._add_temporary_effect(obj, {
@@ -525,6 +585,11 @@ class EffectResolver:
         type_name = effect.get("typeName")
         if not type_name:
             return {"type": "remove_type", "status": "invalid_type"}
+        if type_name == "chosen_card_type":
+            chosen = _resolve_enter_choice_value(self.game_state, context, "card_type")
+            if not chosen:
+                return {"type": "remove_type", "status": "missing_choice"}
+            type_name = _normalize_card_type(chosen)
         results: List[Dict[str, Any]] = []
         for obj in _resolve_target_objects(self.game_state, context, effect.get("target", "target_permanent")):
             self._add_temporary_effect(obj, {
@@ -541,11 +606,20 @@ class EffectResolver:
         colors = effect.get("colors")
         if not isinstance(colors, list):
             return {"type": "set_colors", "status": "invalid_colors"}
+        resolved_colors = []
+        for color in colors:
+            if color == "chosen_color":
+                chosen = _resolve_enter_choice_value(self.game_state, context, "color")
+                if not chosen:
+                    return {"type": "set_colors", "status": "missing_choice"}
+                resolved_colors.append(chosen)
+            else:
+                resolved_colors.append(color)
         results: List[Dict[str, Any]] = []
         for obj in _resolve_target_objects(self.game_state, context, effect.get("target", "target_permanent")):
             self._add_temporary_effect(obj, {
                 "type": "set_colors",
-                "colors": colors,
+                "colors": resolved_colors,
                 "duration": effect.get("duration"),
             })
             results.append({"object_id": obj.id})
@@ -557,6 +631,11 @@ class EffectResolver:
         color = effect.get("color")
         if not color:
             return {"type": "add_color", "status": "invalid_color"}
+        if color == "chosen_color":
+            chosen = _resolve_enter_choice_value(self.game_state, context, "color")
+            if not chosen:
+                return {"type": "add_color", "status": "missing_choice"}
+            color = chosen
         results: List[Dict[str, Any]] = []
         for obj in _resolve_target_objects(self.game_state, context, effect.get("target", "target_permanent")):
             self._add_temporary_effect(obj, {
@@ -573,6 +652,11 @@ class EffectResolver:
         color = effect.get("color")
         if not color:
             return {"type": "remove_color", "status": "invalid_color"}
+        if color == "chosen_color":
+            chosen = _resolve_enter_choice_value(self.game_state, context, "color")
+            if not chosen:
+                return {"type": "remove_color", "status": "missing_choice"}
+            color = chosen
         results: List[Dict[str, Any]] = []
         for obj in _resolve_target_objects(self.game_state, context, effect.get("target", "target_permanent")):
             self._add_temporary_effect(obj, {
@@ -585,30 +669,54 @@ class EffectResolver:
             return {"type": "remove_color", "status": "no_target"}
         return {"type": "remove_color", "results": results}
     def _handle_prevent_damage(self, effect: Dict[str, Any], context: ResolveContext) -> Dict[str, Any]:
-        obj = _resolve_target_object(self.game_state, context, effect.get("target", "target_permanent"))
         amount = int(effect.get("amount", 1))
-        if not obj:
+        obj = _resolve_target_object(self.game_state, context, effect.get("target", "target_permanent"))
+        if obj:
+            self._add_temporary_effect(obj, {
+                "prevent_damage": amount,
+                "duration": "until_end_of_turn",
+                "controller_id": context.controller_id,
+                "effect_id": self.game_state.next_replacement_effect_id(),
+            })
+            return {"type": "prevent_damage", "object_id": obj.id, "amount": amount}
+        player_id = resolve_player_id(context, context.controller_id)
+        if player_id is None:
             return {"type": "prevent_damage", "status": "no_target"}
-        self._add_temporary_effect(obj, {
-            "prevent_damage": amount,
-            "duration": "until_end_of_turn",
-            "controller_id": context.controller_id,
+        self.game_state.replacement_effects.append({
+            "type": "prevent_damage",
+            "effect_id": self.game_state.next_replacement_effect_id(),
+            "timestamp_order": self.game_state.effect_timestamp_counter + 1,
+            "player_id": player_id,
+            "amount": amount,
         })
-        return {"type": "prevent_damage", "object_id": obj.id, "amount": amount}
+        self.game_state.effect_timestamp_counter += 1
+        return {"type": "prevent_damage", "player_id": player_id, "amount": amount}
 
     def _handle_redirect_damage(self, effect: Dict[str, Any], context: ResolveContext) -> Dict[str, Any]:
         source_id = resolve_object_id(context, "sourceTarget", None)
         redirect_id = resolve_object_id(context, "redirectTarget", None)
+        redirect_player_id = resolve_player_id(context, None) if not redirect_id else None
         amount = int(effect.get("amount", 1))
-        if not source_id or not redirect_id:
+        if not source_id or (not redirect_id and redirect_player_id is None):
             return {"type": "redirect_damage", "status": "no_target"}
-        self.game_state.replacement_effects.append(
-            {"type": "redirect_damage", "source": source_id, "redirect": redirect_id, "amount": amount}
-        )
+        entry = {
+            "type": "redirect_damage",
+            "effect_id": self.game_state.next_replacement_effect_id(),
+            "timestamp_order": self.game_state.effect_timestamp_counter + 1,
+            "source": source_id,
+            "amount": amount,
+        }
+        if redirect_id:
+            entry["redirect"] = redirect_id
+        else:
+            entry["redirect_player_id"] = redirect_player_id
+        self.game_state.replacement_effects.append(entry)
+        self.game_state.effect_timestamp_counter += 1
+        redirect_label = redirect_id if redirect_id else f"player:{redirect_player_id}"
         self.game_state.debug_log.append(
-            f"Redirect {amount} damage from {source_id} to {redirect_id}"
+            f"Redirect {amount} damage from {source_id} to {redirect_label}"
         )
-        return {"type": "redirect_damage", "source": source_id, "redirect": redirect_id, "amount": amount}
+        return {"type": "redirect_damage", "source": source_id, "redirect": redirect_label, "amount": amount}
 
     def _handle_replace_zone_change(self, effect: Dict[str, Any], context: ResolveContext) -> Dict[str, Any]:
         target = _resolve_target_object(self.game_state, context, effect.get("target", "target_permanent"))

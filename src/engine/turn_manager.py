@@ -292,20 +292,28 @@ class TurnManager:
                 if duration == "until_end_of_combat" and step == Step.END_COMBAT:
                     if effect.get("type") == "set_controller" and effect.get("original_controller") is not None:
                         obj.controller_id = effect.get("original_controller")
+                    if effect.get("type") == "add_protection" and effect.get("protection"):
+                        obj.protections.discard(effect.get("protection"))
                     continue
                 if duration == "until_end_of_turn" and step == Step.CLEANUP:
                     if effect.get("type") == "set_controller" and effect.get("original_controller") is not None:
                         obj.controller_id = effect.get("original_controller")
+                    if effect.get("type") == "add_protection" and effect.get("protection"):
+                        obj.protections.discard(effect.get("protection"))
                     continue
                 if duration == "until_end_of_your_next_turn" and step == Step.CLEANUP:
                     if controller_id == active_player_id:
                         if effect.get("type") == "set_controller" and effect.get("original_controller") is not None:
                             obj.controller_id = effect.get("original_controller")
+                        if effect.get("type") == "add_protection" and effect.get("protection"):
+                            obj.protections.discard(effect.get("protection"))
                         continue
                 if duration == "until_your_next_upkeep" and step == Step.UPKEEP:
                     if controller_id == active_player_id:
                         if effect.get("type") == "set_controller" and effect.get("original_controller") is not None:
                             obj.controller_id = effect.get("original_controller")
+                        if effect.get("type") == "add_protection" and effect.get("protection"):
+                            obj.protections.discard(effect.get("protection"))
                         continue
                 if duration is None and "prevent_damage" in effect and step == Step.CLEANUP:
                     continue

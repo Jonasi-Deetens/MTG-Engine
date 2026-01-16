@@ -119,6 +119,8 @@ def _build_game_state(snapshot: GameStateSnapshot) -> GameState:
             defending_player_id=snapshot.turn.combat_state.defending_player_id,
             attackers=list(snapshot.turn.combat_state.attackers),
             blockers=dict(snapshot.turn.combat_state.blockers),
+            first_strike_resolved=getattr(snapshot.turn.combat_state, "first_strike_resolved", False),
+            combat_damage_resolved=getattr(snapshot.turn.combat_state, "combat_damage_resolved", False),
         )
 
     try:
@@ -151,6 +153,8 @@ def _serialize_game_state(game_state: GameState) -> GameStateSnapshot:
             "defending_player_id": game_state.turn.combat_state.defending_player_id,
             "attackers": list(game_state.turn.combat_state.attackers),
             "blockers": dict(game_state.turn.combat_state.blockers),
+            "first_strike_resolved": game_state.turn.combat_state.first_strike_resolved,
+            "combat_damage_resolved": game_state.turn.combat_state.combat_damage_resolved,
         }
 
     return GameStateSnapshot(
@@ -485,6 +489,7 @@ def execute_engine_action(
                 payload.player_id,
                 payload.object_id,
                 payload.ability_index or 0,
+                payload.context.model_dump() if payload.context else None,
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
@@ -538,6 +543,7 @@ def execute_engine_action(
                 turn_manager,
                 payload.player_id,
                 payload.damage_assignments or None,
+                payload.combat_damage_pass,
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))

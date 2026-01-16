@@ -19,6 +19,48 @@ def _effect_sort_key(effect: Dict) -> Tuple[int, int]:
     )
 
 
+def _sort_effects_with_dependencies(effects: List[Dict]) -> List[Dict]:
+    if not effects:
+        return effects
+    ordered = list(effects)
+    keys: List[str] = []
+    key_map: Dict[str, int] = {}
+    for idx, effect in enumerate(ordered):
+        key = (
+            effect.get("effect_id")
+            or effect.get("id")
+            or effect.get("key")
+            or f"idx:{idx}"
+        )
+        key = str(key)
+        keys.append(key)
+        key_map[key] = idx
+    deps: Dict[str, set[str]] = {}
+    for idx, effect in enumerate(ordered):
+        raw = effect.get("depends_on") or effect.get("dependsOn") or effect.get("dependencies") or []
+        dep_list = raw if isinstance(raw, list) else [raw]
+        dep_keys = {str(dep) for dep in dep_list if str(dep) in key_map}
+        deps[keys[idx]] = dep_keys
+    indegree = {key: len(dep_set) for key, dep_set in deps.items()}
+    adjacency: Dict[str, set[str]] = {key: set() for key in deps}
+    for key, dep_set in deps.items():
+        for dep in dep_set:
+            adjacency[dep].add(key)
+    base_order = sorted(keys, key=lambda k: _effect_sort_key(ordered[key_map[k]]))
+    queue = [key for key in base_order if indegree.get(key, 0) == 0]
+    result: List[str] = []
+    while queue:
+        current = queue.pop(0)
+        result.append(current)
+        for neighbor in sorted(adjacency.get(current, []), key=lambda k: base_order.index(k)):
+            indegree[neighbor] -= 1
+            if indegree[neighbor] == 0:
+                queue.append(neighbor)
+    if len(result) != len(keys):
+        return sorted(ordered, key=_effect_sort_key)
+    return [ordered[key_map[key]] for key in result]
+
+
 def _object_order(obj: GameObject) -> int:
     try:
         return int(obj.id.split("_", 1)[1])
@@ -62,21 +104,63 @@ def _build_static_effect(effect: Dict, source: GameObject, game_state: GameState
     effect_type = effect.get("type")
     if effect_type == "set_types":
         types = effect.get("types")
-        return _stamp_static_effect({"type": "set_types", "types": types}, source, game_state) if isinstance(types, list) else None
+        if not isinstance(types, list):
+            return None
+        resolved_types = []
+        for type_name in types:
+            if type_name == "chosen_card_type":
+                chosen = (source.etb_choices or {}).get("card_type")
+                if not chosen:
+                    return None
+                resolved_types.append(chosen[:1].upper() + chosen[1:].lower())
+            else:
+                resolved_types.append(type_name)
+        return _stamp_static_effect({"type": "set_types", "types": resolved_types}, source, game_state)
     if effect_type == "add_type":
         type_name = effect.get("typeName")
+        if type_name == "chosen_card_type":
+            chosen = (source.etb_choices or {}).get("card_type")
+            if not chosen:
+                return None
+            type_name = chosen[:1].upper() + chosen[1:].lower()
         return _stamp_static_effect({"type": "add_type", "type": type_name}, source, game_state) if type_name else None
     if effect_type == "remove_type":
         type_name = effect.get("typeName")
+        if type_name == "chosen_card_type":
+            chosen = (source.etb_choices or {}).get("card_type")
+            if not chosen:
+                return None
+            type_name = chosen[:1].upper() + chosen[1:].lower()
         return _stamp_static_effect({"type": "remove_type", "type": type_name}, source, game_state) if type_name else None
     if effect_type == "set_colors":
         colors = effect.get("colors")
-        return _stamp_static_effect({"type": "set_colors", "colors": colors}, source, game_state) if isinstance(colors, list) else None
+        if not isinstance(colors, list):
+            return None
+        resolved_colors = []
+        for color in colors:
+            if color == "chosen_color":
+                chosen = (source.etb_choices or {}).get("color")
+                if not chosen:
+                    return None
+                resolved_colors.append(chosen)
+            else:
+                resolved_colors.append(color)
+        return _stamp_static_effect({"type": "set_colors", "colors": resolved_colors}, source, game_state)
     if effect_type == "add_color":
         color = effect.get("color")
+        if color == "chosen_color":
+            chosen = (source.etb_choices or {}).get("color")
+            if not chosen:
+                return None
+            color = chosen
         return _stamp_static_effect({"type": "add_color", "color": color}, source, game_state) if color else None
     if effect_type == "remove_color":
         color = effect.get("color")
+        if color == "chosen_color":
+            chosen = (source.etb_choices or {}).get("color")
+            if not chosen:
+                return None
+            color = chosen
         return _stamp_static_effect({"type": "remove_color", "color": color}, source, game_state) if color else None
     if effect_type == "gain_keyword":
         keyword = effect.get("keyword")
@@ -188,6 +272,14 @@ def _reset_layer_7_pt(obj) -> None:
         obj.power = obj.base_power
     if obj.base_toughness is not None:
         obj.toughness = obj.base_toughness
+
+
+def _pt_baseline_snapshot(obj: GameObject) -> Tuple[Optional[int], Optional[int]]:
+    return (obj.power, obj.toughness)
+
+
+def _pt_baseline_restore(obj: GameObject, snapshot: Tuple[Optional[int], Optional[int]]) -> None:
+    obj.power, obj.toughness = snapshot
 
 
 def _controller_signature(obj: GameObject) -> Tuple[str, int]:
@@ -353,9 +445,15 @@ def apply_continuous_effects(game_state: GameState) -> None:
         reset_fn=None,
         pre_apply_fn=None,
         include_static: bool = True,
+        dependency_sort: bool = False,
+        baseline_snapshot_fn=None,
+        baseline_restore_fn=None,
     ) -> None:
         previous_signature = None
         max_iterations = 5
+        baseline = None
+        if baseline_snapshot_fn and baseline_restore_fn:
+            baseline = {obj.id: baseline_snapshot_fn(obj) for obj in battlefield}
         for _ in range(max_iterations):
             static_effects = _gather_static_layer_effects(game_state, effect_types) if include_static else {}
             for obj in battlefield:
@@ -365,8 +463,12 @@ def apply_continuous_effects(game_state: GameState) -> None:
                 else:
                     obj.temporary_effects = base_effects
                 obj.temporary_effects = sorted(obj.temporary_effects, key=_effect_sort_key)
+                if dependency_sort:
+                    obj.temporary_effects = _sort_effects_with_dependencies(obj.temporary_effects)
                 if reset_fn:
                     reset_fn(obj)
+                if baseline and baseline_restore_fn:
+                    baseline_restore_fn(obj, baseline[obj.id])
                 if pre_apply_fn:
                     pre_apply_fn(obj)
                 apply_fn(obj)
@@ -431,6 +533,7 @@ def apply_continuous_effects(game_state: GameState) -> None:
         recompute_until_stable=True,
         signature_fn=_keyword_signature,
         reset_fn=_reset_layer_6_abilities,
+        dependency_sort=True,
     )
     apply_layer(
         {"cda_power_toughness"},
@@ -446,13 +549,16 @@ def apply_continuous_effects(game_state: GameState) -> None:
         recompute_until_stable=True,
         signature_fn=_pt_signature,
         reset_fn=_reset_layer_7_pt,
+        dependency_sort=True,
     )
     apply_layer(
         {"change_power_toughness"},
         _apply_layer_7c_modify_pt,
         recompute_until_stable=True,
         signature_fn=_pt_signature,
-        reset_fn=_reset_layer_7_pt,
+        dependency_sort=True,
+        baseline_snapshot_fn=_pt_baseline_snapshot,
+        baseline_restore_fn=_pt_baseline_restore,
     )
     apply_layer(set(), _apply_layer_7d_counters)
 

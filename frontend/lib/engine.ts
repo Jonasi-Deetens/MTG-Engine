@@ -81,6 +81,8 @@ export interface EngineCombatStateSnapshot {
   defending_player_id?: number | null;
   attackers: string[];
   blockers: Record<string, string[]>;
+  first_strike_resolved?: boolean;
+  combat_damage_resolved?: boolean;
 }
 
 export interface EngineStackItemSnapshot {
@@ -136,6 +138,7 @@ export interface EngineActionRequest {
   blockers?: Record<string, string[]>;
   defending_player_id?: number | null;
   damage_assignments?: Record<string, Record<string, number>>;
+  combat_damage_pass?: 'first_strike' | 'regular';
   mana_payment?: Record<string, number>;
   mana_payment_detail?: {
     hybrid_choices?: string[];

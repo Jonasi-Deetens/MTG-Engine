@@ -555,37 +555,45 @@ export function formatEffect(effect: any): string {
   }
   if (effect.type === 'set_types') {
     const target = effect.target || 'target permanent';
-    const types = Array.isArray(effect.types) ? effect.types.join(', ') : 'types';
+    const types = Array.isArray(effect.types)
+      ? effect.types
+          .map((type: string) => (type === 'chosen_card_type' ? 'chosen card type' : type))
+          .join(', ')
+      : 'types';
     const duration = formatDuration(effect.duration);
     return `Target ${target} becomes ${types}${duration ? ` ${duration}` : ''}${maxTargetsText}`;
   }
   if (effect.type === 'add_type') {
     const target = effect.target || 'target permanent';
-    const typeName = effect.typeName || 'type';
+    const typeName = effect.typeName === 'chosen_card_type' ? 'chosen card type' : effect.typeName || 'type';
     const duration = formatDuration(effect.duration);
     return `Target ${target} gains ${typeName}${duration ? ` ${duration}` : ''}${maxTargetsText}`;
   }
   if (effect.type === 'remove_type') {
     const target = effect.target || 'target permanent';
-    const typeName = effect.typeName || 'type';
+    const typeName = effect.typeName === 'chosen_card_type' ? 'chosen card type' : effect.typeName || 'type';
     const duration = formatDuration(effect.duration);
     return `Target ${target} loses ${typeName}${duration ? ` ${duration}` : ''}${maxTargetsText}`;
   }
   if (effect.type === 'set_colors') {
     const target = effect.target || 'target permanent';
-    const colors = Array.isArray(effect.colors) ? effect.colors.join(', ') : 'colors';
+    const colors = Array.isArray(effect.colors)
+      ? effect.colors
+          .map((color: string) => (color === 'chosen_color' ? 'chosen color' : color))
+          .join(', ')
+      : 'colors';
     const duration = formatDuration(effect.duration);
     return `Target ${target} becomes ${colors}${duration ? ` ${duration}` : ''}${maxTargetsText}`;
   }
   if (effect.type === 'add_color') {
     const target = effect.target || 'target permanent';
-    const color = effect.color || 'color';
+    const color = effect.color === 'chosen_color' ? 'chosen color' : effect.color || 'color';
     const duration = formatDuration(effect.duration);
     return `Target ${target} gains ${color}${duration ? ` ${duration}` : ''}${maxTargetsText}`;
   }
   if (effect.type === 'remove_color') {
     const target = effect.target || 'target permanent';
-    const color = effect.color || 'color';
+    const color = effect.color === 'chosen_color' ? 'chosen color' : effect.color || 'color';
     const duration = formatDuration(effect.duration);
     return `Target ${target} loses ${color}${duration ? ` ${duration}` : ''}${maxTargetsText}`;
   }

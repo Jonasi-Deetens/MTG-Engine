@@ -191,7 +191,7 @@ def validate_graph(graph: AbilityGraph, card_colors: Optional[List[str]] = None)
             ))
 
     # Validate type/color inputs for new layer effects
-    valid_colors = {"W", "U", "B", "R", "G"}
+    valid_colors = {"W", "U", "B", "R", "G", "chosen_color"}
     valid_types = {
         "Creature", "Artifact", "Enchantment", "Land", "Planeswalker",
         "Instant", "Sorcery", "Battle", "Tribal", "Legendary",
@@ -228,7 +228,7 @@ def validate_graph(graph: AbilityGraph, card_colors: Optional[List[str]] = None)
                     nodeId=node.id
                 ))
                 continue
-            invalid = [t for t in types if t not in valid_types]
+            invalid = [t for t in types if t not in valid_types and t != "chosen_card_type"]
             if invalid:
                 errors.append(ValidationError(
                     type="error",

@@ -8,6 +8,7 @@ import { PlayerZone } from '@/components/engine/PlayerZone';
 import { StackView } from '@/components/engine/StackView';
 import { TurnStatusCard } from '@/components/engine/TurnStatusCard';
 import { ActionsPanel } from '@/components/engine/ActionsPanel';
+import { CombatDamagePanel } from '@/components/engine/CombatDamagePanel';
 import { ReplacementChoicePanel } from '@/components/engine/ReplacementChoicePanel';
 import { useAbilityGraphs } from '@/hooks/useAbilityGraphs';
 import { useTargeting } from '@/hooks/useTargeting';
@@ -16,6 +17,14 @@ import { useCombatSelection } from '@/hooks/useCombatSelection';
 import { useEngineActions } from '@/hooks/useEngineActions';
 import { useGameSetup } from '@/hooks/useGameSetup';
 import { useTurnReset } from '@/hooks/useTurnReset';
+import { useReplacementConflicts } from '@/hooks/useReplacementConflicts';
+import { useCastContext } from '@/hooks/useCastContext';
+import { useTurnState } from '@/hooks/useTurnState';
+import {
+  buildDefaultCombatAssignments,
+  hasFirstStrikeCombat as computeHasFirstStrikeCombat,
+  isEligibleForCombatPass,
+} from '@/lib/combatDamage';
 import {
   buildEnterChoiceConfig,
   buildEnterChoiceDefaults,
@@ -33,6 +42,8 @@ export default function PlayPage() {
   const [selectedBattlefieldId, setSelectedBattlefieldId] = useState<string | null>(null);
   const [replacementChoices, setReplacementChoices] = useState<Record<string, string>>({});
   const [enterChoices, setEnterChoices] = useState<Record<string, string>>({});
+  const [highlightedReplacementKey, setHighlightedReplacementKey] = useState<string | null>(null);
+  const [combatDamageAssignments, setCombatDamageAssignments] = useState<Record<string, Record<string, number>>>({});
   const { abilityGraphs, loadAbilityGraphForObject } = useAbilityGraphs({
     gameState,
     cardMap,
@@ -63,61 +74,49 @@ export default function PlayPage() {
   } = useCombatSelection({ gameState });
 
 
-  const replacementConflicts = useMemo(() => {
-    if (!gameState) return [];
-    const globalEffects = (gameState.replacement_effects ?? []).filter(
-      (effect) => effect?.type === 'replace_zone_change'
-    );
-    const zoneLabels: Record<string, string> = {
-      battlefield: 'Battlefield',
-      graveyard: 'Graveyard',
-      hand: 'Hand',
-      library: 'Library',
-      exile: 'Exile',
-      command: 'Command',
-      stack: 'Stack',
-    };
-    const getZoneLabel = (zone?: string) => (zone ? zoneLabels[zone] ?? zone : 'Any');
-    return gameState.objects
-      .map((obj) => {
-        const localEffects = (obj as any).temporary_effects || [];
-        const all = [...localEffects, ...globalEffects].filter((effect) => {
-          if (effect?.type !== 'replace_zone_change') return false;
-          if (effect.object_id && effect.object_id !== obj.id) return false;
-          if (!effect.from_zone || !effect.to_zone) return false;
-          return true;
-        });
-        if (all.length < 2) return null;
-        const byKey = new Map<string, { key: string; fromZone: string; toZone: string; options: any[] }>();
-        all.forEach((effect) => {
-          const fromZone = effect.from_zone;
-          const toZone = effect.to_zone;
-          const key = `${obj.id}:${fromZone}:${toZone}`;
-        const entry = byKey.get(key) || { key, fromZone, toZone, options: [] as any[] };
-          entry.options.push(effect);
-          byKey.set(key, entry);
-        });
-        return Array.from(byKey.values()).map((entry) => ({
-          obj,
-          key: entry.key,
-          fromZone: entry.fromZone,
-          toZone: entry.toZone,
-          fromLabel: getZoneLabel(entry.fromZone),
-          toLabel: getZoneLabel(entry.toZone),
-          options: entry.options,
-        }));
-      })
-      .flat()
-      .filter(Boolean) as Array<{
-        obj: any;
-        key: string;
-        fromZone: string;
-        toZone: string;
-        fromLabel: string;
-        toLabel: string;
-        options: Array<Record<string, any>>;
-      }>;
-  }, [gameState]);
+  const replacementConflicts = useReplacementConflicts(gameState);
+  const hasUnresolvedDamageReplacements = useMemo(
+    () =>
+      replacementConflicts.some(
+        (entry) => entry.key.startsWith('damage:event:') && !replacementChoices[entry.key]
+      ),
+    [replacementConflicts, replacementChoices]
+  );
+  const unresolvedDamageReplacements = useMemo(
+    () =>
+      replacementConflicts.filter(
+        (entry) => entry.key.startsWith('damage:event:') && !replacementChoices[entry.key]
+      ),
+    [replacementConflicts, replacementChoices]
+  );
+
+  const hasFirstStrikeCombat = useMemo(() => computeHasFirstStrikeCombat(gameState), [gameState]);
+  const combatDamagePass = useMemo(() => {
+    if (!hasFirstStrikeCombat) return null;
+    const resolved = gameState?.turn?.combat_state?.first_strike_resolved;
+    return resolved ? 'regular' : 'first_strike';
+  }, [gameState, hasFirstStrikeCombat]);
+  const hasManualCombatChoices = useMemo(() => {
+    if (!gameState?.turn?.combat_state) return false;
+    const objectMap = new Map(gameState.objects.map((obj) => [obj.id, obj]));
+    return gameState.turn.combat_state.attackers.some((attackerId) => {
+      const attacker = objectMap.get(attackerId);
+      if (!isEligibleForCombatPass(attacker?.keywords, combatDamagePass ?? undefined)) return false;
+      const blockers = gameState.turn.combat_state?.blockers?.[attackerId] ?? [];
+      if (blockers.length > 1) return true;
+      if (blockers.length > 0 && attacker?.keywords?.includes('Trample')) return true;
+      return false;
+    });
+  }, [combatDamagePass, gameState]);
+  useEffect(() => {
+    if (unresolvedDamageReplacements.length === 0) {
+      setHighlightedReplacementKey(null);
+      return;
+    }
+    if (!highlightedReplacementKey || !unresolvedDamageReplacements.some((entry) => entry.key === highlightedReplacementKey)) {
+      setHighlightedReplacementKey(unresolvedDamageReplacements[0].key);
+    }
+  }, [highlightedReplacementKey, unresolvedDamageReplacements]);
 
 
 
@@ -130,11 +129,17 @@ export default function PlayPage() {
     setError,
   });
 
-  const currentPriority =
-    gameState?.turn.priority_current_index ??
-    priorityPlayer ??
-    gameState?.turn.active_player_index ??
-    0;
+  const {
+    currentPriority,
+    activePlayerIndex,
+    isMainPhase,
+    isDeclareAttackers,
+    isDeclareBlockers,
+    isCombatDamage,
+    combatState,
+    isPriorityActivePlayer,
+    isPriorityDefender,
+  } = useTurnState({ gameState, priorityPlayer });
   const selectedGraph = selectedHandId ? abilityGraphs[cardMap[selectedHandId]?.card_id ?? ''] : undefined;
   const {
     targetHints,
@@ -165,16 +170,7 @@ export default function PlayPage() {
     setActiveAttackerId,
     setSelectedDefenderId,
   });
-  const activePlayerIndex = gameState?.turn.active_player_index ?? 0;
-  const currentStep = gameState?.turn.step ?? '';
-  const isMainPhase = currentStep === 'precombat_main' || currentStep === 'postcombat_main';
-  const isDeclareAttackers = currentStep === 'declare_attackers';
-  const isDeclareBlockers = currentStep === 'declare_blockers';
-  const isCombatDamage = currentStep === 'combat_damage';
-  const combatState = gameState?.turn.combat_state;
   const defendingPlayerId = combatState?.defending_player_id ?? selectedDefenderId;
-  const isPriorityActivePlayer = currentPriority === activePlayerIndex;
-  const isPriorityDefender = defendingPlayerId !== null && currentPriority === defendingPlayerId;
 
   useEffect(() => {
     if (!gameState) return;
@@ -211,24 +207,25 @@ export default function PlayPage() {
     setEnterChoices((prev) => buildEnterChoiceDefaults(enterChoiceConfig, prev));
   }, [selectedHandId, enterChoiceConfig]);
 
-  const buildCastContext = () => ({
-    controller_id: currentPriority,
-    source_id: selectedHandId ?? undefined,
-    targets: {
-      ...(selectedTargetObjectIds.length > 0 ? { target: selectedTargetObjectIds[0] } : {}),
-      ...(selectedTargetObjectIds.length > 0
-        ? { targets: selectedTargetObjectIds.slice(0, targetHints.maxObjectTargets ?? selectedTargetObjectIds.length) }
-        : {}),
-      ...(selectedTargetPlayerIds.length > 0 ? { target_player: selectedTargetPlayerIds[0] } : {}),
-      ...(selectedTargetPlayerIds.length > 0
-        ? { target_players: selectedTargetPlayerIds.slice(0, targetHints.maxPlayerTargets ?? selectedTargetPlayerIds.length) }
-        : {}),
-      ...(selectedTargetObjectIds.length > 0 ? { spell_target: selectedTargetObjectIds[0] } : {}),
-      ...(selectedTargetObjectIds.length > 0
-        ? { spell_targets: selectedTargetObjectIds.slice(0, targetHints.maxObjectTargets ?? selectedTargetObjectIds.length) }
-        : {}),
-    },
-    ...(Object.keys(enterChoices).length > 0 ? { choices: { enter_choices: enterChoices } } : {}),
+  useEffect(() => {
+    if (!gameState) return;
+    if (gameState.turn.step === 'combat_damage') {
+      setCombatDamageAssignments(buildDefaultCombatAssignments(gameState, combatDamagePass ?? undefined));
+      return;
+    }
+    if (Object.keys(combatDamageAssignments).length > 0) {
+      setCombatDamageAssignments({});
+    }
+  }, [combatDamagePass, gameState?.turn.step, gameState?.turn.turn_number]);
+
+  const { buildCastContext } = useCastContext({
+    currentPriority,
+    selectedHandId,
+    selectedTargetObjectIds,
+    selectedTargetPlayerIds,
+    maxObjectTargets: targetHints.maxObjectTargets ?? undefined,
+    maxPlayerTargets: targetHints.maxPlayerTargets ?? undefined,
+    enterChoices,
   });
   const {
     preparedCast,
@@ -332,6 +329,7 @@ export default function PlayPage() {
                 player_id: currentPriority,
                 object_id: selectedBattlefieldId ?? undefined,
                 ability_index: 0,
+                context: buildCastContext(selectedBattlefieldId ?? undefined),
               })
             }
             onDeclareAttackers={() =>
@@ -347,7 +345,15 @@ export default function PlayPage() {
                 blockers: blockersPayload,
               })
             }
-            onAssignCombatDamage={() => runEngineAction('assign_combat_damage', { player_id: currentPriority })}
+            onAssignCombatDamage={() =>
+              runEngineAction('assign_combat_damage', {
+                player_id: currentPriority,
+                ...(hasManualCombatChoices ? { damage_assignments: combatDamageAssignments } : {}),
+                ...(combatDamagePass ? { combat_damage_pass: combatDamagePass } : {}),
+              })
+            }
+            hasUnresolvedDamageReplacements={hasUnresolvedDamageReplacements}
+            unresolvedDamageReplacements={unresolvedDamageReplacements}
             onSelectDefender={(playerId) => setSelectedDefenderId(playerId)}
             onSelectActiveAttacker={setActiveAttackerId}
             onReorderBlockerUp={(index) =>
@@ -402,15 +408,44 @@ export default function PlayPage() {
             }}
           />
 
+          <CombatDamagePanel
+            active={isCombatDamage}
+            combatState={combatState}
+            objects={gameState.objects}
+            cardMap={cardMap}
+            defendingPlayerId={defendingPlayerId ?? null}
+            assignments={combatDamageAssignments}
+            damagePass={combatDamagePass}
+            onUpdateAssignment={(attackerId, targetId, value) =>
+              setCombatDamageAssignments((prev) => ({
+                ...prev,
+                [attackerId]: { ...(prev[attackerId] ?? {}), [targetId]: value },
+              }))
+            }
+          />
+
           <ReplacementChoicePanel
             conflicts={replacementConflicts}
             replacementChoices={replacementChoices}
-            cardMap={cardMap}
+            highlightKey={highlightedReplacementKey}
+            onNextHighlight={() => {
+              if (unresolvedDamageReplacements.length === 0) return;
+              const keys = unresolvedDamageReplacements.map((entry) => entry.key);
+              const currentIndex = highlightedReplacementKey ? keys.indexOf(highlightedReplacementKey) : -1;
+              const nextIndex = (currentIndex + 1) % keys.length;
+              setHighlightedReplacementKey(keys[nextIndex]);
+            }}
             onSelectChoice={(key, value) =>
-              setReplacementChoices((prev) => ({
-                ...prev,
-                [key]: value,
-              }))
+              {
+                setReplacementChoices((prev) => ({
+                  ...prev,
+                  [key]: value,
+                }));
+                const remaining = unresolvedDamageReplacements
+                  .map((entry) => entry.key)
+                  .filter((entryKey) => entryKey !== key);
+                setHighlightedReplacementKey(remaining[0] ?? null);
+              }
             }
           />
 

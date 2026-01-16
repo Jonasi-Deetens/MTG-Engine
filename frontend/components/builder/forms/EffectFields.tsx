@@ -62,6 +62,14 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
 
   const normalizeColorList = (value: string) =>
     parseList(value).map((token) => token.toUpperCase());
+  const colorOptionsWithChosen = [
+    ...COLOR_OPTIONS,
+    { value: 'chosen_color', label: 'Chosen Color (ETB)' },
+  ];
+  const typeOptionsWithChosen = [
+    ...CARD_TYPE_FILTERS.filter((opt) => opt.value !== 'any'),
+    { value: 'chosen_card_type', label: 'Chosen Card Type (ETB)' },
+  ];
 
   const getNodeErrors = (errors: ValidationError[], id?: string) =>
     id ? errors.filter((error) => error.nodeId === id) : [];
@@ -224,7 +232,7 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
             onChange={(e) => onUpdate('typeName', e.target.value)}
             className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
           >
-            {CARD_TYPE_FILTERS.map((opt) => (
+            {typeOptionsWithChosen.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
               </option>
@@ -264,7 +272,7 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
             onChange={(e) => onUpdate('color', e.target.value)}
             className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
           >
-            {COLOR_OPTIONS.map((opt) => (
+            {colorOptionsWithChosen.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
               </option>

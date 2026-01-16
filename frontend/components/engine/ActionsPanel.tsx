@@ -6,6 +6,7 @@ import { TargetSelector } from '@/components/engine/TargetSelector';
 import { EnterChoicesPanel } from '@/components/engine/EnterChoicesPanel';
 import { ManaPaymentPanel } from '@/components/engine/ManaPaymentPanel';
 import { EngineCardMap, EngineCombatStateSnapshot, EnginePlayerSnapshot } from '@/lib/engine';
+import { ReplacementConflictEntry } from '@/hooks/useReplacementConflicts';
 import { EnterChoiceConfig } from '@/lib/enterChoices';
 import { ManaPaymentDetail } from '@/lib/manaPayment';
 
@@ -39,6 +40,8 @@ interface ActionsPanelProps {
   onDeclareAttackers: () => void;
   onDeclareBlockers: () => void;
   onAssignCombatDamage: () => void;
+  hasUnresolvedDamageReplacements: boolean;
+  unresolvedDamageReplacements: ReplacementConflictEntry[];
   onSelectDefender: (playerId: number | null) => void;
   onSelectActiveAttacker: (attackerId: string) => void;
   onReorderBlockerUp: (index: number) => void;
@@ -100,6 +103,8 @@ export function ActionsPanel({
   onDeclareAttackers,
   onDeclareBlockers,
   onAssignCombatDamage,
+  hasUnresolvedDamageReplacements,
+  unresolvedDamageReplacements,
   onSelectDefender,
   onSelectActiveAttacker,
   onReorderBlockerUp,
@@ -180,7 +185,7 @@ export function ActionsPanel({
         <Button
           variant="outline"
           onClick={onAssignCombatDamage}
-          disabled={!isCombatDamage || !isPriorityActivePlayer || loading}
+          disabled={!isCombatDamage || !isPriorityActivePlayer || loading || hasUnresolvedDamageReplacements}
         >
           Assign Combat Damage
         </Button>
@@ -242,6 +247,19 @@ export function ActionsPanel({
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {isCombatDamage && hasUnresolvedDamageReplacements && (
+        <div className="space-y-1 text-xs text-[color:var(--theme-text-secondary)]">
+          <div>Choose a damage replacement/prevention before assigning combat damage.</div>
+          {unresolvedDamageReplacements.length > 0 && (
+            <div className="text-[color:var(--theme-text-muted)]">
+              {unresolvedDamageReplacements.map((entry) => (
+                <div key={`unresolved-${entry.key}`}>{entry.label}</div>
+              ))}
             </div>
           )}
         </div>

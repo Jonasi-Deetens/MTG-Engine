@@ -73,6 +73,8 @@ class CombatStateSnapshot(BaseModel):
     defending_player_id: Optional[int] = None
     attackers: List[str] = Field(default_factory=list)
     blockers: Dict[str, List[str]] = Field(default_factory=dict)
+    first_strike_resolved: bool = False
+    combat_damage_resolved: bool = False
 
 
 class TurnStateSnapshot(BaseModel):
@@ -147,6 +149,7 @@ class EngineActionRequest(BaseModel):
     blockers: Dict[str, List[str]] = Field(default_factory=dict)
     defending_player_id: Optional[int] = None
     damage_assignments: Dict[str, Dict[str, int]] = Field(default_factory=dict)
+    combat_damage_pass: Optional[Literal["first_strike", "regular"]] = None
     mana_payment: Dict[str, int] = Field(default_factory=dict)
     mana_payment_detail: Optional[ManaPaymentDetail] = None
     contexts: List[ResolveContextSnapshot] = Field(default_factory=list)
