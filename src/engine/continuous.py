@@ -366,10 +366,14 @@ def _apply_layer_6_abilities(obj) -> None:
 
 
 def _apply_layer_2_control(obj) -> None:
+    previous_controller = obj.controller_id
     for effect in _effects_of_type(obj.temporary_effects, "set_controller"):
         controller_id = effect.get("controller_id")
         if controller_id is not None:
             obj.controller_id = controller_id
+    if obj.controller_id != previous_controller:
+        obj.is_attacking = False
+        obj.is_blocking = False
 
 
 def _apply_layer_4_type(obj) -> None:
@@ -385,6 +389,9 @@ def _apply_layer_4_type(obj) -> None:
         type_name = effect.get("type")
         if type_name and type_name in obj.types:
             obj.types.remove(type_name)
+    if "Creature" not in obj.types:
+        obj.is_attacking = False
+        obj.is_blocking = False
 
 
 def _apply_layer_5_color(obj) -> None:

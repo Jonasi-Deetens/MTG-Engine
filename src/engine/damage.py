@@ -194,6 +194,9 @@ def _apply_damage_to_object_target(
         current = int(counters.get("loyalty", 0))
         counters["loyalty"] = max(0, current - remaining)
         target.counters = counters
+        if "Lifelink" in source.keywords:
+            controller = game_state.get_player(source.controller_id)
+            controller.life += remaining
         return
     if "Infect" in source.keywords:
         counters = target.counters or {}
@@ -201,10 +204,16 @@ def _apply_damage_to_object_target(
             remaining = target.toughness or remaining
         counters["-1/-1"] = counters.get("-1/-1", 0) + remaining
         target.counters = counters
+        if "Lifelink" in source.keywords:
+            controller = game_state.get_player(source.controller_id)
+            controller.life += remaining
         return
     target.damage += remaining
     if "Deathtouch" in source.keywords:
         target.damage = max(target.damage, target.toughness or target.damage)
+    if "Lifelink" in source.keywords:
+        controller = game_state.get_player(source.controller_id)
+        controller.life += remaining
 
 
 def _apply_damage_to_player_target(

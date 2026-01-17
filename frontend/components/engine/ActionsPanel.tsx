@@ -29,7 +29,6 @@ interface ActionsPanelProps {
   activeBlockerOrder: string[];
   selectedDefenderId: string | null;
   defenderOptions: Array<{ value: string; label: string }>;
-  activePlayerIndex: number;
   combatState: EngineCombatStateSnapshot | null | undefined;
   cardMap: EngineCardMap;
   onPlayLand: () => void;
@@ -94,7 +93,6 @@ export function ActionsPanel({
   activeBlockerOrder,
   selectedDefenderId,
   defenderOptions,
-  activePlayerIndex,
   combatState,
   cardMap,
   onPlayLand,

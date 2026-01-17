@@ -175,6 +175,12 @@ class GameState:
         obj = self.objects.get(obj_id)
         if not obj:
             return
+        player = self.get_player(obj.owner_id)
+        if (
+            obj.id == player.commander_id
+            and destination in (ZONE_GRAVEYARD, ZONE_EXILE, ZONE_HAND, ZONE_LIBRARY)
+        ):
+            destination = ZONE_COMMAND
         previous_zone = obj.zone
         destination = self._apply_zone_replacement(obj, previous_zone, destination)
         if destination != ZONE_HAND:
@@ -182,6 +188,7 @@ class GameState:
         if destination != ZONE_BATTLEFIELD:
             obj.attached_to = None
         if previous_zone == ZONE_BATTLEFIELD and destination != ZONE_BATTLEFIELD:
+            self._clear_battlefield_state(obj)
             for attached in list(self.objects.values()):
                 if attached.zone != ZONE_BATTLEFIELD:
                     continue
@@ -205,6 +212,15 @@ class GameState:
         if destination == ZONE_BATTLEFIELD and previous_zone != ZONE_BATTLEFIELD:
             self.event_bus.publish(Event(type="enters_battlefield", payload={"object_id": obj.id}))
 
+    def _clear_battlefield_state(self, obj: GameObject) -> None:
+        obj.damage = 0
+        obj.tapped = False
+        obj.is_attacking = False
+        obj.is_blocking = False
+        obj.attached_to = None
+        obj.counters = {}
+        obj.temporary_effects = []
+        obj.protections = set()
     def remove_player_from_game(self, player_id: int) -> None:
         player = self.get_player(player_id)
         if getattr(player, "removed_from_game", False):
@@ -397,6 +413,8 @@ class GameState:
         return default_zone
 
     def _is_illegal_attachment(self, attachment: GameObject, attached: GameObject) -> bool:
+        if "Shroud" in attached.keywords:
+            return True
         if "Hexproof" in attached.keywords and attachment.controller_id != attached.controller_id:
             return True
         if attached.protections and attachment.colors:
@@ -407,6 +425,8 @@ class GameState:
     def _enforce_attachment_legality(self, obj: GameObject) -> bool:
         if obj.zone != ZONE_BATTLEFIELD:
             return False
+        if obj.phased_out:
+            return False
         if "Aura" in obj.types:
             if not obj.attached_to:
                 self.move_object(obj.id, ZONE_GRAVEYARD)
@@ -416,7 +436,10 @@ class GameState:
                 obj.attached_to = None
                 self.move_object(obj.id, ZONE_GRAVEYARD)
                 return True
-            if attached.phased_out or self._is_illegal_attachment(obj, attached):
+            if attached.phased_out:
+                obj.phased_out = True
+                return False
+            if self._is_illegal_attachment(obj, attached):
                 obj.attached_to = None
                 self.move_object(obj.id, ZONE_GRAVEYARD)
                 return True
@@ -425,13 +448,23 @@ class GameState:
             if not obj.attached_to:
                 return False
             attached = self.objects.get(obj.attached_to)
-            if not attached or attached.zone != ZONE_BATTLEFIELD or "Creature" not in attached.types or attached.phased_out:
+            if not attached or attached.zone != ZONE_BATTLEFIELD:
                 obj.attached_to = None
+                return False
+            if attached.phased_out:
+                obj.phased_out = True
+                return False
+            if "Creature" not in attached.types:
+                obj.attached_to = None
+                return False
             return False
         if obj.attached_to:
             attached = self.objects.get(obj.attached_to)
             if not attached or attached.zone != ZONE_BATTLEFIELD:
                 obj.attached_to = None
+                return False
+            if attached.phased_out:
+                obj.phased_out = True
         return False
 
     def _apply_enter_copy(self, obj: GameObject, source_id: str) -> None:

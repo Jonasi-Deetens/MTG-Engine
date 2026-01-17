@@ -285,6 +285,12 @@ class TurnManager:
         ))
         if self.state.step in (Step.END_COMBAT, Step.CLEANUP):
             self._expire_temporary_effects(self.state.step)
+        if self.state.step == Step.END_COMBAT:
+            for obj in self.gs.objects.values():
+                if obj.zone == ZONE_BATTLEFIELD:
+                    obj.is_attacking = False
+                    obj.is_blocking = False
+            self.state.combat_state = None
         for player in self.gs.players:
             player.mana_pool = {}
         self.gs.replacement_effects = []

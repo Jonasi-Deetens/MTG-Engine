@@ -1,5 +1,8 @@
-from engine import GameState, GameObject, PlayerState
+from engine import GameState, GameObject, PlayerState, TurnManager
 from engine.commander import apply_commander_tax, record_commander_damage, register_commander
+from engine.rules import cast_spell
+from engine.turn import Phase, Step
+from engine.zones import ZONE_BATTLEFIELD, ZONE_COMMAND, ZONE_GRAVEYARD
 from engine.damage import apply_damage_to_player
 from engine.sba import apply_state_based_actions
 from engine.zones import ZONE_COMMAND
@@ -52,3 +55,53 @@ def test_commander_damage_causes_loss():
 
     assert players[1].has_lost is True
     assert players[1].removed_from_game is True
+
+
+def test_commander_cast_from_command_zone_applies_tax():
+    players = [PlayerState(id=0), PlayerState(id=1)]
+    game_state = GameState(players=players)
+    game_state.turn.phase = Phase.PRECOMBAT_MAIN
+    game_state.turn.step = Step.PRECOMBAT_MAIN
+    game_state.turn.active_player_index = 0
+    game_state.turn.priority_current_index = 0
+    commander = GameObject(
+        id="commander_cast",
+        name="Commander",
+        owner_id=0,
+        controller_id=0,
+        types=["Creature"],
+        zone=ZONE_COMMAND,
+        mana_cost="{G}",
+    )
+    game_state.add_object(commander)
+    register_commander(game_state, 0, commander.id)
+    players[0].commander_tax = 2
+    players[0].mana_pool = {"G": 1, "C": 2}
+    turn_manager = TurnManager(game_state)
+
+    cast_spell(game_state, turn_manager, player_id=0, object_id=commander.id)
+
+    assert players[0].commander_tax == 4
+    assert players[0].mana_pool.get("G", 0) == 0
+    assert players[0].mana_pool.get("C", 0) == 0
+
+
+def test_commander_moves_to_command_zone_on_leave():
+    players = [PlayerState(id=0), PlayerState(id=1)]
+    game_state = GameState(players=players)
+    commander = GameObject(
+        id="commander_move",
+        name="Commander",
+        owner_id=0,
+        controller_id=0,
+        types=["Creature"],
+        zone=ZONE_BATTLEFIELD,
+        power=2,
+        toughness=2,
+    )
+    game_state.add_object(commander)
+    register_commander(game_state, 0, commander.id)
+
+    game_state.move_object(commander.id, ZONE_GRAVEYARD)
+
+    assert commander.zone == ZONE_COMMAND

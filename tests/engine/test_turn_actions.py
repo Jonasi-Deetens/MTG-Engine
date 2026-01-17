@@ -1,7 +1,10 @@
 import pytest
 
 from engine import GameObject, GameState, PlayerState, TurnManager
+from engine.combat import CombatState
 from engine.rules import (
+    activate_ability,
+    activate_mana_ability,
     assign_combat_damage,
     cast_spell,
     declare_attackers,
@@ -311,6 +314,104 @@ def test_combat_damage_can_target_planeswalker():
 
     assert planeswalker.counters.get("loyalty") == 2
     assert game_state.get_player(1).life == 40
+
+
+def test_activate_tap_ability_respects_summoning_sickness():
+    game_state = _build_game_state()
+    creature = GameObject(
+        id="summon_sick",
+        name="Summon Sick",
+        owner_id=0,
+        controller_id=0,
+        types=["Creature"],
+        zone=ZONE_BATTLEFIELD,
+        power=2,
+        toughness=2,
+        entered_turn=game_state.turn.turn_number,
+        ability_graphs=[
+            {
+                "rootNodeId": "act-1",
+                "abilityType": "activated",
+                "nodes": [
+                    {"id": "act-1", "type": "ACTIVATED", "data": {"cost": "{T}"}},
+                    {"id": "effect-1", "type": "EFFECT", "data": {"type": "life", "amount": 1}},
+                ],
+                "edges": [{"from_": "act-1", "to": "effect-1"}],
+            }
+        ],
+    )
+    game_state.add_object(creature)
+    turn_manager = TurnManager(game_state)
+
+    with pytest.raises(ValueError):
+        activate_ability(game_state, turn_manager, player_id=0, object_id=creature.id, ability_index=0)
+
+    creature.keywords.add("Haste")
+    activate_ability(game_state, turn_manager, player_id=0, object_id=creature.id, ability_index=0)
+
+    assert game_state.stack.items
+
+
+def test_activate_mana_ability_respects_summoning_sickness():
+    game_state = _build_game_state()
+    land_creature = GameObject(
+        id="land_creature",
+        name="Forest Creature",
+        owner_id=0,
+        controller_id=0,
+        types=["Land", "Creature"],
+        zone=ZONE_BATTLEFIELD,
+        type_line="Basic Land — Forest",
+        entered_turn=game_state.turn.turn_number,
+    )
+    game_state.add_object(land_creature)
+    turn_manager = TurnManager(game_state)
+
+    with pytest.raises(ValueError):
+        activate_mana_ability(game_state, turn_manager, player_id=0, object_id=land_creature.id)
+
+
+def test_end_combat_clears_combat_state():
+    game_state = _build_game_state()
+    attacker = GameObject(
+        id="end_combat_attacker",
+        name="Attacker",
+        owner_id=0,
+        controller_id=0,
+        types=["Creature"],
+        zone=ZONE_BATTLEFIELD,
+        power=3,
+        toughness=3,
+    )
+    blocker = GameObject(
+        id="end_combat_blocker",
+        name="Blocker",
+        owner_id=1,
+        controller_id=1,
+        types=["Creature"],
+        zone=ZONE_BATTLEFIELD,
+        power=2,
+        toughness=2,
+    )
+    game_state.add_object(attacker)
+    game_state.add_object(blocker)
+    attacker.is_attacking = True
+    blocker.is_blocking = True
+    game_state.turn.combat_state = CombatState(
+        attacking_player_id=0,
+        defending_player_id=1,
+        attackers=[attacker.id],
+        blockers={attacker.id: [blocker.id]},
+    )
+    game_state.turn.step = Step.END_COMBAT
+    game_state.turn.phase = Phase.COMBAT
+    turn_manager = TurnManager(game_state)
+
+    turn_manager._end_step()
+
+    assert attacker.is_attacking is False
+    assert blocker.is_blocking is False
+    assert game_state.turn.combat_state is None
 
 
 def test_assign_combat_damage_to_player():

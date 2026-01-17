@@ -125,13 +125,21 @@ def _check_object_target(game_state: GameState, context: ResolveContext, target_
         return False, "Target must be on the battlefield."
     if obj.phased_out:
         return False, "Target is phased out."
+    if "Shroud" in obj.keywords:
+        return False, "Target has shroud."
     if "Ward" in obj.keywords and not context.choices.get("ward_paid"):
         return False, "Ward cost not paid."
     if "Hexproof" in obj.keywords and context.controller_id is not None:
         if obj.controller_id != context.controller_id:
             return False, "Target has hexproof."
-    if obj.protections and context.source_id:
-        source = game_state.objects.get(context.source_id)
+    source_id = (
+        context.source_id
+        or context.triggering_source_id
+        or context.triggering_spell_id
+        or context.triggering_aura_id
+    )
+    if obj.protections and source_id:
+        source = game_state.objects.get(source_id)
         if source and any(color in obj.protections for color in source.colors):
             return False, "Target has protection from source."
     return True, None
@@ -142,7 +150,7 @@ def _is_legal_object_target(game_state: GameState, context: ResolveContext, targ
 
 
 def _is_legal_player_target(game_state: GameState, player_id: int) -> bool:
-    return any(player.id == player_id for player in game_state.players)
+    return any(player.id == player_id and not getattr(player, "removed_from_game", False) for player in game_state.players)
 
 
 def _is_legal_spell_target(game_state: GameState, target_id: str) -> bool:

@@ -370,6 +370,68 @@ def test_damage_to_planeswalker_removes_loyalty():
     assert planeswalker.damage == 0
 
 
+def test_lifelink_on_creature_damage_gains_life():
+    game_state = _build_game_state()
+    source = GameObject(
+        id="lifelink_source",
+        name="Source",
+        owner_id=0,
+        controller_id=0,
+        types=["Creature"],
+        zone=ZONE_BATTLEFIELD,
+        power=3,
+        toughness=3,
+        keywords={"Lifelink"},
+    )
+    target = GameObject(
+        id="lifelink_target",
+        name="Target",
+        owner_id=1,
+        controller_id=1,
+        types=["Creature"],
+        zone=ZONE_BATTLEFIELD,
+        power=2,
+        toughness=2,
+    )
+    game_state.add_object(source)
+    game_state.add_object(target)
+
+    apply_damage_to_object(game_state, source, target, 2)
+
+    assert game_state.get_player(0).life == 42
+
+
+def test_lifelink_on_planeswalker_damage_gains_life():
+    game_state = _build_game_state()
+    source = GameObject(
+        id="lifelink_pw_source",
+        name="Source",
+        owner_id=0,
+        controller_id=0,
+        types=["Creature"],
+        zone=ZONE_BATTLEFIELD,
+        power=3,
+        toughness=3,
+        keywords={"Lifelink"},
+    )
+    planeswalker = GameObject(
+        id="lifelink_pw",
+        name="Walker",
+        owner_id=1,
+        controller_id=1,
+        types=["Planeswalker"],
+        zone=ZONE_BATTLEFIELD,
+    )
+    planeswalker.counters["loyalty"] = 4
+    game_state.add_object(source)
+    game_state.add_object(planeswalker)
+
+    apply_damage_to_object(game_state, source, planeswalker, 2)
+
+    assert planeswalker.counters.get("loyalty") == 2
+    assert game_state.get_player(0).life == 42
+
+
 def test_indestructible_survives_lethal_damage():
     game_state = _build_game_state()
     creature = GameObject(

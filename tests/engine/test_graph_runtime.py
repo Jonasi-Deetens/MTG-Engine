@@ -1,4 +1,5 @@
 from engine import AbilityGraphRuntimeAdapter, GameState, PlayerState, ResolveContext
+from engine.effects import EffectResolver
 
 
 def test_resolve_damage_effect():
@@ -46,3 +47,16 @@ def test_condition_blocks_resolution():
     result = adapter.resolve(graph, context)
 
     assert result["status"] == "condition_failed"
+
+
+def test_draw_from_empty_library_causes_loss():
+    players = [PlayerState(id=0, life=20)]
+    game_state = GameState(players=players)
+    resolver = EffectResolver(game_state)
+    context = ResolveContext(controller_id=0, targets={"player_id": 0})
+
+    result = resolver.apply({"type": "draw", "amount": 1}, context)
+
+    assert result["type"] == "draw"
+    assert players[0].has_lost is True
+    assert players[0].removed_from_game is True

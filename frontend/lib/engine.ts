@@ -192,6 +192,7 @@ const parseKeywords = (oracleText?: string): string[] => {
     'Deathtouch',
     'Reach',
     'Hexproof',
+    'Shroud',
     'Indestructible',
     'Ward',
     'Infect',

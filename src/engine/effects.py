@@ -144,6 +144,10 @@ class EffectResolver:
         replaced = []
         for _ in range(amount):
             if not player.library:
+                player.has_lost = True
+                self.game_state.log(f"Player {player.id} loses for drawing from empty library.")
+                if not player.removed_from_game:
+                    self.game_state.remove_player_from_game(player.id)
                 break
             card_id = player.library[0]
             replacement = resolve_replacement(
@@ -331,11 +335,27 @@ class EffectResolver:
             target_id = resolve_object_id(context, "target", None)
             if target_id:
                 card_ids = [target_id]
+        attached = self.game_state.objects.get(attach_to) if attach_to else None
+        results: List[Dict[str, Any]] = []
         for obj_id in card_ids:
             obj = self.game_state.objects.get(obj_id)
-            if obj:
-                obj.attached_to = attach_to
-        return {"type": "attach", "cards": card_ids, "attach_to": attach_to}
+            if not obj:
+                continue
+            if not attached or attached.zone != ZONE_BATTLEFIELD or attached.phased_out:
+                obj.attached_to = None
+                results.append({"object_id": obj.id, "status": "invalid_target"})
+                continue
+            if "Equipment" in obj.types and "Creature" not in attached.types:
+                obj.attached_to = None
+                results.append({"object_id": obj.id, "status": "invalid_target"})
+                continue
+            if self.game_state._is_illegal_attachment(obj, attached):
+                obj.attached_to = None
+                results.append({"object_id": obj.id, "status": "illegal_attachment"})
+                continue
+            obj.attached_to = attach_to
+            results.append({"object_id": obj.id, "status": "attached"})
+        return {"type": "attach", "cards": card_ids, "attach_to": attach_to, "results": results}
 
     def _handle_shuffle(self, effect: Dict[str, Any], context: ResolveContext) -> Dict[str, Any]:
         player_id = resolve_player_id(context, context.controller_id)
@@ -460,7 +480,23 @@ class EffectResolver:
         if player_id is None:
             return {"type": "scry", "status": "no_player"}
         player = self.game_state.get_player(player_id)
-        scryed = player.library[:amount]
+        scryed = list(player.library[:amount])
+        if not scryed:
+            return {"type": "scry", "player_id": player_id, "cards": []}
+        choice = context.choices.get("scry")
+        if isinstance(choice, dict):
+            chosen_top = choice.get("top") or []
+            chosen_bottom = choice.get("bottom") or []
+            if (
+                isinstance(chosen_top, list)
+                and isinstance(chosen_bottom, list)
+                and set(chosen_top + chosen_bottom).issubset(set(scryed))
+            ):
+                remaining = [card_id for card_id in scryed if card_id not in chosen_top + chosen_bottom]
+                new_top = [card_id for card_id in chosen_top if card_id in scryed] + remaining
+                new_bottom = [card_id for card_id in chosen_bottom if card_id in scryed]
+                player.library = new_top + player.library[amount:] + new_bottom
+                return {"type": "scry", "player_id": player_id, "cards": scryed}
         return {"type": "scry", "player_id": player_id, "cards": scryed}
 
     def _handle_look_at(self, effect: Dict[str, Any], context: ResolveContext) -> Dict[str, Any]:
@@ -591,6 +627,16 @@ class EffectResolver:
         if not obj:
             return {"type": "phase_out", "status": "no_target"}
         obj.phased_out = True
+        obj.is_attacking = False
+        obj.is_blocking = False
+        for attached in list(self.game_state.objects.values()):
+            if attached.zone != ZONE_BATTLEFIELD:
+                continue
+            if attached.attached_to != obj.id:
+                continue
+            attached.phased_out = True
+            attached.is_attacking = False
+            attached.is_blocking = False
         return {"type": "phase_out", "object_id": obj.id}
 
     def _handle_transform(self, effect: Dict[str, Any], context: ResolveContext) -> Dict[str, Any]:
@@ -598,6 +644,9 @@ class EffectResolver:
         if not obj:
             return {"type": "transform", "status": "no_target"}
         obj.transformed = not obj.transformed
+        obj.tapped = False
+        obj.is_attacking = False
+        obj.is_blocking = False
         return {"type": "transform", "object_id": obj.id}
 
     def _handle_flicker(self, effect: Dict[str, Any], context: ResolveContext) -> Dict[str, Any]:
@@ -605,6 +654,8 @@ class EffectResolver:
         if not obj:
             return {"type": "flicker", "status": "no_target"}
         self.game_state.move_object(obj.id, ZONE_EXILE)
+        obj.controller_id = obj.owner_id
+        obj.base_controller_id = obj.owner_id
         self.game_state.move_object(obj.id, ZONE_BATTLEFIELD)
         return {"type": "flicker", "object_id": obj.id}
 
@@ -624,6 +675,8 @@ class EffectResolver:
         else:
             obj.controller_id = int(new_controller)
             obj.base_controller_id = int(new_controller)
+        obj.is_attacking = False
+        obj.is_blocking = False
         return {"type": "change_control", "object_id": obj.id, "controller_id": int(new_controller)}
 
     def _handle_set_types(self, effect: Dict[str, Any], context: ResolveContext) -> Dict[str, Any]:

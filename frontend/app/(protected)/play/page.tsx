@@ -452,7 +452,6 @@ export default function PlayPage() {
             activeBlockerOrder={activeBlockerOrder}
             selectedDefenderId={selectedDefenderId}
             defenderOptions={defenderOptions}
-            activePlayerIndex={activePlayerIndex}
             combatState={combatState}
             cardMap={cardMap}
             onPlayLand={() =>
