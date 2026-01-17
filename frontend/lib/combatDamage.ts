@@ -46,6 +46,7 @@ export const buildDefaultCombatAssignments = (
   const objectMap = new Map(gameState.objects.map((obj) => [obj.id, obj]));
   const assignments: Record<string, Record<string, number>> = {};
   const defendingPlayerId = combatState.defending_player_id;
+  const defendingObjectId = combatState.defending_object_id;
 
   combatState.attackers.forEach((attackerId) => {
     const attacker = objectMap.get(attackerId);
@@ -59,8 +60,12 @@ export const buildDefaultCombatAssignments = (
     const perAttacker: Record<string, number> = {};
 
     if (blockers.length === 0) {
-      if (typeof defendingPlayerId === 'number' && attackerPower > 0) {
-        perAttacker.player = attackerPower;
+      if (attackerPower > 0) {
+        if (defendingObjectId) {
+          perAttacker.defender = attackerPower;
+        } else if (typeof defendingPlayerId === 'number') {
+          perAttacker.player = attackerPower;
+        }
       }
     } else {
       let remaining = attackerPower;
@@ -74,8 +79,12 @@ export const buildDefaultCombatAssignments = (
           remaining -= assign;
         }
       });
-      if (remaining > 0 && hasKeyword(attacker.keywords, 'Trample') && typeof defendingPlayerId === 'number') {
-        perAttacker.player = remaining;
+      if (remaining > 0 && hasKeyword(attacker.keywords, 'Trample')) {
+        if (defendingObjectId) {
+          perAttacker.defender = remaining;
+        } else if (typeof defendingPlayerId === 'number') {
+          perAttacker.player = remaining;
+        }
       }
     }
 

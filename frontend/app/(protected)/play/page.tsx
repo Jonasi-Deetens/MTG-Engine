@@ -73,6 +73,10 @@ export default function PlayPage() {
     setSelectedBlockerOrder,
   } = useCombatSelection({ gameState });
 
+  const objectMap = useMemo(
+    () => new Map(gameState?.objects.map((obj) => [obj.id, obj]) ?? []),
+    [gameState?.objects]
+  );
 
   const replacementConflicts = useReplacementConflicts(gameState);
   const hasUnresolvedDamageReplacements = useMemo(
@@ -275,7 +279,40 @@ export default function PlayPage() {
     setActiveAttackerId,
     setSelectedDefenderId,
   });
-  const defendingPlayerId = combatState?.defending_player_id ?? selectedDefenderId;
+  const defendingObjectId = combatState?.defending_object_id ?? (
+    selectedDefenderId?.startsWith('planeswalker:') ? selectedDefenderId.split(':')[1] : null
+  );
+  const selectedDefendingPlayerId = useMemo(() => {
+    if (!selectedDefenderId) return null;
+    if (selectedDefenderId.startsWith('player:')) {
+      const raw = selectedDefenderId.split(':')[1];
+      return raw ? Number(raw) : null;
+    }
+    if (selectedDefenderId.startsWith('planeswalker:')) {
+      const objId = selectedDefenderId.split(':')[1];
+      const obj = objId ? objectMap.get(objId) : undefined;
+      return obj ? obj.controller_id : null;
+    }
+    return null;
+  }, [objectMap, selectedDefenderId]);
+  const defendingPlayerId = combatState?.defending_player_id ?? selectedDefendingPlayerId;
+  const defenderOptions = useMemo(() => {
+    if (!gameState) return [];
+    const activePlayerId = gameState.players[activePlayerIndex]?.id;
+    const options: Array<{ value: string; label: string }> = [];
+    gameState.players.forEach((player) => {
+      if (player.id === activePlayerId) return;
+      options.push({ value: `player:${player.id}`, label: `Player ${player.id + 1}` });
+    });
+    gameState.objects.forEach((obj) => {
+      if (obj.zone !== 'battlefield') return;
+      if (!obj.types?.includes('Planeswalker')) return;
+      if (obj.controller_id === activePlayerId) return;
+      const label = cardMap[obj.id]?.name || obj.name || obj.id;
+      options.push({ value: `planeswalker:${obj.id}`, label: `${label} (Planeswalker)` });
+    });
+    return options;
+  }, [activePlayerIndex, cardMap, gameState]);
 
   useEffect(() => {
     if (!gameState) return;
@@ -413,10 +450,10 @@ export default function PlayPage() {
             selectedAttackers={selectedAttackers}
             activeAttackerId={activeAttackerId}
             activeBlockerOrder={activeBlockerOrder}
-            defendingPlayerId={defendingPlayerId}
+            selectedDefenderId={selectedDefenderId}
+            defenderOptions={defenderOptions}
             activePlayerIndex={activePlayerIndex}
             combatState={combatState}
-            players={gameState.players}
             cardMap={cardMap}
             onPlayLand={() =>
               runEngineAction('play_land', { player_id: currentPriority, object_id: selectedHandId ?? undefined })
@@ -437,13 +474,24 @@ export default function PlayPage() {
                 context: buildCastContext(selectedBattlefieldId ?? undefined),
               })
             }
-            onDeclareAttackers={() =>
-              runEngineAction('declare_attackers', {
+            onDeclareAttackers={() => {
+              const payload: any = {
                 player_id: currentPriority,
                 attackers: Array.from(selectedAttackers),
-                defending_player_id: defendingPlayerId ?? undefined,
-              })
-            }
+              };
+              if (selectedDefenderId?.startsWith('player:')) {
+                const raw = selectedDefenderId.split(':')[1];
+                payload.defending_player_id = raw ? Number(raw) : undefined;
+              } else if (selectedDefenderId?.startsWith('planeswalker:')) {
+                const objId = selectedDefenderId.split(':')[1];
+                payload.defending_object_id = objId || undefined;
+                const obj = objId ? objectMap.get(objId) : undefined;
+                if (obj) {
+                  payload.defending_player_id = obj.controller_id;
+                }
+              }
+              runEngineAction('declare_attackers', payload);
+            }}
             onDeclareBlockers={() =>
               runEngineAction('declare_blockers', {
                 player_id: currentPriority,
@@ -461,7 +509,7 @@ export default function PlayPage() {
             unresolvedDamageReplacements={unresolvedDamageReplacements}
             blockerErrors={blockerErrors}
             blockerErrorMap={blockerErrorMap}
-            onSelectDefender={(playerId) => setSelectedDefenderId(playerId)}
+            onSelectDefender={(value) => setSelectedDefenderId(value)}
             onSelectActiveAttacker={setActiveAttackerId}
             onReorderBlockerUp={(index) =>
               setSelectedBlockerOrder((prev) => {
@@ -521,6 +569,7 @@ export default function PlayPage() {
             objects={gameState.objects}
             cardMap={cardMap}
             defendingPlayerId={defendingPlayerId ?? null}
+            defendingObjectId={defendingObjectId}
             assignments={combatDamageAssignments}
             damagePass={combatDamagePass}
             onUpdateAssignment={(attackerId, targetId, value) =>

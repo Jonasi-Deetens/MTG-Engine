@@ -344,6 +344,14 @@ def validate_graph(graph: AbilityGraph, card_colors: Optional[List[str]] = None)
                     message=f"Effect {node.id} must define amount",
                     nodeId=node.id
                 ))
+        if effect_type == "add_poison":
+            amount = payload.get("amount")
+            if amount is None or not isinstance(amount, (int, float)):
+                errors.append(ValidationError(
+                    type="error",
+                    message=f"Effect {node.id} must define amount",
+                    nodeId=node.id
+                ))
         if effect_type == "enter_choice":
             choice_type = payload.get("choice")
             if choice_type not in ("color", "creature_type", "card_type", "target"):

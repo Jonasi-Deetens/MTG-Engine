@@ -45,6 +45,10 @@ def _build_game_state(snapshot: GameStateSnapshot) -> GameState:
         players.append(PlayerState(
             id=player.id,
             life=player.life,
+            max_hand_size=getattr(player, "max_hand_size", 7),
+            has_lost=getattr(player, "has_lost", False),
+            removed_from_game=getattr(player, "removed_from_game", False),
+            poison_counters=getattr(player, "poison_counters", 0),
             mana_pool=player.mana_pool,
             library=list(player.library),
             hand=list(player.hand),
@@ -118,6 +122,7 @@ def _build_game_state(snapshot: GameStateSnapshot) -> GameState:
         combat_state = CombatState(
             attacking_player_id=snapshot.turn.combat_state.attacking_player_id,
             defending_player_id=snapshot.turn.combat_state.defending_player_id,
+            defending_object_id=getattr(snapshot.turn.combat_state, "defending_object_id", None),
             attackers=list(snapshot.turn.combat_state.attackers),
             blockers=dict(snapshot.turn.combat_state.blockers),
             attackers_declared=getattr(snapshot.turn.combat_state, "attackers_declared", False),
@@ -154,6 +159,7 @@ def _serialize_game_state(game_state: GameState) -> GameStateSnapshot:
         combat_state = {
             "attacking_player_id": game_state.turn.combat_state.attacking_player_id,
             "defending_player_id": game_state.turn.combat_state.defending_player_id,
+            "defending_object_id": game_state.turn.combat_state.defending_object_id,
             "attackers": list(game_state.turn.combat_state.attackers),
             "blockers": dict(game_state.turn.combat_state.blockers),
             "attackers_declared": game_state.turn.combat_state.attackers_declared,
@@ -167,6 +173,10 @@ def _serialize_game_state(game_state: GameState) -> GameStateSnapshot:
             {
                 "id": player.id,
                 "life": player.life,
+                "max_hand_size": getattr(player, "max_hand_size", 7),
+                "has_lost": getattr(player, "has_lost", False),
+                "removed_from_game": getattr(player, "removed_from_game", False),
+                "poison_counters": getattr(player, "poison_counters", 0),
                 "mana_pool": player.mana_pool,
                 "library": player.library,
                 "hand": player.hand,
@@ -515,6 +525,7 @@ def execute_engine_action(
                 payload.player_id,
                 payload.attackers,
                 payload.defending_player_id,
+                payload.defending_object_id,
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))

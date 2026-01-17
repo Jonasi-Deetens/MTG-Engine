@@ -115,7 +115,15 @@ class EffectResolver:
                     if source:
                         apply_damage_to_player(self.game_state, source, player_id, amount)
                         results.append({"player_id": player_id, "amount": amount})
-        if target_type in ("any", "target", "target_permanent", "target_creature", "target_artifact", "target_enchantment"):
+        if target_type in (
+            "any",
+            "target",
+            "target_permanent",
+            "target_creature",
+            "target_artifact",
+            "target_enchantment",
+            "target_planeswalker",
+        ):
             for obj in _resolve_target_objects(self.game_state, context, target_type):
                 if context.source_id:
                     source = self.game_state.objects.get(context.source_id)
@@ -208,6 +216,15 @@ class EffectResolver:
         player = self.game_state.get_player(player_id)
         player.life -= amount
         return {"type": "lose_life", "player_id": player_id, "amount": amount}
+
+    def _handle_add_poison(self, effect: Dict[str, Any], context: ResolveContext) -> Dict[str, Any]:
+        amount = int(effect.get("amount", 0))
+        player_id = resolve_player_id(context, context.controller_id)
+        if player_id is None:
+            return {"type": "add_poison", "status": "no_player"}
+        player = self.game_state.get_player(player_id)
+        player.poison_counters += amount
+        return {"type": "add_poison", "player_id": player_id, "amount": amount}
 
     def _handle_mana(self, effect: Dict[str, Any], context: ResolveContext) -> Dict[str, Any]:
         amount = int(effect.get("amount", 1))

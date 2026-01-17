@@ -10,7 +10,7 @@ export const useCombatSelection = ({ gameState }: UseCombatSelectionArgs) => {
   const [selectedBlockers, setSelectedBlockers] = useState<Record<string, Set<string>>>({});
   const [selectedBlockerOrder, setSelectedBlockerOrder] = useState<Record<string, string[]>>({});
   const [activeAttackerId, setActiveAttackerId] = useState<string | null>(null);
-  const [selectedDefenderId, setSelectedDefenderId] = useState<number | null>(null);
+  const [selectedDefenderId, setSelectedDefenderId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!gameState) return;
@@ -21,7 +21,8 @@ export const useCombatSelection = ({ gameState }: UseCombatSelectionArgs) => {
     if (gameState.turn.step === 'declare_attackers') {
       const activeIndex = gameState.turn.active_player_index;
       const defenderIndex = (activeIndex + 1) % gameState.players.length;
-      setSelectedDefenderId(gameState.players[defenderIndex]?.id ?? null);
+      const defenderId = gameState.players[defenderIndex]?.id;
+      setSelectedDefenderId(defenderId != null ? `player:${defenderId}` : null);
     }
     if (gameState.turn.step === 'declare_blockers') {
       setActiveAttackerId(gameState.turn.combat_state?.attackers[0] ?? null);

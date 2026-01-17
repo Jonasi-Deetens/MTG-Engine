@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { TargetSelector } from '@/components/engine/TargetSelector';
 import { EnterChoicesPanel } from '@/components/engine/EnterChoicesPanel';
 import { ManaPaymentPanel } from '@/components/engine/ManaPaymentPanel';
-import { EngineCardMap, EngineCombatStateSnapshot, EnginePlayerSnapshot } from '@/lib/engine';
+import { EngineCardMap, EngineCombatStateSnapshot } from '@/lib/engine';
 import { ReplacementConflictEntry } from '@/hooks/useReplacementConflicts';
 import { EnterChoiceConfig } from '@/lib/enterChoices';
 import { ManaPaymentDetail } from '@/lib/manaPayment';
@@ -27,10 +27,10 @@ interface ActionsPanelProps {
   selectedAttackers: Set<string>;
   activeAttackerId: string | null;
   activeBlockerOrder: string[];
-  defendingPlayerId: number | null;
+  selectedDefenderId: string | null;
+  defenderOptions: Array<{ value: string; label: string }>;
   activePlayerIndex: number;
   combatState: EngineCombatStateSnapshot | null | undefined;
-  players: EnginePlayerSnapshot[];
   cardMap: EngineCardMap;
   onPlayLand: () => void;
   onPrepareCast: () => void;
@@ -44,7 +44,7 @@ interface ActionsPanelProps {
   unresolvedDamageReplacements: ReplacementConflictEntry[];
   blockerErrors: string[];
   blockerErrorMap: Record<string, string[]>;
-  onSelectDefender: (playerId: number | null) => void;
+  onSelectDefender: (value: string | null) => void;
   onSelectActiveAttacker: (attackerId: string) => void;
   onReorderBlockerUp: (index: number) => void;
   onReorderBlockerDown: (index: number) => void;
@@ -92,10 +92,10 @@ export function ActionsPanel({
   selectedAttackers,
   activeAttackerId,
   activeBlockerOrder,
-  defendingPlayerId,
+  selectedDefenderId,
+  defenderOptions,
   activePlayerIndex,
   combatState,
-  players,
   cardMap,
   onPlayLand,
   onPrepareCast,
@@ -211,17 +211,15 @@ export function ActionsPanel({
         <div className="flex flex-wrap gap-3">
           <div className="text-xs uppercase text-[color:var(--theme-text-secondary)]">Defender</div>
           <select
-            value={defendingPlayerId ?? ''}
-            onChange={(e) => onSelectDefender(e.target.value ? parseInt(e.target.value, 10) : null)}
+            value={selectedDefenderId ?? ''}
+            onChange={(e) => onSelectDefender(e.target.value || null)}
             className="px-3 py-1 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none text-sm"
           >
-            {players
-              .filter((player) => player.id !== activePlayerIndex)
-              .map((player) => (
-                <option key={`defender-${player.id}`} value={player.id}>
-                  Player {player.id + 1}
-                </option>
-              ))}
+            {defenderOptions.map((option) => (
+              <option key={`defender-${option.value}`} value={option.value}>
+                {option.label}
+              </option>
+            ))}
           </select>
         </div>
       )}

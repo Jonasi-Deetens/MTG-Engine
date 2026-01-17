@@ -7,6 +7,7 @@ from .continuous import apply_continuous_effects
 from .sba import apply_state_based_actions
 from .events import Event
 from .priority import PriorityManager
+from .replacements import resolve_replacement
 from .state import GameState, ResolveContext
 from .turn import Phase, Step, PHASE_STEP_ORDER
 from .zones import ZONE_BATTLEFIELD, ZONE_GRAVEYARD
@@ -16,7 +17,7 @@ class TurnManager:
     def __init__(self, game_state: GameState):
         self.gs = game_state
         self.state = self.gs.turn
-        player_ids = [player.id for player in self.gs.players]
+        player_ids = self._alive_player_ids()
         self.priority = PriorityManager(player_order=player_ids)
         self._hydrate_priority()
 
@@ -30,15 +31,46 @@ class TurnManager:
         self.state.priority_pass_count = self.priority.pass_count
         self.state.priority_last_passed_player_id = self.priority.last_passed_player
 
+    def _alive_player_ids(self) -> List[int]:
+        return [player.id for player in self.gs.players if not getattr(player, "has_lost", False)]
+
+    def _next_active_index(self, start_index: int) -> int:
+        total = len(self.gs.players)
+        if total == 0:
+            return start_index
+        for offset in range(1, total + 1):
+            idx = (start_index + offset) % total
+            if not getattr(self.gs.players[idx], "has_lost", False):
+                return idx
+        return start_index
+
+    def _ensure_active_player(self) -> None:
+        if not self.gs.players:
+            return
+        current = self.gs.players[self.state.active_player_index]
+        if getattr(current, "has_lost", False):
+            self.state.active_player_index = self._next_active_index(self.state.active_player_index)
+
+    def _sync_priority(self, current_player_id: Optional[int] = None) -> None:
+        alive_ids = self._alive_player_ids()
+        if not alive_ids:
+            return
+        if current_player_id is None:
+            current_player_id = alive_ids[0]
+        self.priority.update_order(alive_ids, current_player_id)
+        self._persist_priority()
+
     def begin_game(self) -> None:
         for player in self.gs.players:
             self._draw_cards(player.id, 7)
         self.state.turn_number = 1
         self.state.active_player_index = 0
+        self._ensure_active_player()
         self._set_phase_step(Phase.BEGINNING, Step.UNTAP)
         self._begin_step()
 
     def handle_player_pass(self, player_id: int) -> None:
+        self._sync_priority(self.priority.current)
         if player_id != self.priority.current:
             return
         if self.state.step == Step.DECLARE_ATTACKERS:
@@ -165,8 +197,8 @@ class TurnManager:
         self.gs.clear_prepared_casts()
         apply_continuous_effects(self.gs)
         apply_state_based_actions(self.gs)
-        self.priority.give_to(self.current_active_player_id())
-        self._persist_priority()
+        self._ensure_active_player()
+        self._sync_priority(self.current_active_player_id())
 
     def after_player_action(self, player_id: int) -> None:
         if player_id != self.priority.current:
@@ -174,18 +206,21 @@ class TurnManager:
         self.gs.clear_prepared_casts()
         apply_continuous_effects(self.gs)
         apply_state_based_actions(self.gs)
-        self.priority.last_passed_player = None
-        self.priority.pass_count = 0
-        self._persist_priority()
+        self._ensure_active_player()
+        current_id = self.priority.current if self.priority.current in self._alive_player_ids() else self.current_active_player_id()
+        self._sync_priority(current_id)
 
     def after_mana_ability(self, player_id: int) -> None:
         if player_id != self.priority.current and player_id not in self.gs.prepared_casts:
             return
         apply_continuous_effects(self.gs)
         apply_state_based_actions(self.gs)
-        self._persist_priority()
+        self._ensure_active_player()
+        current_id = self.priority.current if self.priority.current in self._alive_player_ids() else self.current_active_player_id()
+        self._sync_priority(current_id)
 
     def current_active_player_id(self) -> int:
+        self._ensure_active_player()
         return self.gs.players[self.state.active_player_index].id
 
     def _set_phase_step(self, phase: Phase, step: Step) -> None:
@@ -193,6 +228,7 @@ class TurnManager:
         self.state.step = step
 
     def _begin_step(self) -> None:
+        self._ensure_active_player()
         self.gs.event_bus.publish(Event(
             type="begin_step",
             payload={
@@ -215,8 +251,8 @@ class TurnManager:
             self.gs.event_bus.publish(Event(type="end_step", payload={"player_id": self.current_active_player_id()}))
         apply_continuous_effects(self.gs)
         apply_state_based_actions(self.gs)
-        self.priority.reset_for_new_step(self.current_active_player_id())
-        self._persist_priority()
+        self._ensure_active_player()
+        self._sync_priority(self.current_active_player_id())
 
         if self.state.step == Step.UNTAP:
             self._handle_untap_step()
@@ -224,11 +260,13 @@ class TurnManager:
             return
         if self.state.step == Step.DRAW:
             self._handle_draw_step()
-            self.priority.reset_for_new_step(self.current_active_player_id())
+            self._ensure_active_player()
+            self._sync_priority(self.current_active_player_id())
             return
         if self.state.step == Step.COMBAT_DAMAGE:
             self._handle_combat_damage_step()
-            self.priority.reset_for_new_step(self.current_active_player_id())
+            self._ensure_active_player()
+            self._sync_priority(self.current_active_player_id())
             return
         if self.state.step == Step.CLEANUP:
             self._handle_cleanup_step()
@@ -265,7 +303,7 @@ class TurnManager:
 
     def _start_next_turn(self) -> None:
         self.state.turn_number += 1
-        self.state.active_player_index = (self.state.active_player_index + 1) % len(self.gs.players)
+        self.state.active_player_index = self._next_active_index(self.state.active_player_index)
         self.state.land_plays_this_turn = 0
         self.state.combat_state = None
         self._reset_activation_limits("turn")
@@ -289,6 +327,8 @@ class TurnManager:
 
     def _handle_draw_step(self) -> None:
         active_player_id = self.current_active_player_id()
+        if self.state.turn_number == 1 and self.state.active_player_index == 0:
+            return
         self._draw_cards(active_player_id, 1)
 
     def _handle_combat_damage_step(self) -> None:
@@ -303,7 +343,35 @@ class TurnManager:
                 obj.damage = 0
                 obj.is_attacking = False
                 obj.is_blocking = False
+        active_player = self.gs.get_player(self.current_active_player_id())
+        self._discard_to_hand_size(active_player)
         self.state.combat_state = None
+
+    def _discard_to_hand_size(self, player) -> None:
+        max_hand_size = getattr(player, "max_hand_size", 7)
+        if max_hand_size is None or max_hand_size < 0:
+            return
+        attempts = 0
+        while len(player.hand) > max_hand_size and player.hand:
+            card_id = player.hand[-1]
+            replacement = resolve_replacement(
+                self.gs,
+                "replace_discard",
+                player.id,
+                f"discard:event:cleanup:{player.id}",
+            )
+            attempts += 1
+            if replacement:
+                replacement_zone = replacement.get("replacement_zone")
+                if replacement_zone == "skip":
+                    if attempts >= len(player.hand):
+                        break
+                    player.hand.insert(0, player.hand.pop())
+                    continue
+                if replacement_zone:
+                    self.gs.move_object(card_id, replacement_zone)
+                    continue
+            self.gs.move_object(card_id, ZONE_GRAVEYARD)
 
     def _expire_temporary_effects(self, step: Step) -> None:
         active_player_id = self.current_active_player_id()
@@ -349,6 +417,10 @@ class TurnManager:
         player = self.gs.get_player(player_id)
         for _ in range(count):
             if not player.library:
+                player.has_lost = True
+                self.gs.log(f"Player {player.id} loses for drawing from empty library.")
+                if not player.removed_from_game:
+                    self.gs.remove_player_from_game(player.id)
                 return
             card_id = player.library.pop(0)
             player.hand.append(card_id)

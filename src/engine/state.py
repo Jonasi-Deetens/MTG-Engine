@@ -71,6 +71,10 @@ class GameObject:
 class PlayerState:
     id: int
     life: int = 40
+    max_hand_size: int = 7
+    has_lost: bool = False
+    removed_from_game: bool = False
+    poison_counters: int = 0
     mana_pool: Dict[str, int] = field(default_factory=dict)
     library: List[str] = field(default_factory=list)
     hand: List[str] = field(default_factory=list)
@@ -200,6 +204,83 @@ class GameState:
             return
         if destination == ZONE_BATTLEFIELD and previous_zone != ZONE_BATTLEFIELD:
             self.event_bus.publish(Event(type="enters_battlefield", payload={"object_id": obj.id}))
+
+    def remove_player_from_game(self, player_id: int) -> None:
+        player = self.get_player(player_id)
+        if getattr(player, "removed_from_game", False):
+            return
+        player.removed_from_game = True
+
+        self.prepared_casts.pop(player_id, None)
+        self.replacement_choices = {
+            key: value for key, value in self.replacement_choices.items() if str(player_id) not in key
+        }
+        self.replacement_effects = [
+            effect
+            for effect in self.replacement_effects
+            if effect.get("player_id") != player_id
+            and effect.get("controller_id") != player_id
+            and effect.get("owner_id") != player_id
+        ]
+
+        self.stack.items = [
+            item for item in self.stack.items if not self._stack_item_for_player(item, player_id)
+        ]
+
+        owned_objects = [obj for obj in list(self.objects.values()) if obj.owner_id == player_id]
+        for obj in owned_objects:
+            self._remove_owned_object_from_game(obj)
+
+        for obj in list(self.objects.values()):
+            if obj.controller_id != player_id or obj.owner_id == player_id:
+                continue
+            if obj.zone == ZONE_BATTLEFIELD:
+                prev_controller = obj.controller_id
+                obj.controller_id = obj.owner_id
+                if obj.base_controller_id is not None:
+                    obj.base_controller_id = obj.owner_id
+                prev_player = self.get_player(prev_controller)
+                if obj.id in prev_player.battlefield:
+                    prev_player.battlefield.remove(obj.id)
+                self._add_to_zone(ZONE_BATTLEFIELD, obj.id)
+                self._enforce_attachment_legality(obj)
+
+        player.library = []
+        player.hand = []
+        player.graveyard = []
+        player.command = []
+        player.battlefield = []
+
+    def _stack_item_for_player(self, item, player_id: int) -> bool:
+        if item.controller_id == player_id:
+            return True
+        payload = item.payload or {}
+        for key in ("object_id", "source_object_id", "copy_of"):
+            obj_id = payload.get(key)
+            if obj_id and obj_id in self.objects and self.objects[obj_id].owner_id == player_id:
+                return True
+        return False
+
+    def _remove_owned_object_from_game(self, obj: GameObject) -> None:
+        previous_zone = obj.zone
+        if previous_zone == ZONE_BATTLEFIELD:
+            for attached in list(self.objects.values()):
+                if attached.zone != ZONE_BATTLEFIELD:
+                    continue
+                if attached.attached_to != obj.id:
+                    continue
+                attached.attached_to = None
+                if "Aura" in attached.types:
+                    self.move_object(attached.id, ZONE_GRAVEYARD)
+        self._remove_from_zone(previous_zone, obj.id)
+        obj.attached_to = None
+        obj.zone = ZONE_EXILE
+        if obj.is_token:
+            self.objects.pop(obj.id, None)
+            return
+        owner = self.get_player(obj.owner_id)
+        if obj.id not in owner.exile:
+            owner.exile.append(obj.id)
 
     def _apply_zone_replacement(self, obj: GameObject, from_zone: str, to_zone: str) -> str:
         def matches(effect: Dict[str, Any]) -> bool:
@@ -389,9 +470,20 @@ class GameState:
         obj.etb_choices.update(choices)
         obj.base_etb_choices.update(choices)
 
-    def destroy_object(self, obj_id: str) -> None:
+    def destroy_object(self, obj_id: str, allow_regen: bool = True) -> None:
         obj = self.objects.get(obj_id)
         if not obj:
+            return
+        if allow_regen and "Indestructible" in obj.keywords:
+            self.log(f"Destroy prevented (indestructible): {obj_id}")
+            return
+        if allow_regen and obj.regenerate_shield:
+            obj.regenerate_shield = False
+            obj.tapped = True
+            obj.damage = 0
+            obj.is_attacking = False
+            obj.is_blocking = False
+            self.log(f"Regenerated: {obj_id}")
             return
         replacement = self._apply_object_replacement(obj, "replace_destroy", ZONE_GRAVEYARD)
         if replacement == "skip":

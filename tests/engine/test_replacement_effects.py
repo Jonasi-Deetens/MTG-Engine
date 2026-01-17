@@ -1,6 +1,6 @@
 from engine import GameObject, GameState, PlayerState
 from engine.damage import apply_damage_to_object
-from engine.zones import ZONE_BATTLEFIELD
+from engine.zones import ZONE_BATTLEFIELD, ZONE_EXILE
 
 
 def _build_game_state() -> GameState:
@@ -80,5 +80,49 @@ def test_redirect_damage_effect():
     apply_damage_to_object(game_state, source, target, 3)
     assert target.damage == 0
     assert redirect.damage == 3
+
+
+def test_replace_destroy_moves_to_exile():
+    game_state = _build_game_state()
+    target = GameObject(
+        id="destroy_target",
+        name="Target",
+        owner_id=0,
+        controller_id=0,
+        types=["Creature"],
+        zone=ZONE_BATTLEFIELD,
+        power=2,
+        toughness=2,
+    )
+    target.temporary_effects.append(
+        {"type": "replace_destroy", "replacement_zone": ZONE_EXILE, "timestamp_order": 1}
+    )
+    game_state.add_object(target)
+
+    game_state.destroy_object(target.id)
+
+    assert target.zone == ZONE_EXILE
+
+
+def test_replace_sacrifice_moves_to_exile():
+    game_state = _build_game_state()
+    target = GameObject(
+        id="sac_target",
+        name="Target",
+        owner_id=0,
+        controller_id=0,
+        types=["Creature"],
+        zone=ZONE_BATTLEFIELD,
+        power=2,
+        toughness=2,
+    )
+    target.temporary_effects.append(
+        {"type": "replace_sacrifice", "replacement_zone": ZONE_EXILE, "timestamp_order": 1}
+    )
+    game_state.add_object(target)
+
+    game_state.sacrifice_object(target.id)
+
+    assert target.zone == ZONE_EXILE
 
 

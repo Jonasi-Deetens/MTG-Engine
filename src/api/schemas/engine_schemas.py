@@ -56,6 +56,10 @@ class GameObjectSnapshot(BaseModel):
 class PlayerStateSnapshot(BaseModel):
     id: int
     life: int = 40
+    max_hand_size: int = 7
+    has_lost: bool = False
+    removed_from_game: bool = False
+    poison_counters: int = 0
     mana_pool: Dict[str, int] = Field(default_factory=dict)
     library: List[str] = Field(default_factory=list)
     hand: List[str] = Field(default_factory=list)
@@ -71,6 +75,7 @@ class PlayerStateSnapshot(BaseModel):
 class CombatStateSnapshot(BaseModel):
     attacking_player_id: Optional[int] = None
     defending_player_id: Optional[int] = None
+    defending_object_id: Optional[str] = None
     attackers: List[str] = Field(default_factory=list)
     blockers: Dict[str, List[str]] = Field(default_factory=dict)
     attackers_declared: bool = False
@@ -150,6 +155,7 @@ class EngineActionRequest(BaseModel):
     attackers: List[str] = Field(default_factory=list)
     blockers: Dict[str, List[str]] = Field(default_factory=dict)
     defending_player_id: Optional[int] = None
+    defending_object_id: Optional[str] = None
     damage_assignments: Dict[str, Dict[str, int]] = Field(default_factory=dict)
     combat_damage_pass: Optional[Literal["first_strike", "regular"]] = None
     mana_payment: Dict[str, int] = Field(default_factory=dict)

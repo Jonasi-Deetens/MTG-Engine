@@ -16,19 +16,35 @@ def apply_state_based_actions(game_state: GameState) -> None:
             continue
         if obj.phased_out:
             continue
-        if "Indestructible" in obj.keywords:
+        if obj.toughness is not None and obj.toughness <= 0:
+            game_state.destroy_object(obj.id, allow_regen=False)
             continue
         if obj.toughness is not None and obj.damage >= obj.toughness:
-            game_state.destroy_object(obj.id)
-        if obj.toughness is not None and obj.toughness <= 0:
-            game_state.destroy_object(obj.id)
+            if "Indestructible" not in obj.keywords:
+                game_state.destroy_object(obj.id, allow_regen=True)
         if "Planeswalker" in obj.types:
             if obj.counters.get("loyalty", 0) <= 0:
-                game_state.destroy_object(obj.id)
+                game_state.destroy_object(obj.id, allow_regen=False)
 
     for player in game_state.players:
         if player.life <= 0:
-            game_state.log(f"Player {player.id} has 0 or less life.")
+            if not player.has_lost:
+                player.has_lost = True
+                game_state.log(f"Player {player.id} has 0 or less life.")
+            if not player.removed_from_game:
+                game_state.remove_player_from_game(player.id)
+        if player.poison_counters >= 10:
+            if not player.has_lost:
+                player.has_lost = True
+                game_state.log(f"Player {player.id} has 10 or more poison counters.")
+            if not player.removed_from_game:
+                game_state.remove_player_from_game(player.id)
+        if any(damage >= 21 for damage in player.commander_damage_taken.values()):
+            if not player.has_lost:
+                player.has_lost = True
+                game_state.log(f"Player {player.id} has 21 or more commander damage.")
+            if not player.removed_from_game:
+                game_state.remove_player_from_game(player.id)
 
 
 def _apply_legend_rule(game_state: GameState) -> None:
@@ -50,7 +66,7 @@ def _apply_legend_rule(game_state: GameState) -> None:
         for obj in group:
             if obj.id == keep.id:
                 continue
-            game_state.destroy_object(obj.id)
+            game_state.destroy_object(obj.id, allow_regen=False)
 
 
 def _apply_counter_cancellation(game_state: GameState) -> None:
@@ -86,7 +102,7 @@ def _apply_planeswalker_uniqueness(game_state: GameState) -> None:
         for obj in group:
             if obj.id == keep.id:
                 continue
-            game_state.destroy_object(obj.id)
+            game_state.destroy_object(obj.id, allow_regen=False)
 
 
 def _apply_attachment_checks(game_state: GameState) -> None:

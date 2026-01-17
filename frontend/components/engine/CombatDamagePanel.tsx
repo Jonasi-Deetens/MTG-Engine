@@ -11,6 +11,7 @@ interface CombatDamagePanelProps {
   objects: EngineGameObjectSnapshot[];
   cardMap: EngineCardMap;
   defendingPlayerId: number | null;
+  defendingObjectId?: string | null;
   assignments: Record<string, Record<string, number>>;
   damagePass?: 'first_strike' | 'regular' | null;
   disabledReason?: string | null;
@@ -23,6 +24,7 @@ export function CombatDamagePanel({
   objects,
   cardMap,
   defendingPlayerId,
+  defendingObjectId,
   assignments,
   damagePass,
   disabledReason,
@@ -56,6 +58,10 @@ export function CombatDamagePanel({
             blockers.length === 0 ||
             (Array.isArray(attacker.keywords) && attacker.keywords.includes('Trample'));
           const disabled = Boolean(disabledReason);
+          const defenderObject = defendingObjectId ? objectMap.get(defendingObjectId) : undefined;
+          const defenderLabel = defenderObject
+            ? cardMap[defendingObjectId!]?.name || defenderObject.name || defendingObjectId
+            : null;
 
           return (
             <div key={`combat-assign-${attackerId}`} className="space-y-2">
@@ -85,7 +91,24 @@ export function CombatDamagePanel({
                   })}
                 </div>
               )}
-              {canAssignToPlayer && typeof defendingPlayerId === 'number' && (
+              {canAssignToPlayer && defenderObject && (
+                <div className="flex items-center gap-2">
+                  <div className="text-xs text-[color:var(--theme-text-secondary)]">
+                    {defenderLabel} (Planeswalker)
+                  </div>
+                  <input
+                    type="number"
+                    min={0}
+                    value={attackerAssignments.defender ?? 0}
+                    disabled={disabled}
+                    onChange={(e) =>
+                      onUpdateAssignment(attackerId, 'defender', Math.max(0, Number(e.target.value || 0)))
+                    }
+                    className="w-16 px-2 py-1 text-xs bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+                  />
+                </div>
+              )}
+              {canAssignToPlayer && !defenderObject && typeof defendingPlayerId === 'number' && (
                 <div className="flex items-center gap-2">
                   <div className="text-xs text-[color:var(--theme-text-secondary)]">
                     Player {defendingPlayerId + 1}

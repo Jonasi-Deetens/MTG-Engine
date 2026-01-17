@@ -24,6 +24,21 @@ class PriorityManager:
     def reset_for_new_step(self, active_player_id: int) -> None:
         self.give_to(active_player_id)
 
+    def update_order(self, player_order: List[int], current_player_id: Optional[int] = None) -> None:
+        self.player_order = list(player_order)
+        self.pass_count = 0
+        self.last_passed_player = None
+        if not self.player_order:
+            self.current_index = 0
+            return
+        if current_player_id is None:
+            self.current_index = 0
+            return
+        if current_player_id in self.player_order:
+            self.current_index = self.player_order.index(current_player_id)
+        else:
+            self.current_index = 0
+
     def pass_priority(self) -> bool:
         player_id = self.current
         if self.last_passed_player == player_id:

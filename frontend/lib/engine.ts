@@ -52,6 +52,10 @@ export interface EngineGameObjectSnapshot {
 export interface EnginePlayerSnapshot {
   id: number;
   life: number;
+  max_hand_size?: number;
+  has_lost?: boolean;
+  removed_from_game?: boolean;
+  poison_counters?: number;
   mana_pool: Record<string, number>;
   library: string[];
   hand: string[];
@@ -79,6 +83,7 @@ export interface EngineTurnSnapshot {
 export interface EngineCombatStateSnapshot {
   attacking_player_id?: number | null;
   defending_player_id?: number | null;
+  defending_object_id?: string | null;
   attackers: string[];
   blockers: Record<string, string[]>;
   attackers_declared?: boolean;
@@ -139,6 +144,7 @@ export interface EngineActionRequest {
   attackers?: string[];
   blockers?: Record<string, string[]>;
   defending_player_id?: number | null;
+  defending_object_id?: string | null;
   damage_assignments?: Record<string, Record<string, number>>;
   combat_damage_pass?: 'first_strike' | 'regular';
   mana_payment?: Record<string, number>;
@@ -188,6 +194,7 @@ const parseKeywords = (oracleText?: string): string[] => {
     'Hexproof',
     'Indestructible',
     'Ward',
+    'Infect',
   ];
   const found: string[] = [];
   keywords.forEach((keyword) => {

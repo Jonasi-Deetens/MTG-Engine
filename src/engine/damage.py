@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Optional, List, Tuple
 
+from .commander import record_commander_damage
 from .state import GameObject, GameState
 
 
@@ -188,6 +189,19 @@ def _apply_damage_to_object_target(
     remaining = _apply_prevent_damage(game_state, target, amount)
     if remaining <= 0:
         return
+    if "Planeswalker" in target.types:
+        counters = target.counters or {}
+        current = int(counters.get("loyalty", 0))
+        counters["loyalty"] = max(0, current - remaining)
+        target.counters = counters
+        return
+    if "Infect" in source.keywords:
+        counters = target.counters or {}
+        if "Deathtouch" in source.keywords and (target.toughness or 0) > remaining:
+            remaining = target.toughness or remaining
+        counters["-1/-1"] = counters.get("-1/-1", 0) + remaining
+        target.counters = counters
+        return
     target.damage += remaining
     if "Deathtouch" in source.keywords:
         target.damage = max(target.damage, target.toughness or target.damage)
@@ -205,10 +219,19 @@ def _apply_damage_to_player_target(
     remaining = _apply_prevent_damage_to_player(game_state, player_id, amount)
     if remaining <= 0:
         return
-    player.life -= remaining
+    if "Infect" in source.keywords:
+        player.poison_counters += remaining
+    else:
+        player.life -= remaining
+    if _is_commander_source(game_state, source.id):
+        record_commander_damage(game_state, source.id, player_id, remaining)
     if "Lifelink" in source.keywords:
         controller = game_state.get_player(source.controller_id)
         controller.life += remaining
+
+
+def _is_commander_source(game_state: GameState, source_id: str) -> bool:
+    return any(player.commander_id == source_id for player in game_state.players)
 
 
 def apply_damage_to_object(

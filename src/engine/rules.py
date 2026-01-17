@@ -248,6 +248,7 @@ def declare_attackers(
     player_id: int,
     attackers: List[str],
     defending_player_id: Optional[int],
+    defending_object_id: Optional[str] = None,
 ) -> None:
     require_priority(turn_manager, player_id)
     require_active_player(turn_manager, player_id)
@@ -256,6 +257,17 @@ def declare_attackers(
     if game_state.turn.combat_state and game_state.turn.combat_state.attackers_declared:
         raise ValueError("Attackers have already been declared.")
 
+    defending_object = None
+    if defending_object_id:
+        defending_object = game_state.objects.get(defending_object_id)
+        if not defending_object or defending_object.zone != ZONE_BATTLEFIELD:
+            raise ValueError("Defending planeswalker not found on the battlefield.")
+        if "Planeswalker" not in defending_object.types:
+            raise ValueError("Defending object is not a planeswalker.")
+        if defending_player_id is None:
+            defending_player_id = defending_object.controller_id
+        if defending_object.controller_id != defending_player_id:
+            raise ValueError("Defending planeswalker is not controlled by the defending player.")
     if defending_player_id is None:
         active_index = game_state.turn.active_player_index
         defending_index = (active_index + 1) % len(game_state.players)
@@ -264,6 +276,7 @@ def declare_attackers(
     combat_state = CombatState(
         attacking_player_id=player_id,
         defending_player_id=defending_player_id,
+        defending_object_id=defending_object.id if defending_object else None,
         attackers=[],
         blockers={},
     )
@@ -492,11 +505,24 @@ def assign_combat_damage(
                 if target_id == "player":
                     if combat_state.defending_player_id is None:
                         raise ValueError("No defending player for combat damage.")
+                    if combat_state.defending_object_id is not None:
+                        raise ValueError("Combat damage must be assigned to the defending planeswalker.")
+                    has_player_assignment = True
+                elif target_id == "defender":
+                    if combat_state.defending_object_id is None:
+                        raise ValueError("No defending planeswalker for combat damage.")
                     has_player_assignment = True
                 elif target_id.startswith("player:"):
                     player_target_id = int(target_id.split(":", 1)[1])
                     if player_target_id != combat_state.defending_player_id:
                         raise ValueError("Combat damage can only be assigned to the defending player.")
+                    if combat_state.defending_object_id is not None:
+                        raise ValueError("Combat damage must be assigned to the defending planeswalker.")
+                    has_player_assignment = True
+                elif target_id.startswith("planeswalker:"):
+                    planeswalker_id = target_id.split(":", 1)[1]
+                    if combat_state.defending_object_id != planeswalker_id:
+                        raise ValueError("Combat damage can only be assigned to the defending planeswalker.")
                     has_player_assignment = True
                 else:
                     if target_id not in combat_state.blockers.get(source_id, []):
@@ -549,6 +575,21 @@ def assign_combat_damage(
                     if _register_event_choice(source_id, event_key, None, combat_state.defending_player_id):
                         missing_choices.append(event_key)
                     used_event_keys.add(event_key)
+                elif target_id == "defender":
+                    planeswalker_id = combat_state.defending_object_id
+                    if planeswalker_id:
+                        target = game_state.objects.get(planeswalker_id)
+                        event_key = f"damage:event:{source_id}:object:{planeswalker_id}"
+                        if target and _register_event_choice(source_id, event_key, target, None):
+                            missing_choices.append(event_key)
+                        used_event_keys.add(event_key)
+                elif target_id.startswith("planeswalker:"):
+                    planeswalker_id = target_id.split(":", 1)[1]
+                    target = game_state.objects.get(planeswalker_id)
+                    event_key = f"damage:event:{source_id}:object:{planeswalker_id}"
+                    if target and _register_event_choice(source_id, event_key, target, None):
+                        missing_choices.append(event_key)
+                    used_event_keys.add(event_key)
                 else:
                     target = game_state.objects.get(target_id)
                     if target:
@@ -570,6 +611,16 @@ def assign_combat_damage(
                     apply_damage_to_player(game_state, source, player_target_id, int(amount))
                 elif target_id == "player":
                     apply_damage_to_player(game_state, source, combat_state.defending_player_id, int(amount))
+                elif target_id == "defender":
+                    planeswalker_id = combat_state.defending_object_id
+                    target = game_state.objects.get(planeswalker_id) if planeswalker_id else None
+                    if target:
+                        apply_damage_to_object(game_state, source, target, int(amount))
+                elif target_id.startswith("planeswalker:"):
+                    planeswalker_id = target_id.split(":", 1)[1]
+                    target = game_state.objects.get(planeswalker_id)
+                    if target:
+                        apply_damage_to_object(game_state, source, target, int(amount))
                 else:
                     target = game_state.objects.get(target_id)
                     if target:
@@ -614,6 +665,18 @@ def assign_combat_damage(
     ) -> bool:
         return _register_event_choice(source_obj.id, event_key, target_obj, player_target_id)
 
+    def apply_damage_to_defender(attacker: GameObject, amount: int, used_event_keys: Optional[set[str]] = None) -> None:
+        if combat_state.defending_object_id:
+            defender = game_state.objects.get(combat_state.defending_object_id)
+            if defender:
+                if used_event_keys is not None:
+                    used_event_keys.add(f"damage:event:{attacker.id}:object:{defender.id}")
+                apply_damage_to_object(game_state, attacker, defender, amount)
+            return
+        if used_event_keys is not None:
+            used_event_keys.add(f"damage:event:{attacker.id}:player:{combat_state.defending_player_id}")
+        apply_damage_to_player(game_state, attacker, combat_state.defending_player_id, amount)
+
     def deal_to_blockers(attacker, blockers, used_event_keys: Optional[set[str]] = None):
         remaining = get_power(attacker)
         if remaining <= 0:
@@ -630,9 +693,7 @@ def assign_combat_damage(
                 apply_damage_to_object(game_state, attacker, blocker, assign)
             remaining -= assign
         if remaining > 0 and has_keyword(attacker, "Trample"):
-            if used_event_keys is not None:
-                used_event_keys.add(f"damage:event:{attacker.id}:player:{combat_state.defending_player_id}")
-            apply_damage_to_player(game_state, attacker, combat_state.defending_player_id, remaining)
+            apply_damage_to_defender(attacker, remaining, used_event_keys)
 
     def deal_blocker_damage(attacker, blockers, used_event_keys: Optional[set[str]] = None):
         for blocker in blockers:
@@ -661,9 +722,7 @@ def assign_combat_damage(
 
             if not blockers:
                 if attacker_can_deal:
-                    if used_event_keys is not None:
-                        used_event_keys.add(f"damage:event:{attacker.id}:player:{combat_state.defending_player_id}")
-                    apply_damage_to_player(game_state, attacker, combat_state.defending_player_id, get_power(attacker))
+                    apply_damage_to_defender(attacker, get_power(attacker), used_event_keys)
                 continue
 
             if attacker_can_deal:
@@ -694,9 +753,16 @@ def assign_combat_damage(
             ]
             blockers = [b for b in blockers if b and is_alive(b) and b.is_blocking and is_eligible_for_pass(b)]
             if not blockers:
-                event_key = f"damage:event:{attacker.id}:player:{combat_state.defending_player_id}"
-                if register_combat_event_choice(attacker, None, combat_state.defending_player_id, event_key):
-                    missing.append(event_key)
+                if combat_state.defending_object_id:
+                    defender = game_state.objects.get(combat_state.defending_object_id)
+                    if defender:
+                        event_key = f"damage:event:{attacker.id}:object:{defender.id}"
+                        if register_combat_event_choice(attacker, defender, None, event_key):
+                            missing.append(event_key)
+                else:
+                    event_key = f"damage:event:{attacker.id}:player:{combat_state.defending_player_id}"
+                    if register_combat_event_choice(attacker, None, combat_state.defending_player_id, event_key):
+                        missing.append(event_key)
                 continue
             remaining = get_power(attacker)
             if remaining > 0:
@@ -712,9 +778,16 @@ def assign_combat_damage(
                             missing.append(event_key)
                     remaining -= assign
                 if remaining > 0 and has_keyword(attacker, "Trample"):
-                    event_key = f"damage:event:{attacker.id}:player:{combat_state.defending_player_id}"
-                    if register_combat_event_choice(attacker, None, combat_state.defending_player_id, event_key):
-                        missing.append(event_key)
+                    if combat_state.defending_object_id:
+                        defender = game_state.objects.get(combat_state.defending_object_id)
+                        if defender:
+                            event_key = f"damage:event:{attacker.id}:object:{defender.id}"
+                            if register_combat_event_choice(attacker, defender, None, event_key):
+                                missing.append(event_key)
+                    else:
+                        event_key = f"damage:event:{attacker.id}:player:{combat_state.defending_player_id}"
+                        if register_combat_event_choice(attacker, None, combat_state.defending_player_id, event_key):
+                            missing.append(event_key)
             for blocker in blockers:
                 if get_power(blocker) <= 0:
                     continue

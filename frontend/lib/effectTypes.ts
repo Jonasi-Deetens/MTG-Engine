@@ -42,6 +42,7 @@ export const EFFECT_TYPE_OPTIONS: EffectTypeOption[] = [
   { value: 'counters', label: 'Add Counters', requiresAmount: true },
   { value: 'life', label: 'Gain Life', requiresAmount: true },
   { value: 'lose_life', label: 'Lose Life', requiresAmount: true, requiresTarget: true },
+  { value: 'add_poison', label: 'Add Poison Counters', requiresAmount: true, requiresTarget: true },
   { value: 'mana', label: 'Add Mana', requiresManaType: true },
   { value: 'untap', label: 'Untap', requiresUntapTarget: true },
   { value: 'tap', label: 'Tap', requiresUntapTarget: true },
@@ -321,6 +322,9 @@ export function formatEffect(effect: any): string {
   }
   if (effect.type === 'lose_life') {
     return `Lose ${effect.amount || 0} life`;
+  }
+  if (effect.type === 'add_poison') {
+    return `Add ${effect.amount || 0} poison counter${(effect.amount || 0) === 1 ? '' : 's'}`;
   }
   if (effect.type === 'mana') {
     const amount = effect.amount || 1;
