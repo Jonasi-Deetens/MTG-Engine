@@ -81,6 +81,8 @@ export interface EngineCombatStateSnapshot {
   defending_player_id?: number | null;
   attackers: string[];
   blockers: Record<string, string[]>;
+  attackers_declared?: boolean;
+  blockers_declared?: boolean;
   first_strike_resolved?: boolean;
   combat_damage_resolved?: boolean;
 }

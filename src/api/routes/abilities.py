@@ -304,6 +304,46 @@ def validate_graph(graph: AbilityGraph, card_colors: Optional[List[str]] = None)
                     message=f"Effect {node.id} has invalid toZone",
                     nodeId=node.id
                 ))
+        if effect_type in ("replace_destroy", "replace_sacrifice"):
+            replacement_zone = payload.get("replacementZone")
+            if not isinstance(replacement_zone, str):
+                errors.append(ValidationError(
+                    type="error",
+                    message=f"Effect {node.id} must define replacementZone",
+                    nodeId=node.id
+                ))
+        if effect_type in ("replace_draw", "replace_discard"):
+            replacement_zone = payload.get("replacementZone")
+            if not isinstance(replacement_zone, str):
+                errors.append(ValidationError(
+                    type="error",
+                    message=f"Effect {node.id} must define replacementZone",
+                    nodeId=node.id
+                ))
+        if effect_type in ("replace_destroy", "replace_sacrifice"):
+            replacement_zone = payload.get("replacementZone")
+            if not isinstance(replacement_zone, str):
+                errors.append(ValidationError(
+                    type="error",
+                    message=f"Effect {node.id} must define replacementZone",
+                    nodeId=node.id
+                ))
+        if effect_type == "replace_life_loss":
+            replacement_amount = payload.get("replacementAmount")
+            if replacement_amount is not None and not isinstance(replacement_amount, (int, float)):
+                errors.append(ValidationError(
+                    type="error",
+                    message=f"Effect {node.id} must define a valid replacementAmount",
+                    nodeId=node.id
+                ))
+        if effect_type == "lose_life":
+            amount = payload.get("amount")
+            if amount is None or not isinstance(amount, (int, float)):
+                errors.append(ValidationError(
+                    type="error",
+                    message=f"Effect {node.id} must define amount",
+                    nodeId=node.id
+                ))
         if effect_type == "enter_choice":
             choice_type = payload.get("choice")
             if choice_type not in ("color", "creature_type", "card_type", "target"):

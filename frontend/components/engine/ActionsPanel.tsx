@@ -42,6 +42,8 @@ interface ActionsPanelProps {
   onAssignCombatDamage: () => void;
   hasUnresolvedDamageReplacements: boolean;
   unresolvedDamageReplacements: ReplacementConflictEntry[];
+  blockerErrors: string[];
+  blockerErrorMap: Record<string, string[]>;
   onSelectDefender: (playerId: number | null) => void;
   onSelectActiveAttacker: (attackerId: string) => void;
   onReorderBlockerUp: (index: number) => void;
@@ -105,6 +107,8 @@ export function ActionsPanel({
   onAssignCombatDamage,
   hasUnresolvedDamageReplacements,
   unresolvedDamageReplacements,
+  blockerErrors,
+  blockerErrorMap,
   onSelectDefender,
   onSelectActiveAttacker,
   onReorderBlockerUp,
@@ -171,14 +175,26 @@ export function ActionsPanel({
         <Button
           variant="outline"
           onClick={onDeclareAttackers}
-          disabled={!isDeclareAttackers || !isPriorityActivePlayer || selectedAttackers.size === 0 || loading}
+          disabled={
+            !isDeclareAttackers ||
+            !isPriorityActivePlayer ||
+            combatState?.attackers_declared ||
+            loading
+          }
         >
           Declare Attackers
         </Button>
         <Button
           variant="outline"
           onClick={onDeclareBlockers}
-          disabled={!isDeclareBlockers || !isPriorityDefender || !activeAttackerId || loading}
+          disabled={
+            !isDeclareBlockers ||
+            !isPriorityDefender ||
+            (combatState?.attackers?.length ? !activeAttackerId : false) ||
+            combatState?.blockers_declared ||
+            loading ||
+            blockerErrors.length > 0
+          }
         >
           Declare Blockers
         </Button>
@@ -232,21 +248,35 @@ export function ActionsPanel({
               </div>
               <div className="space-y-1">
                 {activeBlockerOrder.map((blockerId, index) => (
-                  <div key={`blocker-order-${blockerId}`} className="flex items-center gap-2">
-                    <div className="text-xs text-[color:var(--theme-text-secondary)]">
-                      {cardMap[blockerId]?.name || blockerId}
+                  <div key={`blocker-order-${blockerId}`} className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <div className="text-xs text-[color:var(--theme-text-secondary)]">
+                        {cardMap[blockerId]?.name || blockerId}
+                      </div>
+                      <div className="flex gap-1">
+                        <Button size="xs" variant="outline" onClick={() => onReorderBlockerUp(index)}>
+                          ↑
+                        </Button>
+                        <Button size="xs" variant="outline" onClick={() => onReorderBlockerDown(index)}>
+                          ↓
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex gap-1">
-                      <Button size="xs" variant="outline" onClick={() => onReorderBlockerUp(index)}>
-                        ↑
-                      </Button>
-                      <Button size="xs" variant="outline" onClick={() => onReorderBlockerDown(index)}>
-                        ↓
-                      </Button>
-                    </div>
+                    {blockerErrorMap[blockerId]?.length ? (
+                      <div className="text-xs text-[color:var(--theme-status-error)]">
+                        {blockerErrorMap[blockerId].join(' ')}
+                      </div>
+                    ) : null}
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+          {blockerErrors.length > 0 && (
+            <div className="space-y-1 text-xs text-[color:var(--theme-status-error)]">
+              {blockerErrors.map((error) => (
+                <div key={error}>{error}</div>
+              ))}
             </div>
           )}
         </div>

@@ -63,6 +63,7 @@ class GameObject:
     base_ability_graphs: List[Dict[str, Any]] = field(default_factory=list)
     activation_limits: Dict[str, int] = field(default_factory=dict)
     etb_choices: Dict[str, Any] = field(default_factory=dict)
+    base_etb_choices: Dict[str, Any] = field(default_factory=dict)
     base_controller_id: Optional[int] = None
 
 
@@ -139,6 +140,8 @@ class GameState:
             obj.base_oracle_text = obj.oracle_text
         if not obj.base_ability_graphs and obj.ability_graphs:
             obj.base_ability_graphs = list(obj.ability_graphs)
+        if not obj.base_etb_choices and obj.etb_choices:
+            obj.base_etb_choices = dict(obj.etb_choices)
         self._add_to_zone(obj.zone, obj.id)
 
     def create_token(
@@ -175,6 +178,14 @@ class GameState:
         if destination != ZONE_BATTLEFIELD:
             obj.attached_to = None
         if previous_zone == ZONE_BATTLEFIELD and destination != ZONE_BATTLEFIELD:
+            for attached in list(self.objects.values()):
+                if attached.zone != ZONE_BATTLEFIELD:
+                    continue
+                if attached.attached_to != obj_id:
+                    continue
+                attached.attached_to = None
+                if "Aura" in attached.types:
+                    self.move_object(attached.id, ZONE_GRAVEYARD)
             self.event_bus.publish(Event(type="leaves_battlefield", payload={"object_id": obj.id}))
         self._remove_from_zone(obj.zone, obj_id)
         obj.zone = destination
@@ -249,6 +260,61 @@ class GameState:
 
         return to_zone
 
+    def _apply_object_replacement(self, obj: GameObject, effect_type: str, default_zone: str) -> str:
+        def matches(effect: Dict[str, Any]) -> bool:
+            if effect.get("type") != effect_type:
+                return False
+            if effect.get("object_id") and effect.get("object_id") != obj.id:
+                return False
+            if effect.get("controller_id") is not None and effect.get("controller_id") != obj.controller_id:
+                return False
+            if effect.get("owner_id") is not None and effect.get("owner_id") != obj.owner_id:
+                return False
+            return True
+
+        def consume(effect: Dict[str, Any], container: List[Dict[str, Any]]) -> None:
+            remaining = effect.get("uses")
+            if remaining is None:
+                return
+            remaining = int(remaining) - 1
+            if remaining <= 0:
+                container.remove(effect)
+            else:
+                effect["uses"] = remaining
+
+        matches_temp = [effect for effect in list(obj.temporary_effects) if matches(effect)]
+        matches_global = [effect for effect in list(self.replacement_effects) if matches(effect)]
+        matches_all = [(effect, obj.temporary_effects) for effect in matches_temp] + [
+            (effect, self.replacement_effects) for effect in matches_global
+        ]
+
+        event_key = f"{obj.id}:{effect_type}"
+        if len(matches_all) > 1:
+            choice_id = self.replacement_choices.get(event_key)
+            if choice_id:
+                for effect, container in matches_all:
+                    if effect.get("effect_id") == choice_id:
+                        replacement = effect.get("replacement_zone")
+                        if replacement:
+                            consume(effect, container)
+                            self.replacement_choices.pop(event_key, None)
+                            return replacement
+            matches_all.sort(key=lambda item: int(item[0].get("timestamp_order", 0)), reverse=True)
+            effect, container = matches_all[0]
+            replacement = effect.get("replacement_zone")
+            if replacement:
+                consume(effect, container)
+                self.log(f"Multiple replacements for {obj.id}; defaulted to most recent.")
+                return replacement
+
+        for effect, container in matches_all:
+            replacement = effect.get("replacement_zone")
+            if replacement:
+                consume(effect, container)
+                return replacement
+
+        return default_zone
+
     def _is_illegal_attachment(self, attachment: GameObject, attached: GameObject) -> bool:
         if "Hexproof" in attached.keywords and attachment.controller_id != attached.controller_id:
             return True
@@ -291,18 +357,19 @@ class GameState:
         source = self.objects.get(source_id)
         if not source:
             return
-        obj.base_name = source.base_name or source.name
-        obj.base_mana_cost = source.base_mana_cost or source.mana_cost
-        obj.base_mana_value = source.base_mana_value if source.base_mana_value is not None else source.mana_value
-        obj.base_type_line = source.base_type_line or source.type_line
-        obj.base_oracle_text = source.base_oracle_text or source.oracle_text
-        obj.base_types = list(source.base_types) if source.base_types else list(source.types)
-        obj.base_colors = list(source.base_colors) if source.base_colors else list(source.colors)
-        obj.base_power = source.base_power
-        obj.base_toughness = source.base_toughness
-        obj.base_keywords = set(source.base_keywords) if source.base_keywords else set(source.keywords)
-        obj.base_ability_graphs = list(source.base_ability_graphs) if source.base_ability_graphs else list(source.ability_graphs)
-        obj.etb_choices = dict(getattr(source, "etb_choices", {}) or {})
+        obj.base_name = source.name
+        obj.base_mana_cost = source.mana_cost
+        obj.base_mana_value = source.mana_value
+        obj.base_type_line = source.type_line
+        obj.base_oracle_text = source.oracle_text
+        obj.base_types = list(source.types)
+        obj.base_colors = list(source.colors)
+        obj.base_power = source.power
+        obj.base_toughness = source.toughness
+        obj.base_keywords = set(source.keywords)
+        obj.base_ability_graphs = list(source.ability_graphs)
+        obj.base_etb_choices = dict(getattr(source, "etb_choices", {}) or {})
+        obj.etb_choices = dict(obj.base_etb_choices)
 
         obj.name = obj.base_name or obj.name
         obj.mana_cost = obj.base_mana_cost
@@ -320,10 +387,19 @@ class GameState:
         if not choices:
             return
         obj.etb_choices.update(choices)
+        obj.base_etb_choices.update(choices)
 
     def destroy_object(self, obj_id: str) -> None:
         obj = self.objects.get(obj_id)
         if not obj:
+            return
+        replacement = self._apply_object_replacement(obj, "replace_destroy", ZONE_GRAVEYARD)
+        if replacement == "skip":
+            self.log(f"Destroy skipped: {obj_id}")
+            return
+        if replacement != ZONE_GRAVEYARD:
+            self.move_object(obj_id, replacement)
+            self.log(f"Object destroyed (replaced): {obj_id}")
             return
         self.event_bus.publish(Event(type="dies", payload={"object_id": obj_id}))
         if obj.is_token:
@@ -333,6 +409,27 @@ class GameState:
             return
         self.move_object(obj_id, ZONE_GRAVEYARD)
         self.log(f"Object destroyed: {obj_id}")
+
+    def sacrifice_object(self, obj_id: str) -> None:
+        obj = self.objects.get(obj_id)
+        if not obj:
+            return
+        replacement = self._apply_object_replacement(obj, "replace_sacrifice", ZONE_GRAVEYARD)
+        if replacement == "skip":
+            self.log(f"Sacrifice skipped: {obj_id}")
+            return
+        if replacement != ZONE_GRAVEYARD:
+            self.move_object(obj_id, replacement)
+            self.log(f"Object sacrificed (replaced): {obj_id}")
+            return
+        self.event_bus.publish(Event(type="dies", payload={"object_id": obj_id}))
+        if obj.is_token:
+            self._remove_from_zone(obj.zone, obj_id)
+            del self.objects[obj_id]
+            self.log(f"Token sacrificed: {obj_id}")
+            return
+        self.move_object(obj_id, ZONE_GRAVEYARD)
+        self.log(f"Object sacrificed: {obj_id}")
 
     def clear_prepared_casts(self) -> None:
         self.prepared_casts.clear()

@@ -72,6 +72,7 @@ def _validate_cast_timing(game_state, turn_manager, player_id: int, obj) -> None
         require_active_player(turn_manager, player_id)
         require_main_phase(game_state)
         require_empty_stack(game_state)
+    _require_combat_declarations_done(game_state)
 
 
 def _validate_ability_timing(game_state, turn_manager, player_id: int, obj, runtime) -> None:
@@ -81,6 +82,18 @@ def _validate_ability_timing(game_state, turn_manager, player_id: int, obj, runt
         require_active_player(turn_manager, player_id)
         require_main_phase(game_state)
         require_empty_stack(game_state)
+    _require_combat_declarations_done(game_state)
+
+
+def _require_combat_declarations_done(game_state) -> None:
+    step = game_state.turn.step
+    combat_state = game_state.turn.combat_state
+    if step == Step.DECLARE_ATTACKERS:
+        if not combat_state or not combat_state.attackers_declared:
+            raise ValueError("Declare attackers before taking other actions.")
+    if step == Step.DECLARE_BLOCKERS:
+        if not combat_state or not combat_state.blockers_declared:
+            raise ValueError("Declare blockers before taking other actions.")
 
 
 
@@ -240,6 +253,8 @@ def declare_attackers(
     require_active_player(turn_manager, player_id)
     if game_state.turn.step != Step.DECLARE_ATTACKERS:
         raise ValueError("Not in declare attackers step.")
+    if game_state.turn.combat_state and game_state.turn.combat_state.attackers_declared:
+        raise ValueError("Attackers have already been declared.")
 
     if defending_player_id is None:
         active_index = game_state.turn.active_player_index
@@ -261,8 +276,12 @@ def declare_attackers(
             raise ValueError("Attacker must be on the battlefield under your control.")
         if "Creature" not in obj.types:
             raise ValueError("Only creatures can attack.")
+        if obj.phased_out:
+            raise ValueError("Phased out creatures cannot attack.")
         if obj.tapped:
             raise ValueError("Tapped creatures cannot attack.")
+        if "Defender" in obj.keywords:
+            raise ValueError("Creatures with defender cannot attack.")
         if obj.entered_turn == game_state.turn.turn_number and "Haste" not in obj.keywords:
             raise ValueError("Creature has summoning sickness.")
         obj.is_attacking = True
@@ -273,6 +292,7 @@ def declare_attackers(
     game_state.turn.combat_state = combat_state
     for attacker_id in attackers:
         game_state.event_bus.publish(Event(type="attacks", payload={"object_id": attacker_id}))
+    combat_state.attackers_declared = True
     turn_manager.after_player_action(player_id)
 
 
@@ -289,17 +309,24 @@ def declare_blockers(
     combat_state = game_state.turn.combat_state
     if not combat_state:
         raise ValueError("No combat state is active.")
+    if combat_state.blockers_declared:
+        raise ValueError("Blockers have already been declared.")
     if combat_state.combat_damage_resolved:
         raise ValueError("Combat damage has already been assigned.")
     if combat_state.defending_player_id != player_id:
         raise ValueError("Only the defending player may declare blockers.")
 
+    used_blockers: set[str] = set()
     for attacker_id, blocker_ids in blockers.items():
         if attacker_id not in combat_state.attackers:
             raise ValueError("Blockers must target an attacking creature.")
         attacker = game_state.objects.get(attacker_id)
         if not attacker or not attacker.is_attacking:
             raise ValueError("Invalid attacking creature.")
+        if "Menace" in attacker.keywords and len(blocker_ids) == 1:
+            raise ValueError("Menace requires two or more blockers.")
+        if len(blocker_ids) != len(set(blocker_ids)):
+            raise ValueError("Duplicate blockers are not allowed.")
         for blocker_id in blocker_ids:
             blocker = game_state.objects.get(blocker_id)
             if not blocker:
@@ -308,15 +335,24 @@ def declare_blockers(
                 raise ValueError("Blocker must be on the battlefield under your control.")
             if "Creature" not in blocker.types:
                 raise ValueError("Only creatures can block.")
+            if blocker.phased_out:
+                raise ValueError("Phased out creatures cannot block.")
             if blocker.tapped:
                 raise ValueError("Tapped creatures cannot block.")
+            if blocker_id in used_blockers:
+                raise ValueError("A creature cannot block multiple attackers.")
             if "Flying" in attacker.keywords and not (
                 "Flying" in blocker.keywords or "Reach" in blocker.keywords
             ):
                 raise ValueError("Only creatures with flying or reach can block a flying creature.")
+            if attacker.protections and blocker.colors:
+                if any(color in attacker.protections for color in blocker.colors):
+                    raise ValueError("Attacker has protection from this blocker.")
             blocker.is_blocking = True
+            used_blockers.add(blocker_id)
         combat_state.blockers[attacker_id] = list(blocker_ids)
     game_state.event_bus.publish(Event(type="blocks", payload={"blockers": blockers}))
+    combat_state.blockers_declared = True
     turn_manager.after_player_action(player_id)
 
 
@@ -380,6 +416,42 @@ def assign_combat_damage(
         if deathtouch:
             return 1
         return max(0, int(defender.toughness) - int(defender.damage or 0))
+
+    has_first_strike_combat = False
+    for attacker_id in combat_state.attackers:
+        attacker = game_state.objects.get(attacker_id)
+        if attacker and (has_keyword(attacker, "First strike") or has_keyword(attacker, "Double strike")):
+            has_first_strike_combat = True
+            break
+        for blocker_id in combat_state.blockers.get(attacker_id, []):
+            blocker = game_state.objects.get(blocker_id)
+            if blocker and (has_keyword(blocker, "First strike") or has_keyword(blocker, "Double strike")):
+                has_first_strike_combat = True
+                break
+        if has_first_strike_combat:
+            break
+
+    if combat_damage_pass not in (None, "first_strike", "regular"):
+        raise ValueError("Invalid combat damage pass.")
+    if has_first_strike_combat:
+        if combat_damage_pass == "first_strike" and combat_state.first_strike_resolved:
+            raise ValueError("First strike combat damage already assigned.")
+        if combat_damage_pass == "regular" and not combat_state.first_strike_resolved:
+            raise ValueError("First strike combat damage must resolve first.")
+        if combat_damage_pass is None and damage_assignments:
+            raise ValueError("Combat damage pass is required with first/double strike.")
+        if combat_damage_pass is None and combat_state.first_strike_resolved:
+            raise ValueError("Combat damage pass is required with first/double strike.")
+    else:
+        if combat_damage_pass == "first_strike":
+            raise ValueError("First strike combat damage does not apply.")
+
+    def is_eligible_for_pass(obj) -> bool:
+        if combat_damage_pass == "first_strike":
+            return has_keyword(obj, "First strike") or has_keyword(obj, "Double strike")
+        if combat_damage_pass == "regular":
+            return not has_keyword(obj, "First strike") or has_keyword(obj, "Double strike")
+        return True
 
     def _validate_manual_assignments(assignments: Dict[str, Dict[str, int]]) -> None:
         if not combat_state:
@@ -601,33 +673,12 @@ def assign_combat_damage(
 
         apply_state_based_actions(game_state)
 
-    if combat_damage_pass not in (None, "first_strike", "regular"):
-        raise ValueError("Invalid combat damage pass.")
-    if has_first_strike_combat:
-        if combat_damage_pass == "first_strike" and combat_state.first_strike_resolved:
-            raise ValueError("First strike combat damage already assigned.")
-        if combat_damage_pass == "regular" and not combat_state.first_strike_resolved:
-            raise ValueError("First strike combat damage must resolve first.")
-        if combat_damage_pass is None and damage_assignments:
-            raise ValueError("Combat damage pass is required with first/double strike.")
-        if combat_damage_pass is None and combat_state.first_strike_resolved:
-            raise ValueError("Combat damage pass is required with first/double strike.")
-    else:
-        if combat_damage_pass == "first_strike":
-            raise ValueError("First strike combat damage does not apply.")
-
     def can_deal_in_first_strike(obj) -> bool:
         return has_keyword(obj, "First strike") or has_keyword(obj, "Double strike")
 
     def can_deal_in_second_strike(obj) -> bool:
         return not has_keyword(obj, "First strike") or has_keyword(obj, "Double strike")
 
-    def is_eligible_for_pass(obj) -> bool:
-        if combat_damage_pass == "first_strike":
-            return can_deal_in_first_strike(obj)
-        if combat_damage_pass == "regular":
-            return can_deal_in_second_strike(obj)
-        return True
 
     def _collect_missing_combat_choices() -> List[str]:
         missing: List[str] = []
@@ -698,6 +749,7 @@ def assign_combat_damage(
 def activate_mana_ability(game_state, turn_manager, player_id: int, object_id: str) -> None:
     if player_id != turn_manager.priority.current and player_id not in game_state.prepared_casts:
         raise ValueError("Player does not have priority or is not casting a spell.")
+    _require_combat_declarations_done(game_state)
     obj = game_state.objects.get(object_id)
     if not obj:
         raise ValueError("Permanent not found.")

@@ -105,6 +105,7 @@ def _build_game_state(snapshot: GameStateSnapshot) -> GameState:
             temporary_effects=list(getattr(obj, "temporary_effects", [])),
             activation_limits=dict(getattr(obj, "activation_limits", {})),
             etb_choices=dict(getattr(obj, "etb_choices", {})),
+            base_etb_choices=dict(getattr(obj, "etb_choices", {})),
         )
 
     game_state.stack.items = [
@@ -119,6 +120,8 @@ def _build_game_state(snapshot: GameStateSnapshot) -> GameState:
             defending_player_id=snapshot.turn.combat_state.defending_player_id,
             attackers=list(snapshot.turn.combat_state.attackers),
             blockers=dict(snapshot.turn.combat_state.blockers),
+            attackers_declared=getattr(snapshot.turn.combat_state, "attackers_declared", False),
+            blockers_declared=getattr(snapshot.turn.combat_state, "blockers_declared", False),
             first_strike_resolved=getattr(snapshot.turn.combat_state, "first_strike_resolved", False),
             combat_damage_resolved=getattr(snapshot.turn.combat_state, "combat_damage_resolved", False),
         )
@@ -153,6 +156,8 @@ def _serialize_game_state(game_state: GameState) -> GameStateSnapshot:
             "defending_player_id": game_state.turn.combat_state.defending_player_id,
             "attackers": list(game_state.turn.combat_state.attackers),
             "blockers": dict(game_state.turn.combat_state.blockers),
+            "attackers_declared": game_state.turn.combat_state.attackers_declared,
+            "blockers_declared": game_state.turn.combat_state.blockers_declared,
             "first_strike_resolved": game_state.turn.combat_state.first_strike_resolved,
             "combat_damage_resolved": game_state.turn.combat_state.combat_damage_resolved,
         }

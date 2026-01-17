@@ -250,6 +250,8 @@ def _reset_characteristics(obj) -> None:
         obj.colors = list(obj.base_colors)
     if getattr(obj, "base_ability_graphs", None):
         obj.ability_graphs = list(obj.base_ability_graphs)
+    if getattr(obj, "base_etb_choices", None) is not None:
+        obj.etb_choices = dict(obj.base_etb_choices)
 
 
 def _reset_layer_2_control(obj) -> None:
@@ -481,36 +483,53 @@ def apply_continuous_effects(game_state: GameState) -> None:
             previous_signature = signature
 
     def _apply_layer_1_copy(obj) -> None:
-        for effect in _effects_of_type(obj.temporary_effects, "copy_object"):
-            source_id = effect.get("source_id")
-            if not source_id:
-                continue
-            source = game_state.objects.get(source_id)
-            if not source:
-                continue
-            obj.name = source.base_name or source.name
-            obj.mana_cost = source.base_mana_cost or source.mana_cost
-            obj.mana_value = source.base_mana_value if source.base_mana_value is not None else source.mana_value
-            obj.type_line = source.base_type_line or source.type_line
-            obj.oracle_text = source.base_oracle_text or source.oracle_text
-            if getattr(source, "base_types", None):
-                obj.types = list(source.base_types)
-            if getattr(source, "base_colors", None):
-                obj.colors = list(source.base_colors)
-            if source.base_power is not None:
-                obj.power = source.base_power
-            if source.base_toughness is not None:
-                obj.toughness = source.base_toughness
-            if source.base_keywords is not None:
-                obj.keywords = set(source.base_keywords)
-            if getattr(source, "base_ability_graphs", None):
-                obj.ability_graphs = list(source.base_ability_graphs)
+        copy_effects = list(_effects_of_type(obj.temporary_effects, "copy_object"))
+        if not copy_effects:
             return
+        copy_effects = sorted(copy_effects, key=_effect_sort_key)
+        effect = copy_effects[-1]
+        source_id = effect.get("source_id")
+        if not source_id:
+            return
+        source = game_state.objects.get(source_id)
+        if not source:
+            return
+        obj.name = source.name
+        obj.mana_cost = source.mana_cost
+        obj.mana_value = source.mana_value
+        obj.type_line = source.type_line
+        obj.oracle_text = source.oracle_text
+        obj.types = list(source.types)
+        obj.colors = list(source.colors)
+        obj.power = source.power
+        obj.toughness = source.toughness
+        obj.keywords = set(source.keywords)
+        obj.ability_graphs = list(source.ability_graphs)
+        obj.etb_choices = dict(getattr(source, "etb_choices", {}) or {})
+
+    def _copy_signature(obj) -> Tuple:
+        graphs = tuple(str(graph) for graph in (obj.ability_graphs or []))
+        choices = tuple(str(item) for item in sorted((obj.etb_choices or {}).items()))
+        return (
+            obj.name,
+            obj.mana_cost,
+            obj.mana_value,
+            tuple(obj.types),
+            tuple(obj.colors),
+            obj.power,
+            obj.toughness,
+            tuple(sorted(obj.keywords)),
+            graphs,
+            choices,
+        )
 
     apply_layer(
         {"copy_permanent"},
         _apply_layer_1_copy,
         include_static=False,
+        recompute_until_stable=True,
+        signature_fn=_copy_signature,
+        reset_fn=_reset_characteristics,
     )
     apply_layer(
         {"change_control"},

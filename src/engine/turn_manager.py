@@ -41,6 +41,14 @@ class TurnManager:
     def handle_player_pass(self, player_id: int) -> None:
         if player_id != self.priority.current:
             return
+        if self.state.step == Step.DECLARE_ATTACKERS:
+            combat_state = self.state.combat_state
+            if not combat_state or not combat_state.attackers_declared:
+                return
+        if self.state.step == Step.DECLARE_BLOCKERS:
+            combat_state = self.state.combat_state
+            if not combat_state or not combat_state.blockers_declared:
+                return
 
         all_passed = self.priority.pass_priority()
         self._persist_priority()
@@ -53,54 +61,71 @@ class TurnManager:
 
         resolved_item = self.gs.stack.pop()
         if resolved_item.kind == "spell":
-            obj_id = resolved_item.payload.get("object_id")
-            destination_zone = resolved_item.payload.get("destination_zone")
-            obj = self.gs.objects.get(obj_id)
-            context_data = resolved_item.payload.get("context") or {}
+            payload = resolved_item.payload or {}
+            obj_id = payload.get("object_id")
+            copy_of = payload.get("copy_of")
+            is_copy = bool(payload.get("is_copy"))
+            destination_zone = payload.get("destination_zone")
+            obj = self.gs.objects.get(obj_id or copy_of) if (obj_id or copy_of) else None
+            context_data = payload.get("context") or {}
             context = ResolveContext(**context_data)
             from engine.targets import has_legal_targets, normalize_targets
             if obj:
-                context.source_id = obj.id
+                if context.source_id is None:
+                    context.source_id = obj.id
                 normalize_targets(self.gs, context)
                 if not has_legal_targets(self.gs, context):
-                    self.gs.move_object(obj.id, ZONE_GRAVEYARD)
-                    obj.was_cast = False
-                    self.gs.event_bus.publish(Event(
-                        type="spell_fizzled",
-                        payload={"object_id": obj.id, "controller_id": obj.controller_id},
-                    ))
-                    self.gs.log(f"Spell fizzles (illegal targets): {obj_id}")
-                else:
-                    if destination_zone:
-                        resolved_destination = destination_zone
-                    elif "Instant" in obj.types or "Sorcery" in obj.types:
-                        resolved_destination = ZONE_GRAVEYARD
+                    if not is_copy:
+                        self.gs.move_object(obj.id, ZONE_GRAVEYARD)
+                        obj.was_cast = False
+                        self.gs.event_bus.publish(Event(
+                            type="spell_fizzled",
+                            payload={"object_id": obj.id, "controller_id": obj.controller_id},
+                        ))
+                        self.gs.log(f"Spell fizzles (illegal targets): {obj_id}")
                     else:
-                        resolved_destination = ZONE_BATTLEFIELD
-                    if resolved_destination == ZONE_BATTLEFIELD:
-                        enter_copy_of = context.choices.get("enter_copy_of")
-                        if enter_copy_of:
-                            self.gs._apply_enter_copy(obj, enter_copy_of)
-                        enter_choices = context.choices.get("enter_choices")
-                        if isinstance(enter_choices, dict):
-                            self.gs._apply_enter_choices(obj, enter_choices)
-                    self.gs.move_object(obj.id, resolved_destination)
-                    obj.was_cast = False
-                    self.gs.event_bus.publish(Event(
-                        type="spell_resolved",
-                        payload={"object_id": obj.id, "controller_id": obj.controller_id},
-                    ))
-                    self.gs.log(f"Resolved spell {obj_id}")
+                        self.gs.log(f"Spell copy fizzles (illegal targets): {copy_of}")
+                else:
+                    if not is_copy:
+                        if destination_zone:
+                            resolved_destination = destination_zone
+                        elif "Instant" in obj.types or "Sorcery" in obj.types:
+                            resolved_destination = ZONE_GRAVEYARD
+                        else:
+                            resolved_destination = ZONE_BATTLEFIELD
+                        if resolved_destination == ZONE_BATTLEFIELD:
+                            enter_copy_of = context.choices.get("enter_copy_of")
+                            if enter_copy_of:
+                                self.gs._apply_enter_copy(obj, enter_copy_of)
+                            enter_choices = context.choices.get("enter_choices")
+                            if isinstance(enter_choices, dict):
+                                self.gs._apply_enter_choices(obj, enter_choices)
+                        self.gs.move_object(obj.id, resolved_destination)
+                        obj.was_cast = False
+                        self.gs.event_bus.publish(Event(
+                            type="spell_resolved",
+                            payload={"object_id": obj.id, "controller_id": obj.controller_id},
+                        ))
+                        self.gs.log(f"Resolved spell {obj_id}")
+                    else:
+                        self.gs.event_bus.publish(Event(
+                            type="spell_resolved",
+                            payload={"copy_of": copy_of, "controller_id": context.controller_id},
+                        ))
+                        self.gs.log(f"Resolved spell copy of {copy_of}")
             else:
-                self.gs.log(f"Resolved spell {obj_id}")
+                self.gs.log(f"Resolved spell {obj_id or copy_of}")
         elif resolved_item.kind == "ability_graph":
             payload = resolved_item.payload or {}
+            is_copy = bool(payload.get("is_copy"))
             graph = payload.get("graph")
             context_data = payload.get("context") or {}
             context = ResolveContext(**context_data)
             from engine.targets import normalize_targets, validate_targets
             from engine.choices import validate_enter_choices
             try:
+                if context.source_id is None and payload.get("copy_of"):
+                    context.source_id = payload.get("copy_of")
                 normalize_targets(self.gs, context)
                 validate_targets(self.gs, context)
                 adapter = AbilityGraphRuntimeAdapter(self.gs)
@@ -109,7 +134,7 @@ class TurnManager:
                     adapter.resolve(graph, context)
                 source_id = payload.get("source_object_id")
                 destination_zone = payload.get("destination_zone")
-                if source_id and destination_zone:
+                if source_id and destination_zone and not is_copy:
                     obj = self.gs.objects.get(source_id)
                     if obj:
                         if destination_zone == ZONE_BATTLEFIELD:

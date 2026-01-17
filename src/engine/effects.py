@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
+import copy
 import random
 
 from .state import GameState, ResolveContext, GameObject
@@ -14,6 +15,7 @@ from .zones import (
 )
 from .targets import resolve_object, resolve_object_id, resolve_player_id
 from .damage import apply_damage_to_object, apply_damage_to_player
+from .replacements import resolve_replacement
 from .stack import StackItem
 from .events import Event
 
@@ -131,13 +133,27 @@ class EffectResolver:
             return {"type": "draw", "status": "no_player"}
         player = self.game_state.get_player(player_id)
         drawn = []
+        replaced = []
         for _ in range(amount):
             if not player.library:
                 break
-            card_id = player.library.pop(0)
-            player.hand.append(card_id)
-            drawn.append(card_id)
-        return {"type": "draw", "player_id": player_id, "cards": drawn}
+            card_id = player.library[0]
+            replacement = resolve_replacement(
+                self.game_state,
+                "replace_draw",
+                player_id,
+                f"draw:event:player:{player_id}",
+                consume_choice=False,
+            )
+            if replacement and replacement.get("replacement_zone") == "skip":
+                continue
+            destination = replacement.get("replacement_zone") if replacement else ZONE_HAND
+            self.game_state.move_object(card_id, destination)
+            if destination == ZONE_HAND:
+                drawn.append(card_id)
+            else:
+                replaced.append({"card_id": card_id, "zone": destination})
+        return {"type": "draw", "player_id": player_id, "cards": drawn, "replaced": replaced}
 
     def _handle_token(self, effect: Dict[str, Any], context: ResolveContext) -> Dict[str, Any]:
         amount = int(effect.get("amount", 1))
@@ -172,6 +188,26 @@ class EffectResolver:
         player = self.game_state.get_player(player_id)
         player.life += amount
         return {"type": "life", "player_id": player_id, "amount": amount}
+
+    def _handle_lose_life(self, effect: Dict[str, Any], context: ResolveContext) -> Dict[str, Any]:
+        amount = int(effect.get("amount", 0))
+        player_id = resolve_player_id(context, context.controller_id)
+        if player_id is None:
+            return {"type": "lose_life", "status": "no_player"}
+        replacement = resolve_replacement(
+            self.game_state,
+            "replace_life_loss",
+            player_id,
+            f"life_loss:event:player:{player_id}",
+            consume_choice=False,
+        )
+        if replacement and (replacement.get("replacement_amount") is not None or replacement.get("replacementAmount") is not None):
+            amount = int(replacement.get("replacement_amount") or replacement.get("replacementAmount") or amount)
+        if amount <= 0:
+            return {"type": "lose_life", "player_id": player_id, "amount": 0}
+        player = self.game_state.get_player(player_id)
+        player.life -= amount
+        return {"type": "lose_life", "player_id": player_id, "amount": amount}
 
     def _handle_mana(self, effect: Dict[str, Any], context: ResolveContext) -> Dict[str, Any]:
         amount = int(effect.get("amount", 1))
@@ -231,7 +267,7 @@ class EffectResolver:
     def _handle_sacrifice(self, effect: Dict[str, Any], context: ResolveContext) -> Dict[str, Any]:
         results: List[Dict[str, Any]] = []
         for obj in _resolve_target_objects(self.game_state, context, effect.get("target", "target_permanent")):
-            self.game_state.move_object(obj.id, ZONE_GRAVEYARD)
+            self.game_state.sacrifice_object(obj.id)
             results.append({"object_id": obj.id})
         if not results:
             return {"type": "sacrifice", "status": "no_target"}
@@ -365,8 +401,8 @@ class EffectResolver:
         for _ in range(amount):
             if not player.library:
                 break
-            card_id = player.library.pop(0)
-            player.graveyard.append(card_id)
+            card_id = player.library[0]
+            self.game_state.move_object(card_id, ZONE_GRAVEYARD)
             milled.append(card_id)
         return {"type": "mill", "player_id": player_id, "cards": milled}
 
@@ -383,13 +419,21 @@ class EffectResolver:
                 break
             if choices:
                 card_id = choices.pop(0)
-                if card_id in player.hand:
-                    player.hand.remove(card_id)
-                else:
+                if card_id not in player.hand:
                     continue
             else:
-                card_id = player.hand.pop(0)
-            player.graveyard.append(card_id)
+                card_id = player.hand[0]
+            replacement = resolve_replacement(
+                self.game_state,
+                "replace_discard",
+                player_id,
+                f"discard:event:player:{player_id}",
+                consume_choice=False,
+            )
+            if replacement and replacement.get("replacement_zone") == "skip":
+                continue
+            destination = replacement.get("replacement_zone") if replacement else ZONE_GRAVEYARD
+            self.game_state.move_object(card_id, destination)
             discarded.append(card_id)
         return {"type": "discard", "player_id": player_id, "cards": discarded}
 
@@ -420,9 +464,39 @@ class EffectResolver:
         target_spell = resolve_object_id(context, "target", None)
         if not target_spell:
             return {"type": "copy_spell", "status": "no_target"}
-        self.game_state.stack.push(
-            StackItem(kind="spell", payload={"copy_of": target_spell}, controller_id=context.controller_id)
-        )
+        target_item = None
+        for item in self.game_state.stack.items:
+            if item.kind not in ("spell", "ability_graph"):
+                continue
+            if item.payload.get("object_id") == target_spell or item.payload.get("copy_of") == target_spell:
+                target_item = item
+                break
+        if not target_item:
+            return {"type": "copy_spell", "status": "no_target"}
+        if target_item.kind == "ability_graph":
+            payload = copy.deepcopy(target_item.payload or {})
+            context_data = copy.deepcopy(payload.get("context") or {})
+            if context_data.get("source_id") is None:
+                context_data["source_id"] = payload.get("source_object_id") or target_spell
+            if context_data.get("controller_id") is None and context.controller_id is not None:
+                context_data["controller_id"] = context.controller_id
+            payload["context"] = context_data
+            payload["copy_of"] = target_spell
+            payload["is_copy"] = True
+            payload["source_object_id"] = None
+            payload["destination_zone"] = None
+            self.game_state.stack.push(
+                StackItem(kind="ability_graph", payload=payload, controller_id=context.controller_id)
+            )
+        else:
+            payload = copy.deepcopy(target_item.payload or {})
+            payload["copy_of"] = target_spell
+            payload["is_copy"] = True
+            payload.pop("object_id", None)
+            payload.pop("destination_zone", None)
+            self.game_state.stack.push(
+                StackItem(kind="spell", payload=payload, controller_id=context.controller_id)
+            )
         return {"type": "copy_spell", "copy_of": target_spell}
 
     def _handle_copy_permanent(self, effect: Dict[str, Any], context: ResolveContext) -> Dict[str, Any]:
@@ -744,3 +818,99 @@ class EffectResolver:
             "object_id": target.id,
             "replacement_zone": replacement_zone,
         }
+
+    def _handle_replace_destroy(self, effect: Dict[str, Any], context: ResolveContext) -> Dict[str, Any]:
+        target = _resolve_target_object(self.game_state, context, effect.get("target", "target_permanent"))
+        if not target:
+            return {"type": "replace_destroy", "status": "no_target"}
+        replacement_zone = effect.get("replacementZone")
+        if not replacement_zone:
+            return {"type": "replace_destroy", "status": "invalid_replacement"}
+        entry = {
+            "type": "replace_destroy",
+            "effect_id": self.game_state.next_replacement_effect_id(),
+            "replacement_zone": replacement_zone,
+            "duration": effect.get("duration"),
+            "controller_id": context.controller_id,
+            "object_id": target.id,
+        }
+        uses = effect.get("uses")
+        if uses is not None:
+            entry["uses"] = int(uses)
+        self._add_temporary_effect(target, entry)
+        return {"type": "replace_destroy", "object_id": target.id, "replacement_zone": replacement_zone}
+
+    def _handle_replace_sacrifice(self, effect: Dict[str, Any], context: ResolveContext) -> Dict[str, Any]:
+        target = _resolve_target_object(self.game_state, context, effect.get("target", "target_permanent"))
+        if not target:
+            return {"type": "replace_sacrifice", "status": "no_target"}
+        replacement_zone = effect.get("replacementZone")
+        if not replacement_zone:
+            return {"type": "replace_sacrifice", "status": "invalid_replacement"}
+        entry = {
+            "type": "replace_sacrifice",
+            "effect_id": self.game_state.next_replacement_effect_id(),
+            "replacement_zone": replacement_zone,
+            "duration": effect.get("duration"),
+            "controller_id": context.controller_id,
+            "object_id": target.id,
+        }
+        uses = effect.get("uses")
+        if uses is not None:
+            entry["uses"] = int(uses)
+        self._add_temporary_effect(target, entry)
+        return {"type": "replace_sacrifice", "object_id": target.id, "replacement_zone": replacement_zone}
+
+    def _handle_replace_draw(self, effect: Dict[str, Any], context: ResolveContext) -> Dict[str, Any]:
+        player_id = resolve_player_id(context, context.controller_id)
+        if player_id is None:
+            return {"type": "replace_draw", "status": "no_player"}
+        entry = {
+            "type": "replace_draw",
+            "effect_id": self.game_state.next_replacement_effect_id(),
+            "timestamp_order": self.game_state.effect_timestamp_counter + 1,
+            "player_id": player_id,
+            "replacement_zone": effect.get("replacementZone"),
+        }
+        uses = effect.get("uses")
+        if uses is not None:
+            entry["uses"] = int(uses)
+        self.game_state.replacement_effects.append(entry)
+        self.game_state.effect_timestamp_counter += 1
+        return {"type": "replace_draw", "player_id": player_id, "replacement_zone": entry.get("replacement_zone")}
+
+    def _handle_replace_discard(self, effect: Dict[str, Any], context: ResolveContext) -> Dict[str, Any]:
+        player_id = resolve_player_id(context, context.controller_id)
+        if player_id is None:
+            return {"type": "replace_discard", "status": "no_player"}
+        entry = {
+            "type": "replace_discard",
+            "effect_id": self.game_state.next_replacement_effect_id(),
+            "timestamp_order": self.game_state.effect_timestamp_counter + 1,
+            "player_id": player_id,
+            "replacement_zone": effect.get("replacementZone"),
+        }
+        uses = effect.get("uses")
+        if uses is not None:
+            entry["uses"] = int(uses)
+        self.game_state.replacement_effects.append(entry)
+        self.game_state.effect_timestamp_counter += 1
+        return {"type": "replace_discard", "player_id": player_id, "replacement_zone": entry.get("replacement_zone")}
+
+    def _handle_replace_life_loss(self, effect: Dict[str, Any], context: ResolveContext) -> Dict[str, Any]:
+        player_id = resolve_player_id(context, context.controller_id)
+        if player_id is None:
+            return {"type": "replace_life_loss", "status": "no_player"}
+        entry = {
+            "type": "replace_life_loss",
+            "effect_id": self.game_state.next_replacement_effect_id(),
+            "timestamp_order": self.game_state.effect_timestamp_counter + 1,
+            "player_id": player_id,
+            "replacement_amount": effect.get("replacementAmount"),
+        }
+        uses = effect.get("uses")
+        if uses is not None:
+            entry["uses"] = int(uses)
+        self.game_state.replacement_effects.append(entry)
+        self.game_state.effect_timestamp_counter += 1
+        return {"type": "replace_life_loss", "player_id": player_id, "replacement_amount": entry.get("replacement_amount")}

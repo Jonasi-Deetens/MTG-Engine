@@ -82,6 +82,93 @@ export const useReplacementConflicts = (gameState: EngineGameStateSnapshot | nul
       .flat()
       .filter(Boolean) as ReplacementConflictEntry[];
 
+    const objectReplacementConflicts = gameState.objects
+      .map((obj) => {
+        const localEffects = (obj as any).temporary_effects || [];
+        const replaceEffects = localEffects.filter(
+          (effect: any) => effect?.type === 'replace_destroy' || effect?.type === 'replace_sacrifice'
+        );
+        const grouped = new Map<string, any[]>();
+        replaceEffects.forEach((effect: any) => {
+          const key = `${obj.id}:${effect.type}`;
+          const entry = grouped.get(key) || [];
+          entry.push(effect);
+          grouped.set(key, entry);
+        });
+        return Array.from(grouped.entries())
+          .filter(([, effects]) => effects.length > 1)
+          .map(([key, effects]) => ({
+            key,
+            label: `${obj.name || obj.id} (${effects[0].type === 'replace_destroy' ? 'Destroy' : 'Sacrifice'})`,
+            options: effects.map((effect) => ({
+              ...effect,
+              label: effect.replacement_zone || 'Replacement',
+            })),
+          }));
+      })
+      .flat()
+      .filter(Boolean) as ReplacementConflictEntry[];
+
+    const buildPlayerReplacementConflicts = (
+      effects: Array<Record<string, any>>,
+      keyPrefix: string,
+      labelPrefix: string,
+      buildLabel: (effect: Record<string, any>) => string
+    ) => {
+      const byPlayer = new Map<number, { key: string; playerId: number; options: any[] }>();
+      effects.forEach((effect) => {
+        if (effect.player_id == null) return;
+        const playerId = Number(effect.player_id);
+        const key = `${keyPrefix}:${playerId}`;
+        const entry = byPlayer.get(playerId) || { key, playerId, options: [] as any[] };
+        entry.options.push(effect);
+        byPlayer.set(playerId, entry);
+      });
+      const entries: ReplacementConflictEntry[] = [];
+      byPlayer.forEach((entry) => {
+        if (entry.options.length < 2) return;
+        entries.push({
+          key: entry.key,
+          label: `${labelPrefix} ${formatPlayerLabel(entry.playerId)}`,
+          options: entry.options.map((effect) => ({
+            ...effect,
+            label: buildLabel(effect),
+          })),
+        });
+      });
+      return entries;
+    };
+
+    const drawReplacementConflicts = buildPlayerReplacementConflicts(
+      (gameState.replacement_effects ?? []).filter((effect) => effect?.type === 'replace_draw'),
+      'draw:event:player',
+      'Draw replacement for',
+      (effect) => {
+        const zoneLabel = ZONE_LABELS[effect.replacement_zone] || effect.replacement_zone;
+        return effect.replacement_zone === 'skip' ? 'Skip draw' : `Put into ${zoneLabel}`;
+      }
+    );
+
+    const discardReplacementConflicts = buildPlayerReplacementConflicts(
+      (gameState.replacement_effects ?? []).filter((effect) => effect?.type === 'replace_discard'),
+      'discard:event:player',
+      'Discard replacement for',
+      (effect) => {
+        const zoneLabel = ZONE_LABELS[effect.replacement_zone] || effect.replacement_zone;
+        return effect.replacement_zone === 'skip' ? 'Skip discard' : `Put into ${zoneLabel}`;
+      }
+    );
+
+    const lifeLossReplacementConflicts = buildPlayerReplacementConflicts(
+      (gameState.replacement_effects ?? []).filter((effect) => effect?.type === 'replace_life_loss'),
+      'life_loss:event:player',
+      'Life loss replacement for',
+      (effect) => {
+        const amount = effect.replacement_amount ?? effect.replacementAmount ?? 0;
+        return `Lose ${amount}`;
+      }
+    );
+
     const redirectEffects = (gameState.replacement_effects ?? []).filter(
       (effect) => effect?.type === 'redirect_damage'
     );
@@ -370,7 +457,16 @@ export const useReplacementConflicts = (gameState: EngineGameStateSnapshot | nul
       });
     }
 
-    return [...zoneConflicts, ...damageConflicts, ...stackDamageConflicts, ...combatDamageConflicts];
+    return [
+      ...zoneConflicts,
+      ...objectReplacementConflicts,
+      ...drawReplacementConflicts,
+      ...discardReplacementConflicts,
+      ...lifeLossReplacementConflicts,
+      ...damageConflicts,
+      ...stackDamageConflicts,
+      ...combatDamageConflicts,
+    ];
   }, [gameState]);
 };
 

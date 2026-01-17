@@ -44,6 +44,14 @@ export const useCombatSelection = ({ gameState }: UseCombatSelectionArgs) => {
     if (!activeAttackerId) return;
     setSelectedBlockers((prev) => {
       const next: Record<string, Set<string>> = { ...prev };
+      // Ensure a blocker can only block one attacker.
+      Object.keys(next).forEach((attackerId) => {
+        if (attackerId !== activeAttackerId && next[attackerId]?.has(objectId)) {
+          const updated = new Set(next[attackerId]);
+          updated.delete(objectId);
+          next[attackerId] = updated;
+        }
+      });
       const existing = next[activeAttackerId] ?? new Set<string>();
       const updated = new Set(existing);
       if (updated.has(objectId)) {
@@ -56,6 +64,12 @@ export const useCombatSelection = ({ gameState }: UseCombatSelectionArgs) => {
     });
     setSelectedBlockerOrder((prev) => {
       const next = { ...prev };
+      // Remove from other attackers' order lists.
+      Object.keys(next).forEach((attackerId) => {
+        if (attackerId !== activeAttackerId && next[attackerId]?.includes(objectId)) {
+          next[attackerId] = next[attackerId].filter((id) => id !== objectId);
+        }
+      });
       const currentOrder = next[activeAttackerId] ?? [];
       if (currentOrder.includes(objectId)) {
         next[activeAttackerId] = currentOrder.filter((id) => id !== objectId);

@@ -43,7 +43,13 @@ def _apply_legend_rule(game_state: GameState) -> None:
     for (_, _), group in legend_groups.items():
         if len(group) <= 1:
             continue
+        keep = max(
+            enumerate(group),
+            key=lambda item: ((item[1].entered_turn or -1), item[0]),
+        )[1]
         for obj in group:
+            if obj.id == keep.id:
+                continue
             game_state.destroy_object(obj.id)
 
 
@@ -73,7 +79,13 @@ def _apply_planeswalker_uniqueness(game_state: GameState) -> None:
     for (_, _), group in planeswalker_groups.items():
         if len(group) <= 1:
             continue
+        keep = max(
+            enumerate(group),
+            key=lambda item: ((item[1].entered_turn or -1), item[0]),
+        )[1]
         for obj in group:
+            if obj.id == keep.id:
+                continue
             game_state.destroy_object(obj.id)
 
 

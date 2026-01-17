@@ -24,7 +24,8 @@ import {
   CDA_ZONE_OPTIONS,
   CDA_SET_OPTIONS,
   CDA_TEMPLATE_OPTIONS,
-  ZONE_OPTIONS
+  ZONE_OPTIONS,
+  REPLACEMENT_ZONE_OPTIONS
 } from '@/lib/effectTypes';
 import { useEffect, useState } from 'react';
 import { abilities } from '@/lib/abilities';
@@ -115,6 +116,9 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
             onUpdate('type', nextType);
             if (nextType === 'counter_spell') {
               onUpdate('target', 'spell');
+            }
+            if (['replace_draw', 'replace_discard', 'replace_life_loss', 'lose_life'].includes(nextType)) {
+              onUpdate('target', 'player');
             }
             if (nextType === 'cda_power_toughness') {
               onUpdate('cdaSource', 'controlled');
@@ -381,48 +385,67 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
 
       {selectedEffectType?.requiresReplacementZone && (
         <div className="space-y-2">
-          <div>
-            <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">From Zone</label>
-            <select
-              value={effect.fromZone || 'battlefield'}
-              onChange={(e) => onUpdate('fromZone', e.target.value)}
-              className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
-            >
-              {ZONE_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">To Zone</label>
-            <select
-              value={effect.toZone || 'graveyard'}
-              onChange={(e) => onUpdate('toZone', e.target.value)}
-              className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
-            >
-              {ZONE_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          {effect.type === 'replace_zone_change' && (
+            <>
+              <div>
+                <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">From Zone</label>
+                <select
+                  value={effect.fromZone || 'battlefield'}
+                  onChange={(e) => onUpdate('fromZone', e.target.value)}
+                  className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+                >
+                  {ZONE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">To Zone</label>
+                <select
+                  value={effect.toZone || 'graveyard'}
+                  onChange={(e) => onUpdate('toZone', e.target.value)}
+                  className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+                >
+                  {ZONE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
           <div>
             <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Replacement Zone</label>
             <select
-              value={effect.replacementZone || 'exile'}
+              value={effect.replacementZone || (effect.type === 'replace_zone_change' ? 'exile' : 'skip')}
               onChange={(e) => onUpdate('replacementZone', e.target.value)}
               className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
             >
-              {ZONE_OPTIONS.map((opt) => (
+              {(effect.type === 'replace_zone_change' ? ZONE_OPTIONS : REPLACEMENT_ZONE_OPTIONS).map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
                 </option>
               ))}
             </select>
           </div>
+        </div>
+      )}
+
+      {selectedEffectType?.requiresReplacementAmount && (
+        <div>
+          <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">
+            Replacement Amount
+          </label>
+          <input
+            type="number"
+            value={effect.replacementAmount ?? 0}
+            onChange={(e) => onUpdate('replacementAmount', parseInt(e.target.value) || 0)}
+            min="0"
+            className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+          />
         </div>
       )}
 

@@ -32,6 +32,7 @@ export interface EffectTypeOption {
   requiresReplacementZone?: boolean;
   requiresUses?: boolean;
   requiresCopyDuration?: boolean;
+  requiresReplacementAmount?: boolean;
 }
 
 export const EFFECT_TYPE_OPTIONS: EffectTypeOption[] = [
@@ -40,6 +41,7 @@ export const EFFECT_TYPE_OPTIONS: EffectTypeOption[] = [
   { value: 'token', label: 'Create Token', requiresAmount: true },
   { value: 'counters', label: 'Add Counters', requiresAmount: true },
   { value: 'life', label: 'Gain Life', requiresAmount: true },
+  { value: 'lose_life', label: 'Lose Life', requiresAmount: true, requiresTarget: true },
   { value: 'mana', label: 'Add Mana', requiresManaType: true },
   { value: 'untap', label: 'Untap', requiresUntapTarget: true },
   { value: 'tap', label: 'Tap', requiresUntapTarget: true },
@@ -73,6 +75,11 @@ export const EFFECT_TYPE_OPTIONS: EffectTypeOption[] = [
   { value: 'change_control', label: 'Change Control', requiresTarget: true, requiresDuration: true },
   { value: 'prevent_damage', label: 'Prevent Damage', requiresTarget: true, requiresAmount: true },
   { value: 'redirect_damage', label: 'Redirect Damage', requiresTwoTargets: true, requiresAmount: true },
+  { value: 'replace_draw', label: 'Replace Draw', requiresTarget: true, requiresReplacementZone: true, requiresUses: true },
+  { value: 'replace_discard', label: 'Replace Discard', requiresTarget: true, requiresReplacementZone: true, requiresUses: true },
+  { value: 'replace_life_loss', label: 'Replace Life Loss', requiresTarget: true, requiresReplacementAmount: true, requiresUses: true },
+  { value: 'replace_destroy', label: 'Replace Destroy', requiresTarget: true, requiresReplacementZone: true, requiresDuration: true, requiresUses: true },
+  { value: 'replace_sacrifice', label: 'Replace Sacrifice', requiresTarget: true, requiresReplacementZone: true, requiresDuration: true, requiresUses: true },
   { value: 'set_types', label: 'Set Types', requiresTarget: true, requiresTypeList: true, requiresDuration: true },
   { value: 'add_type', label: 'Add Type', requiresTarget: true, requiresTypeName: true, requiresDuration: true },
   { value: 'remove_type', label: 'Remove Type', requiresTarget: true, requiresTypeName: true, requiresDuration: true },
@@ -128,6 +135,11 @@ export const ZONE_OPTIONS = [
   { value: 'exile', label: 'Exile' },
   { value: 'command', label: 'Command' },
   { value: 'stack', label: 'Stack' },
+];
+
+export const REPLACEMENT_ZONE_OPTIONS = [
+  { value: 'skip', label: 'Skip' },
+  ...ZONE_OPTIONS,
 ];
 
 export const CARD_TYPE_FILTERS = [
@@ -307,6 +319,9 @@ export function formatEffect(effect: any): string {
   if (effect.type === 'life') {
     return `Gain ${effect.amount || 0} life`;
   }
+  if (effect.type === 'lose_life') {
+    return `Lose ${effect.amount || 0} life`;
+  }
   if (effect.type === 'mana') {
     const amount = effect.amount || 1;
     const manaType = effect.manaType || 'C';
@@ -444,6 +459,30 @@ export function formatEffect(effect: any): string {
     const usesText = effect.uses ? ` (next ${effect.uses})` : '';
     const duration = formatDuration(effect.duration);
     return `If it would move from ${fromZone} to ${toZone}, put it into ${replacement} instead${duration ? ` ${duration}` : ''}${usesText}`;
+  }
+  if (effect.type === 'replace_draw') {
+    const replacement = REPLACEMENT_ZONE_OPTIONS.find(opt => opt.value === effect.replacementZone)?.label || 'Skip';
+    return `If you would draw a card, instead ${replacement === 'Skip' ? 'skip the draw' : `put it into ${replacement.toLowerCase()}`}`;
+  }
+  if (effect.type === 'replace_discard') {
+    const replacement = REPLACEMENT_ZONE_OPTIONS.find(opt => opt.value === effect.replacementZone)?.label || 'Skip';
+    return `If you would discard, instead ${replacement === 'Skip' ? 'skip the discard' : `put it into ${replacement.toLowerCase()}`}`;
+  }
+  if (effect.type === 'replace_life_loss') {
+    const amount = effect.replacementAmount ?? 0;
+    return `If you would lose life, instead lose ${amount}`;
+  }
+  if (effect.type === 'replace_destroy') {
+    const replacement = REPLACEMENT_ZONE_OPTIONS.find(opt => opt.value === effect.replacementZone)?.label || 'Exile';
+    const usesText = effect.uses ? ` (next ${effect.uses})` : '';
+    const duration = formatDuration(effect.duration);
+    return `If it would be destroyed, instead put it into ${replacement}${duration ? ` ${duration}` : ''}${usesText}`;
+  }
+  if (effect.type === 'replace_sacrifice') {
+    const replacement = REPLACEMENT_ZONE_OPTIONS.find(opt => opt.value === effect.replacementZone)?.label || 'Exile';
+    const usesText = effect.uses ? ` (next ${effect.uses})` : '';
+    const duration = formatDuration(effect.duration);
+    return `If it would be sacrificed, instead put it into ${replacement}${duration ? ` ${duration}` : ''}${usesText}`;
   }
   
   // Fight
