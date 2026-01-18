@@ -46,7 +46,7 @@ def gather_cast_cost_modifiers(
             if graph.get("abilityType") != "static":
                 continue
             runtime = adapter.build_runtime(graph)
-            if runtime.trigger or runtime.cost:
+            if runtime.trigger or runtime.costs:
                 continue
             effect_context = ResolveContext(
                 source_id=source.id,

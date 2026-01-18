@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { engineApi, EngineActionRequest, EngineGameStateSnapshot } from '@/lib/engine';
 import { deriveGlobalDistinctTargets, deriveGlobalMinTargets, deriveGlobalRequiredTargets, deriveTargetHints } from '@/lib/targeting';
+import { ModalChoiceConfig } from '@/lib/modalChoices';
 import { buildStackTargetHash } from '@/lib/stackTargets';
 
 interface UseTargetingArgs {
@@ -8,6 +9,8 @@ interface UseTargetingArgs {
   selectedHandId: string | null;
   selectedGraph: any;
   currentPriority: number | null;
+  modalConfig?: ModalChoiceConfig | null;
+  selectedModes?: string[];
 }
 
 export const useTargeting = ({
@@ -15,19 +18,37 @@ export const useTargeting = ({
   selectedHandId,
   selectedGraph,
   currentPriority,
+  modalConfig,
+  selectedModes = [],
 }: UseTargetingArgs) => {
   const [selectedTargetObjectIds, setSelectedTargetObjectIds] = useState<string[]>([]);
   const [selectedTargetPlayerIds, setSelectedTargetPlayerIds] = useState<number[]>([]);
+  useEffect(() => {
+    setSelectedTargetObjectIds([]);
+    setSelectedTargetPlayerIds([]);
+  }, [selectedGraph, selectedHandId, selectedModes.join('|')]);
   const [objectTargetStatus, setObjectTargetStatus] = useState<Record<string, boolean | null>>({});
   const [playerTargetStatus, setPlayerTargetStatus] = useState<Record<number, boolean | null>>({});
   const [stackTargetChecks, setStackTargetChecks] = useState<Record<number, { legal: boolean; issues: string[] }>>({});
   const stackTargetHashesRef = useRef<Record<number, string>>({});
   const selectionTargetHashRef = useRef<string>('');
 
-  const targetHints = useMemo(() => deriveTargetHints(selectedGraph), [selectedGraph]);
-  const requiredTargets = useMemo(() => deriveGlobalRequiredTargets(selectedGraph), [selectedGraph]);
-  const distinctTargets = useMemo(() => deriveGlobalDistinctTargets(selectedGraph), [selectedGraph]);
-  const minTargets = useMemo(() => deriveGlobalMinTargets(selectedGraph), [selectedGraph]);
+  const targetHints = useMemo(
+    () => deriveTargetHints(selectedGraph, modalConfig, selectedModes),
+    [modalConfig, selectedGraph, selectedModes]
+  );
+  const requiredTargets = useMemo(
+    () => deriveGlobalRequiredTargets(selectedGraph, modalConfig, selectedModes),
+    [modalConfig, selectedGraph, selectedModes]
+  );
+  const distinctTargets = useMemo(
+    () => deriveGlobalDistinctTargets(selectedGraph, modalConfig, selectedModes),
+    [modalConfig, selectedGraph, selectedModes]
+  );
+  const minTargets = useMemo(
+    () => deriveGlobalMinTargets(selectedGraph, modalConfig, selectedModes),
+    [modalConfig, selectedGraph, selectedModes]
+  );
   const targetableObjects = gameState
     ? gameState.objects.filter((obj) => obj.zone === 'battlefield')
     : [];

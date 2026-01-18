@@ -17,6 +17,7 @@ def _damage_graph() -> dict:
         "abilityType": "activated",
         "nodes": [
             {"id": "a1", "type": "ACTIVATED", "data": {"cost": ""}},
+            {"id": "kw1", "type": "KEYWORD", "data": {"keyword": "overload", "costs": [{"type": "mana", "cost": "{1}{R}"}]}},
             {"id": "e1", "type": "EFFECT", "data": {"type": "damage", "amount": 2, "target": "target_creature"}},
         ],
         "edges": [{"from_": "a1", "to": "e1"}],
@@ -34,7 +35,6 @@ def test_overload_affects_all_creatures():
         zone=ZONE_HAND,
         mana_cost="{1}{R}",
     )
-    spell.oracle_text = "Overload {1}{R}"
     creature_a = GameObject(
         id="a",
         name="Creature A",

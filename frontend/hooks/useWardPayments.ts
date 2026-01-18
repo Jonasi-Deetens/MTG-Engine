@@ -8,11 +8,12 @@ import {
   hasComplexManaCost,
   ManaPaymentDetail,
 } from '@/lib/manaPayment';
-import { formatManaCostLabel, parseWardCosts, WardCost } from '@/lib/wardCosts';
+import { buildActivationCosts, formatActivationCostLabel } from '@/lib/activationCosts';
+import { deriveWardCostsFromGraphs } from '@/lib/graphCosts';
 import { EngineCardMap } from '@/lib/engine';
 
 type WardCostEntry = {
-  cost: WardCost;
+  cost: ReturnType<typeof buildActivationCosts>[number];
   costLabel?: string;
   discardOptions: Array<{ value: string; label: string }>;
   sacrificeOptions: Array<{ value: string; label: string }>;
@@ -74,7 +75,7 @@ export const useWardPayments = ({
       .map((objectId) => objectMap.get(objectId))
       .filter((obj): obj is EngineGameObjectSnapshot => Boolean(obj))
       .map((obj) => {
-        const costs = parseWardCosts(obj.keywords ?? []);
+        const costs = buildActivationCosts(deriveWardCostsFromGraphs(obj.ability_graphs ?? []));
         if (!costs.length) {
           return null;
         }
@@ -84,22 +85,14 @@ export const useWardPayments = ({
           return entry.types?.includes(cardType);
         };
         const costEntries = costs.map((cost) => {
-          const costLabel = cost.type === 'mana'
-            ? formatManaCostLabel(cost.cost)
-            : cost.type === 'life'
-              ? `${cost.amount} life`
-              : cost.type === 'discard'
-                ? `discard ${cost.amount} card${cost.amount === 1 ? '' : 's'}`
-                : cost.type === 'sacrifice'
-                  ? `sacrifice ${cost.nonland ? 'nonland ' : ''}${cost.cardType ?? 'permanent'}`
-                  : `tap ${cost.nonland ? 'nonland ' : ''}${cost.cardType ?? 'permanent'}`;
+          const costLabel = formatActivationCostLabel(cost);
           const discardOptions = cost.type === 'discard' ? handOptions : [];
           const sacrificeOptions =
             cost.type === 'sacrifice'
               ? battlefieldOptions.filter((entry) => {
                   const obj = objectMap.get(entry.value);
                   if (!obj) return false;
-                  return isTypeMatch(obj, cost.cardType, cost.nonland);
+                  return isTypeMatch(obj, cost.card_type, cost.nonland);
                 })
               : [];
           const tapOptions =
@@ -107,7 +100,7 @@ export const useWardPayments = ({
               ? battlefieldOptions.filter((entry) => {
                   const obj = objectMap.get(entry.value);
                   if (!obj || obj.tapped) return false;
-                  return isTypeMatch(obj, cost.cardType, cost.nonland);
+                  return isTypeMatch(obj, cost.card_type, cost.nonland);
                 })
               : [];
           return {

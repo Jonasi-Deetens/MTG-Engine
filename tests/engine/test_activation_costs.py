@@ -13,12 +13,12 @@ def _build_state() -> GameState:
     return game_state
 
 
-def _activation_graph(cost: str) -> dict:
+def _activation_graph(costs: list[dict]) -> dict:
     return {
         "rootNodeId": "a1",
         "abilityType": "activated",
         "nodes": [
-            {"id": "a1", "type": "ACTIVATED", "data": {"cost": cost}},
+            {"id": "a1", "type": "ACTIVATED", "data": {"costs": costs}},
             {"id": "e1", "type": "EFFECT", "data": {"type": "life", "amount": 0}},
         ],
         "edges": [{"from_": "a1", "to": "e1"}],
@@ -34,7 +34,7 @@ def test_activate_tap_cost_taps_source():
         controller_id=0,
         types=["Creature"],
         zone=ZONE_BATTLEFIELD,
-        ability_graphs=[_activation_graph("{T}")],
+        ability_graphs=[_activation_graph([{"type": "tap_self"}])],
     )
     source.keywords.add("Haste")
     game_state.add_object(source)
@@ -55,7 +55,7 @@ def test_activate_sacrifice_cost():
         controller_id=0,
         types=["Creature"],
         zone=ZONE_BATTLEFIELD,
-        ability_graphs=[_activation_graph("Sacrifice a creature")],
+        ability_graphs=[_activation_graph([{"type": "sacrifice", "card_type": "Creature"}])],
     )
     sacrifice = GameObject(
         id="fodder",
@@ -89,7 +89,7 @@ def test_activate_discard_cost():
         controller_id=0,
         types=["Creature"],
         zone=ZONE_BATTLEFIELD,
-        ability_graphs=[_activation_graph("Discard 2 cards")],
+        ability_graphs=[_activation_graph([{"type": "discard", "amount": 2}])],
     )
     card_a = GameObject(
         id="card_a",
@@ -135,7 +135,7 @@ def test_activate_tap_choice_cost():
         controller_id=0,
         types=["Creature"],
         zone=ZONE_BATTLEFIELD,
-        ability_graphs=[_activation_graph("Tap an untapped creature you control")],
+        ability_graphs=[_activation_graph([{"type": "tap", "card_type": "Creature"}])],
     )
     tap_target = GameObject(
         id="tap_target",
@@ -169,7 +169,7 @@ def test_activate_pay_life_cost():
         controller_id=0,
         types=["Creature"],
         zone=ZONE_BATTLEFIELD,
-        ability_graphs=[_activation_graph("Pay 3 life")],
+        ability_graphs=[_activation_graph([{"type": "life", "amount": 3}])],
     )
     game_state.add_object(source)
     turn_manager = TurnManager(game_state)

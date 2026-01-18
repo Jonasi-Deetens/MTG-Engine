@@ -333,7 +333,7 @@ def test_activate_tap_ability_respects_summoning_sickness():
                 "rootNodeId": "act-1",
                 "abilityType": "activated",
                 "nodes": [
-                    {"id": "act-1", "type": "ACTIVATED", "data": {"cost": "{T}"}},
+                    {"id": "act-1", "type": "ACTIVATED", "data": {"costs": [{"type": "tap_self"}]}},
                     {"id": "effect-1", "type": "EFFECT", "data": {"type": "life", "amount": 1}},
                 ],
                 "edges": [{"from_": "act-1", "to": "effect-1"}],

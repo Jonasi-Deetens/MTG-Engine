@@ -7,6 +7,7 @@ import {
   EnginePlayerSnapshot,
 } from '@/lib/engine';
 import { deriveTargetHintsForTarget, deriveTargetSpecs, EffectTargetSpec, TargetHints } from '@/lib/targeting';
+import { isEffectActiveForModes, ModalChoiceConfig } from '@/lib/modalChoices';
 import { formatEffect } from '@/lib/effectTypes';
 
 export type EffectTargetGroup = {
@@ -123,11 +124,15 @@ export const useEffectTargeting = ({
   selectedGraph,
   currentPriority,
   selectedHandId,
+  modalConfig,
+  selectedModes = [],
 }: {
   gameState: EngineGameStateSnapshot | null;
   selectedGraph: any;
   currentPriority: number | null;
   selectedHandId: string | null;
+  modalConfig?: ModalChoiceConfig | null;
+  selectedModes?: string[];
 }) => {
   const [selections, setSelections] = useState<SelectionState>({});
   const [effectErrors, setEffectErrors] = useState<Record<string, string[]>>({});
@@ -135,10 +140,13 @@ export const useEffectTargeting = ({
   const [targetStatus, setTargetStatus] = useState<
     Record<string, { objects: Record<string, boolean | null>; players: Record<number, boolean | null> }>
   >({});
-  const effectNodes = useMemo(
-    () => (selectedGraph?.nodes ?? []).filter((node: any) => node?.type === 'EFFECT'),
-    [selectedGraph]
-  );
+  const effectNodes = useMemo(() => {
+    const nodes = selectedGraph?.nodes ?? [];
+    return nodes.filter((node: any) => {
+      if (node?.type !== 'EFFECT') return false;
+      return isEffectActiveForModes(node?.data ?? {}, modalConfig ?? null, selectedModes);
+    });
+  }, [modalConfig, selectedGraph, selectedModes]);
   const targetSpecs = useMemo(() => {
     const specs: Array<{ nodeId: string; effect: any; spec: EffectTargetSpec }> = [];
     effectNodes.forEach((node: any) => {
@@ -166,7 +174,7 @@ export const useEffectTargeting = ({
 
   useEffect(() => {
     setSelections({});
-  }, [selectedGraph, selectedHandId]);
+  }, [selectedGraph, selectedHandId, selectedModes.join('|')]);
 
   const targetGroups: EffectTargetGroup[] = useMemo(() => {
     if (!gameState || targetSpecs.length === 0) return [];

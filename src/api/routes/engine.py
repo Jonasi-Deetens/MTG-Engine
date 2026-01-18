@@ -294,11 +294,12 @@ def execute_engine_action(
                 previous_results=payload.context.previous_results,
             )
         from engine.targets import normalize_targets, validate_targets
-        from engine.choices import validate_enter_choices
+        from engine.choices import validate_enter_choices, validate_modal_choices
         try:
             normalize_targets(game_state, context)
             validate_targets(game_state, context)
             validate_enter_choices(payload.ability_graph.model_dump() if payload.ability_graph else None, context.__dict__)
+            validate_modal_choices(payload.ability_graph.model_dump() if payload.ability_graph else None, context.__dict__)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
         adapter = AbilityGraphRuntimeAdapter(game_state)
@@ -404,6 +405,7 @@ def execute_engine_action(
                 payload.player_id,
                 payload.object_id,
                 payload.x_value or 0,
+                ability_graph=payload.ability_graph.model_dump() if payload.ability_graph else None,
                 context=context,
             )
         except ValueError as exc:

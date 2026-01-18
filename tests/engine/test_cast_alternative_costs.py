@@ -24,7 +24,14 @@ def test_cast_spell_with_free_alt_cost():
         zone=ZONE_HAND,
         mana_cost="{3}{U}",
     )
-    spell.oracle_text = "You may cast this spell without paying its mana cost."
+    graph = {
+        "rootNodeId": "kw1",
+        "abilityType": "keyword",
+        "nodes": [
+            {"id": "kw1", "type": "KEYWORD", "data": {"keyword": "free"}},
+        ],
+        "edges": [],
+    }
     game_state.add_object(spell)
     turn_manager = TurnManager(game_state)
 
@@ -33,6 +40,7 @@ def test_cast_spell_with_free_alt_cost():
         turn_manager,
         player_id=0,
         object_id=spell.id,
+        ability_graph=graph,
         context={"choices": {"alternative_cost_tag": "free"}},
     )
 
@@ -43,6 +51,7 @@ def test_cast_spell_with_free_alt_cost():
         turn_manager,
         player_id=0,
         object_id=spell.id,
+        ability_graph=graph,
         context={"choices": {"alternative_cost_tag": "free"}},
     )
 
@@ -60,7 +69,14 @@ def test_cast_spell_with_mana_alt_cost():
         zone=ZONE_HAND,
         mana_cost="{3}{U}",
     )
-    spell.oracle_text = "You may cast this spell for {1}{R} rather than pay its mana cost."
+    graph = {
+        "rootNodeId": "kw1",
+        "abilityType": "keyword",
+        "nodes": [
+            {"id": "kw1", "type": "KEYWORD", "data": {"keyword": "alternative_cost", "costs": [{"type": "mana", "cost": "{1}{R}"}]}},
+        ],
+        "edges": [],
+    }
     game_state.add_object(spell)
     turn_manager = TurnManager(game_state)
     game_state.get_player(0).mana_pool["R"] = 1
@@ -71,6 +87,7 @@ def test_cast_spell_with_mana_alt_cost():
         turn_manager,
         player_id=0,
         object_id=spell.id,
+        ability_graph=graph,
         context={"choices": {"alternative_cost_tag": "{1}{R}"}},
     )
 
@@ -89,7 +106,14 @@ def test_cast_spell_with_flashback_from_graveyard():
         zone=ZONE_GRAVEYARD,
         mana_cost="{3}{U}",
     )
-    spell.oracle_text = "Flashback {1}{R}"
+    graph = {
+        "rootNodeId": "kw1",
+        "abilityType": "keyword",
+        "nodes": [
+            {"id": "kw1", "type": "KEYWORD", "data": {"keyword": "flashback", "costs": [{"type": "mana", "cost": "{1}{R}"}]}},
+        ],
+        "edges": [],
+    }
     game_state.add_object(spell)
     turn_manager = TurnManager(game_state)
     game_state.get_player(0).mana_pool["R"] = 1
@@ -100,6 +124,7 @@ def test_cast_spell_with_flashback_from_graveyard():
         turn_manager,
         player_id=0,
         object_id=spell.id,
+        ability_graph=graph,
         context={"choices": {"alternative_cost_tag": "flashback:{1}{R}"}},
     )
 
@@ -118,7 +143,14 @@ def test_cast_spell_with_escape_exiles_cards():
         zone=ZONE_GRAVEYARD,
         mana_cost="{4}{R}",
     )
-    spell.oracle_text = "Escape {2}{R} — Exile two other cards from your graveyard."
+    graph = {
+        "rootNodeId": "kw1",
+        "abilityType": "keyword",
+        "nodes": [
+            {"id": "kw1", "type": "KEYWORD", "data": {"keyword": "escape", "costs": [{"type": "mana", "cost": "{2}{R}"}], "number": 2}},
+        ],
+        "edges": [],
+    }
     grave_a = GameObject(
         id="grave_a",
         name="Grave A",
@@ -147,6 +179,7 @@ def test_cast_spell_with_escape_exiles_cards():
         turn_manager,
         player_id=0,
         object_id=spell.id,
+        ability_graph=graph,
         context={
             "choices": {
                 "alternative_cost_tag": "escape:{2}{R}",
@@ -174,7 +207,14 @@ def test_cast_spell_with_jump_start_discards():
         zone=ZONE_GRAVEYARD,
         mana_cost="{1}{R}",
     )
-    spell.oracle_text = "Jump-start"
+    graph = {
+        "rootNodeId": "kw1",
+        "abilityType": "keyword",
+        "nodes": [
+            {"id": "kw1", "type": "KEYWORD", "data": {"keyword": "jump-start"}},
+        ],
+        "edges": [],
+    }
     discard = GameObject(
         id="discard_card",
         name="Discard",
@@ -195,6 +235,7 @@ def test_cast_spell_with_jump_start_discards():
         turn_manager,
         player_id=0,
         object_id=spell.id,
+        ability_graph=graph,
         context={
             "choices": {
                 "alternative_cost_tag": "jump-start",

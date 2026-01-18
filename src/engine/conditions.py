@@ -151,6 +151,15 @@ def evaluate_condition(game_state: GameState, condition: Dict[str, Any], context
             return False
         return _compare(obj.mana_value, comparison, value)
 
+    if condition_type == "kicked":
+        choices = context.choices if isinstance(context.choices, dict) else {}
+        return bool(choices.get("kicked"))
+
+    if condition_type == "kicker_count":
+        choices = context.choices if isinstance(context.choices, dict) else {}
+        count = int(choices.get("kicker_count") or 0)
+        return _compare(count, comparison, value)
+
     return True
 
 

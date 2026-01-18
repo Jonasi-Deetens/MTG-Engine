@@ -23,7 +23,13 @@ import { useCastContext } from '@/hooks/useCastContext';
 import { useTurnState } from '@/hooks/useTurnState';
 import { useWardPayments } from '@/hooks/useWardPayments';
 import { useActivationCosts } from '@/hooks/useActivationCosts';
-import { extractAdditionalCastCostText, parseAlternativeCastCosts, parseAlternativeExtraCosts } from '@/lib/activationCosts';
+import {
+  deriveAdditionalCostsFromGraph,
+  deriveAlternativeCastCostsFromGraph,
+  deriveAlternativeExtraCostsFromGraph,
+  deriveOptionalCastCostsFromGraph,
+  deriveSpliceCardsFromHand,
+} from '@/lib/graphCosts';
 import {
   buildDefaultCombatAssignments,
   hasFirstStrikeCombat as computeHasFirstStrikeCombat,
@@ -35,6 +41,7 @@ import {
   buildEnterChoiceErrors,
   buildEnterChoiceTargetOptions,
 } from '@/lib/enterChoices';
+import { buildModalChoiceErrors, deriveModalConfig } from '@/lib/modalChoices';
 
 export default function PlayPage() {
   const [loading, setLoading] = useState(false);
@@ -50,6 +57,10 @@ export default function PlayPage() {
   const [combatDamageAssignments, setCombatDamageAssignments] = useState<Record<string, Record<string, number>>>({});
   const [autoPayWard, setAutoPayWard] = useState(true);
   const [selectedAlternativeCostTag, setSelectedAlternativeCostTag] = useState<string | null>(null);
+  const [selectedModalModes, setSelectedModalModes] = useState<string[]>([]);
+  const [optionalCostSelections, setOptionalCostSelections] = useState<Record<string, number>>({});
+  const [conspireTaps, setConspireTaps] = useState<string[]>([]);
+  const [spliceSelections, setSpliceSelections] = useState<string[]>([]);
   const { abilityGraphs, loadAbilityGraphForObject } = useAbilityGraphs({
     gameState,
     cardMap,
@@ -256,6 +267,14 @@ export default function PlayPage() {
     return map;
   }, [cardMap, combatState, gameState, isDeclareBlockers, selectedBlockers]);
   const selectedGraph = selectedHandId ? abilityGraphs[cardMap[selectedHandId]?.card_id ?? ''] : undefined;
+  const modalChoiceConfig = useMemo(() => deriveModalConfig(selectedGraph), [selectedGraph]);
+  const modalChoiceErrors = useMemo(
+    () => buildModalChoiceErrors(modalChoiceConfig, selectedModalModes),
+    [modalChoiceConfig, selectedModalModes]
+  );
+  useEffect(() => {
+    setSelectedModalModes([]);
+  }, [selectedGraph, selectedHandId]);
   const copySpellConfig = useMemo(() => {
     const nodes = selectedGraph?.nodes ?? [];
     const copyNode = nodes.find((node: any) => node?.type === 'EFFECT' && node?.data?.type === 'copy_spell');
@@ -267,19 +286,6 @@ export default function PlayPage() {
     return { enabled: chooseNewTargets && amount > 0, amount: Math.max(amount, 1) };
   }, [selectedGraph]);
   const [copyTargetSelections, setCopyTargetSelections] = useState<Array<{ objectIds: string[]; playerIds: number[] }>>([]);
-  useEffect(() => {
-    if (!copySpellConfig.enabled) {
-      setCopyTargetSelections([]);
-      return;
-    }
-    setCopyTargetSelections((prev) => {
-      const next = [...prev];
-      while (next.length < copySpellConfig.amount) {
-        next.push({ objectIds: [], playerIds: [] });
-      }
-      return next.slice(0, copySpellConfig.amount);
-    });
-  }, [copySpellConfig]);
   const {
     targetHints,
     selectedTargetObjectIds,
@@ -301,6 +307,8 @@ export default function PlayPage() {
     selectedHandId,
     selectedGraph,
     currentPriority,
+    modalConfig: modalChoiceConfig,
+    selectedModes: selectedModalModes,
   });
   const {
     targetGroups: effectTargetGroups,
@@ -317,6 +325,8 @@ export default function PlayPage() {
     selectedGraph,
     currentPriority,
     selectedHandId,
+    modalConfig: modalChoiceConfig,
+    selectedModes: selectedModalModes,
   });
   const hasEffectTargets = effectTargetGroups.length > 0;
   const resolvedTargetObjectIds = hasEffectTargets ? effectTargetObjectIds : selectedTargetObjectIds;
@@ -447,12 +457,16 @@ export default function PlayPage() {
   const hasActivatedAbility =
     selectedBattlefieldObject?.ability_graphs && selectedBattlefieldObject.ability_graphs.length > 0;
   const selectedHandObject = gameState?.objects.find((obj) => obj.id === selectedHandId);
-  const activatedCostText = useMemo(() => {
-    if (!selectedBattlefieldObject?.ability_graphs?.length) return '';
+  const objectMap = useMemo(
+    () => new Map((gameState?.objects ?? []).map((obj) => [obj.id, obj])),
+    [gameState]
+  );
+  const activatedCosts = useMemo(() => {
+    if (!selectedBattlefieldObject?.ability_graphs?.length) return [];
     const graph = selectedBattlefieldObject.ability_graphs[0];
     const nodes = graph?.nodes ?? [];
     const activatedNode = nodes.find((node: any) => node?.type === 'ACTIVATED');
-    return activatedNode?.data?.cost ?? '';
+    return Array.isArray(activatedNode?.data?.costs) ? activatedNode?.data?.costs : [];
   }, [selectedBattlefieldObject]);
   const {
     costEntries: activationCosts,
@@ -463,7 +477,7 @@ export default function PlayPage() {
     paymentErrors: activationCostErrors,
     paymentsPayload: activationCostPaymentsPayload,
   } = useActivationCosts({
-    costText: activatedCostText,
+    costs: activatedCosts,
     objects: gameState?.objects ?? [],
     players: gameState?.players ?? [],
     cardMap,
@@ -471,9 +485,9 @@ export default function PlayPage() {
     manaPool,
   });
   const hasActivationCostErrors = activationCostErrors.length > 0;
-  const additionalCostText = useMemo(
-    () => extractAdditionalCastCostText(selectedHandObject?.oracle_text),
-    [selectedHandObject?.oracle_text]
+  const additionalCosts = useMemo(
+    () => deriveAdditionalCostsFromGraph(selectedGraph),
+    [selectedGraph]
   );
   const {
     costEntries: additionalCastCosts,
@@ -484,7 +498,7 @@ export default function PlayPage() {
     paymentErrors: additionalCastCostErrors,
     paymentsPayload: additionalCastPaymentsPayload,
   } = useActivationCosts({
-    costText: additionalCostText,
+    costs: additionalCosts,
     objects: gameState?.objects ?? [],
     players: gameState?.players ?? [],
     cardMap,
@@ -493,13 +507,51 @@ export default function PlayPage() {
   });
   const hasAdditionalCastCostErrors = additionalCastCostErrors.length > 0;
   const alternativeCostOptions = useMemo(
-    () => parseAlternativeCastCosts(selectedHandObject?.oracle_text),
-    [selectedHandObject?.oracle_text]
+    () => deriveAlternativeCastCostsFromGraph(selectedGraph),
+    [selectedGraph]
   );
-  const alternativeExtraCostText = useMemo(
-    () => parseAlternativeExtraCosts(selectedHandObject?.oracle_text, selectedAlternativeCostTag),
-    [selectedHandObject?.oracle_text, selectedAlternativeCostTag]
+  const alternativeExtraCosts = useMemo(
+    () => deriveAlternativeExtraCostsFromGraph(selectedGraph, selectedAlternativeCostTag),
+    [selectedGraph, selectedAlternativeCostTag]
   );
+  const optionalCostOptions = useMemo(
+    () => deriveOptionalCastCostsFromGraph(selectedGraph),
+    [selectedGraph]
+  );
+  const optionalCopyCount = useMemo(() => {
+    let total = 0;
+    optionalCostOptions.forEach((option) => {
+      const count = optionalCostSelections[option.tag] ?? 0;
+      if (option.kind === 'replicate') {
+        total += Math.max(0, count);
+      }
+      if (option.kind === 'conspire' && count > 0) {
+        total += 1;
+      }
+    });
+    return total;
+  }, [optionalCostOptions, optionalCostSelections]);
+  const copyTargetsEnabled = useMemo(
+    () => copySpellConfig.enabled || optionalCopyCount > 0,
+    [copySpellConfig.enabled, optionalCopyCount]
+  );
+  const copyTargetsCount = useMemo(
+    () => (copySpellConfig.enabled ? copySpellConfig.amount : 0) + optionalCopyCount,
+    [copySpellConfig.amount, copySpellConfig.enabled, optionalCopyCount]
+  );
+  useEffect(() => {
+    if (!copyTargetsEnabled) {
+      setCopyTargetSelections([]);
+      return;
+    }
+    setCopyTargetSelections((prev) => {
+      const next = [...prev];
+      while (next.length < copyTargetsCount) {
+        next.push({ objectIds: [], playerIds: [] });
+      }
+      return next.slice(0, copyTargetsCount);
+    });
+  }, [copyTargetsCount, copyTargetsEnabled]);
   const {
     costEntries: alternativeExtraCosts,
     payments: alternativeExtraPayments,
@@ -509,7 +561,7 @@ export default function PlayPage() {
     paymentErrors: alternativeExtraCostErrors,
     paymentsPayload: alternativeExtraPaymentsPayload,
   } = useActivationCosts({
-    costText: alternativeExtraCostText,
+    costs: alternativeExtraCosts,
     objects: gameState?.objects ?? [],
     players: gameState?.players ?? [],
     cardMap,
@@ -519,12 +571,221 @@ export default function PlayPage() {
   const hasAlternativeExtraCostErrors = alternativeExtraCostErrors.length > 0;
 
   useEffect(() => {
+    if (!optionalCostOptions.length) {
+      setOptionalCostSelections({});
+      return;
+    }
+    setOptionalCostSelections((prev) => {
+      const next: Record<string, number> = {};
+      optionalCostOptions.forEach((option) => {
+        const value = prev[option.tag];
+        if (typeof value === 'number' && value > 0) {
+          next[option.tag] = value;
+        }
+      });
+      return next;
+    });
+  }, [optionalCostOptions, selectedHandId]);
+
+  const optionalCostCosts = useMemo(() => {
+    if (optionalCostOptions.length === 0) return [];
+    const costs: any[] = [];
+    optionalCostOptions.forEach((option) => {
+      const count = optionalCostSelections[option.tag] ?? 0;
+      if (count > 0) {
+        const repeat = option.repeatable ? count : 1;
+        for (let i = 0; i < repeat; i += 1) {
+          costs.push(...option.costs);
+        }
+      }
+    });
+    return costs;
+  }, [optionalCostOptions, optionalCostSelections]);
+  const conspireSelected = useMemo(
+    () => optionalCostOptions.some((option) => option.kind === 'conspire' && (optionalCostSelections[option.tag] ?? 0) > 0),
+    [optionalCostOptions, optionalCostSelections]
+  );
+  const conspireOptions = useMemo(() => {
+    if (!conspireSelected || !selectedHandObject) return [];
+    const spellColors = new Set(selectedHandObject.colors ?? []);
+    if (spellColors.size === 0) return [];
+    const player = gameState?.players.find((entry) => entry.id === currentPriority);
+    const battlefieldIds = player?.battlefield ?? [];
+    return battlefieldIds
+      .map((objectId) => objectMap.get(objectId))
+      .filter((obj) => {
+        if (!obj) return false;
+        if (obj.tapped) return false;
+        if (!obj.types?.includes('Creature')) return false;
+        const colors = obj.colors ?? [];
+        return colors.some((color) => spellColors.has(color));
+      })
+      .map((obj) => ({
+        value: obj?.id ?? '',
+        label: cardMap[obj?.id ?? '']?.name || obj?.name || obj?.id || '',
+      }))
+      .filter((entry) => entry.value);
+  }, [cardMap, conspireSelected, currentPriority, gameState, objectMap, selectedHandObject]);
+  const conspireError = conspireSelected && conspireTaps.length !== 2
+    ? 'Select exactly two creatures.'
+    : null;
+  useEffect(() => {
+    if (!conspireSelected) {
+      setConspireTaps([]);
+    }
+  }, [conspireSelected, selectedHandId]);
+  const handleToggleConspireTap = (value: string) => {
+    setConspireTaps((prev) => {
+      if (prev.includes(value)) {
+        return prev.filter((entry) => entry !== value);
+      }
+      if (prev.length >= 2) {
+        return prev;
+      }
+      return [...prev, value];
+    });
+  };
+  const isArcaneSpell = !!selectedHandObject?.types?.includes('Arcane');
+  useEffect(() => {
+    if (!gameState || !isArcaneSpell) return;
+    const player = gameState.players.find((entry) => entry.id === currentPriority);
+    (player?.hand ?? []).forEach((objectId) => {
+      loadAbilityGraphForObject(objectId);
+    });
+  }, [currentPriority, gameState, isArcaneSpell, loadAbilityGraphForObject]);
+  const spliceOptions = useMemo(() => {
+    if (!isArcaneSpell || !gameState) return [];
+    const player = gameState.players.find((entry) => entry.id === currentPriority);
+    const handIds = player?.hand ?? [];
+    const graphMap: Record<string, any> = {};
+    handIds.forEach((objectId) => {
+      const cardId = cardMap[objectId]?.card_id;
+      if (!cardId) return;
+      const graph = abilityGraphs[cardId];
+      if (graph) {
+        graphMap[objectId] = graph;
+      }
+    });
+    return deriveSpliceCardsFromHand(handIds, graphMap).map((entry) => ({
+      cardId: entry.cardId,
+      costs: entry.costs,
+      label: cardMap[entry.cardId]?.name || objectMap.get(entry.cardId)?.name || entry.cardId,
+    }));
+  }, [abilityGraphs, cardMap, currentPriority, gameState, isArcaneSpell, objectMap]);
+  useEffect(() => {
+    if (!isArcaneSpell) {
+      setSpliceSelections([]);
+      return;
+    }
+    setSpliceSelections((prev) => prev.filter((id) => spliceOptions.some((entry) => entry.cardId === id)));
+  }, [isArcaneSpell, selectedHandId, spliceOptions]);
+  const handleToggleSpliceCard = (cardId: string) => {
+    setSpliceSelections((prev) =>
+      prev.includes(cardId) ? prev.filter((entry) => entry !== cardId) : [...prev, cardId]
+    );
+  };
+  const spliceCostList = useMemo(() => {
+    if (spliceSelections.length === 0) return [];
+    return spliceSelections.flatMap(
+      (id) => spliceOptions.find((option) => option.cardId === id)?.costs ?? []
+    );
+  }, [spliceOptions, spliceSelections]);
+  const entwineSelected = useMemo(
+    () => optionalCostOptions.some((option) => option.kind === 'entwine' && (optionalCostSelections[option.tag] ?? 0) > 0),
+    [optionalCostOptions, optionalCostSelections]
+  );
+  const modalChoicesForCast = useMemo(() => {
+    if (!entwineSelected || !modalChoiceConfig) return selectedModalModes;
+    return modalChoiceConfig.modes.map((mode) => mode.id);
+  }, [entwineSelected, modalChoiceConfig, selectedModalModes]);
+  useEffect(() => {
+    if (!entwineSelected || !modalChoiceConfig) return;
+    setSelectedModalModes(modalChoiceConfig.modes.map((mode) => mode.id));
+  }, [entwineSelected, modalChoiceConfig]);
+
+  const {
+    costEntries: optionalCostEntries,
+    payments: optionalCostPayments,
+    setPayments: setOptionalCostPayments,
+    paymentDetails: optionalCostPaymentDetails,
+    setPaymentDetails: setOptionalCostPaymentDetails,
+    paymentErrors: optionalCostPaymentErrors,
+    paymentsPayload: optionalCostPaymentsPayload,
+  } = useActivationCosts({
+    costs: optionalCostCosts,
+    objects: gameState?.objects ?? [],
+    players: gameState?.players ?? [],
+    cardMap,
+    currentPlayerId: currentPriority,
+    manaPool,
+  });
+  const hasOptionalCostErrors =
+    optionalCostPaymentErrors.length > 0 ||
+    spliceCostErrors.length > 0 ||
+    (conspireSelected && conspireTaps.length !== 2);
+  const optionalCostErrors = useMemo(
+    () => optionalCostPaymentErrors,
+    [optionalCostPaymentErrors]
+  );
+  const {
+    costEntries: spliceCosts,
+    payments: splicePayments,
+    setPayments: setSplicePayments,
+    paymentDetails: splicePaymentDetails,
+    setPaymentDetails: setSplicePaymentDetails,
+    paymentErrors: spliceCostErrors,
+    paymentsPayload: splicePaymentsPayload,
+  } = useActivationCosts({
+    costs: spliceCostList,
+    objects: gameState?.objects ?? [],
+    players: gameState?.players ?? [],
+    cardMap,
+    currentPlayerId: currentPriority,
+    manaPool,
+  });
+
+  useEffect(() => {
     if (enterChoiceConfig.length === 0) {
       setEnterChoices({});
       return;
     }
     setEnterChoices((prev) => buildEnterChoiceDefaults(enterChoiceConfig, prev));
   }, [selectedHandId, enterChoiceConfig]);
+
+  const handleToggleOptionalCost = (tag: string) => {
+    setOptionalCostSelections((prev) => {
+      const next = { ...prev };
+      if ((next[tag] ?? 0) > 0) {
+        delete next[tag];
+        return next;
+      }
+      next[tag] = 1;
+      return next;
+    });
+  };
+
+  const handleUpdateOptionalCostCount = (tag: string, count: number) => {
+    setOptionalCostSelections((prev) => ({
+      ...prev,
+      [tag]: Math.max(0, count),
+    }));
+  };
+
+  const handleToggleModalMode = (modeId: string) => {
+    if (entwineSelected) return;
+    setSelectedModalModes((prev) => {
+      if (!modalChoiceConfig) return prev;
+      if (modalChoiceConfig.max === 1) {
+        return prev.includes(modeId) ? [] : [modeId];
+      }
+      const exists = prev.includes(modeId);
+      const next = exists ? prev.filter((entry) => entry !== modeId) : [...prev, modeId];
+      if (modalChoiceConfig.max !== null && next.length > modalChoiceConfig.max) {
+        return next.slice(0, modalChoiceConfig.max);
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     setSelectedAlternativeCostTag(null);
@@ -558,12 +819,18 @@ export default function PlayPage() {
     distinctTargetsGlobal: !hasEffectTargets ? distinctTargetsGlobal : undefined,
     minTargetsByEffect: hasEffectTargets ? minTargetsByEffect : undefined,
     minTargetsGlobal: !hasEffectTargets ? minTargetsGlobal : undefined,
-    copyChooseNewTargets: copySpellConfig.enabled,
+    copyChooseNewTargets: copyTargetsEnabled,
     copyTargetsList: copyTargetSelections.map((entry) => ({
       ...(entry.objectIds.length > 0 ? { target: entry.objectIds[0], targets: entry.objectIds } : {}),
       ...(entry.playerIds.length > 0 ? { target_player: entry.playerIds[0], target_players: entry.playerIds } : {}),
     })),
     enterChoices,
+    modalChoices: modalChoicesForCast,
+    optionalCostSelections,
+    optionalCostPayments: optionalCostPaymentsPayload,
+    conspireTaps,
+    spliceCards: spliceSelections,
+    splicePayments: splicePaymentsPayload,
   });
   const {
     preparedCast,
@@ -645,6 +912,7 @@ export default function PlayPage() {
             hasActivationCostErrors={hasActivationCostErrors}
             hasAdditionalCastCostErrors={hasAdditionalCastCostErrors}
             hasAlternativeExtraCostErrors={hasAlternativeExtraCostErrors}
+            hasOptionalCastCostErrors={hasOptionalCostErrors}
             hasAlternativeExtraCostErrors={hasAlternativeExtraCostErrors}
             isMainPhase={isMainPhase}
             isPriorityActivePlayer={isPriorityActivePlayer}
@@ -746,6 +1014,11 @@ export default function PlayPage() {
             onEnterChoiceChange={(choiceType, value) =>
               setEnterChoices((prev) => ({ ...prev, [choiceType]: value }))
             }
+            modalChoiceConfig={modalChoiceConfig}
+            selectedModalModes={selectedModalModes}
+            modalChoiceErrors={modalChoiceErrors}
+            onToggleModalMode={handleToggleModalMode}
+            modalChoiceDisabled={entwineSelected}
             isComplexCost={isComplexCost}
             manaPool={manaPool}
             manaPayment={manaPayment}
@@ -809,6 +1082,53 @@ export default function PlayPage() {
             alternativeCostOptions={alternativeCostOptions}
             selectedAlternativeCostTag={selectedAlternativeCostTag}
             onSelectAlternativeCost={setSelectedAlternativeCostTag}
+            optionalCostOptions={optionalCostOptions}
+            optionalCostSelections={optionalCostSelections}
+            optionalCostErrors={optionalCostErrors}
+            onToggleOptionalCost={handleToggleOptionalCost}
+            onUpdateOptionalCostCount={handleUpdateOptionalCostCount}
+            optionalCostEntries={optionalCostEntries}
+            optionalCostPayments={optionalCostPayments}
+            optionalCostPaymentDetails={optionalCostPaymentDetails}
+            optionalCostPaymentErrors={optionalCostPaymentErrors}
+            onUpdateOptionalCostPayment={(index, updater) =>
+              setOptionalCostPayments((prev) => {
+                const next = [...prev];
+                next[index] = updater(next[index] ?? {});
+                return next;
+              })
+            }
+            onUpdateOptionalCostPaymentDetail={(index, updater) =>
+              setOptionalCostPaymentDetails((prev) => ({
+                ...prev,
+                [index]: updater(prev[index] ?? { hybrid_choices: [], two_brid_choices: [], phyrexian_choices: [] }),
+              }))
+            }
+            conspireEnabled={conspireSelected}
+            conspireOptions={conspireOptions}
+            conspireSelections={conspireTaps}
+            conspireError={conspireError}
+            onToggleConspire={handleToggleConspireTap}
+            spliceOptions={spliceOptions}
+            spliceSelections={spliceSelections}
+            onToggleSpliceCard={handleToggleSpliceCard}
+            spliceCosts={spliceCosts}
+            splicePayments={splicePayments}
+            splicePaymentDetails={splicePaymentDetails}
+            spliceCostErrors={spliceCostErrors}
+            onUpdateSplicePayment={(index, updater) =>
+              setSplicePayments((prev) => {
+                const next = [...prev];
+                next[index] = updater(next[index] ?? {});
+                return next;
+              })
+            }
+            onUpdateSplicePaymentDetail={(index, updater) =>
+              setSplicePaymentDetails((prev) => ({
+                ...prev,
+                [index]: updater(prev[index] ?? { hybrid_choices: [], two_brid_choices: [], phyrexian_choices: [] }),
+              }))
+            }
             autoPayWard={autoPayWard}
             onToggleAutoPayWard={setAutoPayWard}
             wardTargets={wardTargets}
@@ -850,7 +1170,7 @@ export default function PlayPage() {
             }}
             effectTargetGroups={hasEffectTargets ? effectTargetGroups : undefined}
             targetSelectionErrors={targetSelectionErrors}
-            copyTargetSelections={copySpellConfig.enabled ? copyTargetSelections : undefined}
+            copyTargetSelections={copyTargetsEnabled ? copyTargetSelections : undefined}
             onChangeCopyTarget={(index, objectIds, playerIds) =>
               setCopyTargetSelections((prev) => {
                 const next = [...prev];

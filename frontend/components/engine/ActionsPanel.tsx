@@ -4,16 +4,21 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { TargetSelector } from '@/components/engine/TargetSelector';
 import { EnterChoicesPanel } from '@/components/engine/EnterChoicesPanel';
+import { ModalChoicePanel } from '@/components/engine/ModalChoicePanel';
 import { ManaPaymentPanel } from '@/components/engine/ManaPaymentPanel';
 import { WardPaymentPanel } from '@/components/engine/WardPaymentPanel';
 import { ActivationCostPanel } from '@/components/engine/ActivationCostPanel';
+import { OptionalCostPanel } from '@/components/engine/OptionalCostPanel';
+import { ConspirePanel } from '@/components/engine/ConspirePanel';
+import { SplicePanel } from '@/components/engine/SplicePanel';
 import { EngineCardMap, EngineCombatStateSnapshot } from '@/lib/engine';
 import { EffectTargetGroup } from '@/hooks/useEffectTargeting';
 import { ReplacementConflictEntry } from '@/hooks/useReplacementConflicts';
 import { EnterChoiceConfig } from '@/lib/enterChoices';
+import { ModalChoiceConfig } from '@/lib/modalChoices';
 import { ManaPaymentDetail } from '@/lib/manaPayment';
 import { ActivationCostEntry } from '@/hooks/useActivationCosts';
-import { AlternativeCostOption } from '@/lib/activationCosts';
+import { AlternativeCostOption, OptionalCastCostOption } from '@/lib/graphCosts';
 
 interface ActionsPanelProps {
   loading: boolean;
@@ -26,6 +31,7 @@ interface ActionsPanelProps {
   hasActivationCostErrors: boolean;
   hasAdditionalCastCostErrors: boolean;
   hasAlternativeExtraCostErrors: boolean;
+  hasOptionalCastCostErrors: boolean;
   isMainPhase: boolean;
   isPriorityActivePlayer: boolean;
   isDeclareAttackers: boolean;
@@ -60,6 +66,11 @@ interface ActionsPanelProps {
   enterChoices: Record<string, string>;
   enterChoiceTargetOptions: Array<{ value: string; label: string }>;
   onEnterChoiceChange: (choiceType: string, value: string) => void;
+  modalChoiceConfig: ModalChoiceConfig | null;
+  selectedModalModes: string[];
+  modalChoiceErrors: string[];
+  onToggleModalMode: (modeId: string) => void;
+  modalChoiceDisabled?: boolean;
   isComplexCost: boolean;
   manaPool: Record<string, number>;
   manaPayment: Record<string, number>;
@@ -176,6 +187,91 @@ interface ActionsPanelProps {
   alternativeCostOptions: AlternativeCostOption[];
   selectedAlternativeCostTag: string | null;
   onSelectAlternativeCost: (value: string | null) => void;
+  optionalCostOptions: OptionalCastCostOption[];
+  optionalCostSelections: Record<string, number>;
+  optionalCostErrors: string[];
+  onToggleOptionalCost: (tag: string) => void;
+  onUpdateOptionalCostCount: (tag: string, count: number) => void;
+  optionalCostEntries: ActivationCostEntry[];
+  optionalCostPayments: Array<{
+    mana_payment?: Record<string, number>;
+    mana_payment_detail?: ManaPaymentDetail;
+    life_payment?: number;
+    discard_id?: string;
+    discard_ids?: string[];
+    sacrifice_id?: string;
+    tap_id?: string;
+    exile_ids?: string[];
+  }>;
+  optionalCostPaymentDetails: Record<number, ManaPaymentDetail>;
+  optionalCostPaymentErrors: string[];
+  onUpdateOptionalCostPayment: (
+    index: number,
+    updater: (prev: {
+      mana_payment?: Record<string, number>;
+      mana_payment_detail?: ManaPaymentDetail;
+      life_payment?: number;
+      discard_id?: string;
+      discard_ids?: string[];
+      sacrifice_id?: string;
+      tap_id?: string;
+      exile_ids?: string[];
+    }) => {
+      mana_payment?: Record<string, number>;
+      mana_payment_detail?: ManaPaymentDetail;
+      life_payment?: number;
+      discard_id?: string;
+      discard_ids?: string[];
+      sacrifice_id?: string;
+      tap_id?: string;
+      exile_ids?: string[];
+    }
+  ) => void;
+  onUpdateOptionalCostPaymentDetail: (index: number, updater: (prev: ManaPaymentDetail) => ManaPaymentDetail) => void;
+  conspireEnabled: boolean;
+  conspireOptions: Array<{ value: string; label: string }>;
+  conspireSelections: string[];
+  conspireError?: string | null;
+  onToggleConspire: (value: string) => void;
+  spliceOptions: Array<{ cardId: string; label: string; costs: Array<{ type: string; [key: string]: any }> }>;
+  spliceSelections: string[];
+  onToggleSpliceCard: (cardId: string) => void;
+  spliceCosts: ActivationCostEntry[];
+  splicePayments: Array<{
+    mana_payment?: Record<string, number>;
+    mana_payment_detail?: ManaPaymentDetail;
+    life_payment?: number;
+    discard_id?: string;
+    discard_ids?: string[];
+    sacrifice_id?: string;
+    tap_id?: string;
+    exile_ids?: string[];
+  }>;
+  splicePaymentDetails: Record<number, ManaPaymentDetail>;
+  spliceCostErrors: string[];
+  onUpdateSplicePayment: (
+    index: number,
+    updater: (prev: {
+      mana_payment?: Record<string, number>;
+      mana_payment_detail?: ManaPaymentDetail;
+      life_payment?: number;
+      discard_id?: string;
+      discard_ids?: string[];
+      sacrifice_id?: string;
+      tap_id?: string;
+      exile_ids?: string[];
+    }) => {
+      mana_payment?: Record<string, number>;
+      mana_payment_detail?: ManaPaymentDetail;
+      life_payment?: number;
+      discard_id?: string;
+      discard_ids?: string[];
+      sacrifice_id?: string;
+      tap_id?: string;
+      exile_ids?: string[];
+    }
+  ) => void;
+  onUpdateSplicePaymentDetail: (index: number, updater: (prev: ManaPaymentDetail) => ManaPaymentDetail) => void;
   autoPayWard: boolean;
   onToggleAutoPayWard: (value: boolean) => void;
   wardTargets: Array<{
@@ -255,6 +351,7 @@ export function ActionsPanel({
   hasActivationCostErrors,
   hasAdditionalCastCostErrors,
   hasAlternativeExtraCostErrors,
+  hasOptionalCastCostErrors,
   isMainPhase,
   isPriorityActivePlayer,
   isDeclareAttackers,
@@ -289,6 +386,11 @@ export function ActionsPanel({
   enterChoices,
   enterChoiceTargetOptions,
   onEnterChoiceChange,
+  modalChoiceConfig,
+  selectedModalModes,
+  modalChoiceErrors,
+  onToggleModalMode,
+  modalChoiceDisabled = false,
   isComplexCost,
   manaPool,
   manaPayment,
@@ -319,6 +421,31 @@ export function ActionsPanel({
   alternativeCostOptions,
   selectedAlternativeCostTag,
   onSelectAlternativeCost,
+  optionalCostOptions,
+  optionalCostSelections,
+  optionalCostErrors,
+  onToggleOptionalCost,
+  onUpdateOptionalCostCount,
+  optionalCostEntries,
+  optionalCostPayments,
+  optionalCostPaymentDetails,
+  optionalCostPaymentErrors,
+  onUpdateOptionalCostPayment,
+  onUpdateOptionalCostPaymentDetail,
+  conspireEnabled,
+  conspireOptions,
+  conspireSelections,
+  conspireError,
+  onToggleConspire,
+  spliceOptions,
+  spliceSelections,
+  onToggleSpliceCard,
+  spliceCosts,
+  splicePayments,
+  splicePaymentDetails,
+  spliceCostErrors,
+  onUpdateSplicePayment,
+  onUpdateSplicePaymentDetail,
   autoPayWard,
   onToggleAutoPayWard,
   wardTargets,
@@ -361,10 +488,12 @@ export function ActionsPanel({
             !preparedCast ||
             preparedCast.objectId !== selectedHandId ||
             enterChoiceErrors.length > 0 ||
+            modalChoiceErrors.length > 0 ||
             manaPaymentErrors.length > 0 ||
             hasWardPaymentErrors ||
             hasActivationCostErrors ||
             hasAdditionalCastCostErrors ||
+            hasOptionalCastCostErrors ||
             hasAlternativeExtraCostErrors ||
             (targetSelectionErrors?.length ?? 0) > 0 ||
             loading
@@ -382,6 +511,7 @@ export function ActionsPanel({
             !selectedBattlefieldId ||
             !hasActivatedAbility ||
             hasActivationCostErrors ||
+            modalChoiceErrors.length > 0 ||
             (targetSelectionErrors?.length ?? 0) > 0 ||
             loading
           }
@@ -516,6 +646,32 @@ export function ActionsPanel({
         targetOptions={enterChoiceTargetOptions}
         onChange={onEnterChoiceChange}
       />
+      <ModalChoicePanel
+        config={modalChoiceConfig}
+        selectedModes={selectedModalModes}
+        errors={modalChoiceErrors}
+        onToggleMode={onToggleModalMode}
+        disabled={modalChoiceDisabled}
+      />
+      <OptionalCostPanel
+        options={optionalCostOptions}
+        selections={optionalCostSelections}
+        errors={optionalCostErrors}
+        onToggle={onToggleOptionalCost}
+        onChangeCount={onUpdateOptionalCostCount}
+      />
+      <ConspirePanel
+        enabled={conspireEnabled}
+        options={conspireOptions}
+        selections={conspireSelections}
+        onToggle={onToggleConspire}
+        error={conspireError}
+      />
+      <SplicePanel
+        options={spliceOptions}
+        selections={spliceSelections}
+        onToggle={onToggleSpliceCard}
+      />
 
       <ManaPaymentPanel
         active={!!(preparedCast && preparedCast.objectId === selectedHandId)}
@@ -567,6 +723,28 @@ export function ActionsPanel({
         errors={additionalCastCostErrors}
         onUpdatePayment={onUpdateAdditionalCastPayment}
         onUpdatePaymentDetail={onUpdateAdditionalCastPaymentDetail}
+      />
+      <ActivationCostPanel
+        active={Object.values(optionalCostSelections).some((count) => count > 0)}
+        title="Optional Costs"
+        costEntries={optionalCostEntries}
+        manaPool={manaPool}
+        payments={optionalCostPayments}
+        paymentDetails={optionalCostPaymentDetails}
+        errors={optionalCostPaymentErrors}
+        onUpdatePayment={onUpdateOptionalCostPayment}
+        onUpdatePaymentDetail={onUpdateOptionalCostPaymentDetail}
+      />
+      <ActivationCostPanel
+        active={spliceSelections.length > 0}
+        title="Splice Costs"
+        costEntries={spliceCosts}
+        manaPool={manaPool}
+        payments={splicePayments}
+        paymentDetails={splicePaymentDetails}
+        errors={spliceCostErrors}
+        onUpdatePayment={onUpdateSplicePayment}
+        onUpdatePaymentDetail={onUpdateSplicePaymentDetail}
       />
 
       <ActivationCostPanel

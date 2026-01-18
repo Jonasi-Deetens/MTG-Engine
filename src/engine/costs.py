@@ -101,6 +101,51 @@ def parse_alternative_extra_costs(oracle_text: Optional[str], alt_tag: Optional[
     return []
 
 
+def parse_optional_cast_costs(oracle_text: Optional[str]) -> List[Dict[str, Any]]:
+    if not oracle_text:
+        return []
+    costs: List[Dict[str, Any]] = []
+    for line in oracle_text.split("\n"):
+        text = line.split("(", 1)[0].strip().rstrip(".")
+        multikicker = re.search(r"multikicker(?:\s+|—|-)\s*(.+)", text, flags=re.IGNORECASE)
+        if multikicker:
+            cost_text = multikicker.group(1).strip()
+            costs.append({
+                "tag": f"multikicker:{cost_text}",
+                "kind": "multikicker",
+                "costs": parse_cost_string(cost_text),
+                "repeatable": True,
+            })
+        kicker = re.search(r"kicker(?:\s+|—|-)\s*(.+)", text, flags=re.IGNORECASE)
+        if kicker and not multikicker:
+            cost_text = kicker.group(1).strip()
+            costs.append({
+                "tag": f"kicker:{cost_text}",
+                "kind": "kicker",
+                "costs": parse_cost_string(cost_text),
+                "repeatable": False,
+            })
+        buyback = re.search(r"buyback(?:\s+|—|-)\s*(.+)", text, flags=re.IGNORECASE)
+        if buyback:
+            cost_text = buyback.group(1).strip()
+            costs.append({
+                "tag": f"buyback:{cost_text}",
+                "kind": "buyback",
+                "costs": parse_cost_string(cost_text),
+                "repeatable": False,
+            })
+        entwine = re.search(r"entwine(?:\s+|—|-)\s*(.+)", text, flags=re.IGNORECASE)
+        if entwine:
+            cost_text = entwine.group(1).strip()
+            costs.append({
+                "tag": f"entwine:{cost_text}",
+                "kind": "entwine",
+                "costs": parse_cost_string(cost_text),
+                "repeatable": False,
+            })
+    return costs
+
+
 def pay_activation_costs(
     game_state: GameState,
     player_id: int,

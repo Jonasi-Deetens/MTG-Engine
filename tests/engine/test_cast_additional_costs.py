@@ -28,7 +28,6 @@ def _basic_spell() -> GameObject:
 def test_additional_cast_cost_discard_required():
     game_state = _build_state()
     spell = _basic_spell()
-    spell.oracle_text = "As an additional cost to cast this spell, discard a card."
     discard = GameObject(
         id="discard",
         name="Discard",
@@ -42,6 +41,14 @@ def test_additional_cast_cost_discard_required():
     game_state.add_object(discard)
     turn_manager = TurnManager(game_state)
     game_state.get_player(0).mana_pool["G"] = 1
+    graph = {
+        "rootNodeId": "kw1",
+        "abilityType": "keyword",
+        "nodes": [
+            {"id": "kw1", "type": "KEYWORD", "data": {"keyword": "additional_cost", "costs": [{"type": "discard", "amount": 1}]}},
+        ],
+        "edges": [],
+    }
 
     with pytest.raises(ValueError):
         cast_spell(
@@ -49,6 +56,7 @@ def test_additional_cast_cost_discard_required():
             turn_manager,
             player_id=0,
             object_id=spell.id,
+            ability_graph=graph,
             context={"choices": {}},
         )
 
@@ -57,6 +65,7 @@ def test_additional_cast_cost_discard_required():
         turn_manager,
         player_id=0,
         object_id=spell.id,
+        ability_graph=graph,
         context={"choices": {"additional_cost_payments": {spell.id: {"discard_id": discard.id}}}},
     )
 
@@ -67,7 +76,6 @@ def test_additional_cast_cost_sacrifice():
     game_state = _build_state()
     spell = _basic_spell()
     spell.id = "spell_two"
-    spell.oracle_text = "As an additional cost to cast this spell, sacrifice a creature."
     sacrifice = GameObject(
         id="fodder",
         name="Fodder",
@@ -80,12 +88,21 @@ def test_additional_cast_cost_sacrifice():
     game_state.add_object(sacrifice)
     turn_manager = TurnManager(game_state)
     game_state.get_player(0).mana_pool["G"] = 1
+    graph = {
+        "rootNodeId": "kw1",
+        "abilityType": "keyword",
+        "nodes": [
+            {"id": "kw1", "type": "KEYWORD", "data": {"keyword": "additional_cost", "costs": [{"type": "sacrifice", "card_type": "Creature"}]}},
+        ],
+        "edges": [],
+    }
 
     cast_spell(
         game_state,
         turn_manager,
         player_id=0,
         object_id=spell.id,
+        ability_graph=graph,
         context={"choices": {"additional_cost_payments": {spell.id: {"sacrifice_id": sacrifice.id}}}},
     )
 

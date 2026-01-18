@@ -22,6 +22,12 @@ interface UseCastContextArgs {
   copyChooseNewTargets?: boolean;
   copyTargetsList?: Array<Record<string, any>>;
   enterChoices: Record<string, string>;
+  modalChoices?: string[];
+  optionalCostSelections?: Record<string, number>;
+  optionalCostPayments?: any;
+  conspireTaps?: string[];
+  spliceCards?: string[];
+  splicePayments?: any;
 }
 
 type WardOptions = {
@@ -53,6 +59,12 @@ export const useCastContext = ({
   copyChooseNewTargets = false,
   copyTargetsList = [],
   enterChoices,
+  modalChoices = [],
+  optionalCostSelections = {},
+  optionalCostPayments,
+  conspireTaps = [],
+  spliceCards = [],
+  splicePayments,
 }: UseCastContextArgs) => {
   const buildCastContext = useCallback((
     sourceIdOverride?: string | null,
@@ -61,6 +73,9 @@ export const useCastContext = ({
     const choices: Record<string, any> = {};
     if (Object.keys(enterChoices).length > 0) {
       choices.enter_choices = enterChoices;
+    }
+    if (modalChoices.length > 0) {
+      choices.chosen_modes = modalChoices;
     }
     if (wardOptions?.wardAutoPay) {
       choices.ward_auto_pay = true;
@@ -79,6 +94,21 @@ export const useCastContext = ({
     }
     if (wardOptions?.alternativeCostPayments) {
       choices.alternative_cost_payments = wardOptions.alternativeCostPayments;
+    }
+    if (Object.keys(optionalCostSelections).length > 0) {
+      choices.optional_costs = optionalCostSelections;
+    }
+    if (optionalCostPayments) {
+      choices.optional_cost_payments = optionalCostPayments;
+    }
+    if (conspireTaps.length > 0) {
+      choices.conspire_taps = conspireTaps;
+    }
+    if (spliceCards.length > 0) {
+      choices.splice_cards = spliceCards;
+    }
+    if (splicePayments) {
+      choices.splice_payments = splicePayments;
     }
     if (copyChooseNewTargets) {
       choices.copy_choose_new_targets = true;
@@ -134,6 +164,12 @@ export const useCastContext = ({
   }, [
     currentPriority,
     enterChoices,
+    modalChoices,
+    optionalCostSelections,
+    optionalCostPayments,
+    conspireTaps,
+    spliceCards,
+    splicePayments,
     maxObjectTargets,
     maxPlayerTargets,
     selectedHandId,

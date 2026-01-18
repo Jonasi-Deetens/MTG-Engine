@@ -72,6 +72,10 @@ export function TriggeredAbilityForm({ abilityId, onSave, onCancel }: TriggeredA
   const [entersWhere, setEntersWhere] = useState(existingAbility?.entersWhere || 'battlefield');
   const [entersFrom, setEntersFrom] = useState(existingAbility?.entersFrom || '');
   const [cardType, setCardType] = useState(existingAbility?.cardType || '');
+  const [isModal, setIsModal] = useState(!!existingAbility?.modal);
+  const [modalMin, setModalMin] = useState(existingAbility?.modal?.min ?? 1);
+  const [modalMax, setModalMax] = useState(existingAbility?.modal?.max ?? 1);
+  const [modalModes, setModalModes] = useState(existingAbility?.modal?.modes ?? []);
 
   const handleAddEffect = () => {
     setEffects([...effects, { type: 'damage', amount: 0 }]);
@@ -81,10 +85,29 @@ export function TriggeredAbilityForm({ abilityId, onSave, onCancel }: TriggeredA
     setEffects(effects.filter((_, i) => i !== index));
   };
 
+  const handleAddMode = () => {
+    setModalModes((prev) => [...prev, { id: `mode-${prev.length + 1}`, label: `Mode ${prev.length + 1}` }]);
+  };
+
+  const handleRemoveMode = (index: number) => {
+    setModalModes((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleUpdateMode = (index: number, field: 'id' | 'label', value: string) => {
+    setModalModes((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: value };
+      return next;
+    });
+  };
+
   const handleUpdateEffect = (index: number, field: string, value: any) => {
     setEffects((prevEffects) => {
       const updated = [...prevEffects];
       updated[index] = { ...updated[index], [field]: value };
+      if (field === 'modeId' && !value) {
+        delete updated[index].modeId;
+      }
 
       // Clean up fields when effect type changes
       if (field === 'type') {
@@ -128,12 +151,31 @@ export function TriggeredAbilityForm({ abilityId, onSave, onCancel }: TriggeredA
   };
 
   const handleSave = () => {
+    const allowedModes = new Set(modalModes.map((mode) => mode.id));
+    const cleanedEffects = isModal
+      ? effects.map((effect) => {
+          if (!effect.modeId || allowedModes.has(effect.modeId)) return effect;
+          const { modeId, ...rest } = effect;
+          return rest;
+        })
+      : effects.map((effect) => {
+          const { modeId, ...rest } = effect;
+          return rest;
+        });
+    const modal = isModal
+      ? {
+          min: Math.max(0, Number(modalMin) || 0),
+          max: modalMax === null || modalMax === undefined || modalMax === '' ? null : Math.max(1, Number(modalMax) || 1),
+          modes: modalModes.filter((mode) => mode.id && mode.label),
+        }
+      : undefined;
     const ability: TriggeredAbility = {
       id: abilityId || `triggered-${Date.now()}`,
       event,
       scope,
       condition: condition || undefined,
-      effects: effects.filter((e) => e.type && (e.amount !== undefined || !['damage', 'draw', 'token', 'counters', 'life'].includes(e.type))),
+      effects: cleanedEffects.filter((e) => e.type && (e.amount !== undefined || !['damage', 'draw', 'token', 'counters', 'life'].includes(e.type))),
+      ...(modal ? { modal } : {}),
       cardType: cardType || undefined,
       ...(event === 'card_enters' && {
         entersWhere: entersWhere || 'battlefield',
@@ -210,6 +252,76 @@ export function TriggeredAbilityForm({ abilityId, onSave, onCancel }: TriggeredA
         <p className="text-xs text-[color:var(--theme-text-secondary)] mt-1">
           Limits the trigger to a specific permanent type when applicable.
         </p>
+      </div>
+
+      {/* Modal Configuration */}
+      <div className="space-y-3">
+        <label className="flex items-center gap-2 text-sm font-medium text-[color:var(--theme-text-secondary)]">
+          <input type="checkbox" checked={isModal} onChange={(e) => setIsModal(e.target.checked)} />
+          Modal ability (choose modes on cast/activation)
+        </label>
+        {isModal && (
+          <div className="space-y-3 rounded border border-[color:var(--theme-card-border)] p-3 bg-[color:var(--theme-card-hover)]">
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Min modes</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={modalMin}
+                  onChange={(e) => setModalMin(parseInt(e.target.value, 10) || 0)}
+                  className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Max modes</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={modalMax ?? ''}
+                  onChange={(e) => setModalMax(e.target.value === '' ? null : parseInt(e.target.value, 10) || 1)}
+                  placeholder="No limit"
+                  className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-[color:var(--theme-text-secondary)]">Modes</span>
+                <Button variant="outline" size="xs" onClick={handleAddMode}>
+                  + Add Mode
+                </Button>
+              </div>
+              {modalModes.length === 0 && (
+                <div className="text-xs text-[color:var(--theme-text-muted)]">Add at least one mode.</div>
+              )}
+              {modalModes.map((mode, index) => (
+                <div key={`mode-${index}`} className="grid grid-cols-[1fr_1fr_auto] gap-2 items-center">
+                  <input
+                    value={mode.id}
+                    onChange={(e) => handleUpdateMode(index, 'id', e.target.value)}
+                    placeholder="mode-id"
+                    className="px-2 py-1 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+                  />
+                  <input
+                    value={mode.label}
+                    onChange={(e) => handleUpdateMode(index, 'label', e.target.value)}
+                    placeholder="Mode label"
+                    className="px-2 py-1 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+                  />
+                  <Button
+                    variant="link"
+                    size="xs"
+                    className="text-[color:var(--theme-status-error)] hover:opacity-80"
+                    onClick={() => handleRemoveMode(index)}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Card Enters Zone Parameters */}
@@ -322,6 +434,11 @@ export function TriggeredAbilityForm({ abilityId, onSave, onCancel }: TriggeredA
                 index={index}
                 allEffects={effects}
                 nodeId={abilityId ? `effect-${abilityId}-${index}` : undefined}
+                modeOptions={
+                  isModal
+                    ? modalModes.map((mode) => ({ value: mode.id, label: mode.label || mode.id }))
+                    : []
+                }
                 onUpdate={(field, value) => handleUpdateEffect(index, field, value)}
               />
             </div>

@@ -19,6 +19,7 @@ def _discard_graph() -> dict:
         "abilityType": "activated",
         "nodes": [
             {"id": "e1", "type": "EFFECT", "data": {"type": "discard", "amount": 1, "target": "player"}},
+            {"id": "kw1", "type": "KEYWORD", "data": {"keyword": "overload", "costs": [{"type": "mana", "cost": "{1}{B}"}]}},
         ],
         "edges": [],
     }
@@ -35,7 +36,6 @@ def test_overload_discard_per_player_choices():
         zone=ZONE_HAND,
         mana_cost="{1}{B}",
     )
-    spell.oracle_text = "Overload {1}{B}"
     card_a = GameObject(
         id="a",
         name="Card A",

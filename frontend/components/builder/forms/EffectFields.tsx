@@ -36,10 +36,11 @@ interface EffectFieldsProps {
   allEffects: Effect[];
   nodeId?: string;
   allowedEffectTypes?: string[];
+  modeOptions?: Array<{ value: string; label: string }>;
   onUpdate: (field: string, value: any) => void;
 }
 
-export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectTypes, onUpdate }: EffectFieldsProps) {
+export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectTypes, modeOptions, onUpdate }: EffectFieldsProps) {
   const filteredEffectTypes = allowedEffectTypes
     ? EFFECT_TYPE_OPTIONS.filter((opt) => allowedEffectTypes.includes(opt.value))
     : EFFECT_TYPE_OPTIONS;
@@ -144,6 +145,24 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
           ))}
         </select>
       </div>
+
+      {modeOptions && modeOptions.length > 0 && (
+        <div>
+          <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Mode</label>
+          <select
+            value={effect.modeId || ''}
+            onChange={(e) => onUpdate('modeId', e.target.value || undefined)}
+            className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+          >
+            <option value="">No mode (always apply)</option>
+            {modeOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* Amount */}
       {selectedEffectType?.requiresAmount && (

@@ -13,6 +13,17 @@ def _build_state() -> GameState:
     return game_state
 
 
+def _ward_graph(costs: list[dict]) -> dict:
+    return {
+        "rootNodeId": "kw1",
+        "abilityType": "keyword",
+        "nodes": [
+            {"id": "kw1", "type": "KEYWORD", "data": {"keyword": "ward", "costs": costs}},
+        ],
+        "edges": [],
+    }
+
+
 def test_ward_requires_payment_choice():
     game_state = _build_state()
     warded = GameObject(
@@ -23,7 +34,7 @@ def test_ward_requires_payment_choice():
         types=["Creature"],
         zone=ZONE_BATTLEFIELD,
     )
-    warded.keywords.add("Ward {1}")
+    warded.ability_graphs = [_ward_graph([{"type": "mana", "cost": "{1}"}])]
     spell = GameObject(
         id="spell",
         name="Spell",
@@ -58,7 +69,7 @@ def test_ward_payment_allows_targeting():
         types=["Creature"],
         zone=ZONE_BATTLEFIELD,
     )
-    warded.keywords.add("Ward {1}")
+    warded.ability_graphs = [_ward_graph([{"type": "mana", "cost": "{1}"}])]
     spell = GameObject(
         id="spell",
         name="Spell",
@@ -97,7 +108,7 @@ def test_ward_payment_uses_specific_mana_payment():
         types=["Creature"],
         zone=ZONE_BATTLEFIELD,
     )
-    warded.keywords.add("Ward {1}")
+    warded.ability_graphs = [_ward_graph([{"type": "mana", "cost": "{1}"}])]
     spell = GameObject(
         id="spell",
         name="Spell",

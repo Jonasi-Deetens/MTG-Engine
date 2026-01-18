@@ -43,7 +43,7 @@ function getAbilitySummary(ability: any, type: string): string {
     }
     case 'activated': {
       const a = ability as ActivatedAbility;
-      const effectText = formatEffect(a.effect).toLowerCase();
+      const effectText = (a.effects ?? []).map((e) => formatEffect(e).toLowerCase()).join(', ');
       return `${a.cost}: ${effectText}`;
     }
     case 'static': {

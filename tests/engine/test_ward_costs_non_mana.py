@@ -25,6 +25,17 @@ def _basic_spell() -> GameObject:
     )
 
 
+def _ward_graph(costs: list[dict]) -> dict:
+    return {
+        "rootNodeId": "kw1",
+        "abilityType": "keyword",
+        "nodes": [
+            {"id": "kw1", "type": "KEYWORD", "data": {"keyword": "ward", "costs": costs}},
+        ],
+        "edges": [],
+    }
+
+
 def test_ward_pay_life_auto():
     game_state = _build_state()
     warded = GameObject(
@@ -35,7 +46,7 @@ def test_ward_pay_life_auto():
         types=["Creature"],
         zone=ZONE_BATTLEFIELD,
     )
-    warded.keywords.add("Ward—Pay 3 life")
+    warded.ability_graphs = [_ward_graph([{"type": "life", "amount": 3}])]
     spell = _basic_spell()
     game_state.add_object(warded)
     game_state.add_object(spell)
@@ -64,7 +75,7 @@ def test_ward_discard_requires_choice():
         types=["Creature"],
         zone=ZONE_BATTLEFIELD,
     )
-    warded.keywords.add("Ward—Discard a card")
+    warded.ability_graphs = [_ward_graph([{"type": "discard", "amount": 1}])]
     spell = _basic_spell()
     discard = GameObject(
         id="fodder",
@@ -114,7 +125,7 @@ def test_ward_sacrifice_and_tap():
         types=["Creature"],
         zone=ZONE_BATTLEFIELD,
     )
-    warded.keywords.add("Ward—Sacrifice a creature")
+    warded.ability_graphs = [_ward_graph([{"type": "sacrifice", "card_type": "Creature"}])]
     warded_tap = GameObject(
         id="warded_tap",
         name="Warded Tap",
@@ -123,7 +134,7 @@ def test_ward_sacrifice_and_tap():
         types=["Creature"],
         zone=ZONE_BATTLEFIELD,
     )
-    warded_tap.keywords.add("Ward—Tap an untapped creature you control")
+    warded_tap.ability_graphs = [_ward_graph([{"type": "tap", "card_type": "Creature"}])]
     sacrifice = GameObject(
         id="sac",
         name="Sacrifice",
@@ -196,8 +207,10 @@ def test_ward_multiple_costs_and_discard_two():
         types=["Creature"],
         zone=ZONE_BATTLEFIELD,
     )
-    warded.keywords.add("Ward {1}")
-    warded.keywords.add("Ward—Pay 3 life")
+    warded.ability_graphs = [
+        _ward_graph([{"type": "mana", "cost": "{1}"}]),
+        _ward_graph([{"type": "life", "amount": 3}]),
+    ]
     warded_disc = GameObject(
         id="warded_discard",
         name="Warded Discard",
@@ -206,7 +219,7 @@ def test_ward_multiple_costs_and_discard_two():
         types=["Creature"],
         zone=ZONE_BATTLEFIELD,
     )
-    warded_disc.keywords.add("Ward—Discard 2 cards")
+    warded_disc.ability_graphs = [_ward_graph([{"type": "discard", "amount": 2}])]
     card_a = GameObject(
         id="card_a",
         name="Card A",

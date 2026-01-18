@@ -10,7 +10,7 @@ from .priority import PriorityManager
 from .replacements import resolve_replacement
 from .state import GameState, ResolveContext
 from .turn import Phase, Step, PHASE_STEP_ORDER
-from .zones import ZONE_BATTLEFIELD, ZONE_GRAVEYARD
+from .zones import ZONE_BATTLEFIELD, ZONE_GRAVEYARD, ZONE_HAND
 
 
 class TurnManager:
@@ -141,6 +141,8 @@ class TurnManager:
                             resolved_destination = ZONE_GRAVEYARD
                         else:
                             resolved_destination = ZONE_BATTLEFIELD
+                        if context.choices.get("buyback_paid") and resolved_destination == ZONE_GRAVEYARD:
+                            resolved_destination = ZONE_HAND
                         if resolved_destination == ZONE_BATTLEFIELD:
                             enter_copy_of = context.choices.get("enter_copy_of")
                             if enter_copy_of:
@@ -170,7 +172,7 @@ class TurnManager:
             context_data = payload.get("context") or {}
             context = ResolveContext(**context_data)
             from engine.targets import normalize_targets, validate_targets
-            from engine.choices import validate_enter_choices
+            from engine.choices import validate_enter_choices, validate_modal_choices
             try:
                 if context.source_id is None and payload.get("copy_of"):
                     context.source_id = payload.get("copy_of")
@@ -179,20 +181,24 @@ class TurnManager:
                 adapter = AbilityGraphRuntimeAdapter(self.gs)
                 if graph:
                     validate_enter_choices(graph, context.__dict__)
+                    validate_modal_choices(graph, context.__dict__)
                     adapter.resolve(graph, context)
                 source_id = payload.get("source_object_id")
                 destination_zone = payload.get("destination_zone")
                 if source_id and destination_zone and not is_copy:
                     obj = self.gs.objects.get(source_id)
                     if obj:
-                        if destination_zone == ZONE_BATTLEFIELD:
+                        resolved_destination = destination_zone
+                        if context.choices.get("buyback_paid") and resolved_destination == ZONE_GRAVEYARD:
+                            resolved_destination = ZONE_HAND
+                        if resolved_destination == ZONE_BATTLEFIELD:
                             enter_copy_of = context.choices.get("enter_copy_of")
                             if enter_copy_of:
                                 self.gs._apply_enter_copy(obj, enter_copy_of)
                             enter_choices = context.choices.get("enter_choices")
                             if isinstance(enter_choices, dict):
                                 self.gs._apply_enter_choices(obj, enter_choices)
-                        self.gs.move_object(obj.id, destination_zone)
+                        self.gs.move_object(obj.id, resolved_destination)
                         obj.was_cast = False
                 if context.source_id:
                     self.gs.event_bus.publish(Event(

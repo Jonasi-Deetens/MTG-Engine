@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import { useBuilderStore, KeywordAbility, KeywordInfo } from '@/store/builderStore';
 import { abilities } from '@/lib/abilities';
 import { Button } from '@/components/ui/Button';
+import { CostListEditor } from '@/components/builder/CostListEditor';
 
 interface KeywordAbilityFormProps {
   abilityId?: string;
@@ -20,10 +21,9 @@ export function KeywordAbilityForm({ abilityId, onSave, onCancel }: KeywordAbili
   
   const [availableKeywords, setAvailableKeywords] = useState<KeywordInfo[]>([]);
   const [selectedKeywordName, setSelectedKeywordName] = useState(existingKeyword?.keyword || '');
-  const [cost, setCost] = useState(existingKeyword?.cost || '');
+  const [costs, setCosts] = useState(existingKeyword?.costs ?? []);
+  const [extraCosts, setExtraCosts] = useState(existingKeyword?.extraCosts ?? []);
   const [number, setNumber] = useState(existingKeyword?.number || undefined);
-  const [lifeCost, setLifeCost] = useState(existingKeyword?.lifeCost || undefined);
-  const [sacrificeCost, setSacrificeCost] = useState(existingKeyword?.sacrificeCost || false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -49,10 +49,9 @@ export function KeywordAbilityForm({ abilityId, onSave, onCancel }: KeywordAbili
     const keyword: KeywordAbility = {
       id: abilityId || `keyword-${Date.now()}`,
       keyword: selectedKeywordName,
-      cost: cost || undefined,
+      costs: costs.length ? costs : undefined,
       number: number !== undefined ? number : undefined,
-      lifeCost: lifeCost !== undefined ? lifeCost : undefined,
-      sacrificeCost: sacrificeCost || undefined,
+      extraCosts: extraCosts.length ? extraCosts : undefined,
     };
 
     if (abilityId) {
@@ -78,10 +77,9 @@ export function KeywordAbilityForm({ abilityId, onSave, onCancel }: KeywordAbili
             onChange={(e) => {
               setSelectedKeywordName(e.target.value);
               // Reset parameters when keyword changes
-              setCost('');
               setNumber(undefined);
-              setLifeCost(undefined);
-              setSacrificeCost(false);
+              setCosts([]);
+              setExtraCosts([]);
             }}
             className="w-full px-3 py-2 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none"
           >
@@ -101,19 +99,8 @@ export function KeywordAbilityForm({ abilityId, onSave, onCancel }: KeywordAbili
       {/* Parameter Fields */}
       {selectedKeyword && (
         <div className="space-y-4">
-          {selectedKeyword.options.has_mana_cost && (
-            <div>
-              <label className="block text-sm font-medium text-[color:var(--theme-text-secondary)] mb-2">
-                Mana Cost
-              </label>
-              <input
-                type="text"
-                value={cost}
-                onChange={(e) => setCost(e.target.value)}
-                placeholder="e.g., {2}, {1}{R}"
-                className="w-full px-3 py-2 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none"
-              />
-            </div>
+          {selectedKeyword.options.has_cost && (
+            <CostListEditor label="Keyword Costs" value={costs} onChange={setCosts} />
           )}
 
           {selectedKeyword.options.has_number && (
@@ -132,34 +119,8 @@ export function KeywordAbilityForm({ abilityId, onSave, onCancel }: KeywordAbili
             </div>
           )}
 
-          {selectedKeyword.options.has_life_cost && (
-            <div>
-              <label className="block text-sm font-medium text-[color:var(--theme-text-secondary)] mb-2">
-                Life Cost
-              </label>
-              <input
-                type="number"
-                value={lifeCost || ''}
-                onChange={(e) => setLifeCost(e.target.value ? parseInt(e.target.value) : undefined)}
-                min="0"
-                placeholder="e.g., 3"
-                className="w-full px-3 py-2 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none"
-              />
-            </div>
-          )}
-
-          {selectedKeyword.options.has_sacrifice_cost && (
-            <div>
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={sacrificeCost}
-                  onChange={(e) => setSacrificeCost(e.target.checked)}
-                    className="w-4 h-4 rounded border-[color:var(--theme-input-border)] bg-[color:var(--theme-input-bg)] text-[color:var(--theme-accent-primary)] focus:ring-[color:var(--theme-border-focus)]"
-                />
-                <span className="text-sm font-medium text-[color:var(--theme-text-secondary)]">Requires Sacrifice Cost</span>
-              </label>
-            </div>
+          {['escape', 'jump-start'].includes(selectedKeyword.name?.toLowerCase() ?? '') && (
+            <CostListEditor label="Extra Costs" value={extraCosts} onChange={setExtraCosts} />
           )}
         </div>
       )}

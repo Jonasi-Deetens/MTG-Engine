@@ -137,7 +137,7 @@ def gather_static_layer_effects(game_state: GameState, effect_types: Optional[se
             if graph.get("abilityType") != "static":
                 continue
             runtime = adapter.build_runtime(graph)
-            if runtime.trigger or runtime.cost:
+            if runtime.trigger or runtime.costs:
                 continue
             for effect_node in runtime.effects:
                 if not isinstance(effect_node, dict):

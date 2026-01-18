@@ -1,6 +1,7 @@
 // frontend/store/builderStore.ts
 
 import { create } from 'zustand';
+import type { CostEntry } from '@/lib/activationCosts';
 
 export interface CardData {
   card_id: string;
@@ -36,12 +37,19 @@ export interface CardData {
 import type { StructuredCondition } from '@/lib/conditionTypes';
 
 // Ability Type Interfaces
+export interface ModalChoiceConfig {
+  min: number;
+  max?: number | null;
+  modes: Array<{ id: string; label: string }>;
+}
+
 export interface TriggeredAbility {
   id: string;
   event: string; // e.g., "enters_battlefield", "dies", "becomes_target", "card_enters"
   scope?: string; // "self", "any", "you_control", "opponent_control", "you", "opponent"
   condition?: StructuredCondition | string; // Structured condition or legacy string
   effects: Effect[];
+  modal?: ModalChoiceConfig;
   // For card_enters event
   entersWhere?: string; // Zone where card enters (battlefield, graveyard, hand, etc.)
   entersFrom?: string; // Optional: zone card came from (hand, library, graveyard, etc.)
@@ -53,8 +61,9 @@ export type { StructuredCondition };
 
 export interface ActivatedAbility {
   id: string;
-  cost: string; // e.g., "{T}", "{1}{R}", "Sacrifice a creature"
-  effect: Effect;
+  costs: CostEntry[];
+  effects: Effect[];
+  modal?: ModalChoiceConfig;
   timing?: string;
   limit?: { scope: string; max: number };
 }
@@ -76,10 +85,9 @@ export interface ContinuousAbility {
 export interface KeywordAbility {
   id: string;
   keyword: string; // Keyword name from database
-  cost?: string; // For keywords with costs (e.g., Ward {2})
+  costs?: CostEntry[];
   number?: number; // For keywords with numbers (e.g., Annihilator 2)
-  lifeCost?: number; // For keywords with life costs
-  sacrificeCost?: boolean; // For keywords with sacrifice costs
+  extraCosts?: CostEntry[];
 }
 
 // Re-export KeywordInfo from abilities for convenience
@@ -90,6 +98,7 @@ export interface Effect {
   amount?: number;
   target?: string;
   maxTargets?: number;
+  modeId?: string;
   manaType?: string;
   untapTarget?: string;
   zone?: string; // For search (library, graveyard, hand, exile)
@@ -356,6 +365,9 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
         data: { 
           event: ability.event,
           scope: ability.scope || 'self',
+          ...(ability.modal && {
+            modal: ability.modal,
+          }),
           ...(ability.event === 'card_enters' && {
             entersWhere: ability.entersWhere,
             entersFrom: ability.entersFrom,
@@ -399,8 +411,14 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
       nodes.push({
         id: activatedId,
         type: 'ACTIVATED',
-        data: { cost: ability.cost, timing: ability.timing, limit: ability.limit, effect: ability.effect },
+        data: {
+          costs: ability.costs,
+          timing: ability.timing,
+          limit: ability.limit,
+          ...(ability.modal ? { modal: ability.modal } : {}),
+        },
       });
+      createEffectChain(ability.effects ?? [], ability.id, activatedId, nodes, edges);
     });
     
     // Process keywords
@@ -416,10 +434,9 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
         type: 'KEYWORD',
         data: {
           keyword: keyword.keyword,
-          cost: keyword.cost,
+          costs: keyword.costs,
           number: keyword.number,
-          lifeCost: keyword.lifeCost,
-          sacrificeCost: keyword.sacrificeCost,
+          extraCosts: keyword.extraCosts,
         },
       });
     });
@@ -564,12 +581,14 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
         }
         
         // Extract card_enters specific fields from trigger data
+        const modal = triggerNode.data.modal || (graph as any).modal;
         const triggeredAbility: TriggeredAbility = {
           id: abilityId,
           event,
           scope: triggerNode.data.scope || 'self',
           condition,
           effects,
+          ...(modal ? { modal } : {}),
           ...(event === 'card_enters' && {
             entersWhere: triggerNode.data.entersWhere,
             entersFrom: triggerNode.data.entersFrom,
@@ -593,15 +612,47 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
         if (processedNodes.has(activatedNode.id)) return;
         
         const abilityId = activatedNode.id.replace('activated-', '');
-        const cost = activatedNode.data.cost || '';
-        const effect = activatedNode.data.effect as Effect;
+        let costs = Array.isArray(activatedNode.data.costs) ? activatedNode.data.costs : [];
+        if (costs.length === 0 && typeof activatedNode.data.cost === 'string') {
+          const raw = activatedNode.data.cost.trim();
+          if (raw === '{T}' || raw.toLowerCase() === 'tap') {
+            costs = [{ type: 'tap_self' }];
+          } else if (raw.includes('{')) {
+            costs = [{ type: 'mana', cost: raw }];
+          }
+        }
+        const modal = activatedNode.data.modal || (graph as any).modal;
+        const effectNodeMap = new Map<string, { node: AbilityNode; index: number }>();
+        graph.nodes
+          .filter(node => node.id.startsWith(`effect-${abilityId}-`))
+          .forEach((node, idx) => {
+            effectNodeMap.set(node.id, { node, index: idx });
+          });
+        const effects: Effect[] = [];
+        const visitedEffects = new Set<string>();
+        const buildEffectChain = (currentNodeId: string): void => {
+          const nextEffectIds = adjacency[currentNodeId] || [];
+          for (const nextId of nextEffectIds) {
+            const effectInfo = effectNodeMap.get(nextId);
+            if (effectInfo && !visitedEffects.has(nextId)) {
+              visitedEffects.add(nextId);
+              effects.push(effectInfo.node.data as Effect);
+              buildEffectChain(nextId);
+            }
+          }
+        };
+        buildEffectChain(activatedNode.id);
+        if (effects.length === 0 && activatedNode.data.effect) {
+          effects.push(activatedNode.data.effect as Effect);
+        }
         
         activatedAbilities.push({
           id: abilityId,
-          cost,
+          costs,
+          effects,
+          ...(modal ? { modal } : {}),
           timing: activatedNode.data.timing,
           limit: activatedNode.data.limit,
-          effect,
         });
         
         processedNodes.add(activatedNode.id);
@@ -616,13 +667,16 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
         const abilityId = keywordNode.id.replace('keyword-', '');
         const data = keywordNode.data;
         
+        let keywordCosts = Array.isArray(data.costs) ? data.costs : [];
+        if (keywordCosts.length === 0 && typeof data.cost === 'string' && data.cost.includes('{')) {
+          keywordCosts = [{ type: 'mana', cost: data.cost }];
+        }
         keywords.push({
           id: abilityId,
           keyword: data.keyword || '',
-          cost: data.cost,
+          costs: keywordCosts,
           number: data.number,
-          lifeCost: data.lifeCost,
-          sacrificeCost: data.sacrificeCost,
+          extraCosts: Array.isArray(data.extraCosts) ? data.extraCosts : [],
         });
         
         processedNodes.add(keywordNode.id);

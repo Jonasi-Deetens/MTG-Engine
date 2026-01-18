@@ -16,10 +16,6 @@ from .mana import (
 )
 from .cost_modifiers import apply_cast_cost_modifiers
 from .costs import (
-    parse_additional_cast_costs,
-    parse_alternative_cast_costs,
-    parse_alternative_extra_costs,
-    parse_cost_string,
     pay_activation_costs,
     pay_costs,
 )
@@ -29,7 +25,15 @@ from .turn import Phase, Step
 from .zones import ZONE_BATTLEFIELD, ZONE_COMMAND, ZONE_GRAVEYARD, ZONE_HAND
 from .events import Event
 from .state import ResolveContext
-from .choices import validate_enter_choices
+from .choices import extract_modal_config, validate_enter_choices, validate_modal_choices
+from .optional_costs import (
+    extract_additional_costs_from_graph,
+    extract_optional_costs_from_graph,
+    resolve_alternative_cost_from_graph,
+)
+from .conspire import apply_conspire_cost
+from .splice import apply_splice_choices
+from .stack_helpers import push_spell_copies
 
 
 def require_priority(turn_manager, player_id: int) -> None:
@@ -195,23 +199,10 @@ def _pay_spell_cost(
 
 
 def _resolve_alternative_cost(
-    obj, context: Optional[ResolveContext]
+    ability_graph: Optional[dict],
+    context: Optional[ResolveContext],
 ) -> tuple[Optional[str], bool, Optional[str], List[Dict[str, Any]]]:
-    if not context or not isinstance(context.choices, dict):
-        return None, False, None, []
-    tag = context.choices.get("alternative_cost_tag")
-    alt_cost = context.choices.get("alternative_cost")
-    if tag:
-        for entry in parse_alternative_cast_costs(obj.oracle_text):
-            if entry.get("tag") == tag:
-                if entry.get("type") == "free":
-                    return "", True, tag, parse_alternative_extra_costs(obj.oracle_text, tag)
-                if entry.get("type") == "normal":
-                    return None, False, tag, parse_alternative_extra_costs(obj.oracle_text, tag)
-                return entry.get("cost"), False, tag, parse_alternative_extra_costs(obj.oracle_text, tag)
-    if alt_cost:
-        return alt_cost, False, None, []
-    return None, False, None, []
+    return resolve_alternative_cost_from_graph(ability_graph, context)
 
 
 def cast_spell(
@@ -232,8 +223,8 @@ def cast_spell(
         raise ValueError("Card not found.")
     if obj.zone not in (ZONE_HAND, ZONE_COMMAND):
         resolve_context = ResolveContext(**context) if context else None
-        _, _, alt_tag, _ = _resolve_alternative_cost(obj, resolve_context)
-        if obj.zone == ZONE_GRAVEYARD and alt_tag and alt_tag.startswith("flashback"):
+        _, _, alt_tag, _ = _resolve_alternative_cost(ability_graph, resolve_context)
+        if obj.zone == ZONE_GRAVEYARD and alt_tag and alt_tag.split(":", 1)[0] in ("flashback", "jump-start", "escape"):
             pass
         else:
             raise ValueError("Spell must be cast from hand or command zone.")
@@ -249,12 +240,95 @@ def cast_spell(
     resolve_context = None
     if context:
         resolve_context = ResolveContext(**context)
+        if resolve_context.source_id is None:
+            resolve_context.source_id = obj.id
         normalize_targets(game_state, resolve_context)
         validate_targets(game_state, resolve_context)
         enforce_ward_payment(game_state, resolve_context)
     validate_enter_choices(ability_graph, context)
-    cost_override, free_cast, alt_tag, alt_extra_costs = _resolve_alternative_cost(obj, resolve_context)
-    additional_costs = parse_additional_cast_costs(obj.oracle_text)
+    if ability_graph and resolve_context and isinstance(resolve_context.choices, dict):
+        optional_costs = extract_optional_costs_from_graph(ability_graph)
+        optional_tags = {entry.get("tag"): entry for entry in optional_costs if entry.get("tag")}
+        selected_optional = resolve_context.choices.get("optional_costs")
+        if isinstance(selected_optional, dict):
+            for tag, count in selected_optional.items():
+                if not tag or not count:
+                    continue
+                entry = optional_tags.get(tag)
+                if entry and entry.get("kind") == "entwine":
+                    modal = extract_modal_config(ability_graph)
+                    if modal and isinstance(modal.get("modes"), list):
+                        resolve_context.choices.setdefault(
+                            "chosen_modes",
+                            [mode.get("id") for mode in modal.get("modes") if isinstance(mode, dict) and mode.get("id")]
+                        )
+                        resolve_context.choices["entwine"] = True
+                    break
+    validate_modal_choices(ability_graph, resolve_context.__dict__ if resolve_context else context)
+    cost_override, free_cast, alt_tag, alt_extra_costs = _resolve_alternative_cost(ability_graph, resolve_context)
+    additional_costs = extract_additional_costs_from_graph(ability_graph) if ability_graph else []
+    optional_costs = extract_optional_costs_from_graph(ability_graph) if ability_graph else []
+    copy_count = 0
+    if optional_costs and resolve_context:
+        choices = resolve_context.choices or {}
+        resolve_context.choices = choices
+        selected = choices.get("optional_costs") if isinstance(choices, dict) else None
+        selected_counts: Dict[str, int] = {}
+        if isinstance(selected, dict):
+            for key, value in selected.items():
+                if isinstance(value, int):
+                    selected_counts[key] = value
+                elif isinstance(value, bool):
+                    selected_counts[key] = 1 if value else 0
+        kicker_count = 0
+        buyback_paid = False
+        conspire_paid = False
+        expanded_costs: List[Dict[str, Any]] = []
+        available_tags = {entry.get("tag") for entry in optional_costs if entry.get("tag")}
+        invalid_tags = [tag for tag, count in selected_counts.items() if tag not in available_tags and count > 0]
+        if invalid_tags:
+            raise ValueError("Invalid optional cost selection.")
+        for entry in optional_costs:
+            tag = entry.get("tag")
+            if not tag or tag not in selected_counts:
+                continue
+            count = selected_counts.get(tag, 0)
+            if count <= 0:
+                continue
+            repeatable = bool(entry.get("repeatable"))
+            if not repeatable:
+                count = 1
+            option_costs = entry.get("costs") if isinstance(entry.get("costs"), list) else []
+            for _ in range(count):
+                expanded_costs.extend(option_costs)
+            if entry.get("kind") in ("kicker", "multikicker"):
+                kicker_count += count
+            if entry.get("kind") == "buyback":
+                buyback_paid = True
+            if entry.get("kind") == "replicate":
+                copy_count += count
+                choices["replicate_count"] = copy_count
+            if entry.get("kind") == "conspire":
+                conspire_paid = True
+        if expanded_costs:
+            pay_costs(
+                game_state,
+                player_id,
+                obj,
+                expanded_costs,
+                resolve_context.choices if resolve_context else {},
+                "optional_cost_payments",
+            )
+        if kicker_count > 0:
+            choices["kicked"] = True
+            choices["kicker_count"] = kicker_count
+        if buyback_paid:
+            choices["buyback_paid"] = True
+        if any(entry.get("kind") == "entwine" and selected_counts.get(entry.get("tag"), 0) > 0 for entry in optional_costs):
+            choices["entwine"] = True
+        if conspire_paid:
+            choices["conspired"] = True
+            copy_count += 1
     if alt_extra_costs:
         pay_costs(
             game_state,
@@ -273,6 +347,15 @@ def cast_spell(
             resolve_context.choices if resolve_context else {},
             "additional_cost_payments",
         )
+    if resolve_context:
+        apply_splice_choices(
+            game_state,
+            player_id,
+            ability_graph,
+            resolve_context,
+        )
+        if resolve_context.choices.get("conspired"):
+            apply_conspire_cost(game_state, player_id, obj, resolve_context.choices.get("conspire_taps"))
     commander_tax = _consume_commander_tax(game_state, player_id, obj)
     _pay_spell_cost(
         game_state,
@@ -299,7 +382,7 @@ def cast_spell(
     obj.controller_id = player_id
 
     destination_zone = ZONE_GRAVEYARD if ("Instant" in obj.types or "Sorcery" in obj.types) else ZONE_BATTLEFIELD
-    if alt_tag and (alt_tag.startswith("flashback") or alt_tag.startswith("jump-start") or alt_tag.startswith("escape")):
+    if alt_tag and alt_tag.split(":", 1)[0] in ("flashback", "jump-start", "escape"):
         destination_zone = ZONE_EXILE
     if ability_graph:
         game_state.stack.push(
@@ -322,6 +405,16 @@ def cast_spell(
                 controller_id=player_id,
             )
         )
+    if copy_count > 0:
+        push_spell_copies(
+            game_state,
+            obj.id,
+            ability_graph,
+            context or {},
+            player_id,
+            copy_count,
+            resolve_context.choices.get("copy_targets_list") if resolve_context else None,
+        )
 
     _publish_becomes_target(game_state, obj.id, resolve_context)
     game_state.event_bus.publish(Event(type="spell_cast", payload={"object_id": obj.id, "player_id": player_id}))
@@ -336,6 +429,7 @@ def prepare_cast(
     player_id: int,
     object_id: str,
     x_value: int = 0,
+    ability_graph: Optional[dict] = None,
     context: Optional[dict] = None,
 ) -> Dict[str, Any]:
     require_priority(turn_manager, player_id)
@@ -345,8 +439,8 @@ def prepare_cast(
         raise ValueError("Card not found.")
     if obj.zone not in (ZONE_HAND, ZONE_COMMAND):
         resolve_context = ResolveContext(**context) if context else None
-        _, _, alt_tag, _ = _resolve_alternative_cost(obj, resolve_context)
-        if obj.zone == ZONE_GRAVEYARD and alt_tag and alt_tag.startswith("flashback"):
+        _, _, alt_tag, _ = _resolve_alternative_cost(ability_graph, resolve_context)
+        if obj.zone == ZONE_GRAVEYARD and alt_tag and alt_tag.split(":", 1)[0] in ("flashback", "jump-start", "escape"):
             pass
         else:
             raise ValueError("Spell must be cast from hand or command zone.")
@@ -364,7 +458,7 @@ def prepare_cast(
         validate_targets(game_state, resolve_context)
 
     cost_override, free_cast, alt_tag, alt_extra_costs = _resolve_alternative_cost(
-        obj, resolve_context if context else None
+        ability_graph, resolve_context if context else None
     )
     cost_text = None if free_cast else (cost_override or obj.mana_cost)
     cost = parse_mana_cost(cost_text, x_value=x_value)
@@ -621,8 +715,9 @@ def activate_ability(
         validate_targets(game_state, resolve_context)
         enforce_ward_payment(game_state, resolve_context)
     validate_enter_choices(graph, context)
-    if runtime.cost:
-        costs = parse_cost_string(runtime.cost)
+    validate_modal_choices(graph, context)
+    costs = runtime.costs or []
+    if costs:
         if any(cost.get("type") == "tap_self" for cost in costs):
             _require_tap_summoning_sickness_ok(game_state, obj)
             if obj.tapped:

@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict, Optional, List
 
 from .state import GameState, ResolveContext, GameObject
-from .costs import parse_ward_keywords
+from .optional_costs import extract_ward_costs_from_graphs
 from .mana import can_pay_cost, can_pay_cost_with_payment, parse_mana_cost, pay_cost, pay_cost_with_payment
 from .zones import ZONE_BATTLEFIELD, ZONE_GRAVEYARD
 
@@ -481,7 +481,7 @@ def _collect_legal_targets(
 
 
 def _ward_cost_entries(obj: GameObject) -> List[Dict[str, Any]]:
-    return parse_ward_keywords(obj.keywords)
+    return extract_ward_costs_from_graphs(obj.ability_graphs or [])
 
 
 def enforce_ward_payment(game_state: GameState, context: ResolveContext) -> None:

@@ -520,6 +520,7 @@ KEYWORD_PARAMETERS = {
     "splice": {"has_cost": True, "has_mana_cost": True, "cost_type": "mana"},
     "entwine": {"has_cost": True, "has_mana_cost": True, "cost_type": "mana"},
     "replicate": {"has_cost": True, "has_mana_cost": True, "cost_type": "mana"},
+    "conspire": {"has_cost": False, "has_mana_cost": False, "cost_type": None},
     "surge": {"has_cost": True, "has_mana_cost": True, "cost_type": "mana"},
     "escape": {"has_cost": True, "has_mana_cost": True, "cost_type": "mana"},
     "retrace": {"has_cost": True, "has_mana_cost": True, "cost_type": "mana"},

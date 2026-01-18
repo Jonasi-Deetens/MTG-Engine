@@ -1,3 +1,5 @@
+import { isEffectActiveForModes, ModalChoiceConfig } from '@/lib/modalChoices';
+
 export type TargetHints = {
   allowPlayers: boolean;
   allowObjects: boolean;
@@ -186,7 +188,23 @@ export const deriveTargetSpecs = (effect: any): EffectTargetSpec[] => {
   return specs;
 };
 
-export const deriveTargetHints = (graph?: any): TargetHints => {
+const filterEffectNodes = (
+  graph: any,
+  modalConfig?: ModalChoiceConfig | null,
+  selectedModes: string[] = []
+) => {
+  if (!graph || !Array.isArray(graph.nodes)) return [];
+  return graph.nodes.filter((node: any) => {
+    if (node?.type !== 'EFFECT') return false;
+    return isEffectActiveForModes(node?.data ?? {}, modalConfig ?? null, selectedModes);
+  });
+};
+
+export const deriveTargetHints = (
+  graph?: any,
+  modalConfig?: ModalChoiceConfig | null,
+  selectedModes: string[] = []
+): TargetHints => {
   if (!graph || !Array.isArray(graph.nodes)) {
     return {
       allowPlayers: true,
@@ -206,7 +224,7 @@ export const deriveTargetHints = (graph?: any): TargetHints => {
     playerFilter: 'any',
     objectFilter: 'any',
   };
-  const effectNodes = graph.nodes.filter((node: any) => node?.type === 'EFFECT');
+  const effectNodes = filterEffectNodes(graph, modalConfig, selectedModes);
 
   effectNodes.forEach((node: any) => {
     const target = normalizeTarget(node?.data?.target || node?.data?.targetType || '');
@@ -280,9 +298,13 @@ export const deriveTargetHints = (graph?: any): TargetHints => {
   return hints;
 };
 
-export const deriveGlobalRequiredTargets = (graph?: any): string[] => {
+export const deriveGlobalRequiredTargets = (
+  graph?: any,
+  modalConfig?: ModalChoiceConfig | null,
+  selectedModes: string[] = []
+): string[] => {
   if (!graph || !Array.isArray(graph.nodes)) return [];
-  const effectNodes = graph.nodes.filter((node: any) => node?.type === 'EFFECT');
+  const effectNodes = filterEffectNodes(graph, modalConfig, selectedModes);
   const required = new Set<string>();
   effectNodes.forEach((node: any) => {
     deriveTargetSpecs(node?.data ?? {}).forEach((spec) => {
@@ -294,9 +316,13 @@ export const deriveGlobalRequiredTargets = (graph?: any): string[] => {
   return Array.from(required);
 };
 
-export const deriveGlobalDistinctTargets = (graph?: any): string[] => {
+export const deriveGlobalDistinctTargets = (
+  graph?: any,
+  modalConfig?: ModalChoiceConfig | null,
+  selectedModes: string[] = []
+): string[] => {
   if (!graph || !Array.isArray(graph.nodes)) return [];
-  const effectNodes = graph.nodes.filter((node: any) => node?.type === 'EFFECT');
+  const effectNodes = filterEffectNodes(graph, modalConfig, selectedModes);
   const distinct = new Set<string>();
   effectNodes.forEach((node: any) => {
     deriveTargetSpecs(node?.data ?? {}).forEach((spec) => {
@@ -308,9 +334,13 @@ export const deriveGlobalDistinctTargets = (graph?: any): string[] => {
   return Array.from(distinct);
 };
 
-export const deriveGlobalMinTargets = (graph?: any): Record<string, number> => {
+export const deriveGlobalMinTargets = (
+  graph?: any,
+  modalConfig?: ModalChoiceConfig | null,
+  selectedModes: string[] = []
+): Record<string, number> => {
   if (!graph || !Array.isArray(graph.nodes)) return {};
-  const effectNodes = graph.nodes.filter((node: any) => node?.type === 'EFFECT');
+  const effectNodes = filterEffectNodes(graph, modalConfig, selectedModes);
   const minTargets: Record<string, number> = {};
   effectNodes.forEach((node: any) => {
     deriveTargetSpecs(node?.data ?? {}).forEach((spec) => {

@@ -8,7 +8,7 @@ import {
   hasComplexManaCost,
   ManaPaymentDetail,
 } from '@/lib/manaPayment';
-import { ActivationCost, formatActivationCostLabel, parseActivationCosts } from '@/lib/activationCosts';
+import { ActivationCost, CostEntry, buildActivationCosts, formatActivationCostLabel } from '@/lib/activationCosts';
 
 export type ActivationCostEntry = {
   cost: ActivationCost;
@@ -31,7 +31,7 @@ export type ActivationCostPayment = {
 };
 
 interface UseActivationCostsArgs {
-  costText: string;
+  costs: CostEntry[];
   objects: EngineGameObjectSnapshot[];
   players: EnginePlayerSnapshot[];
   cardMap: EngineCardMap;
@@ -40,7 +40,7 @@ interface UseActivationCostsArgs {
 }
 
 export const useActivationCosts = ({
-  costText,
+  costs,
   objects,
   players,
   cardMap,
@@ -50,7 +50,7 @@ export const useActivationCosts = ({
   const player = players.find((entry) => entry.id === currentPlayerId);
   const objectMap = useMemo(() => new Map(objects.map((obj) => [obj.id, obj])), [objects]);
   const costEntries = useMemo<ActivationCostEntry[]>(() => {
-    if (!costText) return [];
+    if (!costs.length) return [];
     const cardName = (objectId: string) => cardMap[objectId]?.name || objectMap.get(objectId)?.name || objectId;
     const handOptions = player?.hand?.map((objectId) => ({
       value: objectId,
@@ -69,14 +69,14 @@ export const useActivationCosts = ({
       if (!cardType) return true;
       return entry.types?.includes(cardType);
     };
-    return parseActivationCosts(costText).map((cost) => {
+    return buildActivationCosts(costs).map((cost) => {
       const discardOptions = cost.type === 'discard' ? handOptions : [];
       const sacrificeOptions =
         cost.type === 'sacrifice'
           ? battlefieldOptions.filter((entry) => {
               const obj = objectMap.get(entry.value);
               if (!obj) return false;
-              return isTypeMatch(obj, cost.cardType, cost.nonland);
+              return isTypeMatch(obj, cost.card_type, cost.nonland);
             })
           : [];
       const tapOptions =
@@ -84,7 +84,7 @@ export const useActivationCosts = ({
           ? battlefieldOptions.filter((entry) => {
               const obj = objectMap.get(entry.value);
               if (!obj || obj.tapped) return false;
-              return isTypeMatch(obj, cost.cardType, cost.nonland);
+              return isTypeMatch(obj, cost.card_type, cost.nonland);
             })
           : [];
       const exileOptions = cost.type === 'exile_graveyard' ? graveyardOptions : [];
@@ -97,7 +97,7 @@ export const useActivationCosts = ({
         exileOptions,
       };
     });
-  }, [cardMap, costText, objectMap, player?.battlefield, player?.hand, player?.graveyard]);
+  }, [cardMap, costs, objectMap, player?.battlefield, player?.hand, player?.graveyard]);
 
   const [payments, setPayments] = useState<ActivationCostPayment[]>([]);
   const [paymentDetails, setPaymentDetails] = useState<Record<number, ManaPaymentDetail>>({});
