@@ -1,5 +1,6 @@
 from engine import GameObject, GameState, PlayerState
 from engine.damage import apply_damage_to_object
+from engine.replacements import resolve_replacement
 from engine.zones import ZONE_BATTLEFIELD, ZONE_EXILE
 
 
@@ -124,5 +125,51 @@ def test_replace_sacrifice_moves_to_exile():
     game_state.sacrifice_object(target.id)
 
     assert target.zone == ZONE_EXILE
+
+
+def test_replacement_choice_queue_includes_player_id():
+    game_state = _build_game_state()
+    game_state.replacement_effects.append(
+        {"type": "replace_draw", "replacement_zone": "exile", "effect_id": "r1", "timestamp_order": 1, "player_id": 0}
+    )
+    game_state.replacement_effects.append(
+        {"type": "replace_draw", "replacement_zone": "graveyard", "effect_id": "r2", "timestamp_order": 2, "player_id": 0}
+    )
+
+    resolve_replacement(game_state, "replace_draw", 0, "draw:event:player:0")
+
+    pending = game_state.choices.get("pending", [])
+    assert pending
+    assert pending[0]["type"] == "replacement_effect"
+    assert pending[0]["player_id"] == 0
+
+
+def test_replacement_defaults_to_most_recent():
+    game_state = _build_game_state()
+    game_state.replacement_effects.append(
+        {"type": "replace_draw", "replacement_zone": "exile", "effect_id": "r1", "timestamp_order": 1, "player_id": 0}
+    )
+    game_state.replacement_effects.append(
+        {"type": "replace_draw", "replacement_zone": "graveyard", "effect_id": "r2", "timestamp_order": 5, "player_id": 0}
+    )
+
+    chosen = resolve_replacement(game_state, "replace_draw", 0, "draw:event:player:0")
+
+    assert chosen["replacement_zone"] == "graveyard"
+
+
+def test_replacement_uses_choice_when_provided():
+    game_state = _build_game_state()
+    game_state.replacement_effects.append(
+        {"type": "replace_draw", "replacement_zone": "exile", "effect_id": "r1", "timestamp_order": 1, "player_id": 0}
+    )
+    game_state.replacement_effects.append(
+        {"type": "replace_draw", "replacement_zone": "graveyard", "effect_id": "r2", "timestamp_order": 5, "player_id": 0}
+    )
+    game_state.replacement_choices["draw:event:player:0"] = "r1"
+
+    chosen = resolve_replacement(game_state, "replace_draw", 0, "draw:event:player:0")
+
+    assert chosen["replacement_zone"] == "exile"
 
 

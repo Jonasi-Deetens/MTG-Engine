@@ -20,6 +20,9 @@ const APPLIES_TO_OPTIONS = [
   { value: 'equipped_creature', label: 'Equipped Creature' },
   { value: 'all_creatures', label: 'All Creatures' },
   { value: 'all_permanents', label: 'All Permanents' },
+  { value: 'spells_you_cast', label: 'Spells You Cast' },
+  { value: 'spells_opponents_cast', label: 'Spells Opponents Cast' },
+  { value: 'all_spells', label: 'All Spells' },
 ];
 
 export function ContinuousAbilityForm({ abilityId, onSave, onCancel }: ContinuousAbilityFormProps) {
@@ -53,6 +56,7 @@ export function ContinuousAbilityForm({ abilityId, onSave, onCancel }: Continuou
     'change_power_toughness',
     'change_control',
     'cda_power_toughness',
+    'modify_cast_cost',
   ];
 
   const handleSave = () => {

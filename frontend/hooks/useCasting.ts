@@ -15,7 +15,18 @@ interface UseCastingArgs {
   abilityGraphs: Record<string, any>;
   cardMap: EngineCardMap;
   manaPool: Record<string, number>;
-  buildCastContext: () => EngineActionRequest['context'];
+  buildCastContext: (
+    sourceIdOverride?: string | null,
+    wardOptions?: {
+      wardAutoPay?: boolean;
+      wardPayments?: Record<string, any>;
+    }
+  ) => EngineActionRequest['context'];
+  wardPayments?: Record<string, any>;
+  autoPayWard: boolean;
+  additionalCostPayments?: any;
+  alternativeCostTag?: string | null;
+  alternativeCostPayments?: any;
   runEngineAction: (
     action: EngineActionRequest['action'],
     payload?: Partial<EngineActionRequest>
@@ -29,6 +40,11 @@ export const useCasting = ({
   cardMap,
   manaPool,
   buildCastContext,
+  wardPayments,
+  autoPayWard,
+  additionalCostPayments,
+  alternativeCostTag,
+  alternativeCostPayments,
   runEngineAction,
 }: UseCastingArgs) => {
   const [preparedCast, setPreparedCast] = useState<{ objectId: string; cost: any } | null>(null);
@@ -53,7 +69,13 @@ export const useCasting = ({
       player_id: currentPriority,
       object_id: selectedHandId,
       ability_graph: abilityGraphs[cardMap[selectedHandId]?.card_id ?? ''],
-      context: buildCastContext(),
+      context: buildCastContext(undefined, {
+        wardAutoPay: autoPayWard,
+        wardPayments,
+        additionalCostPayments,
+        alternativeCostTag,
+        alternativeCostPayments,
+      }),
     });
     const cost = response?.result?.cost;
     if (cost) {
@@ -76,7 +98,13 @@ export const useCasting = ({
       player_id: currentPriority,
       object_id: selectedHandId,
       ability_graph: abilityGraphs[cardMap[selectedHandId]?.card_id ?? ''],
-      context: buildCastContext(),
+      context: buildCastContext(undefined, {
+        wardAutoPay: autoPayWard,
+        wardPayments,
+        additionalCostPayments,
+        alternativeCostTag,
+        alternativeCostPayments,
+      }),
       mana_payment: Object.keys(manaPayment).length > 0 ? manaPayment : undefined,
       mana_payment_detail: isComplexCost ? manaPaymentDetail : undefined,
     });

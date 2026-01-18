@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from typing import Optional, List, Tuple
 
+from .choices_runtime import queue_choice
 from .commander import record_commander_damage
+from .events import Event
 from .state import GameObject, GameState
 
 
@@ -27,6 +29,7 @@ def _select_damage_replacement_preference(
     event_key: str,
     redirect_effects: List[dict],
     prevent_effects: List[dict],
+    affected_player_id: Optional[int],
 ) -> Optional[str]:
     choice_id = game_state.replacement_choices.get(event_key)
     if choice_id:
@@ -36,6 +39,16 @@ def _select_damage_replacement_preference(
             return "prevent"
     if not redirect_effects and not prevent_effects:
         return None
+    if len(redirect_effects) + len(prevent_effects) > 1:
+        queue_choice(game_state, {
+            "type": "damage_replacement",
+            "key": event_key,
+            "player_id": affected_player_id,
+            "options": (
+                [{"id": effect.get("effect_id"), "kind": "redirect"} for effect in redirect_effects]
+                + [{"id": effect.get("effect_id"), "kind": "prevent"} for effect in prevent_effects]
+            ),
+        })
     if _most_recent_timestamp(prevent_effects) >= _most_recent_timestamp(redirect_effects):
         return "prevent"
     return "redirect"
@@ -180,6 +193,7 @@ def _apply_damage_to_object_target(
     source: GameObject,
     target: GameObject,
     amount: int,
+    is_combat: bool,
 ) -> None:
     if amount <= 0:
         return
@@ -214,6 +228,24 @@ def _apply_damage_to_object_target(
     if "Lifelink" in source.keywords:
         controller = game_state.get_player(source.controller_id)
         controller.life += remaining
+    game_state.event_bus.publish(Event(
+        type="deals_damage",
+        payload={
+            "object_id": source.id,
+            "amount": remaining,
+            "target_id": target.id,
+            "is_combat": is_combat,
+        },
+    ))
+    game_state.event_bus.publish(Event(
+        type="takes_damage",
+        payload={
+            "object_id": target.id,
+            "amount": remaining,
+            "source_id": source.id,
+            "is_combat": is_combat,
+        },
+    ))
 
 
 def _apply_damage_to_player_target(
@@ -221,6 +253,7 @@ def _apply_damage_to_player_target(
     source: GameObject,
     player_id: int,
     amount: int,
+    is_combat: bool,
 ) -> None:
     if amount <= 0:
         return
@@ -237,6 +270,24 @@ def _apply_damage_to_player_target(
     if "Lifelink" in source.keywords:
         controller = game_state.get_player(source.controller_id)
         controller.life += remaining
+    game_state.event_bus.publish(Event(
+        type="deals_damage",
+        payload={
+            "object_id": source.id,
+            "amount": remaining,
+            "target_player_id": player_id,
+            "is_combat": is_combat,
+        },
+    ))
+    game_state.event_bus.publish(Event(
+        type="takes_damage",
+        payload={
+            "player_id": player_id,
+            "amount": remaining,
+            "source_id": source.id,
+            "is_combat": is_combat,
+        },
+    ))
 
 
 def _is_commander_source(game_state: GameState, source_id: str) -> bool:
@@ -248,6 +299,7 @@ def apply_damage_to_object(
     source: GameObject,
     target: GameObject,
     amount: int,
+    is_combat: bool = False,
 ) -> None:
     if amount <= 0:
         return
@@ -260,6 +312,7 @@ def apply_damage_to_object(
             event_key,
             redirect_effects,
             prevent_effects,
+            target.controller_id,
         )
     else:
         preference = None
@@ -273,11 +326,11 @@ def apply_damage_to_object(
         redirected, redirected_players, remaining = _apply_redirect_damage(game_state, source, amount)
 
     for redirect_target, redirect_amount in redirected:
-        _apply_damage_to_object_target(game_state, source, redirect_target, redirect_amount)
+        _apply_damage_to_object_target(game_state, source, redirect_target, redirect_amount, is_combat)
     for redirect_player_id, redirect_amount in redirected_players:
-        _apply_damage_to_player_target(game_state, source, redirect_player_id, redirect_amount)
+        _apply_damage_to_player_target(game_state, source, redirect_player_id, redirect_amount, is_combat)
     if remaining > 0:
-        _apply_damage_to_object_target(game_state, source, target, remaining)
+        _apply_damage_to_object_target(game_state, source, target, remaining, is_combat)
 
 
 def apply_damage_to_player(
@@ -285,6 +338,7 @@ def apply_damage_to_player(
     source: GameObject,
     player_id: int,
     amount: int,
+    is_combat: bool = False,
 ) -> None:
     if amount <= 0:
         return
@@ -297,6 +351,7 @@ def apply_damage_to_player(
             event_key,
             redirect_effects,
             prevent_effects,
+            player_id,
         )
     else:
         preference = None
@@ -310,9 +365,9 @@ def apply_damage_to_player(
         redirected, redirected_players, remaining = _apply_redirect_damage(game_state, source, amount)
 
     for redirect_target, redirect_amount in redirected:
-        _apply_damage_to_object_target(game_state, source, redirect_target, redirect_amount)
+        _apply_damage_to_object_target(game_state, source, redirect_target, redirect_amount, is_combat)
     for redirect_player_id, redirect_amount in redirected_players:
-        _apply_damage_to_player_target(game_state, source, redirect_player_id, redirect_amount)
+        _apply_damage_to_player_target(game_state, source, redirect_player_id, redirect_amount, is_combat)
     if remaining > 0:
-        _apply_damage_to_player_target(game_state, source, player_id, remaining)
+        _apply_damage_to_player_target(game_state, source, player_id, remaining, is_combat)
 

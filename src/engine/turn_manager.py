@@ -55,10 +55,23 @@ class TurnManager:
         alive_ids = self._alive_player_ids()
         if not alive_ids:
             return
+        self._place_pending_triggers()
         if current_player_id is None:
             current_player_id = alive_ids[0]
         self.priority.update_order(alive_ids, current_player_id)
         self._persist_priority()
+
+    def _place_pending_triggers(self) -> bool:
+        if not self.gs.pending_triggers:
+            return False
+        for entry in list(self.gs.pending_triggers):
+            self.gs.stack.push(StackItem(
+                kind=entry.get("kind", "ability_graph"),
+                payload=entry.get("payload", {}),
+                controller_id=entry.get("controller_id"),
+            ))
+        self.gs.pending_triggers.clear()
+        return True
 
     def begin_game(self) -> None:
         for player in self.gs.players:
@@ -85,6 +98,9 @@ class TurnManager:
         all_passed = self.priority.pass_priority()
         self._persist_priority()
         if not all_passed:
+            return
+        if self._place_pending_triggers():
+            self._sync_priority(self.current_active_player_id())
             return
 
         if self.gs.stack.is_empty():
@@ -198,6 +214,9 @@ class TurnManager:
         apply_continuous_effects(self.gs)
         apply_state_based_actions(self.gs)
         self._ensure_active_player()
+        if self._place_pending_triggers():
+            self._sync_priority(self.current_active_player_id())
+            return
         self._sync_priority(self.current_active_player_id())
 
     def after_player_action(self, player_id: int) -> None:

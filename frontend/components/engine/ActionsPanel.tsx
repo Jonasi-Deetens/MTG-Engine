@@ -5,10 +5,14 @@ import { Button } from '@/components/ui/Button';
 import { TargetSelector } from '@/components/engine/TargetSelector';
 import { EnterChoicesPanel } from '@/components/engine/EnterChoicesPanel';
 import { ManaPaymentPanel } from '@/components/engine/ManaPaymentPanel';
+import { WardPaymentPanel } from '@/components/engine/WardPaymentPanel';
+import { ActivationCostPanel } from '@/components/engine/ActivationCostPanel';
 import { EngineCardMap, EngineCombatStateSnapshot } from '@/lib/engine';
 import { ReplacementConflictEntry } from '@/hooks/useReplacementConflicts';
 import { EnterChoiceConfig } from '@/lib/enterChoices';
 import { ManaPaymentDetail } from '@/lib/manaPayment';
+import { ActivationCostEntry } from '@/hooks/useActivationCosts';
+import { AlternativeCostOption } from '@/lib/activationCosts';
 
 interface ActionsPanelProps {
   loading: boolean;
@@ -17,6 +21,10 @@ interface ActionsPanelProps {
   preparedCast: { objectId: string; cost: any } | null;
   enterChoiceErrors: string[];
   manaPaymentErrors: string[];
+  hasWardPaymentErrors: boolean;
+  hasActivationCostErrors: boolean;
+  hasAdditionalCastCostErrors: boolean;
+  hasAlternativeExtraCostErrors: boolean;
   isMainPhase: boolean;
   isPriorityActivePlayer: boolean;
   isDeclareAttackers: boolean;
@@ -60,6 +68,163 @@ interface ActionsPanelProps {
   onToggleAutoPay: (value: boolean) => void;
   onUpdatePaymentDetail: (updater: (prev: ManaPaymentDetail) => ManaPaymentDetail) => void;
   onUpdateManaPayment: (updater: (prev: Record<string, number>) => Record<string, number>) => void;
+  activationCosts: ActivationCostEntry[];
+  activationPayments: Array<{
+    mana_payment?: Record<string, number>;
+    mana_payment_detail?: ManaPaymentDetail;
+    life_payment?: number;
+    discard_id?: string;
+    discard_ids?: string[];
+    sacrifice_id?: string;
+    tap_id?: string;
+    exile_ids?: string[];
+  }>;
+  activationPaymentDetails: Record<number, ManaPaymentDetail>;
+  activationCostErrors: string[];
+  onUpdateActivationPayment: (
+    index: number,
+    updater: (prev: {
+      mana_payment?: Record<string, number>;
+      mana_payment_detail?: ManaPaymentDetail;
+      life_payment?: number;
+      discard_id?: string;
+      discard_ids?: string[];
+      sacrifice_id?: string;
+      tap_id?: string;
+    }) => {
+      mana_payment?: Record<string, number>;
+      mana_payment_detail?: ManaPaymentDetail;
+      life_payment?: number;
+      discard_id?: string;
+      discard_ids?: string[];
+      sacrifice_id?: string;
+      tap_id?: string;
+    }
+  ) => void;
+  onUpdateActivationPaymentDetail: (index: number, updater: (prev: ManaPaymentDetail) => ManaPaymentDetail) => void;
+  additionalCastCosts: ActivationCostEntry[];
+  additionalCastPayments: Array<{
+    mana_payment?: Record<string, number>;
+    mana_payment_detail?: ManaPaymentDetail;
+    life_payment?: number;
+    discard_id?: string;
+    discard_ids?: string[];
+    sacrifice_id?: string;
+    tap_id?: string;
+    exile_ids?: string[];
+  }>;
+  additionalCastPaymentDetails: Record<number, ManaPaymentDetail>;
+  additionalCastCostErrors: string[];
+  onUpdateAdditionalCastPayment: (
+    index: number,
+    updater: (prev: {
+      mana_payment?: Record<string, number>;
+      mana_payment_detail?: ManaPaymentDetail;
+      life_payment?: number;
+      discard_id?: string;
+      discard_ids?: string[];
+      sacrifice_id?: string;
+      tap_id?: string;
+    }) => {
+      mana_payment?: Record<string, number>;
+      mana_payment_detail?: ManaPaymentDetail;
+      life_payment?: number;
+      discard_id?: string;
+      discard_ids?: string[];
+      sacrifice_id?: string;
+      tap_id?: string;
+    }
+  ) => void;
+  onUpdateAdditionalCastPaymentDetail: (index: number, updater: (prev: ManaPaymentDetail) => ManaPaymentDetail) => void;
+  alternativeExtraCosts: ActivationCostEntry[];
+  alternativeExtraPayments: Array<{
+    mana_payment?: Record<string, number>;
+    mana_payment_detail?: ManaPaymentDetail;
+    life_payment?: number;
+    discard_id?: string;
+    discard_ids?: string[];
+    sacrifice_id?: string;
+    tap_id?: string;
+    exile_ids?: string[];
+  }>;
+  alternativeExtraPaymentDetails: Record<number, ManaPaymentDetail>;
+  alternativeExtraCostErrors: string[];
+  onUpdateAlternativeExtraPayment: (
+    index: number,
+    updater: (prev: {
+      mana_payment?: Record<string, number>;
+      mana_payment_detail?: ManaPaymentDetail;
+      life_payment?: number;
+      discard_id?: string;
+      discard_ids?: string[];
+      sacrifice_id?: string;
+      tap_id?: string;
+      exile_ids?: string[];
+    }) => {
+      mana_payment?: Record<string, number>;
+      mana_payment_detail?: ManaPaymentDetail;
+      life_payment?: number;
+      discard_id?: string;
+      discard_ids?: string[];
+      sacrifice_id?: string;
+      tap_id?: string;
+      exile_ids?: string[];
+    }
+  ) => void;
+  onUpdateAlternativeExtraPaymentDetail: (index: number, updater: (prev: ManaPaymentDetail) => ManaPaymentDetail) => void;
+  alternativeCostOptions: AlternativeCostOption[];
+  selectedAlternativeCostTag: string | null;
+  onSelectAlternativeCost: (value: string | null) => void;
+  autoPayWard: boolean;
+  onToggleAutoPayWard: (value: boolean) => void;
+  wardTargets: Array<{
+    objectId: string;
+    name: string;
+    costs: Array<{
+      cost: any;
+      costLabel?: string;
+      discardOptions: Array<{ value: string; label: string }>;
+      sacrificeOptions: Array<{ value: string; label: string }>;
+      tapOptions: Array<{ value: string; label: string }>;
+    }>;
+    hasMultipleCosts: boolean;
+  }>;
+  wardPayments: Record<string, Array<{
+    mana_payment?: Record<string, number>;
+    mana_payment_detail?: ManaPaymentDetail;
+    life_payment?: number;
+    discard_id?: string;
+    discard_ids?: string[];
+    sacrifice_id?: string;
+    tap_id?: string;
+  }>>;
+  wardPaymentDetails: Record<string, ManaPaymentDetail>;
+  wardPaymentErrors: Record<string, string[]>;
+  onUpdateWardPayment: (
+    objectId: string,
+    index: number,
+    updater: (prev: {
+      mana_payment?: Record<string, number>;
+      mana_payment_detail?: ManaPaymentDetail;
+      life_payment?: number;
+      discard_id?: string;
+      discard_ids?: string[];
+      sacrifice_id?: string;
+      tap_id?: string;
+    }) => {
+      mana_payment?: Record<string, number>;
+      mana_payment_detail?: ManaPaymentDetail;
+      life_payment?: number;
+      discard_id?: string;
+      discard_ids?: string[];
+      sacrifice_id?: string;
+      tap_id?: string;
+    }
+  ) => void;
+  onUpdateWardPaymentDetail: (
+    objectId: string,
+    updater: (prev: ManaPaymentDetail) => ManaPaymentDetail
+  ) => void;
   targetObjects: any[];
   targetPlayers: EnginePlayerSnapshot[];
   selectedTargetObjectIds: string[];
@@ -81,6 +246,10 @@ export function ActionsPanel({
   preparedCast,
   enterChoiceErrors,
   manaPaymentErrors,
+  hasWardPaymentErrors,
+  hasActivationCostErrors,
+  hasAdditionalCastCostErrors,
+  hasAlternativeExtraCostErrors,
   isMainPhase,
   isPriorityActivePlayer,
   isDeclareAttackers,
@@ -124,6 +293,35 @@ export function ActionsPanel({
   onToggleAutoPay,
   onUpdatePaymentDetail,
   onUpdateManaPayment,
+  activationCosts,
+  activationPayments,
+  activationPaymentDetails,
+  activationCostErrors,
+  onUpdateActivationPayment,
+  onUpdateActivationPaymentDetail,
+  additionalCastCosts,
+  additionalCastPayments,
+  additionalCastPaymentDetails,
+  additionalCastCostErrors,
+  onUpdateAdditionalCastPayment,
+  onUpdateAdditionalCastPaymentDetail,
+  alternativeExtraCosts,
+  alternativeExtraPayments,
+  alternativeExtraPaymentDetails,
+  alternativeExtraCostErrors,
+  onUpdateAlternativeExtraPayment,
+  onUpdateAlternativeExtraPaymentDetail,
+  alternativeCostOptions,
+  selectedAlternativeCostTag,
+  onSelectAlternativeCost,
+  autoPayWard,
+  onToggleAutoPayWard,
+  wardTargets,
+  wardPayments,
+  wardPaymentDetails,
+  wardPaymentErrors,
+  onUpdateWardPayment,
+  onUpdateWardPaymentDetail,
   targetObjects,
   targetPlayers,
   selectedTargetObjectIds,
@@ -155,6 +353,10 @@ export function ActionsPanel({
             preparedCast.objectId !== selectedHandId ||
             enterChoiceErrors.length > 0 ||
             manaPaymentErrors.length > 0 ||
+            hasWardPaymentErrors ||
+            hasActivationCostErrors ||
+            hasAdditionalCastCostErrors ||
+            hasAlternativeExtraCostErrors ||
             loading
           }
         >
@@ -166,7 +368,7 @@ export function ActionsPanel({
         <Button
           variant="outline"
           onClick={onActivateAbility}
-          disabled={!selectedBattlefieldId || !hasActivatedAbility || loading}
+          disabled={!selectedBattlefieldId || !hasActivatedAbility || hasActivationCostErrors || loading}
         >
           Activate Ability
         </Button>
@@ -313,6 +515,81 @@ export function ActionsPanel({
         onUpdatePaymentDetail={onUpdatePaymentDetail}
         onUpdateManaPayment={onUpdateManaPayment}
       />
+
+      <WardPaymentPanel
+        active={selectedTargetObjectIds.length > 0}
+        autoPayWard={autoPayWard}
+        onToggleAutoPayWard={onToggleAutoPayWard}
+        wardTargets={wardTargets}
+        manaPool={manaPool}
+        wardPayments={wardPayments}
+        wardPaymentDetails={wardPaymentDetails}
+        wardPaymentErrors={wardPaymentErrors}
+        onUpdateWardPayment={onUpdateWardPayment}
+        onUpdateWardPaymentDetail={onUpdateWardPaymentDetail}
+      />
+
+      <ActivationCostPanel
+        active={hasActivatedAbility && !!selectedBattlefieldId}
+        title="Activation Costs"
+        costEntries={activationCosts}
+        manaPool={manaPool}
+        payments={activationPayments}
+        paymentDetails={activationPaymentDetails}
+        errors={activationCostErrors}
+        onUpdatePayment={onUpdateActivationPayment}
+        onUpdatePaymentDetail={onUpdateActivationPaymentDetail}
+      />
+
+      <ActivationCostPanel
+        active={!!selectedHandId}
+        title="Additional Casting Costs"
+        costEntries={additionalCastCosts}
+        manaPool={manaPool}
+        payments={additionalCastPayments}
+        paymentDetails={additionalCastPaymentDetails}
+        errors={additionalCastCostErrors}
+        onUpdatePayment={onUpdateAdditionalCastPayment}
+        onUpdatePaymentDetail={onUpdateAdditionalCastPaymentDetail}
+      />
+
+      <ActivationCostPanel
+        active={!!selectedHandId}
+        title="Alternative Cost Extras"
+        costEntries={alternativeExtraCosts}
+        manaPool={manaPool}
+        payments={alternativeExtraPayments}
+        paymentDetails={alternativeExtraPaymentDetails}
+        errors={alternativeExtraCostErrors}
+        onUpdatePayment={onUpdateAlternativeExtraPayment}
+        onUpdatePaymentDetail={onUpdateAlternativeExtraPaymentDetail}
+      />
+
+      {alternativeCostOptions.length > 0 && (
+        <div className="space-y-2">
+          <div className="text-xs uppercase text-[color:var(--theme-text-secondary)]">Alternative Cost</div>
+          <label className="flex items-center gap-2 text-xs">
+            <input
+              type="radio"
+              name="alt-cost"
+              checked={!selectedAlternativeCostTag}
+              onChange={() => onSelectAlternativeCost(null)}
+            />
+            Use mana cost
+          </label>
+          {alternativeCostOptions.map((option) => (
+            <label key={`alt-cost-${option.tag}`} className="flex items-center gap-2 text-xs">
+              <input
+                type="radio"
+                name="alt-cost"
+                checked={selectedAlternativeCostTag === option.tag}
+                onChange={() => onSelectAlternativeCost(option.tag)}
+              />
+              {option.label}
+            </label>
+          ))}
+        </div>
+      )}
 
       <TargetSelector
         objects={targetObjects}

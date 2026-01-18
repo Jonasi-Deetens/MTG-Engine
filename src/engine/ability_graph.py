@@ -12,6 +12,7 @@ from .state import GameState, ResolveContext
 class RuntimeAbility:
     ability_type: str
     trigger: Optional[str]
+    trigger_data: Optional[Dict[str, Any]]
     cost: Optional[str]
     keyword: Optional[str]
     timing: Optional[str]
@@ -38,6 +39,7 @@ class AbilityGraphRuntimeAdapter:
             )
 
         trigger = None
+        trigger_data: Optional[Dict[str, Any]] = None
         cost = None
         keyword = None
         timing = None
@@ -45,6 +47,7 @@ class AbilityGraphRuntimeAdapter:
         if root_node:
             if root_node["type"] == "TRIGGER":
                 trigger = root_node["data"].get("event")
+                trigger_data = dict(root_node.get("data") or {})
             elif root_node["type"] == "ACTIVATED":
                 cost = root_node["data"].get("cost")
                 timing = root_node["data"].get("timing")
@@ -75,12 +78,15 @@ class AbilityGraphRuntimeAdapter:
                 traverse(next_id)
 
         if root_node:
+            if root_node["type"] == "EFFECT" and graph.get("abilityType") == "static":
+                effects.append(root_node.get("data", {}))
             for next_id in adjacency.get(root_node["id"], []):
                 traverse(next_id)
 
         return RuntimeAbility(
             ability_type=graph.get("abilityType", "triggered"),
             trigger=trigger,
+            trigger_data=trigger_data,
             cost=cost,
             keyword=keyword,
             timing=timing,

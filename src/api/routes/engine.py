@@ -149,6 +149,8 @@ def _build_game_state(snapshot: GameStateSnapshot) -> GameState:
     game_state.debug_log = list(snapshot.debug_log)
     game_state.replacement_effects = list(snapshot.replacement_effects)
     game_state.replacement_choices = dict(snapshot.replacement_choices or {})
+    game_state.choices = dict(snapshot.choices or {})
+    game_state.pending_triggers = list(snapshot.pending_triggers or [])
     game_state.prepared_casts = dict(snapshot.prepared_casts or {})
     return game_state
 
@@ -261,6 +263,8 @@ def _serialize_game_state(game_state: GameState) -> GameStateSnapshot:
         debug_log=game_state.debug_log,
         replacement_effects=list(game_state.replacement_effects),
         replacement_choices=dict(game_state.replacement_choices),
+        choices=dict(game_state.choices),
+        pending_triggers=list(game_state.pending_triggers),
         prepared_casts=dict(game_state.prepared_casts),
     )
 

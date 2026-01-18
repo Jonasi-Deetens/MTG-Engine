@@ -5,6 +5,7 @@ from typing import Dict, List, Optional, Set, Any
 import itertools
 
 from .zones import ZONE_BATTLEFIELD, ZONE_COMMAND, ZONE_EXILE, ZONE_GRAVEYARD, ZONE_HAND, ZONE_LIBRARY
+from .choices_runtime import queue_choice
 from .events import Event, EventBus
 from .stack import Stack
 from .turn import TurnState
@@ -112,6 +113,8 @@ class GameState:
     debug_log: List[str] = field(default_factory=list)
     replacement_effects: List[Dict[str, Any]] = field(default_factory=list)
     replacement_choices: Dict[str, str] = field(default_factory=dict)
+    choices: Dict[str, Any] = field(default_factory=dict)
+    pending_triggers: List[Dict[str, Any]] = field(default_factory=list)
     prepared_casts: Dict[int, Dict[str, Any]] = field(default_factory=dict)
     effect_timestamp_counter: int = 0
     replacement_effect_counter: int = 0
@@ -168,6 +171,18 @@ class GameState:
             is_token=True,
         )
         self.add_object(token)
+        self.event_bus.publish(Event(type="enters_battlefield", payload={"object_id": token.id}))
+        self.event_bus.publish(Event(
+            type="card_enters",
+            payload={
+                "object_id": token.id,
+                "entersWhere": ZONE_BATTLEFIELD,
+                "entersFrom": None,
+                "cardTypes": list(token.types or []),
+                "controller_id": token.controller_id,
+                "owner_id": token.owner_id,
+            },
+        ))
         self.log(f"Token created: {token.name} ({token.id})")
         return token
 
@@ -211,6 +226,18 @@ class GameState:
             return
         if destination == ZONE_BATTLEFIELD and previous_zone != ZONE_BATTLEFIELD:
             self.event_bus.publish(Event(type="enters_battlefield", payload={"object_id": obj.id}))
+        if previous_zone != destination:
+            self.event_bus.publish(Event(
+                type="card_enters",
+                payload={
+                    "object_id": obj.id,
+                    "entersWhere": destination,
+                    "entersFrom": previous_zone,
+                    "cardTypes": list(obj.types or []),
+                    "controller_id": obj.controller_id,
+                    "owner_id": obj.owner_id,
+                },
+            ))
 
     def _clear_battlefield_state(self, obj: GameObject) -> None:
         obj.damage = 0
@@ -341,6 +368,15 @@ class GameState:
                             consume(effect, container)
                             self.replacement_choices.pop(event_key, None)
                             return replacement
+            queue_choice(self, {
+                "type": "zone_replacement",
+                "key": event_key,
+                "player_id": obj.controller_id,
+                "options": [
+                    {"id": effect.get("effect_id"), "replacement_zone": effect.get("replacement_zone")}
+                    for effect, _ in matches_all
+                ],
+            })
             matches_all.sort(key=lambda item: int(item[0].get("timestamp_order", 0)), reverse=True)
             effect, container = matches_all[0]
             replacement = effect.get("replacement_zone")
@@ -396,6 +432,15 @@ class GameState:
                             consume(effect, container)
                             self.replacement_choices.pop(event_key, None)
                             return replacement
+            queue_choice(self, {
+                "type": "object_replacement",
+                "key": event_key,
+                "player_id": obj.controller_id,
+                "options": [
+                    {"id": effect.get("effect_id"), "replacement_zone": effect.get("replacement_zone")}
+                    for effect, _ in matches_all
+                ],
+            })
             matches_all.sort(key=lambda item: int(item[0].get("timestamp_order", 0)), reverse=True)
             effect, container = matches_all[0]
             replacement = effect.get("replacement_zone")
@@ -526,7 +571,15 @@ class GameState:
             self.move_object(obj_id, replacement)
             self.log(f"Object destroyed (replaced): {obj_id}")
             return
-        self.event_bus.publish(Event(type="dies", payload={"object_id": obj_id}))
+        self.event_bus.publish(Event(
+            type="dies",
+            payload={
+                "object_id": obj_id,
+                "controller_id": obj.controller_id,
+                "owner_id": obj.owner_id,
+                "cardTypes": list(obj.types or []),
+            },
+        ))
         if obj.is_token:
             self._remove_from_zone(obj.zone, obj_id)
             del self.objects[obj_id]
@@ -547,7 +600,15 @@ class GameState:
             self.move_object(obj_id, replacement)
             self.log(f"Object sacrificed (replaced): {obj_id}")
             return
-        self.event_bus.publish(Event(type="dies", payload={"object_id": obj_id}))
+        self.event_bus.publish(Event(
+            type="dies",
+            payload={
+                "object_id": obj_id,
+                "controller_id": obj.controller_id,
+                "owner_id": obj.owner_id,
+                "cardTypes": list(obj.types or []),
+            },
+        ))
         if obj.is_token:
             self._remove_from_zone(obj.zone, obj_id)
             del self.objects[obj_id]
@@ -555,6 +616,27 @@ class GameState:
             return
         self.move_object(obj_id, ZONE_GRAVEYARD)
         self.log(f"Object sacrificed: {obj_id}")
+
+    def state_based_put_into_graveyard(self, obj_id: str) -> None:
+        obj = self.objects.get(obj_id)
+        if not obj:
+            return
+        self.event_bus.publish(Event(
+            type="dies",
+            payload={
+                "object_id": obj_id,
+                "controller_id": obj.controller_id,
+                "owner_id": obj.owner_id,
+                "cardTypes": list(obj.types or []),
+            },
+        ))
+        if obj.is_token:
+            self._remove_from_zone(obj.zone, obj_id)
+            del self.objects[obj_id]
+            self.log(f"Token removed by SBA: {obj_id}")
+            return
+        self.move_object(obj_id, ZONE_GRAVEYARD)
+        self.log(f"Object moved to graveyard by SBA: {obj_id}")
 
     def clear_prepared_casts(self) -> None:
         self.prepared_casts.clear()

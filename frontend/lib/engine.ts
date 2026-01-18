@@ -106,6 +106,8 @@ export interface EngineGameStateSnapshot {
   debug_log: string[];
   replacement_effects?: Array<Record<string, any>>;
   replacement_choices?: Record<string, string>;
+  choices?: Record<string, any>;
+  pending_triggers?: Array<Record<string, any>>;
   prepared_casts?: Record<number, Record<string, any>>;
 }
 

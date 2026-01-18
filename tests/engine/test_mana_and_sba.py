@@ -109,6 +109,83 @@ def test_legend_rule_keeps_one():
     assert len(in_battlefield) == 1
 
 
+def test_legend_rule_ignores_replace_destroy():
+    game_state = _build_game_state()
+    first = GameObject(
+        id="legend_a",
+        name="Legend",
+        owner_id=0,
+        controller_id=0,
+        types=["Creature", "Legendary"],
+        zone=ZONE_BATTLEFIELD,
+        power=2,
+        toughness=2,
+    )
+    second = GameObject(
+        id="legend_b",
+        name="Legend",
+        owner_id=0,
+        controller_id=0,
+        types=["Creature", "Legendary"],
+        zone=ZONE_BATTLEFIELD,
+        power=2,
+        toughness=2,
+    )
+    second.temporary_effects.append(
+        {"type": "replace_destroy", "replacement_zone": ZONE_EXILE, "timestamp_order": 1}
+    )
+    game_state.add_object(first)
+    game_state.add_object(second)
+
+    apply_state_based_actions(game_state)
+
+    assert second.zone in (ZONE_GRAVEYARD, ZONE_BATTLEFIELD)
+    assert second.zone != ZONE_EXILE
+
+
+def test_zero_toughness_ignores_replace_destroy():
+    game_state = _build_game_state()
+    creature = GameObject(
+        id="zero_toughness",
+        name="Creature",
+        owner_id=0,
+        controller_id=0,
+        types=["Creature"],
+        zone=ZONE_BATTLEFIELD,
+        power=2,
+        toughness=0,
+    )
+    creature.temporary_effects.append(
+        {"type": "replace_destroy", "replacement_zone": ZONE_EXILE, "timestamp_order": 1}
+    )
+    game_state.add_object(creature)
+
+    apply_state_based_actions(game_state)
+
+    assert creature.zone == ZONE_GRAVEYARD
+
+
+def test_planeswalker_zero_loyalty_ignores_replace_destroy():
+    game_state = _build_game_state()
+    walker = GameObject(
+        id="walker",
+        name="Walker",
+        owner_id=0,
+        controller_id=0,
+        types=["Planeswalker"],
+        zone=ZONE_BATTLEFIELD,
+    )
+    walker.counters["loyalty"] = 0
+    walker.temporary_effects.append(
+        {"type": "replace_destroy", "replacement_zone": ZONE_EXILE, "timestamp_order": 1}
+    )
+    game_state.add_object(walker)
+
+    apply_state_based_actions(game_state)
+
+    assert walker.zone == ZONE_GRAVEYARD
+
+
 def test_aura_falls_off_when_attached_creature_leaves():
     game_state = _build_game_state()
     creature = GameObject(

@@ -3,7 +3,9 @@ from __future__ import annotations
 from typing import Any, Dict, Optional, List
 
 from .state import GameState, ResolveContext, GameObject
-from .zones import ZONE_BATTLEFIELD
+from .costs import parse_ward_keywords
+from .mana import can_pay_cost, can_pay_cost_with_payment, parse_mana_cost, pay_cost, pay_cost_with_payment
+from .zones import ZONE_BATTLEFIELD, ZONE_GRAVEYARD
 
 
 def resolve_player_id(context: ResolveContext, fallback_controller_id: Optional[int]) -> Optional[int]:
@@ -14,6 +16,13 @@ def resolve_player_id(context: ResolveContext, fallback_controller_id: Optional[
     if "player" in context.targets:
         return context.targets["player"]
     return fallback_controller_id
+
+
+def is_overloaded(context: ResolveContext) -> bool:
+    if not isinstance(context.choices, dict):
+        return False
+    tag = context.choices.get("alternative_cost_tag", "")
+    return isinstance(tag, str) and tag.startswith("overload")
 
 
 def resolve_object_id(context: ResolveContext, key: str, fallback: Optional[str]) -> Optional[str]:
@@ -37,11 +46,15 @@ def resolve_object(
 
 
 def validate_targets(game_state: GameState, context: ResolveContext) -> None:
+    if is_overloaded(context):
+        return
     if not has_legal_targets(game_state, context):
         raise ValueError("No legal targets.")
 
 
 def get_target_issues(game_state: GameState, context: ResolveContext) -> List[str]:
+    if is_overloaded(context):
+        return []
     issues: List[str] = []
     targets = context.targets
 
@@ -72,6 +85,8 @@ def get_target_issues(game_state: GameState, context: ResolveContext) -> List[st
 
 
 def normalize_targets(game_state: GameState, context: ResolveContext) -> None:
+    if is_overloaded(context):
+        return
     targets = context.targets
     if isinstance(targets.get("targets"), list):
         legal = [target_id for target_id in targets["targets"] if _is_legal_object_target(game_state, context, target_id)]
@@ -92,6 +107,8 @@ def normalize_targets(game_state: GameState, context: ResolveContext) -> None:
 
 
 def has_legal_targets(game_state: GameState, context: ResolveContext) -> bool:
+    if is_overloaded(context):
+        return True
     targets = context.targets
     target_id = targets.get("target")
     target_list = targets.get("targets") if isinstance(targets.get("targets"), list) else None
@@ -127,8 +144,6 @@ def _check_object_target(game_state: GameState, context: ResolveContext, target_
         return False, "Target is phased out."
     if "Shroud" in obj.keywords:
         return False, "Target has shroud."
-    if "Ward" in obj.keywords and not context.choices.get("ward_paid"):
-        return False, "Ward cost not paid."
     if "Hexproof" in obj.keywords and context.controller_id is not None:
         if obj.controller_id != context.controller_id:
             return False, "Target has hexproof."
@@ -143,6 +158,127 @@ def _check_object_target(game_state: GameState, context: ResolveContext, target_
         if source and any(color in obj.protections for color in source.colors):
             return False, "Target has protection from source."
     return True, None
+
+
+def _collect_target_ids(context: ResolveContext) -> List[str]:
+    targets = []
+    target_id = context.targets.get("target")
+    if target_id:
+        targets.append(target_id)
+    extra = context.targets.get("targets")
+    if isinstance(extra, list):
+        for obj_id in extra:
+            if obj_id not in targets:
+                targets.append(obj_id)
+    return targets
+
+
+def _ward_cost_entries(obj: GameObject) -> List[Dict[str, Any]]:
+    return parse_ward_keywords(obj.keywords)
+
+
+def enforce_ward_payment(game_state: GameState, context: ResolveContext) -> None:
+    target_ids = _collect_target_ids(context)
+    if not target_ids:
+        return
+    ward_payments = context.choices.get("ward_payments") if isinstance(context.choices, dict) else {}
+    auto_pay = bool(context.choices.get("ward_auto_pay")) if isinstance(context.choices, dict) else False
+    controller_id = context.controller_id
+    if controller_id is None:
+        return
+    for obj_id in target_ids:
+        obj = game_state.objects.get(obj_id)
+        if not obj:
+            continue
+        costs = _ward_cost_entries(obj)
+        if not costs:
+            continue
+        for index, cost in enumerate(costs):
+            entry: Dict[str, Any] = {}
+            if isinstance(ward_payments, dict) and obj_id in ward_payments:
+                provided = ward_payments.get(obj_id) or {}
+                if isinstance(provided, list) and index < len(provided):
+                    entry = provided[index] or {}
+                elif isinstance(provided, dict):
+                    entry = provided
+            if cost.get("type") == "mana":
+                mana_cost = parse_mana_cost(cost.get("cost"), x_value=0)
+                payment = entry.get("mana_payment")
+                payment_detail = entry.get("mana_payment_detail")
+                if payment is not None:
+                    if not can_pay_cost_with_payment(
+                        game_state.get_player(controller_id).mana_pool,
+                        mana_cost,
+                        payment,
+                        payment_detail,
+                    ):
+                        raise ValueError("Not enough mana to pay ward cost.")
+                    pay_cost_with_payment(game_state, controller_id, mana_cost, payment, payment_detail)
+                    continue
+                if auto_pay:
+                    if not can_pay_cost(game_state.get_player(controller_id).mana_pool, mana_cost):
+                        raise ValueError("Not enough mana to pay ward cost.")
+                    pay_cost(game_state, controller_id, mana_cost)
+                    continue
+                raise ValueError("Ward cost not paid.")
+            if cost.get("type") == "life":
+                amount = int(cost.get("amount", 0))
+                if amount <= 0:
+                    continue
+                if not auto_pay and entry.get("life_payment") is None:
+                    raise ValueError("Ward cost not paid.")
+                player = game_state.get_player(controller_id)
+                if player.life < amount:
+                    raise ValueError("Not enough life to pay ward cost.")
+                player.life -= amount
+                continue
+            if cost.get("type") == "discard":
+                amount = int(cost.get("amount", 1))
+                discard_ids = entry.get("discard_ids")
+                discard_id = entry.get("discard_id")
+                if discard_ids is None and discard_id:
+                    discard_ids = [discard_id]
+                if not isinstance(discard_ids, list) or len(discard_ids) != amount:
+                    raise ValueError("Ward cost not paid.")
+                player = game_state.get_player(controller_id)
+                for card_id in discard_ids:
+                    if card_id not in player.hand:
+                        raise ValueError("Invalid card selected to discard for ward.")
+                    game_state.move_object(card_id, ZONE_GRAVEYARD)
+                continue
+            if cost.get("type") == "sacrifice":
+                sacrifice_id = entry.get("sacrifice_id")
+                if not sacrifice_id:
+                    raise ValueError("Ward cost not paid.")
+                sacrifice_obj = game_state.objects.get(sacrifice_id)
+                if not sacrifice_obj or sacrifice_obj.controller_id != controller_id:
+                    raise ValueError("Invalid permanent selected to sacrifice for ward.")
+                if sacrifice_obj.zone != ZONE_BATTLEFIELD:
+                    raise ValueError("Selected permanent is not on the battlefield.")
+                card_type = cost.get("card_type")
+                if card_type and card_type.capitalize() not in (sacrifice_obj.types or []):
+                    raise ValueError("Selected permanent does not match ward sacrifice cost.")
+                if cost.get("nonland") and "Land" in (sacrifice_obj.types or []):
+                    raise ValueError("Selected permanent does not match ward sacrifice cost.")
+                game_state.sacrifice_object(sacrifice_id)
+                continue
+            if cost.get("type") == "tap":
+                tap_id = entry.get("tap_id")
+                if not tap_id:
+                    raise ValueError("Ward cost not paid.")
+                tap_obj = game_state.objects.get(tap_id)
+                if not tap_obj or tap_obj.controller_id != controller_id:
+                    raise ValueError("Invalid permanent selected to tap for ward.")
+                if tap_obj.zone != ZONE_BATTLEFIELD or tap_obj.tapped:
+                    raise ValueError("Selected permanent is not an untapped permanent.")
+                card_type = cost.get("card_type")
+                if card_type and card_type.capitalize() not in (tap_obj.types or []):
+                    raise ValueError("Selected permanent does not match ward tap cost.")
+                if cost.get("nonland") and "Land" in (tap_obj.types or []):
+                    raise ValueError("Selected permanent does not match ward tap cost.")
+                tap_obj.tapped = True
+                continue
+            raise ValueError("Ward cost not paid.")
 
 
 def _is_legal_object_target(game_state: GameState, context: ResolveContext, target_id: str) -> bool:

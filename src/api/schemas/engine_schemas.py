@@ -110,6 +110,8 @@ class GameStateSnapshot(BaseModel):
     debug_log: List[str] = Field(default_factory=list)
     replacement_effects: List[Dict[str, Any]] = Field(default_factory=list)
     replacement_choices: Dict[str, str] = Field(default_factory=dict)
+    choices: Dict[str, Any] = Field(default_factory=dict)
+    pending_triggers: List[Dict[str, Any]] = Field(default_factory=list)
     prepared_casts: Dict[int, Dict[str, Any]] = Field(default_factory=dict)
 
 

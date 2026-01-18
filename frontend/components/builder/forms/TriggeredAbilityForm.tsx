@@ -66,6 +66,7 @@ export function TriggeredAbilityForm({ abilityId, onSave, onCancel }: TriggeredA
   const existingAbility = abilityId ? triggeredAbilities.find((a) => a.id === abilityId) : null;
   
   const [event, setEvent] = useState(existingAbility?.event || 'enters_battlefield');
+  const [scope, setScope] = useState(existingAbility?.scope || 'self');
   const [condition, setCondition] = useState<StructuredCondition | string | undefined>(existingAbility?.condition);
   const [effects, setEffects] = useState<Effect[]>(existingAbility?.effects || [{ type: 'damage', amount: 0 }]);
   const [entersWhere, setEntersWhere] = useState(existingAbility?.entersWhere || 'battlefield');
@@ -130,12 +131,13 @@ export function TriggeredAbilityForm({ abilityId, onSave, onCancel }: TriggeredA
     const ability: TriggeredAbility = {
       id: abilityId || `triggered-${Date.now()}`,
       event,
+      scope,
       condition: condition || undefined,
       effects: effects.filter((e) => e.type && (e.amount !== undefined || !['damage', 'draw', 'token', 'counters', 'life'].includes(e.type))),
+      cardType: cardType || undefined,
       ...(event === 'card_enters' && {
         entersWhere: entersWhere || 'battlefield',
         entersFrom: entersFrom || undefined,
-        cardType: cardType || undefined,
       }),
     };
 
@@ -167,6 +169,49 @@ export function TriggeredAbilityForm({ abilityId, onSave, onCancel }: TriggeredA
         </select>
       </div>
 
+      {/* Trigger Scope */}
+      <div>
+        <label className="block text-sm font-medium text-[color:var(--theme-text-secondary)] mb-2">
+          Trigger Scope
+        </label>
+        <select
+          value={scope}
+          onChange={(e) => setScope(e.target.value)}
+          className="w-full px-3 py-2 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+        >
+          <option value="self">This Permanent</option>
+          <option value="any">Any Permanent</option>
+          <option value="you_control">Permanents You Control</option>
+          <option value="opponent_control">Permanents Opponents Control</option>
+          <option value="you">You (Player)</option>
+          <option value="opponent">Opponent (Player)</option>
+        </select>
+        <p className="text-xs text-[color:var(--theme-text-secondary)] mt-1">
+          Use "Any Permanent" for global triggers; player scopes apply to player-based events.
+        </p>
+      </div>
+
+      {/* Card Type Filter */}
+      <div>
+        <label className="block text-sm font-medium text-[color:var(--theme-text-secondary)] mb-2">
+          Card Type Filter <span className="text-[color:var(--theme-text-muted)]">(optional)</span>
+        </label>
+        <select
+          value={cardType}
+          onChange={(e) => setCardType(e.target.value)}
+          className="w-full px-3 py-2 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+        >
+          {CARD_TYPE_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+        <p className="text-xs text-[color:var(--theme-text-secondary)] mt-1">
+          Limits the trigger to a specific permanent type when applicable.
+        </p>
+      </div>
+
       {/* Card Enters Zone Parameters */}
       {event === 'card_enters' && (
         <div className="space-y-3">
@@ -185,25 +230,6 @@ export function TriggeredAbilityForm({ abilityId, onSave, onCancel }: TriggeredA
                 </option>
               ))}
             </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-[color:var(--theme-text-secondary)] mb-2">
-              Card Type <span className="text-[color:var(--theme-text-muted)]">(optional)</span>
-            </label>
-            <select
-              value={cardType}
-              onChange={(e) => setCardType(e.target.value)}
-              className="w-full px-3 py-2 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none"
-            >
-              {CARD_TYPE_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-            <p className="text-xs text-[color:var(--theme-text-secondary)] mt-1">
-              Leave as "Any Card Type" to trigger for all card types
-            </p>
           </div>
           <div>
             <label className="block text-sm font-medium text-[color:var(--theme-text-secondary)] mb-2">

@@ -14,8 +14,17 @@ from .mana import (
     pay_cost_with_payment,
     produce_mana_for_object,
 )
+from .cost_modifiers import apply_cast_cost_modifiers
+from .costs import (
+    parse_additional_cast_costs,
+    parse_alternative_cast_costs,
+    parse_alternative_extra_costs,
+    parse_cost_string,
+    pay_activation_costs,
+    pay_costs,
+)
 from .stack import StackItem
-from .targets import normalize_targets, validate_targets
+from .targets import enforce_ward_payment, normalize_targets, validate_targets
 from .turn import Phase, Step
 from .zones import ZONE_BATTLEFIELD, ZONE_COMMAND, ZONE_GRAVEYARD, ZONE_HAND
 from .events import Event
@@ -97,6 +106,24 @@ def _require_combat_declarations_done(game_state) -> None:
             raise ValueError("Declare blockers before taking other actions.")
 
 
+def _publish_becomes_target(game_state, source_id: Optional[str], resolve_context: Optional[ResolveContext]) -> None:
+    if not source_id or not resolve_context:
+        return
+    targets = set()
+    target_id = resolve_context.targets.get("target")
+    if target_id:
+        targets.add(target_id)
+    target_list = resolve_context.targets.get("targets") if isinstance(resolve_context.targets.get("targets"), list) else []
+    for obj_id in target_list:
+        targets.add(obj_id)
+    for obj_id in targets:
+        if obj_id in game_state.objects:
+            game_state.event_bus.publish(Event(
+                type="becomes_target",
+                payload={"object_id": obj_id, "source_id": source_id},
+            ))
+
+
 
 
 def _check_activation_limit(obj, ability_index: int, runtime) -> None:
@@ -150,16 +177,41 @@ def _pay_spell_cost(
     mana_payment: Optional[Dict[str, int]],
     mana_payment_detail: Optional[Dict[str, Any]],
     extra_generic: int = 0,
+    cost_override: Optional[str] = None,
+    free_cast: bool = False,
+    resolve_context: Optional[ResolveContext] = None,
 ) -> None:
-    cost = parse_mana_cost(obj.mana_cost, x_value=x_value)
+    cost_text = None if free_cast else (cost_override or obj.mana_cost)
+    cost = parse_mana_cost(cost_text, x_value=x_value)
     if extra_generic:
         cost.generic += int(extra_generic)
+    cost = apply_cast_cost_modifiers(game_state, player_id, obj, cost, resolve_context)
     if mana_payment:
         pay_cost_with_payment(game_state, player_id, cost, mana_payment, mana_payment_detail)
         return
     if not can_pay_cost(game_state.get_player(player_id).mana_pool, cost):
         raise ValueError("Not enough mana to cast spell.")
     pay_cost(game_state, player_id, cost)
+
+
+def _resolve_alternative_cost(
+    obj, context: Optional[ResolveContext]
+) -> tuple[Optional[str], bool, Optional[str], List[Dict[str, Any]]]:
+    if not context or not isinstance(context.choices, dict):
+        return None, False, None, []
+    tag = context.choices.get("alternative_cost_tag")
+    alt_cost = context.choices.get("alternative_cost")
+    if tag:
+        for entry in parse_alternative_cast_costs(obj.oracle_text):
+            if entry.get("tag") == tag:
+                if entry.get("type") == "free":
+                    return "", True, tag, parse_alternative_extra_costs(obj.oracle_text, tag)
+                if entry.get("type") == "normal":
+                    return None, False, tag, parse_alternative_extra_costs(obj.oracle_text, tag)
+                return entry.get("cost"), False, tag, parse_alternative_extra_costs(obj.oracle_text, tag)
+    if alt_cost:
+        return alt_cost, False, None, []
+    return None, False, None, []
 
 
 def cast_spell(
@@ -179,7 +231,12 @@ def cast_spell(
     if not obj:
         raise ValueError("Card not found.")
     if obj.zone not in (ZONE_HAND, ZONE_COMMAND):
-        raise ValueError("Spell must be cast from hand or command zone.")
+        resolve_context = ResolveContext(**context) if context else None
+        _, _, alt_tag, _ = _resolve_alternative_cost(obj, resolve_context)
+        if obj.zone == ZONE_GRAVEYARD and alt_tag and alt_tag.startswith("flashback"):
+            pass
+        else:
+            raise ValueError("Spell must be cast from hand or command zone.")
     if obj.zone == ZONE_COMMAND:
         player = game_state.get_player(player_id)
         if obj.id != player.commander_id:
@@ -189,24 +246,61 @@ def cast_spell(
 
     _validate_cast_timing(game_state, turn_manager, player_id, obj)
 
+    resolve_context = None
     if context:
         resolve_context = ResolveContext(**context)
         normalize_targets(game_state, resolve_context)
         validate_targets(game_state, resolve_context)
+        enforce_ward_payment(game_state, resolve_context)
     validate_enter_choices(ability_graph, context)
+    cost_override, free_cast, alt_tag, alt_extra_costs = _resolve_alternative_cost(obj, resolve_context)
+    additional_costs = parse_additional_cast_costs(obj.oracle_text)
+    if alt_extra_costs:
+        pay_costs(
+            game_state,
+            player_id,
+            obj,
+            alt_extra_costs,
+            resolve_context.choices if resolve_context else {},
+            "alternative_cost_payments",
+        )
+    if additional_costs:
+        pay_costs(
+            game_state,
+            player_id,
+            obj,
+            additional_costs,
+            resolve_context.choices if resolve_context else {},
+            "additional_cost_payments",
+        )
     commander_tax = _consume_commander_tax(game_state, player_id, obj)
-    _pay_spell_cost(game_state, player_id, obj, x_value, mana_payment, mana_payment_detail, commander_tax)
+    _pay_spell_cost(
+        game_state,
+        player_id,
+        obj,
+        x_value,
+        mana_payment,
+        mana_payment_detail,
+        commander_tax,
+        cost_override=cost_override,
+        free_cast=free_cast,
+        resolve_context=resolve_context,
+    )
 
     # Remove from hand and put on stack
     owner = game_state.get_player(obj.owner_id)
     if obj.id in owner.hand:
         owner.hand.remove(obj.id)
+    if obj.id in owner.graveyard:
+        owner.graveyard.remove(obj.id)
     obj.zone = "stack"
     game_state.clear_prepared_casts_for_object(obj.id)
     obj.was_cast = True
     obj.controller_id = player_id
 
     destination_zone = ZONE_GRAVEYARD if ("Instant" in obj.types or "Sorcery" in obj.types) else ZONE_BATTLEFIELD
+    if alt_tag and (alt_tag.startswith("flashback") or alt_tag.startswith("jump-start") or alt_tag.startswith("escape")):
+        destination_zone = ZONE_EXILE
     if ability_graph:
         game_state.stack.push(
             StackItem(
@@ -229,6 +323,7 @@ def cast_spell(
             )
         )
 
+    _publish_becomes_target(game_state, obj.id, resolve_context)
     game_state.event_bus.publish(Event(type="spell_cast", payload={"object_id": obj.id, "player_id": player_id}))
 
     # Reset priority pass state after casting
@@ -249,7 +344,12 @@ def prepare_cast(
     if not obj:
         raise ValueError("Card not found.")
     if obj.zone not in (ZONE_HAND, ZONE_COMMAND):
-        raise ValueError("Spell must be cast from hand or command zone.")
+        resolve_context = ResolveContext(**context) if context else None
+        _, _, alt_tag, _ = _resolve_alternative_cost(obj, resolve_context)
+        if obj.zone == ZONE_GRAVEYARD and alt_tag and alt_tag.startswith("flashback"):
+            pass
+        else:
+            raise ValueError("Spell must be cast from hand or command zone.")
     if obj.zone == ZONE_COMMAND:
         player = game_state.get_player(player_id)
         if obj.id != player.commander_id:
@@ -263,15 +363,24 @@ def prepare_cast(
         resolve_context = ResolveContext(**context)
         validate_targets(game_state, resolve_context)
 
-    cost = parse_mana_cost(obj.mana_cost, x_value=x_value)
+    cost_override, free_cast, alt_tag, alt_extra_costs = _resolve_alternative_cost(
+        obj, resolve_context if context else None
+    )
+    cost_text = None if free_cast else (cost_override or obj.mana_cost)
+    cost = parse_mana_cost(cost_text, x_value=x_value)
     commander_tax = _commander_tax_preview(game_state, player_id, obj)
     if commander_tax:
         cost.generic += int(commander_tax)
+    cost = apply_cast_cost_modifiers(game_state, player_id, obj, cost, resolve_context)
     game_state.prepared_casts[player_id] = {
         "object_id": obj.id,
         "x_value": x_value,
         "context": context or {},
         "cost": mana_cost_snapshot(cost),
+        "alternative_cost": cost_override,
+        "alternative_cost_tag": alt_tag,
+        "free_cast": free_cast,
+        "alternative_extra_costs": alt_extra_costs,
     }
     return {
         "status": "prepared",
@@ -341,7 +450,17 @@ def declare_attackers(
 
     game_state.turn.combat_state = combat_state
     for attacker_id in attackers:
-        game_state.event_bus.publish(Event(type="attacks", payload={"object_id": attacker_id}))
+        attacker = game_state.objects.get(attacker_id)
+        if attacker:
+            game_state.event_bus.publish(Event(
+                type="attacks",
+                payload={
+                    "object_id": attacker_id,
+                    "controller_id": attacker.controller_id,
+                    "owner_id": attacker.owner_id,
+                    "cardTypes": list(attacker.types or []),
+                },
+            ))
     combat_state.attackers_declared = True
     turn_manager.after_player_action(player_id)
 
@@ -401,7 +520,24 @@ def declare_blockers(
             blocker.is_blocking = True
             used_blockers.add(blocker_id)
         combat_state.blockers[attacker_id] = list(blocker_ids)
-    game_state.event_bus.publish(Event(type="blocks", payload={"blockers": blockers}))
+    for attacker_id, blocker_ids in blockers.items():
+        for blocker_id in blocker_ids:
+            blocker = game_state.objects.get(blocker_id)
+            attacker = game_state.objects.get(attacker_id)
+            payload = {"object_id": blocker_id, "attacker_id": attacker_id}
+            if blocker:
+                payload.update({
+                    "controller_id": blocker.controller_id,
+                    "owner_id": blocker.owner_id,
+                    "cardTypes": list(blocker.types or []),
+                })
+            if attacker:
+                payload.update({
+                    "attacker_controller_id": attacker.controller_id,
+                    "attacker_owner_id": attacker.owner_id,
+                    "attacker_cardTypes": list(attacker.types or []),
+                })
+            game_state.event_bus.publish(Event(type="blocks", payload=payload))
     combat_state.blockers_declared = True
     turn_manager.after_player_action(player_id)
 
@@ -474,6 +610,7 @@ def activate_ability(
     runtime = adapter.build_runtime(graph)
     _validate_ability_timing(game_state, turn_manager, player_id, obj, runtime)
     _check_activation_limit(obj, ability_index, runtime)
+    resolve_context = None
     if context:
         resolve_context = ResolveContext(**context)
         if resolve_context.source_id is None:
@@ -482,17 +619,21 @@ def activate_ability(
             resolve_context.controller_id = player_id
         normalize_targets(game_state, resolve_context)
         validate_targets(game_state, resolve_context)
+        enforce_ward_payment(game_state, resolve_context)
     validate_enter_choices(graph, context)
     if runtime.cost:
-        if "{T}" in runtime.cost or "Tap" in runtime.cost:
+        costs = parse_cost_string(runtime.cost)
+        if any(cost.get("type") == "tap_self" for cost in costs):
             _require_tap_summoning_sickness_ok(game_state, obj)
             if obj.tapped:
                 raise ValueError("Permanent is already tapped.")
-            obj.tapped = True
-        cost = parse_mana_cost(runtime.cost, x_value=0)
-        if not can_pay_cost(game_state.get_player(player_id).mana_pool, cost):
-            raise ValueError("Not enough mana to activate ability.")
-        pay_cost(game_state, player_id, cost)
+        pay_activation_costs(
+            game_state,
+            player_id,
+            obj,
+            costs,
+            resolve_context.choices if resolve_context else {},
+        )
     _record_activation_use(obj, ability_index, runtime)
 
     stacked_context = context or {}
@@ -509,5 +650,6 @@ def activate_ability(
             controller_id=player_id,
         )
     )
+    _publish_becomes_target(game_state, obj.id, resolve_context)
     turn_manager.after_player_action(player_id)
 

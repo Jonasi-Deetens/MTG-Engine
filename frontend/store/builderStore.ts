@@ -39,6 +39,7 @@ import type { StructuredCondition } from '@/lib/conditionTypes';
 export interface TriggeredAbility {
   id: string;
   event: string; // e.g., "enters_battlefield", "dies", "becomes_target", "card_enters"
+  scope?: string; // "self", "any", "you_control", "opponent_control", "you", "opponent"
   condition?: StructuredCondition | string; // Structured condition or legacy string
   effects: Effect[];
   // For card_enters event
@@ -351,9 +352,12 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
         type: 'TRIGGER',
         data: { 
           event: ability.event,
+          scope: ability.scope || 'self',
           ...(ability.event === 'card_enters' && {
             entersWhere: ability.entersWhere,
             entersFrom: ability.entersFrom,
+          }),
+          ...(ability.cardType && ability.cardType !== '' && {
             cardType: ability.cardType,
           }),
         },
@@ -560,13 +564,14 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
         const triggeredAbility: TriggeredAbility = {
           id: abilityId,
           event,
+          scope: triggerNode.data.scope || 'self',
           condition,
           effects,
           ...(event === 'card_enters' && {
             entersWhere: triggerNode.data.entersWhere,
             entersFrom: triggerNode.data.entersFrom,
-            cardType: triggerNode.data.cardType,
           }),
+          ...(triggerNode.data.cardType && { cardType: triggerNode.data.cardType }),
         };
         
         triggeredAbilities.push(triggeredAbility);

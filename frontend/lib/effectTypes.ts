@@ -74,6 +74,7 @@ export const EFFECT_TYPE_OPTIONS: EffectTypeOption[] = [
   { value: 'transform', label: 'Transform', requiresTarget: true },
   { value: 'flicker', label: 'Flicker (Exile & Return)', requiresTarget: true },
   { value: 'change_control', label: 'Change Control', requiresTarget: true, requiresDuration: true },
+  { value: 'modify_cast_cost', label: 'Modify Casting Cost', requiresAmount: true, requiresTypeList: true },
   { value: 'prevent_damage', label: 'Prevent Damage', requiresTarget: true, requiresAmount: true },
   { value: 'redirect_damage', label: 'Redirect Damage', requiresTwoTargets: true, requiresAmount: true },
   { value: 'replace_draw', label: 'Replace Draw', requiresTarget: true, requiresReplacementZone: true, requiresUses: true },

@@ -98,3 +98,4 @@ def test_protection_prevents_damage_and_targeting():
         validate_targets(game_state, context)
 
 
+

@@ -20,6 +20,9 @@ import { useTurnReset } from '@/hooks/useTurnReset';
 import { useReplacementConflicts } from '@/hooks/useReplacementConflicts';
 import { useCastContext } from '@/hooks/useCastContext';
 import { useTurnState } from '@/hooks/useTurnState';
+import { useWardPayments } from '@/hooks/useWardPayments';
+import { useActivationCosts } from '@/hooks/useActivationCosts';
+import { extractAdditionalCastCostText, parseAlternativeCastCosts, parseAlternativeExtraCosts } from '@/lib/activationCosts';
 import {
   buildDefaultCombatAssignments,
   hasFirstStrikeCombat as computeHasFirstStrikeCombat,
@@ -44,6 +47,8 @@ export default function PlayPage() {
   const [enterChoices, setEnterChoices] = useState<Record<string, string>>({});
   const [highlightedReplacementKey, setHighlightedReplacementKey] = useState<string | null>(null);
   const [combatDamageAssignments, setCombatDamageAssignments] = useState<Record<string, Record<string, number>>>({});
+  const [autoPayWard, setAutoPayWard] = useState(true);
+  const [selectedAlternativeCostTag, setSelectedAlternativeCostTag] = useState<string | null>(null);
   const { abilityGraphs, loadAbilityGraphForObject } = useAbilityGraphs({
     gameState,
     cardMap,
@@ -328,6 +333,23 @@ export default function PlayPage() {
 
   const priorityPlayerState = gameState?.players.find((player) => player.id === currentPriority);
   const manaPool = priorityPlayerState?.mana_pool ?? {};
+  const {
+    wardTargets,
+    wardPayments,
+    setWardPayments,
+    wardPaymentDetails,
+    setWardPaymentDetails,
+    wardPaymentErrors,
+    wardPaymentsPayload,
+  } = useWardPayments({
+    objects: gameState?.objects ?? [],
+    players: gameState?.players ?? [],
+    cardMap,
+    currentPlayerId: currentPriority,
+    selectedTargetObjectIds,
+    manaPool,
+    autoPayWard,
+  });
   const enterChoiceConfig = useMemo(() => buildEnterChoiceConfig(selectedGraph), [selectedGraph]);
   const enterChoiceTargetOptions = useMemo(
     () => buildEnterChoiceTargetOptions(gameState, cardMap),
@@ -337,9 +359,84 @@ export default function PlayPage() {
     () => buildEnterChoiceErrors(enterChoiceConfig, enterChoices),
     [enterChoiceConfig, enterChoices]
   );
+  const hasWardPaymentErrors = useMemo(
+    () => Object.values(wardPaymentErrors).some((entries) => entries.length > 0),
+    [wardPaymentErrors]
+  );
   const selectedBattlefieldObject = gameState?.objects.find((obj) => obj.id === selectedBattlefieldId);
   const hasActivatedAbility =
     selectedBattlefieldObject?.ability_graphs && selectedBattlefieldObject.ability_graphs.length > 0;
+  const selectedHandObject = gameState?.objects.find((obj) => obj.id === selectedHandId);
+  const activatedCostText = useMemo(() => {
+    if (!selectedBattlefieldObject?.ability_graphs?.length) return '';
+    const graph = selectedBattlefieldObject.ability_graphs[0];
+    const nodes = graph?.nodes ?? [];
+    const activatedNode = nodes.find((node: any) => node?.type === 'ACTIVATED');
+    return activatedNode?.data?.cost ?? '';
+  }, [selectedBattlefieldObject]);
+  const {
+    costEntries: activationCosts,
+    payments: activationPayments,
+    setPayments: setActivationPayments,
+    paymentDetails: activationPaymentDetails,
+    setPaymentDetails: setActivationPaymentDetails,
+    paymentErrors: activationCostErrors,
+    paymentsPayload: activationCostPaymentsPayload,
+  } = useActivationCosts({
+    costText: activatedCostText,
+    objects: gameState?.objects ?? [],
+    players: gameState?.players ?? [],
+    cardMap,
+    currentPlayerId: currentPriority,
+    manaPool,
+  });
+  const hasActivationCostErrors = activationCostErrors.length > 0;
+  const additionalCostText = useMemo(
+    () => extractAdditionalCastCostText(selectedHandObject?.oracle_text),
+    [selectedHandObject?.oracle_text]
+  );
+  const {
+    costEntries: additionalCastCosts,
+    payments: additionalCastPayments,
+    setPayments: setAdditionalCastPayments,
+    paymentDetails: additionalCastPaymentDetails,
+    setPaymentDetails: setAdditionalCastPaymentDetails,
+    paymentErrors: additionalCastCostErrors,
+    paymentsPayload: additionalCastPaymentsPayload,
+  } = useActivationCosts({
+    costText: additionalCostText,
+    objects: gameState?.objects ?? [],
+    players: gameState?.players ?? [],
+    cardMap,
+    currentPlayerId: currentPriority,
+    manaPool,
+  });
+  const hasAdditionalCastCostErrors = additionalCastCostErrors.length > 0;
+  const alternativeCostOptions = useMemo(
+    () => parseAlternativeCastCosts(selectedHandObject?.oracle_text),
+    [selectedHandObject?.oracle_text]
+  );
+  const alternativeExtraCostText = useMemo(
+    () => parseAlternativeExtraCosts(selectedHandObject?.oracle_text, selectedAlternativeCostTag),
+    [selectedHandObject?.oracle_text, selectedAlternativeCostTag]
+  );
+  const {
+    costEntries: alternativeExtraCosts,
+    payments: alternativeExtraPayments,
+    setPayments: setAlternativeExtraPayments,
+    paymentDetails: alternativeExtraPaymentDetails,
+    setPaymentDetails: setAlternativeExtraPaymentDetails,
+    paymentErrors: alternativeExtraCostErrors,
+    paymentsPayload: alternativeExtraPaymentsPayload,
+  } = useActivationCosts({
+    costText: alternativeExtraCostText,
+    objects: gameState?.objects ?? [],
+    players: gameState?.players ?? [],
+    cardMap,
+    currentPlayerId: currentPriority,
+    manaPool,
+  });
+  const hasAlternativeExtraCostErrors = alternativeExtraCostErrors.length > 0;
 
   useEffect(() => {
     if (enterChoiceConfig.length === 0) {
@@ -348,6 +445,10 @@ export default function PlayPage() {
     }
     setEnterChoices((prev) => buildEnterChoiceDefaults(enterChoiceConfig, prev));
   }, [selectedHandId, enterChoiceConfig]);
+
+  useEffect(() => {
+    setSelectedAlternativeCostTag(null);
+  }, [selectedHandId]);
 
   useEffect(() => {
     if (!gameState) return;
@@ -389,6 +490,11 @@ export default function PlayPage() {
     cardMap,
     manaPool,
     buildCastContext,
+    wardPayments: wardPaymentsPayload,
+    autoPayWard,
+    additionalCostPayments: additionalCastPaymentsPayload,
+    alternativeCostTag: selectedAlternativeCostTag,
+    alternativeCostPayments: alternativeExtraPaymentsPayload,
     runEngineAction,
   });
 
@@ -440,6 +546,11 @@ export default function PlayPage() {
             preparedCast={preparedCast}
             enterChoiceErrors={enterChoiceErrors}
             manaPaymentErrors={manaPaymentStatus.errors}
+            hasWardPaymentErrors={hasWardPaymentErrors}
+            hasActivationCostErrors={hasActivationCostErrors}
+            hasAdditionalCastCostErrors={hasAdditionalCastCostErrors}
+            hasAlternativeExtraCostErrors={hasAlternativeExtraCostErrors}
+            hasAlternativeExtraCostErrors={hasAlternativeExtraCostErrors}
             isMainPhase={isMainPhase}
             isPriorityActivePlayer={isPriorityActivePlayer}
             isDeclareAttackers={isDeclareAttackers}
@@ -470,7 +581,11 @@ export default function PlayPage() {
                 player_id: currentPriority,
                 object_id: selectedBattlefieldId ?? undefined,
                 ability_index: 0,
-                context: buildCastContext(selectedBattlefieldId ?? undefined),
+                context: buildCastContext(selectedBattlefieldId ?? undefined, {
+                  wardAutoPay: autoPayWard,
+                  wardPayments: wardPaymentsPayload,
+                  costPayments: activationCostPaymentsPayload,
+                }),
               })
             }
             onDeclareAttackers={() => {
@@ -545,6 +660,84 @@ export default function PlayPage() {
             onToggleAutoPay={setAutoPayMana}
             onUpdatePaymentDetail={setManaPaymentDetail}
             onUpdateManaPayment={setManaPayment}
+            activationCosts={activationCosts}
+            activationPayments={activationPayments}
+            activationPaymentDetails={activationPaymentDetails}
+            activationCostErrors={activationCostErrors}
+            onUpdateActivationPayment={(index, updater) =>
+              setActivationPayments((prev) => {
+                const next = [...prev];
+                next[index] = updater(next[index] ?? {});
+                return next;
+              })
+            }
+            onUpdateActivationPaymentDetail={(index, updater) =>
+              setActivationPaymentDetails((prev) => ({
+                ...prev,
+                [index]: updater(prev[index] ?? { hybrid_choices: [], two_brid_choices: [], phyrexian_choices: [] }),
+              }))
+            }
+            additionalCastCosts={additionalCastCosts}
+            additionalCastPayments={additionalCastPayments}
+            additionalCastPaymentDetails={additionalCastPaymentDetails}
+            additionalCastCostErrors={additionalCastCostErrors}
+            onUpdateAdditionalCastPayment={(index, updater) =>
+              setAdditionalCastPayments((prev) => {
+                const next = [...prev];
+                next[index] = updater(next[index] ?? {});
+                return next;
+              })
+            }
+            onUpdateAdditionalCastPaymentDetail={(index, updater) =>
+              setAdditionalCastPaymentDetails((prev) => ({
+                ...prev,
+                [index]: updater(prev[index] ?? { hybrid_choices: [], two_brid_choices: [], phyrexian_choices: [] }),
+              }))
+            }
+            alternativeExtraCosts={alternativeExtraCosts}
+            alternativeExtraPayments={alternativeExtraPayments}
+            alternativeExtraPaymentDetails={alternativeExtraPaymentDetails}
+            alternativeExtraCostErrors={alternativeExtraCostErrors}
+            onUpdateAlternativeExtraPayment={(index, updater) =>
+              setAlternativeExtraPayments((prev) => {
+                const next = [...prev];
+                next[index] = updater(next[index] ?? {});
+                return next;
+              })
+            }
+            onUpdateAlternativeExtraPaymentDetail={(index, updater) =>
+              setAlternativeExtraPaymentDetails((prev) => ({
+                ...prev,
+                [index]: updater(prev[index] ?? { hybrid_choices: [], two_brid_choices: [], phyrexian_choices: [] }),
+              }))
+            }
+            alternativeCostOptions={alternativeCostOptions}
+            selectedAlternativeCostTag={selectedAlternativeCostTag}
+            onSelectAlternativeCost={setSelectedAlternativeCostTag}
+            autoPayWard={autoPayWard}
+            onToggleAutoPayWard={setAutoPayWard}
+            wardTargets={wardTargets}
+            wardPayments={wardPayments}
+            wardPaymentDetails={wardPaymentDetails}
+            wardPaymentErrors={wardPaymentErrors}
+            onUpdateWardPayment={(objectId, index, updater) =>
+              setWardPayments((prev) => ({
+                ...prev,
+                [objectId]: (() => {
+                  const next = [...(prev[objectId] ?? [])];
+                  next[index] = updater(next[index] ?? {});
+                  return next;
+                })(),
+              }))
+            }
+            onUpdateWardPaymentDetail={(objectId, updater) =>
+              setWardPaymentDetails((prev) => ({
+                ...prev,
+                [objectId]: updater(
+                  prev[objectId] ?? { hybrid_choices: [], two_brid_choices: [], phyrexian_choices: [] }
+                ),
+              }))
+            }
             targetObjects={shouldUseStackTargets ? stackSpellObjects : filteredTargetableObjects}
             targetPlayers={shouldUseStackTargets ? [] : filteredTargetPlayers}
             selectedTargetObjectIds={selectedTargetObjectIds}

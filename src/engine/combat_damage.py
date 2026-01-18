@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
+from .choices_runtime import queue_choice
 from .damage import apply_damage_to_object, apply_damage_to_player
 from .sba import apply_state_based_actions
 from .state import GameObject, GameState
@@ -50,6 +51,15 @@ def resolve_combat_damage(
         else:
             prevent_effects = _prevent_effects_for_player(player_target_id) if player_target_id is not None else []
         if len(redirect_effects) + len(prevent_effects) > 1:
+            queue_choice(game_state, {
+                "type": "damage_replacement",
+                "key": target_key,
+                "player_id": target_obj.controller_id if target_obj else player_target_id,
+                "options": (
+                    [{"id": effect.get("effect_id"), "kind": "redirect"} for effect in redirect_effects]
+                    + [{"id": effect.get("effect_id"), "kind": "prevent"} for effect in prevent_effects]
+                ),
+            })
             return _requires_choice(source_id, target_key)
         return False
 
@@ -132,7 +142,13 @@ def resolve_combat_damage(
             if not targets:
                 raise ValueError("Damage assignments missing targets.")
             blocker_ids = combat_state.blockers.get(source_id, [])
+            current_blockers = []
+            for blocker_id in blocker_ids:
+                blocker = game_state.objects.get(blocker_id)
+                if blocker and is_alive(blocker) and blocker.is_blocking:
+                    current_blockers.append(blocker_id)
             has_player_assignment = False
+            total_to_blockers = 0
             total = 0
             for target_id, amount in targets.items():
                 try:
@@ -164,20 +180,23 @@ def resolve_combat_damage(
                         raise ValueError("Combat damage can only be assigned to the defending planeswalker.")
                     has_player_assignment = True
                 else:
-                    if target_id not in combat_state.blockers.get(source_id, []):
+                    if target_id not in current_blockers:
                         raise ValueError("Combat damage assigned to an invalid blocker.")
+                    total_to_blockers += amt
                 total += amt
             source_power = int(source.power or 0)
             if total > source_power:
                 raise ValueError("Assigned damage exceeds power.")
-            if total < source_power and "Trample" not in source.keywords:
-                raise ValueError("Assigned damage must equal power without trample.")
-            if blocker_ids and has_player_assignment and "Trample" not in source.keywords:
+            if total != source_power:
+                raise ValueError("Assigned damage must equal power.")
+            if current_blockers and has_player_assignment and "Trample" not in source.keywords:
                 raise ValueError("Combat damage to player requires trample.")
-            if combat_state.blockers.get(source_id):
-                order = combat_state.blockers.get(source_id, [])
+            if current_blockers:
+                order = _resolve_blocker_order(game_state, combat_state, source_id)
+                order = [blocker_id for blocker_id in order if blocker_id in current_blockers]
                 deathtouch = "Deathtouch" in source.keywords
                 remaining = source_power
+                required_lethal = 0
                 for blocker_id in order:
                     if remaining <= 0:
                         break
@@ -186,9 +205,14 @@ def resolve_combat_damage(
                         continue
                     assign = int(targets.get(blocker_id, 0))
                     lethal = lethal_damage_required(blocker, deathtouch)
+                    before_remaining = remaining
                     if assign < min(remaining, lethal):
                         raise ValueError("Damage must be assigned to blockers in lethal order.")
                     remaining -= assign
+                    required_lethal += min(before_remaining, lethal)
+                if has_player_assignment and "Trample" in source.keywords:
+                    if total_to_blockers < required_lethal:
+                        raise ValueError("Trample damage must assign lethal to each blocker before player.")
                 if remaining > 0 and "Trample" not in source.keywords:
                     raise ValueError("Unassigned combat damage without trample.")
 
@@ -247,23 +271,23 @@ def resolve_combat_damage(
                     continue
                 if target_id.startswith("player:"):
                     player_target_id = int(target_id.split(":", 1)[1])
-                    apply_damage_to_player(game_state, source, player_target_id, int(amount))
+                    apply_damage_to_player(game_state, source, player_target_id, int(amount), is_combat=True)
                 elif target_id == "player":
-                    apply_damage_to_player(game_state, source, combat_state.defending_player_id, int(amount))
+                    apply_damage_to_player(game_state, source, combat_state.defending_player_id, int(amount), is_combat=True)
                 elif target_id == "defender":
                     planeswalker_id = combat_state.defending_object_id
                     target = game_state.objects.get(planeswalker_id) if planeswalker_id else None
                     if target:
-                        apply_damage_to_object(game_state, source, target, int(amount))
+                        apply_damage_to_object(game_state, source, target, int(amount), is_combat=True)
                 elif target_id.startswith("planeswalker:"):
                     planeswalker_id = target_id.split(":", 1)[1]
                     target = game_state.objects.get(planeswalker_id)
                     if target:
-                        apply_damage_to_object(game_state, source, target, int(amount))
+                        apply_damage_to_object(game_state, source, target, int(amount), is_combat=True)
                 else:
                     target = game_state.objects.get(target_id)
                     if target:
-                        apply_damage_to_object(game_state, source, target, int(amount))
+                        apply_damage_to_object(game_state, source, target, int(amount), is_combat=True)
         for attacker_id in combat_state.attackers:
             attacker = game_state.objects.get(attacker_id)
             if not attacker or not is_alive(attacker) or not attacker.is_attacking:
@@ -277,7 +301,7 @@ def resolve_combat_damage(
                 if get_power(blocker) <= 0:
                     continue
                 used_event_keys.add(f"damage:event:{blocker.id}:object:{attacker_id}")
-                apply_damage_to_object(game_state, blocker, attacker, get_power(blocker))
+                apply_damage_to_object(game_state, blocker, attacker, get_power(blocker), is_combat=True)
         apply_state_based_actions(game_state)
         for key in used_event_keys:
             game_state.replacement_choices.pop(key, None)
@@ -310,18 +334,21 @@ def resolve_combat_damage(
             if defender:
                 if used_event_keys is not None:
                     used_event_keys.add(f"damage:event:{attacker.id}:object:{defender.id}")
-                apply_damage_to_object(game_state, attacker, defender, amount)
+                apply_damage_to_object(game_state, attacker, defender, amount, is_combat=True)
             return
         if used_event_keys is not None:
             used_event_keys.add(f"damage:event:{attacker.id}:player:{combat_state.defending_player_id}")
-        apply_damage_to_player(game_state, attacker, combat_state.defending_player_id, amount)
+        apply_damage_to_player(game_state, attacker, combat_state.defending_player_id, amount, is_combat=True)
 
     def deal_to_blockers(attacker, blockers, used_event_keys: Optional[set[str]] = None):
         remaining = get_power(attacker)
         if remaining <= 0:
             return
         deathtouch = has_keyword(attacker, "Deathtouch")
-        for blocker in blockers:
+        blocker_order = _resolve_blocker_order(game_state, combat_state, attacker.id)
+        blockers_by_id = {blocker.id: blocker for blocker in blockers}
+        ordered_blockers = [blockers_by_id[b_id] for b_id in blocker_order if b_id in blockers_by_id]
+        for blocker in ordered_blockers:
             if remaining <= 0:
                 break
             lethal = lethal_damage_required(blocker, deathtouch)
@@ -329,18 +356,21 @@ def resolve_combat_damage(
             if assign > 0:
                 if used_event_keys is not None:
                     used_event_keys.add(f"damage:event:{attacker.id}:object:{blocker.id}")
-                apply_damage_to_object(game_state, attacker, blocker, assign)
+                apply_damage_to_object(game_state, attacker, blocker, assign, is_combat=True)
             remaining -= assign
         if remaining > 0 and has_keyword(attacker, "Trample"):
             apply_damage_to_defender(attacker, remaining, used_event_keys)
 
     def deal_blocker_damage(attacker, blockers, used_event_keys: Optional[set[str]] = None):
-        for blocker in blockers:
+        blocker_order = _resolve_blocker_order(game_state, combat_state, attacker.id)
+        blockers_by_id = {blocker.id: blocker for blocker in blockers}
+        ordered_blockers = [blockers_by_id[b_id] for b_id in blocker_order if b_id in blockers_by_id]
+        for blocker in ordered_blockers:
             if get_power(blocker) <= 0:
                 continue
             if used_event_keys is not None:
                 used_event_keys.add(f"damage:event:{blocker.id}:object:{attacker.id}")
-            apply_damage_to_object(game_state, blocker, attacker, get_power(blocker))
+            apply_damage_to_object(game_state, blocker, attacker, get_power(blocker), is_combat=True)
 
     def resolve_combat_pass(first_strike_pass: bool, used_event_keys: Optional[set[str]] = None):
         for attacker_id in combat_state.attackers:
@@ -449,4 +479,23 @@ def resolve_combat_damage(
     for key in used_event_keys:
         game_state.replacement_choices.pop(key, None)
     turn_manager.after_player_action(player_id)
+
+
+def _resolve_blocker_order(game_state: GameState, combat_state, attacker_id: str) -> List[str]:
+    blockers = combat_state.blockers.get(attacker_id, [])
+    if not blockers or len(blockers) <= 1:
+        return list(blockers)
+    choice_key = f"blocker_order:{attacker_id}"
+    chosen = game_state.choices.get(choice_key) if isinstance(game_state.choices, dict) else None
+    if isinstance(chosen, list) and set(chosen) == set(blockers):
+        return chosen
+    from .choices_runtime import queue_choice
+    queue_choice(game_state, {
+        "type": "blocker_order",
+        "key": choice_key,
+        "player_id": combat_state.attacking_player_id,
+        "options": list(blockers),
+    })
+    game_state.log(f"Blocker order choice missing for {attacker_id}; default order applied.")
+    return list(blockers)
 
