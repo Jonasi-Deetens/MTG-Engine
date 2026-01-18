@@ -3,16 +3,85 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 from .state import GameState, ResolveContext, GameObject
-from .targets import resolve_object, resolve_object_id, resolve_player_id, is_overloaded
+from .targets import resolve_object, resolve_object_id, resolve_player_id, is_overloaded, is_legal_object_target
 
 
 def resolve_target_object(game_state: GameState, context: ResolveContext, target_key: str) -> Optional[GameObject]:
     fallback = context.source_id if target_key in ("self", "source") else None
-    return resolve_object(game_state, context, target_key, fallback)
+    obj = resolve_object(game_state, context, target_key, fallback)
+    if obj and not is_overloaded(context):
+        if not is_legal_object_target(game_state, context, obj.id):
+            return None
+    return obj
 
 
 def resolve_target_objects(game_state: GameState, context: ResolveContext, target_key: str) -> List[GameObject]:
     targets: List[GameObject] = []
+    if target_key.startswith("target_") and (target_key.endswith("_you_control") or target_key.endswith("_opponents_control")):
+        controller_id = context.controller_id
+        if controller_id is None:
+            return []
+        scope = "you_control" if target_key.endswith("_you_control") else "opponent_control"
+        base_key = target_key.replace("_you_control", "").replace("_opponents_control", "")
+        primary = resolve_target_object(game_state, context, base_key)
+        if primary:
+            if scope == "you_control" and primary.controller_id != controller_id:
+                return []
+            if scope == "opponent_control" and primary.controller_id == controller_id:
+                return []
+            targets.append(primary)
+        for obj_id in context.targets.get("targets", []) if isinstance(context.targets.get("targets"), list) else []:
+            obj = game_state.objects.get(obj_id)
+            if not obj:
+                continue
+            if scope == "you_control" and obj.controller_id != controller_id:
+                continue
+            if scope == "opponent_control" and obj.controller_id == controller_id:
+                continue
+            if obj not in targets:
+                targets.append(obj)
+        return targets
+    if target_key in (
+        "permanents_you_control",
+        "creatures_you_control",
+        "artifacts_you_control",
+        "enchantments_you_control",
+        "planeswalkers_you_control",
+        "lands_you_control",
+        "permanents_opponents_control",
+        "creatures_opponents_control",
+        "artifacts_opponents_control",
+        "enchantments_opponents_control",
+        "planeswalkers_opponents_control",
+        "lands_opponents_control",
+        "you_control",
+        "opponent_control",
+    ):
+        controller_id = context.controller_id
+        if controller_id is None:
+            return []
+        def matches(obj: GameObject) -> bool:
+            if obj.zone != "battlefield" or obj.phased_out:
+                return False
+            is_controller = obj.controller_id == controller_id
+            if target_key.endswith("_you_control") or target_key == "you_control":
+                if not is_controller:
+                    return False
+            if target_key.endswith("_opponents_control") or target_key == "opponent_control":
+                if is_controller:
+                    return False
+            if target_key.startswith("creatures_") and "Creature" not in obj.types:
+                return False
+            if target_key.startswith("artifacts_") and "Artifact" not in obj.types:
+                return False
+            if target_key.startswith("enchantments_") and "Enchantment" not in obj.types:
+                return False
+            if target_key.startswith("planeswalkers_") and "Planeswalker" not in obj.types:
+                return False
+            if target_key.startswith("lands_") and "Land" not in obj.types:
+                return False
+            return True
+        return [obj for obj in game_state.objects.values() if matches(obj)]
     if is_overloaded(context):
         overload_key = target_key
         if overload_key in ("any", "target"):
@@ -48,6 +117,8 @@ def resolve_target_objects(game_state: GameState, context: ResolveContext, targe
     for obj_id in context.targets.get("targets", []) if isinstance(context.targets.get("targets"), list) else []:
         obj = game_state.objects.get(obj_id)
         if obj and obj not in targets:
+            if not is_overloaded(context) and not is_legal_object_target(game_state, context, obj_id):
+                continue
             targets.append(obj)
     return targets
 
@@ -76,6 +147,29 @@ def resolve_effect_players(
     fallback_controller_id: Optional[int],
 ) -> List[int]:
     target_key = effect.get("target", "player")
+    if target_key in ("each_player", "all_players"):
+        return [player.id for player in game_state.players if not getattr(player, "removed_from_game", False)]
+    if target_key in ("each_opponent", "opponents"):
+        controller_id = context.controller_id if context.controller_id is not None else fallback_controller_id
+        if controller_id is None:
+            return []
+        return [
+            player.id
+            for player in game_state.players
+            if player.id != controller_id and not getattr(player, "removed_from_game", False)
+        ]
+    if target_key == "opponent":
+        explicit = resolve_target_players(context, None, game_state)
+        if explicit:
+            return explicit
+        controller_id = context.controller_id if context.controller_id is not None else fallback_controller_id
+        if controller_id is None:
+            return []
+        return [
+            player.id
+            for player in game_state.players
+            if player.id != controller_id and not getattr(player, "removed_from_game", False)
+        ]
     if is_overloaded(context) and target_key in ("player", "any"):
         return [player.id for player in game_state.players if not getattr(player, "removed_from_game", False)]
     return resolve_target_players(context, fallback_controller_id, game_state)

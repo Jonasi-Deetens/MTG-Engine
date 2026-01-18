@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-from .effects_helpers import resolve_target_object
+from .effects_helpers import resolve_target_object, resolve_effect_players
+from .replacements import apnap_player_order
 from .targets import resolve_player_id
 
 
@@ -79,58 +80,70 @@ def handle_replace_sacrifice(resolver, effect: Dict[str, Any], context) -> Dict[
 
 
 def handle_replace_draw(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
-    player_id = resolve_player_id(context, context.controller_id)
-    if player_id is None:
+    player_ids = resolve_effect_players(resolver.game_state, context, effect, context.controller_id)
+    if not player_ids:
         return {"type": "replace_draw", "status": "no_player"}
-    entry = {
-        "type": "replace_draw",
-        "effect_id": resolver.game_state.next_replacement_effect_id(),
-        "timestamp_order": resolver.game_state.effect_timestamp_counter + 1,
-        "player_id": player_id,
-        "replacement_zone": effect.get("replacementZone"),
-    }
-    uses = effect.get("uses")
-    if uses is not None:
-        entry["uses"] = int(uses)
-    resolver.game_state.replacement_effects.append(entry)
-    resolver.game_state.effect_timestamp_counter += 1
-    return {"type": "replace_draw", "player_id": player_id, "replacement_zone": entry.get("replacement_zone")}
+    ordered = apnap_player_order(resolver.game_state, player_ids) if len(player_ids) > 1 else player_ids
+    results = []
+    for player_id in ordered:
+        entry = {
+            "type": "replace_draw",
+            "effect_id": resolver.game_state.next_replacement_effect_id(),
+            "timestamp_order": resolver.game_state.effect_timestamp_counter + 1,
+            "player_id": player_id,
+            "replacement_zone": effect.get("replacementZone"),
+        }
+        uses = effect.get("uses")
+        if uses is not None:
+            entry["uses"] = int(uses)
+        resolver.game_state.replacement_effects.append(entry)
+        resolver.game_state.effect_timestamp_counter += 1
+        results.append({"player_id": player_id, "replacement_zone": entry.get("replacement_zone")})
+    return {"type": "replace_draw", "results": results} if len(results) > 1 else {"type": "replace_draw", **results[0]}
 
 
 def handle_replace_discard(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
-    player_id = resolve_player_id(context, context.controller_id)
-    if player_id is None:
+    player_ids = resolve_effect_players(resolver.game_state, context, effect, context.controller_id)
+    if not player_ids:
         return {"type": "replace_discard", "status": "no_player"}
-    entry = {
-        "type": "replace_discard",
-        "effect_id": resolver.game_state.next_replacement_effect_id(),
-        "timestamp_order": resolver.game_state.effect_timestamp_counter + 1,
-        "player_id": player_id,
-        "replacement_zone": effect.get("replacementZone"),
-    }
-    uses = effect.get("uses")
-    if uses is not None:
-        entry["uses"] = int(uses)
-    resolver.game_state.replacement_effects.append(entry)
-    resolver.game_state.effect_timestamp_counter += 1
-    return {"type": "replace_discard", "player_id": player_id, "replacement_zone": entry.get("replacement_zone")}
+    ordered = apnap_player_order(resolver.game_state, player_ids) if len(player_ids) > 1 else player_ids
+    results = []
+    for player_id in ordered:
+        entry = {
+            "type": "replace_discard",
+            "effect_id": resolver.game_state.next_replacement_effect_id(),
+            "timestamp_order": resolver.game_state.effect_timestamp_counter + 1,
+            "player_id": player_id,
+            "replacement_zone": effect.get("replacementZone"),
+        }
+        uses = effect.get("uses")
+        if uses is not None:
+            entry["uses"] = int(uses)
+        resolver.game_state.replacement_effects.append(entry)
+        resolver.game_state.effect_timestamp_counter += 1
+        results.append({"player_id": player_id, "replacement_zone": entry.get("replacement_zone")})
+    return {"type": "replace_discard", "results": results} if len(results) > 1 else {"type": "replace_discard", **results[0]}
 
 
 def handle_replace_life_loss(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
-    player_id = resolve_player_id(context, context.controller_id)
-    if player_id is None:
+    player_ids = resolve_effect_players(resolver.game_state, context, effect, context.controller_id)
+    if not player_ids:
         return {"type": "replace_life_loss", "status": "no_player"}
-    entry = {
-        "type": "replace_life_loss",
-        "effect_id": resolver.game_state.next_replacement_effect_id(),
-        "timestamp_order": resolver.game_state.effect_timestamp_counter + 1,
-        "player_id": player_id,
-        "replacement_amount": effect.get("replacementAmount"),
-    }
-    uses = effect.get("uses")
-    if uses is not None:
-        entry["uses"] = int(uses)
-    resolver.game_state.replacement_effects.append(entry)
-    resolver.game_state.effect_timestamp_counter += 1
-    return {"type": "replace_life_loss", "player_id": player_id, "replacement_amount": entry.get("replacement_amount")}
+    ordered = apnap_player_order(resolver.game_state, player_ids) if len(player_ids) > 1 else player_ids
+    results = []
+    for player_id in ordered:
+        entry = {
+            "type": "replace_life_loss",
+            "effect_id": resolver.game_state.next_replacement_effect_id(),
+            "timestamp_order": resolver.game_state.effect_timestamp_counter + 1,
+            "player_id": player_id,
+            "replacement_amount": effect.get("replacementAmount"),
+        }
+        uses = effect.get("uses")
+        if uses is not None:
+            entry["uses"] = int(uses)
+        resolver.game_state.replacement_effects.append(entry)
+        resolver.game_state.effect_timestamp_counter += 1
+        results.append({"player_id": player_id, "replacement_amount": entry.get("replacement_amount")})
+    return {"type": "replace_life_loss", "results": results} if len(results) > 1 else {"type": "replace_life_loss", **results[0]}
 

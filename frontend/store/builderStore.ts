@@ -127,6 +127,9 @@ export interface Effect {
   toZone?: string;
   replacementZone?: string;
   uses?: number;
+  distinctTargets?: boolean;
+  minTargets?: number;
+  chooseNewTargets?: boolean;
   [key: string]: any; // Additional effect-specific data
 }
 

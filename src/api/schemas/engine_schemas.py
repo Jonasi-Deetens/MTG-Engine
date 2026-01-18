@@ -122,6 +122,10 @@ class ResolveContextSnapshot(BaseModel):
     triggering_aura_id: Optional[str] = None
     triggering_spell_id: Optional[str] = None
     targets: Dict[str, Any] = Field(default_factory=dict)
+    targets_by_effect: Dict[str, Dict[str, Any]] = Field(default_factory=dict)
+    required_targets_by_effect: Dict[str, List[str]] = Field(default_factory=dict)
+    distinct_targets_by_effect: Dict[str, List[str]] = Field(default_factory=dict)
+    min_targets_by_effect: Dict[str, Dict[str, int]] = Field(default_factory=dict)
     choices: Dict[str, Any] = Field(default_factory=dict)
     previous_results: List[Dict[str, Any]] = Field(default_factory=list)
 

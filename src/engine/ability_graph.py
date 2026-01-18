@@ -73,13 +73,17 @@ class AbilityGraphRuntimeAdapter:
             if node["type"] == "CONDITION":
                 conditions.append(node["data"])
             if node["type"] == "EFFECT":
-                effects.append(node["data"])
+                effect_data = dict(node["data"])
+                effect_data["_node_id"] = node_id
+                effects.append(effect_data)
             for next_id in adjacency.get(node_id, []):
                 traverse(next_id)
 
         if root_node:
             if root_node["type"] == "EFFECT" and graph.get("abilityType") == "static":
-                effects.append(root_node.get("data", {}))
+                effect_data = dict(root_node.get("data", {}))
+                effect_data["_node_id"] = root_node["id"]
+                effects.append(effect_data)
             for next_id in adjacency.get(root_node["id"], []):
                 traverse(next_id)
 

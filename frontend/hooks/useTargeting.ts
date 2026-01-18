@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { engineApi, EngineActionRequest, EngineGameStateSnapshot } from '@/lib/engine';
-import { deriveTargetHints } from '@/lib/targeting';
+import { deriveGlobalDistinctTargets, deriveGlobalMinTargets, deriveGlobalRequiredTargets, deriveTargetHints } from '@/lib/targeting';
 import { buildStackTargetHash } from '@/lib/stackTargets';
 
 interface UseTargetingArgs {
@@ -25,6 +25,9 @@ export const useTargeting = ({
   const selectionTargetHashRef = useRef<string>('');
 
   const targetHints = useMemo(() => deriveTargetHints(selectedGraph), [selectedGraph]);
+  const requiredTargets = useMemo(() => deriveGlobalRequiredTargets(selectedGraph), [selectedGraph]);
+  const distinctTargets = useMemo(() => deriveGlobalDistinctTargets(selectedGraph), [selectedGraph]);
+  const minTargets = useMemo(() => deriveGlobalMinTargets(selectedGraph), [selectedGraph]);
   const targetableObjects = gameState
     ? gameState.objects.filter((obj) => obj.zone === 'battlefield')
     : [];
@@ -39,11 +42,27 @@ export const useTargeting = ({
     : [];
   const filteredTargetableObjects = targetHints.allowObjects
     ? targetableObjects.filter((obj) => {
+        if (targetHints.objectFilter === 'opponent') {
+          if (currentPriority !== null && obj.controller_id === currentPriority) return false;
+        }
+        if (targetHints.objectFilter === 'controller') {
+          if (currentPriority !== null && obj.controller_id !== currentPriority) return false;
+        }
         if (targetHints.objectTypes.size === 0) return true;
         return obj.types.some((type) => targetHints.objectTypes.has(type));
       })
     : [];
-  const filteredTargetPlayers = targetHints.allowPlayers ? gameState?.players ?? [] : [];
+  const filteredTargetPlayers = targetHints.allowPlayers
+    ? (gameState?.players ?? []).filter((player) => {
+        if (targetHints.playerFilter === 'opponent') {
+          return currentPriority === null ? true : player.id !== currentPriority;
+        }
+        if (targetHints.playerFilter === 'controller') {
+          return currentPriority === null ? true : player.id === currentPriority;
+        }
+        return true;
+      })
+    : [];
   const shouldUseStackTargets = selectedGraph?.nodes?.some(
     (node: any) => node?.type === 'EFFECT' && node?.data?.target === 'spell'
   );
@@ -52,9 +71,19 @@ export const useTargeting = ({
     (targets: Record<string, any>) => ({
       controller_id: currentPriority,
       source_id: selectedHandId ?? undefined,
-      targets,
+      targets: {
+        ...targets,
+        ...(targetHints.playerFilter !== 'any' ? { target_scope: targetHints.playerFilter } : {}),
+        ...(targetHints.objectFilter !== 'any'
+          ? { target_object_scope: targetHints.objectFilter === 'controller' ? 'you_control' : 'opponent_control' }
+          : {}),
+        ...(targetHints.objectTypes.size > 0 ? { target_object_types: Array.from(targetHints.objectTypes) } : {}),
+      },
+      ...(requiredTargets.length > 0 ? { required_targets_by_effect: { _global: requiredTargets } } : {}),
+      ...(distinctTargets.length > 0 ? { distinct_targets_by_effect: { _global: distinctTargets } } : {}),
+      ...(Object.keys(minTargets).length > 0 ? { min_targets_by_effect: { _global: minTargets } } : {}),
     }),
-    [currentPriority, selectedHandId]
+    [currentPriority, distinctTargets, minTargets, requiredTargets, selectedHandId, targetHints]
   );
 
   const checkStackTargets = useCallback(async () => {
@@ -208,14 +237,21 @@ export const useTargeting = ({
       setSelectedTargetObjectIds((prev) => prev.filter((id) => stackSpellTargets.includes(id)));
       return;
     }
-    if (targetHints.objectTypes.size === 0) return;
     setSelectedTargetObjectIds((prev) =>
       prev.filter((id) => {
         const obj = gameState?.objects.find((entry) => entry.id === id);
-        return obj ? obj.types.some((type) => targetHints.objectTypes.has(type)) : false;
+        if (!obj) return false;
+        if (targetHints.objectFilter === 'opponent') {
+          if (currentPriority !== null && obj.controller_id === currentPriority) return false;
+        }
+        if (targetHints.objectFilter === 'controller') {
+          if (currentPriority !== null && obj.controller_id !== currentPriority) return false;
+        }
+        if (targetHints.objectTypes.size === 0) return true;
+        return obj.types.some((type) => targetHints.objectTypes.has(type));
       })
     );
-  }, [gameState, targetHints, shouldUseStackTargets, stackSpellTargets]);
+  }, [currentPriority, gameState, targetHints, shouldUseStackTargets, stackSpellTargets]);
 
   useEffect(() => {
     if (targetHints.allowPlayers) return;
@@ -225,6 +261,16 @@ export const useTargeting = ({
     }
     setSelectedTargetPlayerIds([]);
   }, [targetHints, shouldUseStackTargets]);
+
+  useEffect(() => {
+    if (!targetHints.allowPlayers) return;
+    if (targetHints.playerFilter === 'any' || currentPriority === null) return;
+    setSelectedTargetPlayerIds((prev) =>
+      prev.filter((playerId) =>
+        targetHints.playerFilter === 'opponent' ? playerId !== currentPriority : playerId === currentPriority
+      )
+    );
+  }, [currentPriority, targetHints]);
 
   return {
     targetHints,
@@ -239,6 +285,9 @@ export const useTargeting = ({
     filteredTargetableObjects,
     filteredTargetPlayers,
     shouldUseStackTargets,
+    requiredTargets,
+    distinctTargets,
+    minTargets,
   };
 };
 

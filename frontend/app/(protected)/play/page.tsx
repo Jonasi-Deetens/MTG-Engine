@@ -12,6 +12,7 @@ import { CombatDamagePanel } from '@/components/engine/CombatDamagePanel';
 import { ReplacementChoicePanel } from '@/components/engine/ReplacementChoicePanel';
 import { useAbilityGraphs } from '@/hooks/useAbilityGraphs';
 import { useTargeting } from '@/hooks/useTargeting';
+import { useEffectTargeting } from '@/hooks/useEffectTargeting';
 import { useCasting } from '@/hooks/useCasting';
 import { useCombatSelection } from '@/hooks/useCombatSelection';
 import { useEngineActions } from '@/hooks/useEngineActions';
@@ -255,6 +256,30 @@ export default function PlayPage() {
     return map;
   }, [cardMap, combatState, gameState, isDeclareBlockers, selectedBlockers]);
   const selectedGraph = selectedHandId ? abilityGraphs[cardMap[selectedHandId]?.card_id ?? ''] : undefined;
+  const copySpellConfig = useMemo(() => {
+    const nodes = selectedGraph?.nodes ?? [];
+    const copyNode = nodes.find((node: any) => node?.type === 'EFFECT' && node?.data?.type === 'copy_spell');
+    if (!copyNode) {
+      return { enabled: false, amount: 0 };
+    }
+    const amount = Number(copyNode?.data?.amount ?? 1);
+    const chooseNewTargets = !!copyNode?.data?.chooseNewTargets;
+    return { enabled: chooseNewTargets && amount > 0, amount: Math.max(amount, 1) };
+  }, [selectedGraph]);
+  const [copyTargetSelections, setCopyTargetSelections] = useState<Array<{ objectIds: string[]; playerIds: number[] }>>([]);
+  useEffect(() => {
+    if (!copySpellConfig.enabled) {
+      setCopyTargetSelections([]);
+      return;
+    }
+    setCopyTargetSelections((prev) => {
+      const next = [...prev];
+      while (next.length < copySpellConfig.amount) {
+        next.push({ objectIds: [], playerIds: [] });
+      }
+      return next.slice(0, copySpellConfig.amount);
+    });
+  }, [copySpellConfig]);
   const {
     targetHints,
     selectedTargetObjectIds,
@@ -268,12 +293,65 @@ export default function PlayPage() {
     filteredTargetableObjects,
     filteredTargetPlayers,
     shouldUseStackTargets,
+    requiredTargets: requiredTargetsGlobal,
+    distinctTargets: distinctTargetsGlobal,
+    minTargets: minTargetsGlobal,
   } = useTargeting({
     gameState,
     selectedHandId,
     selectedGraph,
     currentPriority,
   });
+  const {
+    targetGroups: effectTargetGroups,
+    targetsByEffect,
+    requiredTargetsByEffect,
+    distinctTargetsByEffect,
+    minTargetsByEffect,
+    globalTargetErrors,
+    allSelectedObjectIds: effectTargetObjectIds,
+    allSelectedPlayerIds: effectTargetPlayerIds,
+    clearAllTargets: clearEffectTargets,
+  } = useEffectTargeting({
+    gameState,
+    selectedGraph,
+    currentPriority,
+    selectedHandId,
+  });
+  const hasEffectTargets = effectTargetGroups.length > 0;
+  const resolvedTargetObjectIds = hasEffectTargets ? effectTargetObjectIds : selectedTargetObjectIds;
+  const resolvedTargetPlayerIds = hasEffectTargets ? effectTargetPlayerIds : selectedTargetPlayerIds;
+  const targetSelectionErrors = useMemo(() => {
+    if (hasEffectTargets) {
+      const errors: string[] = [];
+      effectTargetGroups.forEach((group) => {
+        const min = group.minTargets ?? 0;
+        if (min > 0) {
+          const count = group.selectedObjectIds.length + group.selectedPlayerIds.length;
+          if (count < min) {
+            errors.push(`${group.label}: select at least ${min} target${min === 1 ? '' : 's'}.`);
+          }
+        }
+      });
+      if (globalTargetErrors.length > 0) {
+        errors.push(...globalTargetErrors);
+      }
+      return errors;
+    }
+    const min = minTargetsGlobal?.target ?? 0;
+    const count = resolvedTargetObjectIds.length + resolvedTargetPlayerIds.length;
+    if (min > 0 && count < min) {
+      return [`Select at least ${min} target${min === 1 ? '' : 's'}.`];
+    }
+    return [];
+  }, [
+    effectTargetGroups,
+    globalTargetErrors,
+    hasEffectTargets,
+    minTargetsGlobal,
+    resolvedTargetObjectIds.length,
+    resolvedTargetPlayerIds.length,
+  ]);
   useTurnReset({
     gameState,
     setReplacementChoices,
@@ -283,6 +361,7 @@ export default function PlayPage() {
     setSelectedTargetPlayerIds,
     setActiveAttackerId,
     setSelectedDefenderId,
+    onResetTargets: clearEffectTargets,
   });
   const defendingObjectId = combatState?.defending_object_id ?? (
     selectedDefenderId?.startsWith('planeswalker:') ? selectedDefenderId.split(':')[1] : null
@@ -328,6 +407,7 @@ export default function PlayPage() {
     setSelectedBattlefieldId(null);
     setSelectedTargetObjectIds([]);
     setSelectedTargetPlayerIds([]);
+    clearEffectTargets();
   }, [gameState?.turn.step, gameState?.turn.turn_number]);
 
 
@@ -346,7 +426,7 @@ export default function PlayPage() {
     players: gameState?.players ?? [],
     cardMap,
     currentPlayerId: currentPriority,
-    selectedTargetObjectIds,
+    selectedTargetObjectIds: resolvedTargetObjectIds,
     manaPool,
     autoPayWard,
   });
@@ -464,10 +544,25 @@ export default function PlayPage() {
   const { buildCastContext } = useCastContext({
     currentPriority,
     selectedHandId,
-    selectedTargetObjectIds,
-    selectedTargetPlayerIds,
+    selectedTargetObjectIds: resolvedTargetObjectIds,
+    selectedTargetPlayerIds: resolvedTargetPlayerIds,
     maxObjectTargets: targetHints.maxObjectTargets ?? undefined,
     maxPlayerTargets: targetHints.maxPlayerTargets ?? undefined,
+    targetPlayerFilter: targetHints.playerFilter,
+    targetObjectFilter: targetHints.objectFilter,
+    targetObjectTypes: Array.from(targetHints.objectTypes ?? []),
+    targetsByEffect: hasEffectTargets ? targetsByEffect : undefined,
+    requiredTargetsByEffect: hasEffectTargets ? requiredTargetsByEffect : undefined,
+    requiredTargetsGlobal: !hasEffectTargets ? requiredTargetsGlobal : undefined,
+    distinctTargetsByEffect: hasEffectTargets ? distinctTargetsByEffect : undefined,
+    distinctTargetsGlobal: !hasEffectTargets ? distinctTargetsGlobal : undefined,
+    minTargetsByEffect: hasEffectTargets ? minTargetsByEffect : undefined,
+    minTargetsGlobal: !hasEffectTargets ? minTargetsGlobal : undefined,
+    copyChooseNewTargets: copySpellConfig.enabled,
+    copyTargetsList: copyTargetSelections.map((entry) => ({
+      ...(entry.objectIds.length > 0 ? { target: entry.objectIds[0], targets: entry.objectIds } : {}),
+      ...(entry.playerIds.length > 0 ? { target_player: entry.playerIds[0], target_players: entry.playerIds } : {}),
+    })),
     enterChoices,
   });
   const {
@@ -740,8 +835,8 @@ export default function PlayPage() {
             }
             targetObjects={shouldUseStackTargets ? stackSpellObjects : filteredTargetableObjects}
             targetPlayers={shouldUseStackTargets ? [] : filteredTargetPlayers}
-            selectedTargetObjectIds={selectedTargetObjectIds}
-            selectedTargetPlayerIds={selectedTargetPlayerIds}
+            selectedTargetObjectIds={resolvedTargetObjectIds}
+            selectedTargetPlayerIds={resolvedTargetPlayerIds}
             objectLabel={shouldUseStackTargets ? 'Spells on Stack' : 'Objects'}
             maxObjectTargets={targetHints.maxObjectTargets ?? undefined}
             maxPlayerTargets={targetHints.maxPlayerTargets ?? undefined}
@@ -753,6 +848,16 @@ export default function PlayPage() {
               setSelectedTargetObjectIds([]);
               setSelectedTargetPlayerIds([]);
             }}
+            effectTargetGroups={hasEffectTargets ? effectTargetGroups : undefined}
+            targetSelectionErrors={targetSelectionErrors}
+            copyTargetSelections={copySpellConfig.enabled ? copyTargetSelections : undefined}
+            onChangeCopyTarget={(index, objectIds, playerIds) =>
+              setCopyTargetSelections((prev) => {
+                const next = [...prev];
+                next[index] = { objectIds, playerIds };
+                return next;
+              })
+            }
           />
 
           <CombatDamagePanel

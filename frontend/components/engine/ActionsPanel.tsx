@@ -8,6 +8,7 @@ import { ManaPaymentPanel } from '@/components/engine/ManaPaymentPanel';
 import { WardPaymentPanel } from '@/components/engine/WardPaymentPanel';
 import { ActivationCostPanel } from '@/components/engine/ActivationCostPanel';
 import { EngineCardMap, EngineCombatStateSnapshot } from '@/lib/engine';
+import { EffectTargetGroup } from '@/hooks/useEffectTargeting';
 import { ReplacementConflictEntry } from '@/hooks/useReplacementConflicts';
 import { EnterChoiceConfig } from '@/lib/enterChoices';
 import { ManaPaymentDetail } from '@/lib/manaPayment';
@@ -237,6 +238,10 @@ interface ActionsPanelProps {
   onChangeTargetObjects: (ids: string[]) => void;
   onChangeTargetPlayers: (ids: number[]) => void;
   onClearTargets: () => void;
+  effectTargetGroups?: EffectTargetGroup[];
+  targetSelectionErrors?: string[];
+  copyTargetSelections?: Array<{ objectIds: string[]; playerIds: number[] }>;
+  onChangeCopyTarget: (index: number, objectIds: string[], playerIds: number[]) => void;
 }
 
 export function ActionsPanel({
@@ -334,6 +339,10 @@ export function ActionsPanel({
   onChangeTargetObjects,
   onChangeTargetPlayers,
   onClearTargets,
+  effectTargetGroups,
+  targetSelectionErrors,
+  copyTargetSelections,
+  onChangeCopyTarget,
 }: ActionsPanelProps) {
   return (
     <Card variant="bordered" className="p-4 space-y-4">
@@ -357,6 +366,7 @@ export function ActionsPanel({
             hasActivationCostErrors ||
             hasAdditionalCastCostErrors ||
             hasAlternativeExtraCostErrors ||
+            (targetSelectionErrors?.length ?? 0) > 0 ||
             loading
           }
         >
@@ -368,7 +378,13 @@ export function ActionsPanel({
         <Button
           variant="outline"
           onClick={onActivateAbility}
-          disabled={!selectedBattlefieldId || !hasActivatedAbility || hasActivationCostErrors || loading}
+          disabled={
+            !selectedBattlefieldId ||
+            !hasActivatedAbility ||
+            hasActivationCostErrors ||
+            (targetSelectionErrors?.length ?? 0) > 0 ||
+            loading
+          }
         >
           Activate Ability
         </Button>
@@ -591,22 +607,89 @@ export function ActionsPanel({
         </div>
       )}
 
-      <TargetSelector
-        objects={targetObjects}
-        players={targetPlayers}
-        cardMap={cardMap}
-        selectedObjectIds={selectedTargetObjectIds}
-        selectedPlayerIds={selectedTargetPlayerIds}
-        objectLabel={objectLabel}
-        playerLabel="Players"
-        maxObjectTargets={maxObjectTargets}
-        maxPlayerTargets={maxPlayerTargets}
-        objectTargetStatus={objectTargetStatus}
-        playerTargetStatus={playerTargetStatus}
-        onChangeObjects={onChangeTargetObjects}
-        onChangePlayers={onChangeTargetPlayers}
-        onClear={onClearTargets}
-      />
+      {effectTargetGroups && effectTargetGroups.length > 0 ? (
+        <div className="space-y-4">
+          {effectTargetGroups.map((group) => (
+            <div key={group.id} className="space-y-2">
+              <div className="text-xs uppercase text-[color:var(--theme-text-secondary)]">{group.label}</div>
+              <TargetSelector
+                objects={group.objects}
+                players={group.players}
+                cardMap={cardMap}
+                selectedObjectIds={group.selectedObjectIds}
+                selectedPlayerIds={group.selectedPlayerIds}
+                objectLabel={group.objectLabel || objectLabel}
+                playerLabel={group.playerLabel || 'Players'}
+                maxObjectTargets={group.maxObjectTargets ?? undefined}
+                maxPlayerTargets={group.maxPlayerTargets ?? undefined}
+                objectTargetStatus={group.objectTargetStatus}
+                playerTargetStatus={group.playerTargetStatus}
+                onChangeObjects={group.onChangeObjects}
+                onChangePlayers={group.onChangePlayers}
+                onClear={group.onClear}
+              />
+              {typeof group.minTargets === 'number' && group.minTargets > 0 && (
+                <div className="text-xs text-[color:var(--theme-text-secondary)]">
+                  Minimum targets: {group.minTargets}
+                </div>
+              )}
+              {group.errors && group.errors.length > 0 && (
+                <div className="text-xs text-[color:var(--theme-status-error)]">
+                  {group.errors.join(' ')}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <TargetSelector
+          objects={targetObjects}
+          players={targetPlayers}
+          cardMap={cardMap}
+          selectedObjectIds={selectedTargetObjectIds}
+          selectedPlayerIds={selectedTargetPlayerIds}
+          objectLabel={objectLabel}
+          playerLabel="Players"
+          maxObjectTargets={maxObjectTargets}
+          maxPlayerTargets={maxPlayerTargets}
+          objectTargetStatus={objectTargetStatus}
+          playerTargetStatus={playerTargetStatus}
+          onChangeObjects={onChangeTargetObjects}
+          onChangePlayers={onChangeTargetPlayers}
+          onClear={onClearTargets}
+        />
+      )}
+      {copyTargetSelections && copyTargetSelections.length > 0 && (
+        <div className="space-y-3">
+          <div className="text-xs uppercase text-[color:var(--theme-text-secondary)]">Copy Targets</div>
+          {copyTargetSelections.map((entry, index) => (
+            <div key={`copy-target-${index}`} className="space-y-2">
+              <div className="text-xs text-[color:var(--theme-text-secondary)]">Copy {index + 1}</div>
+              <TargetSelector
+                objects={targetObjects}
+                players={targetPlayers}
+                cardMap={cardMap}
+                selectedObjectIds={entry.objectIds}
+                selectedPlayerIds={entry.playerIds}
+                objectLabel={objectLabel}
+                playerLabel="Players"
+                maxObjectTargets={maxObjectTargets}
+                maxPlayerTargets={maxPlayerTargets}
+                objectTargetStatus={objectTargetStatus}
+                playerTargetStatus={playerTargetStatus}
+                onChangeObjects={(ids) => onChangeCopyTarget(index, ids, entry.playerIds)}
+                onChangePlayers={(ids) => onChangeCopyTarget(index, entry.objectIds, ids)}
+                onClear={() => onChangeCopyTarget(index, [], [])}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+      {targetSelectionErrors && targetSelectionErrors.length > 0 && (
+        <div className="text-xs text-[color:var(--theme-status-error)]">
+          {targetSelectionErrors.join(' ')}
+        </div>
+      )}
     </Card>
   );
 }

@@ -332,6 +332,10 @@ def execute_engine_action(
                 triggering_aura_id=ctx.triggering_aura_id,
                 triggering_spell_id=ctx.triggering_spell_id,
                 targets=ctx.targets,
+                targets_by_effect=ctx.targets_by_effect,
+                required_targets_by_effect=ctx.required_targets_by_effect,
+                distinct_targets_by_effect=ctx.distinct_targets_by_effect,
+                min_targets_by_effect=ctx.min_targets_by_effect,
                 choices=ctx.choices,
                 previous_results=ctx.previous_results,
             )

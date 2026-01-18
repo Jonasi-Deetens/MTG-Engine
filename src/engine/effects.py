@@ -147,5 +147,18 @@ class EffectResolver:
         if not handler:
             self.game_state.log(f"Unhandled effect type: {effect_type}")
             return {"type": effect_type, "status": "unhandled"}
+        node_id = effect.get("_node_id") or effect.get("node_id")
+        override_targets = None
+        if node_id and isinstance(context.targets_by_effect, dict):
+            override_targets = context.targets_by_effect.get(node_id)
+        if isinstance(override_targets, dict):
+            original_targets = context.targets
+            merged = dict(original_targets)
+            merged.update(override_targets)
+            context.targets = merged
+            try:
+                return handler(self, effect, context)
+            finally:
+                context.targets = original_targets
         return handler(self, effect, context)
 

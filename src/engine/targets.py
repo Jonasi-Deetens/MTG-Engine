@@ -45,19 +45,18 @@ def resolve_object(
     return None
 
 
-def validate_targets(game_state: GameState, context: ResolveContext) -> None:
+def validate_targets(game_state: GameState, context: ResolveContext, allow_partial: bool = False) -> None:
     if is_overloaded(context):
         return
-    if not has_legal_targets(game_state, context):
+    if not has_legal_targets(game_state, context, allow_partial=allow_partial):
+        issues = get_target_issues(game_state, context)
+        if issues:
+            raise ValueError("; ".join(issues))
         raise ValueError("No legal targets.")
 
 
-def get_target_issues(game_state: GameState, context: ResolveContext) -> List[str]:
-    if is_overloaded(context):
-        return []
+def _get_target_issues_for_targets(game_state: GameState, context: ResolveContext, targets: Dict[str, Any]) -> List[str]:
     issues: List[str] = []
-    targets = context.targets
-
     target_id = targets.get("target")
     target_list = targets.get("targets") if isinstance(targets.get("targets"), list) else None
     if target_id:
@@ -69,9 +68,12 @@ def get_target_issues(game_state: GameState, context: ResolveContext) -> List[st
 
     target_player = targets.get("target_player")
     player_list = targets.get("target_players") if isinstance(targets.get("target_players"), list) else None
-    if target_player is not None and not _is_legal_player_target(game_state, target_player):
+    target_scope = targets.get("target_scope")
+    if target_player is not None and not _is_legal_player_target(game_state, context, target_player, target_scope):
         issues.append(f"Player {target_player}: illegal target.")
-    if player_list is not None and not any(_is_legal_player_target(game_state, player_id) for player_id in player_list):
+    if player_list is not None and not any(
+        _is_legal_player_target(game_state, context, player_id, target_scope) for player_id in player_list
+    ):
         issues.append("No legal player targets.")
 
     spell_target = targets.get("spell_target")
@@ -80,25 +82,64 @@ def get_target_issues(game_state: GameState, context: ResolveContext) -> List[st
         issues.append(f"Spell {spell_target}: not on the stack.")
     if spell_list is not None and not any(_is_legal_spell_target(game_state, target_id) for target_id in spell_list):
         issues.append("No legal spell targets.")
-
     return issues
 
 
-def normalize_targets(game_state: GameState, context: ResolveContext) -> None:
+def get_target_issues(game_state: GameState, context: ResolveContext) -> List[str]:
     if is_overloaded(context):
-        return
-    targets = context.targets
+        return []
+    issues: List[str] = []
+    for missing in _missing_required_global_targets(context):
+        issues.append(f"missing target {missing}")
+    if isinstance(context.distinct_targets_by_effect, dict):
+        distinct_keys = context.distinct_targets_by_effect.get("_global", []) or []
+        if _has_distinct_violation(context.targets, distinct_keys):
+            issues.append("targets must be distinct")
+    if isinstance(context.min_targets_by_effect, dict):
+        min_targets = context.min_targets_by_effect.get("_global", {}) or {}
+        if _has_min_targets_violation(context.targets, min_targets):
+            issues.append("not enough targets selected")
+    issues.extend(_get_target_issues_for_targets(game_state, context, context.targets))
+    if isinstance(context.targets_by_effect, dict):
+        for node_id, override in context.targets_by_effect.items():
+            if not isinstance(override, dict):
+                continue
+            merged = dict(context.targets)
+            merged.update(override)
+            required_keys = []
+            if isinstance(context.required_targets_by_effect, dict):
+                required_keys = context.required_targets_by_effect.get(node_id, []) or []
+            for missing in _missing_required_targets(merged, required_keys):
+                issues.append(f"{node_id}: missing target {missing}")
+            if isinstance(context.distinct_targets_by_effect, dict):
+                distinct_keys = context.distinct_targets_by_effect.get(node_id, []) or []
+                if _has_distinct_violation(merged, distinct_keys):
+                    issues.append(f"{node_id}: targets must be distinct")
+            if isinstance(context.min_targets_by_effect, dict):
+                min_targets = context.min_targets_by_effect.get(node_id, {}) or {}
+                if _has_min_targets_violation(merged, min_targets):
+                    issues.append(f"{node_id}: not enough targets selected")
+            for issue in _get_target_issues_for_targets(game_state, context, merged):
+                issues.append(f"{node_id}: {issue}")
+    return issues
+
+
+def _normalize_targets_for_targets(game_state: GameState, context: ResolveContext, targets: Dict[str, Any]) -> None:
     if isinstance(targets.get("targets"), list):
         legal = [target_id for target_id in targets["targets"] if _is_legal_object_target(game_state, context, target_id)]
         targets["targets"] = legal
         if "target" not in targets and legal:
             targets["target"] = legal[0]
     if isinstance(targets.get("target_players"), list):
-        legal_players = [player_id for player_id in targets["target_players"] if _is_legal_player_target(game_state, player_id)]
+        target_scope = targets.get("target_scope")
+        legal_players = [
+            player_id
+            for player_id in targets["target_players"]
+            if _is_legal_player_target(game_state, context, player_id, target_scope)
+        ]
         targets["target_players"] = legal_players
         if "target_player" not in targets and legal_players:
             targets["target_player"] = legal_players[0]
-
     if isinstance(targets.get("spell_targets"), list):
         legal_spells = [target_id for target_id in targets["spell_targets"] if _is_legal_spell_target(game_state, target_id)]
         targets["spell_targets"] = legal_spells
@@ -106,10 +147,17 @@ def normalize_targets(game_state: GameState, context: ResolveContext) -> None:
             targets["spell_target"] = legal_spells[0]
 
 
-def has_legal_targets(game_state: GameState, context: ResolveContext) -> bool:
+def normalize_targets(game_state: GameState, context: ResolveContext) -> None:
     if is_overloaded(context):
-        return True
-    targets = context.targets
+        return
+    _normalize_targets_for_targets(game_state, context, context.targets)
+    if isinstance(context.targets_by_effect, dict):
+        for override in context.targets_by_effect.values():
+            if isinstance(override, dict):
+                _normalize_targets_for_targets(game_state, context, override)
+
+
+def _has_legal_targets_for_targets(game_state: GameState, context: ResolveContext, targets: Dict[str, Any]) -> bool:
     target_id = targets.get("target")
     target_list = targets.get("targets") if isinstance(targets.get("targets"), list) else None
     if target_id and not _is_legal_object_target(game_state, context, target_id):
@@ -119,9 +167,12 @@ def has_legal_targets(game_state: GameState, context: ResolveContext) -> bool:
 
     target_player = targets.get("target_player")
     player_list = targets.get("target_players") if isinstance(targets.get("target_players"), list) else None
-    if target_player is not None and not _is_legal_player_target(game_state, target_player):
+    target_scope = targets.get("target_scope")
+    if target_player is not None and not _is_legal_player_target(game_state, context, target_player, target_scope):
         return False
-    if player_list is not None and not any(_is_legal_player_target(game_state, player_id) for player_id in player_list):
+    if player_list is not None and not any(
+        _is_legal_player_target(game_state, context, player_id, target_scope) for player_id in player_list
+    ):
         return False
 
     spell_target = targets.get("spell_target")
@@ -130,7 +181,68 @@ def has_legal_targets(game_state: GameState, context: ResolveContext) -> bool:
         return False
     if spell_list is not None and not any(_is_legal_spell_target(game_state, target_id) for target_id in spell_list):
         return False
+    return True
 
+
+def has_legal_targets(game_state: GameState, context: ResolveContext, allow_partial: bool = False) -> bool:
+    if is_overloaded(context):
+        return True
+    if allow_partial:
+        required_present = False
+        if isinstance(context.required_targets_by_effect, dict):
+            required_present = any(keys for keys in context.required_targets_by_effect.values())
+        if not required_present and _has_any_target_data(context.targets):
+            required_present = True
+        if not required_present and isinstance(context.targets_by_effect, dict):
+            for override in context.targets_by_effect.values():
+                if isinstance(override, dict) and _has_any_target_data(override):
+                    required_present = True
+                    break
+        if not required_present:
+            return True
+        bucket: set[tuple[str, Any]] = set()
+        _collect_legal_targets(game_state, context, context.targets, bucket)
+        if isinstance(context.targets_by_effect, dict):
+            for override in context.targets_by_effect.values():
+                if not isinstance(override, dict):
+                    continue
+                merged = dict(context.targets)
+                merged.update(override)
+                _collect_legal_targets(game_state, context, merged, bucket)
+        return len(bucket) > 0
+    if _missing_required_global_targets(context):
+        return False
+    if isinstance(context.distinct_targets_by_effect, dict):
+        distinct_keys = context.distinct_targets_by_effect.get("_global", []) or []
+        if _has_distinct_violation(context.targets, distinct_keys):
+            return False
+    if isinstance(context.min_targets_by_effect, dict):
+        min_targets = context.min_targets_by_effect.get("_global", {}) or {}
+        if _has_min_targets_violation(context.targets, min_targets):
+            return False
+    if not _has_legal_targets_for_targets(game_state, context, context.targets):
+        return False
+    if isinstance(context.targets_by_effect, dict):
+        for node_id, override in context.targets_by_effect.items():
+            if not isinstance(override, dict):
+                continue
+            merged = dict(context.targets)
+            merged.update(override)
+            required_keys = []
+            if isinstance(context.required_targets_by_effect, dict):
+                required_keys = context.required_targets_by_effect.get(node_id, []) or []
+            if _missing_required_targets(merged, required_keys):
+                return False
+            if isinstance(context.distinct_targets_by_effect, dict):
+                distinct_keys = context.distinct_targets_by_effect.get(node_id, []) or []
+                if _has_distinct_violation(merged, distinct_keys):
+                    return False
+            if isinstance(context.min_targets_by_effect, dict):
+                min_targets = context.min_targets_by_effect.get(node_id, {}) or {}
+                if _has_min_targets_violation(merged, min_targets):
+                    return False
+            if not _has_legal_targets_for_targets(game_state, context, merged):
+                return False
     return True
 
 
@@ -142,6 +254,17 @@ def _check_object_target(game_state: GameState, context: ResolveContext, target_
         return False, "Target must be on the battlefield."
     if obj.phased_out:
         return False, "Target is phased out."
+    scope = context.targets.get("target_object_scope")
+    if scope == "you_control" and context.controller_id is not None:
+        if obj.controller_id != context.controller_id:
+            return False, "Target is not controlled by you."
+    if scope == "opponent_control" and context.controller_id is not None:
+        if obj.controller_id == context.controller_id:
+            return False, "Target is not controlled by an opponent."
+    type_filter = context.targets.get("target_object_types")
+    if isinstance(type_filter, list) and type_filter:
+        if not any(type_name in (obj.types or []) for type_name in type_filter):
+            return False, "Target does not match required types."
     if "Shroud" in obj.keywords:
         return False, "Target has shroud."
     if "Hexproof" in obj.keywords and context.controller_id is not None:
@@ -162,15 +285,199 @@ def _check_object_target(game_state: GameState, context: ResolveContext, target_
 
 def _collect_target_ids(context: ResolveContext) -> List[str]:
     targets = []
-    target_id = context.targets.get("target")
-    if target_id:
-        targets.append(target_id)
-    extra = context.targets.get("targets")
-    if isinstance(extra, list):
-        for obj_id in extra:
-            if obj_id not in targets:
-                targets.append(obj_id)
+
+    def add_target(value: Any) -> None:
+        if isinstance(value, str) and value not in targets:
+            targets.append(value)
+
+    def add_targets_from_dict(payload: Dict[str, Any]) -> None:
+        add_target(payload.get("target"))
+        add_target(payload.get("yourCreature"))
+        add_target(payload.get("opponentCreature"))
+        add_target(payload.get("sourceTarget"))
+        add_target(payload.get("redirectTarget"))
+        add_target(payload.get("attach_to"))
+        extra = payload.get("targets")
+        if isinstance(extra, list):
+            for obj_id in extra:
+                add_target(obj_id)
+
+    add_targets_from_dict(context.targets or {})
+    if isinstance(context.targets_by_effect, dict):
+        for entry in context.targets_by_effect.values():
+            if isinstance(entry, dict):
+                add_targets_from_dict(entry)
     return targets
+
+
+def _has_any_target_data(targets: Dict[str, Any]) -> bool:
+    if targets.get("target"):
+        return True
+    if targets.get("targets"):
+        return True
+    if targets.get("target_player") is not None:
+        return True
+    if targets.get("target_players"):
+        return True
+    if targets.get("spell_target"):
+        return True
+    if targets.get("spell_targets"):
+        return True
+    if targets.get("yourCreature"):
+        return True
+    if targets.get("opponentCreature"):
+        return True
+    if targets.get("sourceTarget"):
+        return True
+    if targets.get("redirectTarget"):
+        return True
+    if targets.get("attach_to"):
+        return True
+    return False
+
+
+def _missing_required_targets(targets: Dict[str, Any], required_keys: List[str]) -> List[str]:
+    missing = []
+    for key in required_keys:
+        if key == "target":
+            if (
+                not targets.get("target")
+                and not targets.get("targets")
+                and not targets.get("target_player")
+                and not targets.get("target_players")
+                and not targets.get("spell_target")
+                and not targets.get("spell_targets")
+            ):
+                missing.append(key)
+        elif key == "redirectTarget":
+            if not targets.get("redirectTarget") and not targets.get("target_player") and not targets.get("target_players"):
+                missing.append(key)
+        else:
+            if not targets.get(key):
+                missing.append(key)
+    return missing
+
+
+def _missing_required_global_targets(context: ResolveContext) -> List[str]:
+    if not isinstance(context.required_targets_by_effect, dict):
+        return []
+    required = context.required_targets_by_effect.get("_global", []) or []
+    return _missing_required_targets(context.targets, required)
+
+
+def _collect_target_units(targets: Dict[str, Any]) -> tuple[List[str], List[int]]:
+    object_ids: List[str] = []
+    player_ids: List[int] = []
+    target_id = targets.get("target")
+    if isinstance(target_id, str):
+        object_ids.append(target_id)
+    target_list = targets.get("targets") if isinstance(targets.get("targets"), list) else None
+    if target_list:
+        object_ids.extend([target for target in target_list if isinstance(target, str)])
+    spell_target = targets.get("spell_target")
+    if isinstance(spell_target, str):
+        object_ids.append(spell_target)
+    spell_list = targets.get("spell_targets") if isinstance(targets.get("spell_targets"), list) else None
+    if spell_list:
+        object_ids.extend([target for target in spell_list if isinstance(target, str)])
+    target_player = targets.get("target_player")
+    if isinstance(target_player, int):
+        player_ids.append(target_player)
+    player_list = targets.get("target_players") if isinstance(targets.get("target_players"), list) else None
+    if player_list:
+        player_ids.extend([player_id for player_id in player_list if isinstance(player_id, int)])
+    return object_ids, player_ids
+
+
+def _has_distinct_violation(targets: Dict[str, Any], distinct_keys: List[str]) -> bool:
+    if not distinct_keys:
+        return False
+    object_ids, player_ids = _collect_target_units(targets)
+    if "target" in distinct_keys:
+        if object_ids and len(set(object_ids)) != len(object_ids):
+            return True
+        if player_ids and len(set(player_ids)) != len(player_ids):
+            return True
+    key_map = {
+        "yourCreature": "object",
+        "opponentCreature": "object",
+        "sourceTarget": "object",
+        "redirectTarget": "object_or_player",
+        "attach_to": "object",
+    }
+    selected_objects: List[str] = []
+    selected_players: List[int] = []
+    for key in distinct_keys:
+        if key == "target":
+            continue
+        kind = key_map.get(key)
+        if kind is None:
+            continue
+        if key == "redirectTarget":
+            redirect = targets.get("redirectTarget")
+            if isinstance(redirect, str):
+                selected_objects.append(redirect)
+            target_player = targets.get("target_player")
+            if isinstance(target_player, int):
+                selected_players.append(target_player)
+            target_players = targets.get("target_players") if isinstance(targets.get("target_players"), list) else None
+            if target_players:
+                selected_players.extend([player_id for player_id in target_players if isinstance(player_id, int)])
+            continue
+        value = targets.get(key)
+        if kind == "object" and isinstance(value, str):
+            selected_objects.append(value)
+        if kind == "player" and isinstance(value, int):
+            selected_players.append(value)
+    if selected_objects and len(set(selected_objects)) != len(selected_objects):
+        return True
+    if selected_players and len(set(selected_players)) != len(selected_players):
+        return True
+    return False
+
+
+def _has_min_targets_violation(targets: Dict[str, Any], min_targets: Dict[str, int]) -> bool:
+    if not min_targets:
+        return False
+    min_target = min_targets.get("target")
+    if isinstance(min_target, int) and min_target > 0:
+        object_ids, player_ids = _collect_target_units(targets)
+        count = len(set(object_ids)) + len(set(player_ids))
+        return count < min_target
+    return False
+
+
+def _collect_legal_targets(
+    game_state: GameState,
+    context: ResolveContext,
+    targets: Dict[str, Any],
+    bucket: set[tuple[str, Any]],
+) -> None:
+    target_id = targets.get("target")
+    if target_id and _is_legal_object_target(game_state, context, target_id):
+        bucket.add(("object", target_id))
+    target_list = targets.get("targets") if isinstance(targets.get("targets"), list) else None
+    if target_list is not None:
+        for target in target_list:
+            if _is_legal_object_target(game_state, context, target):
+                bucket.add(("object", target))
+    target_player = targets.get("target_player")
+    target_scope = targets.get("target_scope")
+    if target_player is not None and _is_legal_player_target(game_state, context, target_player, target_scope):
+        bucket.add(("player", target_player))
+    player_list = targets.get("target_players") if isinstance(targets.get("target_players"), list) else None
+    if player_list is not None:
+        for player_id in player_list:
+            if _is_legal_player_target(game_state, context, player_id, target_scope):
+                bucket.add(("player", player_id))
+    spell_target = targets.get("spell_target")
+    if spell_target is not None and _is_legal_spell_target(game_state, spell_target):
+        bucket.add(("spell", spell_target))
+    spell_list = targets.get("spell_targets") if isinstance(targets.get("spell_targets"), list) else None
+    if spell_list is not None:
+        for target_id in spell_list:
+            if _is_legal_spell_target(game_state, target_id):
+                bucket.add(("spell", target_id))
 
 
 def _ward_cost_entries(obj: GameObject) -> List[Dict[str, Any]]:
@@ -285,8 +592,26 @@ def _is_legal_object_target(game_state: GameState, context: ResolveContext, targ
     return _check_object_target(game_state, context, target_id)[0]
 
 
-def _is_legal_player_target(game_state: GameState, player_id: int) -> bool:
-    return any(player.id == player_id and not getattr(player, "removed_from_game", False) for player in game_state.players)
+def is_legal_object_target(game_state: GameState, context: ResolveContext, target_id: str) -> bool:
+    return _is_legal_object_target(game_state, context, target_id)
+
+
+def _is_legal_player_target(
+    game_state: GameState,
+    context: ResolveContext,
+    player_id: int,
+    target_scope: str | None = None,
+) -> bool:
+    controller_id = context.controller_id
+    for player in game_state.players:
+        if player.id != player_id or getattr(player, "removed_from_game", False):
+            continue
+        if target_scope == "opponent" and controller_id is not None and player.id == controller_id:
+            return False
+        if target_scope == "controller" and controller_id is not None and player.id != controller_id:
+            return False
+        return True
+    return False
 
 
 def _is_legal_spell_target(game_state: GameState, target_id: str) -> bool:

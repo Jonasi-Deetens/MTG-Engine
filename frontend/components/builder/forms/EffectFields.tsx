@@ -210,6 +210,17 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
         </div>
       )}
 
+      {effect.type === 'copy_spell' && (
+        <label className="flex items-center gap-2 text-xs text-[color:var(--theme-text-secondary)]">
+          <input
+            type="checkbox"
+            checked={!!effect.chooseNewTargets}
+            onChange={(e) => onUpdate('chooseNewTargets', e.target.checked)}
+          />
+          Allow choosing new targets for the copy
+        </label>
+      )}
+
       {selectedEffectType?.requiresTypeList && (
         <div>
           <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Types (comma-separated)</label>
@@ -494,6 +505,47 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
             </div>
           )}
         </div>
+      )}
+
+      {shouldShowMaxTargets && (
+        <div>
+          <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">
+            Min Targets <span className="text-[color:var(--theme-text-muted)]">(optional)</span>
+          </label>
+          <input
+            type="number"
+            value={effect.minTargets || ''}
+            onChange={(e) => {
+              const value = e.target.value ? parseInt(e.target.value, 10) : undefined;
+              onUpdate('minTargets', value);
+            }}
+            min="0"
+            placeholder="Leave blank for none"
+            className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+          />
+          {effect.minTargets !== undefined &&
+            (!Number.isFinite(effect.minTargets) || effect.minTargets < 0) && (
+              <div className="text-xs text-[color:var(--theme-status-error)]">Must be at least 0.</div>
+            )}
+          {typeof effect.maxTargets === 'number' &&
+            typeof effect.minTargets === 'number' &&
+            effect.maxTargets < effect.minTargets && (
+              <div className="text-xs text-[color:var(--theme-status-error)]">
+                Min targets cannot exceed max targets.
+              </div>
+            )}
+        </div>
+      )}
+
+      {selectedEffectType?.requiresTarget && (
+        <label className="flex items-center gap-2 text-xs text-[color:var(--theme-text-secondary)]">
+          <input
+            type="checkbox"
+            checked={!!effect.distinctTargets}
+            onChange={(e) => onUpdate('distinctTargets', e.target.checked)}
+          />
+          Require distinct targets
+        </label>
       )}
 
       {/* Untap Target */}

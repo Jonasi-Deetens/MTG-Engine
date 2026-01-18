@@ -118,6 +118,10 @@ export interface EngineResolveContextSnapshot {
   triggering_aura_id?: string | null;
   triggering_spell_id?: string | null;
   targets?: Record<string, any>;
+  targets_by_effect?: Record<string, Record<string, any>>;
+  required_targets_by_effect?: Record<string, string[]>;
+  distinct_targets_by_effect?: Record<string, string[]>;
+  min_targets_by_effect?: Record<string, Record<string, number>>;
   choices?: Record<string, any>;
   previous_results?: Array<Record<string, any>>;
 }

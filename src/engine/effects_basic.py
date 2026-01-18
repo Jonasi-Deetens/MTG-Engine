@@ -9,17 +9,13 @@ from .effects_helpers import (
     resolve_choice_for_player,
     resolve_target_list_for_player,
 )
-from .replacements import resolve_replacement
+from .replacements import resolve_replacement, apnap_player_order
 from .state import ResolveContext
 from .targets import resolve_object_id, resolve_player_id
 from .zones import ZONE_GRAVEYARD, ZONE_HAND, ZONE_LIBRARY
 
 
-def handle_draw(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
-    amount = int(effect.get("amount", 1))
-    player_id = resolve_player_id(context, context.controller_id)
-    if player_id is None:
-        return {"type": "draw", "status": "no_player"}
+def _draw_for_player(resolver, player_id: int, amount: int) -> Dict[str, Any]:
     player = resolver.game_state.get_player(player_id)
     drawn = []
     replaced = []
@@ -46,29 +42,24 @@ def handle_draw(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
             drawn.append(card_id)
         else:
             replaced.append({"card_id": card_id, "zone": destination})
-    return {"type": "draw", "player_id": player_id, "cards": drawn, "replaced": replaced}
+    return {"player_id": player_id, "cards": drawn, "replaced": replaced}
+
+
+def handle_draw(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
+    amount = int(effect.get("amount", 1))
+    player_ids = resolve_effect_players(resolver.game_state, context, effect, context.controller_id)
+    if not player_ids:
+        return {"type": "draw", "status": "no_player"}
+    ordered = apnap_player_order(resolver.game_state, player_ids) if len(player_ids) > 1 else player_ids
+    results = [_draw_for_player(resolver, player_id, amount) for player_id in ordered]
+    return {"type": "draw", "results": results} if len(results) > 1 else {"type": "draw", **results[0]}
 
 
 def handle_draw_each(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
     amount = int(effect.get("amount", 1))
-    results: List[Dict[str, Any]] = []
-    from .replacements import resolve_replacements_for_players
     player_ids = [player.id for player in resolver.game_state.players if not getattr(player, "removed_from_game", False)]
-    resolve_replacements_for_players(
-        resolver.game_state,
-        "replace_draw",
-        player_ids,
-        "draw:event:player:",
-    )
-    for player_id in player_ids:
-        ctx = ResolveContext(
-            source_id=context.source_id,
-            controller_id=player_id,
-            targets=dict(context.targets),
-            choices=dict(context.choices),
-        )
-        effect_result = handle_draw(resolver, {"type": "draw", "amount": amount}, ctx)
-        results.append(effect_result)
+    ordered = apnap_player_order(resolver.game_state, player_ids) if len(player_ids) > 1 else player_ids
+    results = [_draw_for_player(resolver, player_id, amount) for player_id in ordered]
     return {"type": "draw_each", "results": results}
 
 
@@ -154,12 +145,15 @@ def handle_add_poison(resolver, effect: Dict[str, Any], context) -> Dict[str, An
 def handle_mana(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
     amount = int(effect.get("amount", 1))
     mana_type = effect.get("manaType", "C")
-    player_id = resolve_player_id(context, context.controller_id)
-    if player_id is None:
+    player_ids = resolve_effect_players(resolver.game_state, context, effect, context.controller_id)
+    if not player_ids:
         return {"type": "mana", "status": "no_player"}
-    player = resolver.game_state.get_player(player_id)
-    player.mana_pool[mana_type] = player.mana_pool.get(mana_type, 0) + amount
-    return {"type": "mana", "player_id": player_id, "mana_type": mana_type, "amount": amount}
+    results = []
+    for player_id in player_ids:
+        player = resolver.game_state.get_player(player_id)
+        player.mana_pool[mana_type] = player.mana_pool.get(mana_type, 0) + amount
+        results.append({"player_id": player_id, "mana_type": mana_type, "amount": amount})
+    return {"type": "mana", "results": results} if len(results) > 1 else {"type": "mana", **results[0]}
 
 
 def handle_fight(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:

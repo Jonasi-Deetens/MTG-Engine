@@ -1,0 +1,272 @@
+import pytest
+
+from engine import GameObject, GameState, PlayerState, TurnManager
+from engine.rules import cast_spell
+from engine.zones import ZONE_BATTLEFIELD, ZONE_GRAVEYARD, ZONE_HAND
+
+
+def _build_state() -> GameState:
+    players = [PlayerState(id=0), PlayerState(id=1)]
+    game_state = GameState(players=players)
+    game_state.turn.active_player_index = 0
+    game_state.turn.priority_current_index = 0
+    return game_state
+
+
+def _basic_spell() -> GameObject:
+    return GameObject(
+        id="spell",
+        name="Spell",
+        owner_id=0,
+        controller_id=0,
+        types=["Sorcery"],
+        zone=ZONE_HAND,
+        mana_cost="{G}",
+    )
+
+
+def test_ward_pay_life_auto():
+    game_state = _build_state()
+    warded = GameObject(
+        id="warded",
+        name="Warded",
+        owner_id=1,
+        controller_id=1,
+        types=["Creature"],
+        zone=ZONE_BATTLEFIELD,
+    )
+    warded.keywords.add("Ward—Pay 3 life")
+    spell = _basic_spell()
+    game_state.add_object(warded)
+    game_state.add_object(spell)
+    turn_manager = TurnManager(game_state)
+    game_state.get_player(0).mana_pool["G"] = 1
+    starting_life = game_state.get_player(0).life
+
+    cast_spell(
+        game_state,
+        turn_manager,
+        player_id=0,
+        object_id=spell.id,
+        context={"targets": {"target": warded.id, "targets": [warded.id]}, "choices": {"ward_auto_pay": True}},
+    )
+
+    assert game_state.get_player(0).life == starting_life - 3
+
+
+def test_ward_discard_requires_choice():
+    game_state = _build_state()
+    warded = GameObject(
+        id="warded",
+        name="Warded",
+        owner_id=1,
+        controller_id=1,
+        types=["Creature"],
+        zone=ZONE_BATTLEFIELD,
+    )
+    warded.keywords.add("Ward—Discard a card")
+    spell = _basic_spell()
+    discard = GameObject(
+        id="fodder",
+        name="Fodder",
+        owner_id=0,
+        controller_id=0,
+        types=["Instant"],
+        zone=ZONE_HAND,
+        mana_cost="{U}",
+    )
+    game_state.add_object(warded)
+    game_state.add_object(spell)
+    game_state.add_object(discard)
+    turn_manager = TurnManager(game_state)
+    game_state.get_player(0).mana_pool["G"] = 1
+
+    with pytest.raises(ValueError):
+        cast_spell(
+            game_state,
+            turn_manager,
+            player_id=0,
+            object_id=spell.id,
+            context={"targets": {"target": warded.id, "targets": [warded.id]}, "choices": {}},
+        )
+
+    cast_spell(
+        game_state,
+        turn_manager,
+        player_id=0,
+        object_id=spell.id,
+        context={
+            "targets": {"target": warded.id, "targets": [warded.id]},
+            "choices": {"ward_payments": {warded.id: {"discard_id": discard.id}}},
+        },
+    )
+
+    assert discard.zone == ZONE_GRAVEYARD
+
+
+def test_ward_sacrifice_and_tap():
+    game_state = _build_state()
+    warded = GameObject(
+        id="warded",
+        name="Warded",
+        owner_id=1,
+        controller_id=1,
+        types=["Creature"],
+        zone=ZONE_BATTLEFIELD,
+    )
+    warded.keywords.add("Ward—Sacrifice a creature")
+    warded_tap = GameObject(
+        id="warded_tap",
+        name="Warded Tap",
+        owner_id=1,
+        controller_id=1,
+        types=["Creature"],
+        zone=ZONE_BATTLEFIELD,
+    )
+    warded_tap.keywords.add("Ward—Tap an untapped creature you control")
+    sacrifice = GameObject(
+        id="sac",
+        name="Sacrifice",
+        owner_id=0,
+        controller_id=0,
+        types=["Creature"],
+        zone=ZONE_BATTLEFIELD,
+    )
+    tapper = GameObject(
+        id="tapper",
+        name="Tapper",
+        owner_id=0,
+        controller_id=0,
+        types=["Creature"],
+        zone=ZONE_BATTLEFIELD,
+    )
+    spell = _basic_spell()
+    game_state.add_object(warded)
+    game_state.add_object(warded_tap)
+    game_state.add_object(sacrifice)
+    game_state.add_object(tapper)
+    game_state.add_object(spell)
+    turn_manager = TurnManager(game_state)
+    game_state.get_player(0).mana_pool["G"] = 2
+
+    cast_spell(
+        game_state,
+        turn_manager,
+        player_id=0,
+        object_id=spell.id,
+        context={
+            "targets": {"target": warded.id, "targets": [warded.id]},
+            "choices": {"ward_payments": {warded.id: {"sacrifice_id": sacrifice.id}}},
+        },
+    )
+
+    assert sacrifice.zone == ZONE_GRAVEYARD
+
+    second_spell = GameObject(
+        id="spell_two",
+        name="Spell Two",
+        owner_id=0,
+        controller_id=0,
+        types=["Sorcery"],
+        zone=ZONE_HAND,
+        mana_cost="{G}",
+    )
+    game_state.add_object(second_spell)
+    cast_spell(
+        game_state,
+        turn_manager,
+        player_id=0,
+        object_id=second_spell.id,
+        context={
+            "targets": {"target": warded_tap.id, "targets": [warded_tap.id]},
+            "choices": {"ward_payments": {warded_tap.id: {"tap_id": tapper.id}}},
+        },
+    )
+
+    assert tapper.tapped is True
+
+
+def test_ward_multiple_costs_and_discard_two():
+    game_state = _build_state()
+    warded = GameObject(
+        id="warded_multi",
+        name="Warded Multi",
+        owner_id=1,
+        controller_id=1,
+        types=["Creature"],
+        zone=ZONE_BATTLEFIELD,
+    )
+    warded.keywords.add("Ward {1}")
+    warded.keywords.add("Ward—Pay 3 life")
+    warded_disc = GameObject(
+        id="warded_discard",
+        name="Warded Discard",
+        owner_id=1,
+        controller_id=1,
+        types=["Creature"],
+        zone=ZONE_BATTLEFIELD,
+    )
+    warded_disc.keywords.add("Ward—Discard 2 cards")
+    card_a = GameObject(
+        id="card_a",
+        name="Card A",
+        owner_id=0,
+        controller_id=0,
+        types=["Instant"],
+        zone=ZONE_HAND,
+        mana_cost="{U}",
+    )
+    card_b = GameObject(
+        id="card_b",
+        name="Card B",
+        owner_id=0,
+        controller_id=0,
+        types=["Instant"],
+        zone=ZONE_HAND,
+        mana_cost="{U}",
+    )
+    spell = _basic_spell()
+    spell_two = GameObject(
+        id="spell_multi",
+        name="Spell Multi",
+        owner_id=0,
+        controller_id=0,
+        types=["Sorcery"],
+        zone=ZONE_HAND,
+        mana_cost="{G}",
+    )
+    game_state.add_object(warded)
+    game_state.add_object(warded_disc)
+    game_state.add_object(card_a)
+    game_state.add_object(card_b)
+    game_state.add_object(spell)
+    game_state.add_object(spell_two)
+    turn_manager = TurnManager(game_state)
+    game_state.get_player(0).mana_pool["G"] = 2
+    starting_life = game_state.get_player(0).life
+
+    cast_spell(
+        game_state,
+        turn_manager,
+        player_id=0,
+        object_id=spell.id,
+        context={"targets": {"target": warded.id, "targets": [warded.id]}, "choices": {"ward_auto_pay": True}},
+    )
+
+    assert game_state.get_player(0).mana_pool.get("G", 0) == 1
+    assert game_state.get_player(0).life == starting_life - 3
+
+    cast_spell(
+        game_state,
+        turn_manager,
+        player_id=0,
+        object_id=spell_two.id,
+        context={
+            "targets": {"target": warded_disc.id, "targets": [warded_disc.id]},
+            "choices": {"ward_payments": {warded_disc.id: {"discard_ids": [card_a.id, card_b.id]}}},
+        },
+    )
+
+    assert card_a.zone == ZONE_GRAVEYARD
+    assert card_b.zone == ZONE_GRAVEYARD
+

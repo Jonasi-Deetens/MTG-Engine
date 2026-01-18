@@ -122,7 +122,7 @@ class TurnManager:
                 if context.source_id is None:
                     context.source_id = obj.id
                 normalize_targets(self.gs, context)
-                if not has_legal_targets(self.gs, context):
+                if not has_legal_targets(self.gs, context, allow_partial=True):
                     if not is_copy:
                         self.gs.move_object(obj.id, ZONE_GRAVEYARD)
                         obj.was_cast = False
@@ -175,7 +175,7 @@ class TurnManager:
                 if context.source_id is None and payload.get("copy_of"):
                     context.source_id = payload.get("copy_of")
                 normalize_targets(self.gs, context)
-                validate_targets(self.gs, context)
+                validate_targets(self.gs, context, allow_partial=True)
                 adapter = AbilityGraphRuntimeAdapter(self.gs)
                 if graph:
                     validate_enter_choices(graph, context.__dict__)
@@ -203,11 +203,16 @@ class TurnManager:
             except ValueError as exc:
                 self.gs.log(f"Ability fizzles: {exc}")
                 source_id = payload.get("source_object_id")
-                if source_id:
+                destination_zone = payload.get("destination_zone")
+                if source_id and destination_zone:
                     obj = self.gs.objects.get(source_id)
                     if obj:
-                        self.gs.move_object(obj.id, ZONE_GRAVEYARD)
+                        self.gs.move_object(obj.id, destination_zone)
                         obj.was_cast = False
+                        self.gs.event_bus.publish(Event(
+                            type="spell_fizzled",
+                            payload={"object_id": obj.id, "controller_id": obj.controller_id},
+                        ))
         else:
             self.gs.log(f"Resolved stack item {resolved_item.kind}")
         self.gs.clear_prepared_casts()

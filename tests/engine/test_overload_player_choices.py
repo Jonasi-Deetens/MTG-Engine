@@ -113,3 +113,31 @@ def test_overload_shuffle_returns_multi_player_results():
     assert result["type"] == "shuffle"
     assert len(result["results"]) == 2
 
+
+def test_overload_draw_targets_all_players():
+    game_state = _build_state()
+    resolver = EffectResolver(game_state)
+    game_state.get_player(0).library = ["p0-a"]
+    game_state.get_player(1).library = ["p1-a"]
+    context = ResolveContext(controller_id=0, choices={"alternative_cost_tag": "overload"})
+
+    result = resolver.apply({"type": "draw", "amount": 1, "target": "player"}, context)
+
+    assert result["type"] == "draw"
+    assert len(result["results"]) == 2
+    assert len(game_state.get_player(0).hand) == 1
+    assert len(game_state.get_player(1).hand) == 1
+
+
+def test_overload_replace_draw_applies_to_each_player():
+    game_state = _build_state()
+    resolver = EffectResolver(game_state)
+    context = ResolveContext(controller_id=0, choices={"alternative_cost_tag": "overload"})
+
+    result = resolver.apply({"type": "replace_draw", "target": "player", "replacementZone": "exile"}, context)
+
+    assert result["type"] == "replace_draw"
+    assert len(result["results"]) == 2
+    affected = {entry["player_id"] for entry in result["results"]}
+    assert affected == {0, 1}
+

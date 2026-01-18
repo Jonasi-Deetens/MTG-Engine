@@ -10,6 +10,7 @@ interface UseTurnResetArgs {
   setSelectedTargetPlayerIds: React.Dispatch<React.SetStateAction<number[]>>;
   setActiveAttackerId: React.Dispatch<React.SetStateAction<string | null>>;
   setSelectedDefenderId: React.Dispatch<React.SetStateAction<string | null>>;
+  onResetTargets?: () => void;
 }
 
 export const useTurnReset = ({
@@ -21,6 +22,7 @@ export const useTurnReset = ({
   setSelectedTargetPlayerIds,
   setActiveAttackerId,
   setSelectedDefenderId,
+  onResetTargets,
 }: UseTurnResetArgs) => {
   useEffect(() => {
     if (!gameState) return;
@@ -31,6 +33,9 @@ export const useTurnReset = ({
     setSelectedBattlefieldId(null);
     setSelectedTargetObjectIds([]);
     setSelectedTargetPlayerIds([]);
+    if (onResetTargets) {
+      onResetTargets();
+    }
     if (gameState.turn.step === 'declare_attackers') {
       const activeIndex = gameState.turn.active_player_index;
       const defenderIndex = (activeIndex + 1) % gameState.players.length;
