@@ -1,6 +1,7 @@
 import pytest
 
 from engine import GameObject, GameState, PlayerState, TurnManager
+from tests.engine.cost_helpers import mana_cost_data
 from engine.rules import cast_spell, prepare_cast
 from engine.zones import ZONE_EXILE, ZONE_GRAVEYARD, ZONE_HAND
 
@@ -73,7 +74,11 @@ def test_cast_spell_with_mana_alt_cost():
         "rootNodeId": "kw1",
         "abilityType": "keyword",
         "nodes": [
-            {"id": "kw1", "type": "KEYWORD", "data": {"keyword": "alternative_cost", "costs": [{"type": "mana", "cost": "{1}{R}"}]}},
+            {
+                "id": "kw1",
+                "type": "KEYWORD",
+                "data": {"keyword": "alternative_cost", "costs": [{"type": "mana", "cost": mana_cost_data("{1}{R}")}]},
+            },
         ],
         "edges": [],
     }
@@ -110,7 +115,11 @@ def test_cast_spell_with_flashback_from_graveyard():
         "rootNodeId": "kw1",
         "abilityType": "keyword",
         "nodes": [
-            {"id": "kw1", "type": "KEYWORD", "data": {"keyword": "flashback", "costs": [{"type": "mana", "cost": "{1}{R}"}]}},
+            {
+                "id": "kw1",
+                "type": "KEYWORD",
+                "data": {"keyword": "flashback", "costs": [{"type": "mana", "cost": mana_cost_data("{1}{R}")}]},
+            },
         ],
         "edges": [],
     }
@@ -147,7 +156,11 @@ def test_cast_spell_with_escape_exiles_cards():
         "rootNodeId": "kw1",
         "abilityType": "keyword",
         "nodes": [
-            {"id": "kw1", "type": "KEYWORD", "data": {"keyword": "escape", "costs": [{"type": "mana", "cost": "{2}{R}"}], "number": 2}},
+            {
+                "id": "kw1",
+                "type": "KEYWORD",
+                "data": {"keyword": "escape", "costs": [{"type": "mana", "cost": mana_cost_data("{2}{R}")}], "number": 2},
+            },
         ],
         "edges": [],
     }

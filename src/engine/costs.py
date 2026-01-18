@@ -1,20 +1,90 @@
 from __future__ import annotations
 
-import re
 from typing import Any, Dict, Iterable, List, Optional
 
-from .mana import MANA_SYMBOL_PATTERN, can_pay_cost, can_pay_cost_with_payment, parse_mana_cost, pay_cost, pay_cost_with_payment
+from .mana import (
+    can_pay_cost,
+    can_pay_cost_with_payment,
+    extract_mana_symbols,
+    parse_mana_cost,
+    pay_cost,
+    pay_cost_with_payment,
+)
 from .state import GameObject, GameState
 from .zones import ZONE_BATTLEFIELD, ZONE_EXILE, ZONE_GRAVEYARD
 
+_TEXT_SEPARATORS = {",", ";"}
 
-_TEXT_SEPARATOR = re.compile(r"[,;]")
+
+def _split_segments(text: str) -> List[str]:
+    segments: List[str] = []
+    current: List[str] = []
+    for char in text:
+        if char in _TEXT_SEPARATORS:
+            segment = "".join(current).strip()
+            if segment:
+                segments.append(segment)
+            current = []
+        else:
+            current.append(char)
+    tail = "".join(current).strip()
+    if tail:
+        segments.append(tail)
+    return segments
+
+
+def _tokenize(text: str) -> List[str]:
+    tokens: List[str] = []
+    current: List[str] = []
+    for char in text:
+        if char.isalnum():
+            current.append(char)
+        else:
+            if current:
+                tokens.append("".join(current))
+                current = []
+    if current:
+        tokens.append("".join(current))
+    return tokens
+
+
+def _extract_mana_sequence_from(text: str, start_index: int) -> Optional[str]:
+    if start_index < 0 or start_index >= len(text):
+        return None
+    index = text.find("{", start_index)
+    if index == -1:
+        return None
+    parts: List[str] = []
+    while index < len(text) and text[index] == "{":
+        end = text.find("}", index + 1)
+        if end == -1:
+            break
+        parts.append(text[index : end + 1])
+        index = end + 1
+        while index < len(text) and text[index].isspace():
+            index += 1
+        if index >= len(text) or text[index] != "{":
+            break
+    return "".join(parts) if parts else None
+
+
+def _extract_keyword_tail(text: str, keyword: str) -> Optional[str]:
+    lower = text.lower()
+    key = keyword.lower()
+    start = lower.find(key)
+    if start == -1:
+        return None
+    index = start + len(key)
+    while index < len(text) and text[index] in (" ", "\t", "-", "—", "–"):
+        index += 1
+    tail = text[index:].strip()
+    return tail if tail else None
 
 
 def parse_cost_string(cost_text: Optional[str]) -> List[Dict[str, Any]]:
     if not cost_text:
         return []
-    segments = [segment.strip() for segment in _TEXT_SEPARATOR.split(cost_text) if segment.strip()]
+    segments = _split_segments(cost_text)
     costs: List[Dict[str, Any]] = []
     for segment in segments:
         costs.extend(_parse_cost_segment(segment))
@@ -37,10 +107,15 @@ def parse_additional_cast_costs(oracle_text: Optional[str]) -> List[Dict[str, An
         return []
     costs: List[Dict[str, Any]] = []
     for line in oracle_text.split("\n"):
-        match = re.search(r"additional cost to cast[^,]*,\s*(.+)", line, flags=re.IGNORECASE)
-        if not match:
+        lower = line.lower()
+        marker = "additional cost to cast"
+        marker_index = lower.find(marker)
+        if marker_index == -1:
             continue
-        raw = match.group(1)
+        comma_index = line.find(",", marker_index)
+        if comma_index == -1:
+            continue
+        raw = line[comma_index + 1 :]
         if "." in raw:
             raw = raw.split(".", 1)[0]
         costs.extend(parse_cost_string(raw.strip()))
@@ -52,31 +127,29 @@ def parse_alternative_cast_costs(oracle_text: Optional[str]) -> List[Dict[str, A
         return []
     costs: List[Dict[str, Any]] = []
     for line in oracle_text.split("\n"):
-        flashback = re.search(r"flashback\s+(\{[^}]+\}(?:\{[^}]+\})*)", line, flags=re.IGNORECASE)
-        if flashback:
-            cost_text = flashback.group(1)
-            costs.append({"tag": f"flashback:{cost_text}", "type": "mana", "cost": cost_text, "zone": "graveyard"})
-        escape = re.search(r"escape\s+(\{[^}]+\}(?:\{[^}]+\})*)", line, flags=re.IGNORECASE)
-        if escape:
-            cost_text = escape.group(1)
-            costs.append({"tag": f"escape:{cost_text}", "type": "mana", "cost": cost_text, "zone": "graveyard"})
-        if re.search(r"jump-start", line, flags=re.IGNORECASE):
+        lower = line.lower()
+        if "flashback" in lower:
+            cost_text = _extract_mana_sequence_from(line, lower.find("flashback"))
+            if cost_text:
+                costs.append({"tag": f"flashback:{cost_text}", "type": "mana", "cost": cost_text, "zone": "graveyard"})
+        if "escape" in lower:
+            cost_text = _extract_mana_sequence_from(line, lower.find("escape"))
+            if cost_text:
+                costs.append({"tag": f"escape:{cost_text}", "type": "mana", "cost": cost_text, "zone": "graveyard"})
+        if "jump-start" in lower:
             costs.append({"tag": "jump-start", "type": "normal", "zone": "graveyard"})
-        if re.search(r"overload", line, flags=re.IGNORECASE):
-            overload = re.search(r"overload\s+(\{[^}]+\}(?:\{[^}]+\})*)", line, flags=re.IGNORECASE)
-            if overload:
-                cost_text = overload.group(1)
+        if "overload" in lower:
+            cost_text = _extract_mana_sequence_from(line, lower.find("overload"))
+            if cost_text:
                 costs.append({"tag": f"overload:{cost_text}", "type": "mana", "cost": cost_text})
-        if re.search(r"without paying its mana cost", line, flags=re.IGNORECASE):
+        if "without paying its mana cost" in lower:
             costs.append({"tag": "free", "type": "free"})
-        match = re.search(
-            r"you may cast this spell for\s+(\{[^}]+\}(?:\{[^}]+\})*)",
-            line,
-            flags=re.IGNORECASE,
-        )
-        if match:
-            cost_text = match.group(1)
-            costs.append({"tag": cost_text, "type": "mana", "cost": cost_text})
+        phrase = "you may cast this spell for"
+        phrase_index = lower.find(phrase)
+        if phrase_index != -1:
+            cost_text = _extract_mana_sequence_from(line, phrase_index)
+            if cost_text:
+                costs.append({"tag": cost_text, "type": "mana", "cost": cost_text})
     return costs
 
 
@@ -107,36 +180,36 @@ def parse_optional_cast_costs(oracle_text: Optional[str]) -> List[Dict[str, Any]
     costs: List[Dict[str, Any]] = []
     for line in oracle_text.split("\n"):
         text = line.split("(", 1)[0].strip().rstrip(".")
-        multikicker = re.search(r"multikicker(?:\s+|—|-)\s*(.+)", text, flags=re.IGNORECASE)
+        multikicker = _extract_keyword_tail(text, "multikicker")
         if multikicker:
-            cost_text = multikicker.group(1).strip()
+            cost_text = multikicker.strip()
             costs.append({
                 "tag": f"multikicker:{cost_text}",
                 "kind": "multikicker",
                 "costs": parse_cost_string(cost_text),
                 "repeatable": True,
             })
-        kicker = re.search(r"kicker(?:\s+|—|-)\s*(.+)", text, flags=re.IGNORECASE)
+        kicker = _extract_keyword_tail(text, "kicker")
         if kicker and not multikicker:
-            cost_text = kicker.group(1).strip()
+            cost_text = kicker.strip()
             costs.append({
                 "tag": f"kicker:{cost_text}",
                 "kind": "kicker",
                 "costs": parse_cost_string(cost_text),
                 "repeatable": False,
             })
-        buyback = re.search(r"buyback(?:\s+|—|-)\s*(.+)", text, flags=re.IGNORECASE)
+        buyback = _extract_keyword_tail(text, "buyback")
         if buyback:
-            cost_text = buyback.group(1).strip()
+            cost_text = buyback.strip()
             costs.append({
                 "tag": f"buyback:{cost_text}",
                 "kind": "buyback",
                 "costs": parse_cost_string(cost_text),
                 "repeatable": False,
             })
-        entwine = re.search(r"entwine(?:\s+|—|-)\s*(.+)", text, flags=re.IGNORECASE)
+        entwine = _extract_keyword_tail(text, "entwine")
         if entwine:
-            cost_text = entwine.group(1).strip()
+            cost_text = entwine.strip()
             costs.append({
                 "tag": f"entwine:{cost_text}",
                 "kind": "entwine",
@@ -277,7 +350,7 @@ def pay_costs(
 
 
 def _parse_ward_keyword(keyword: str) -> List[Dict[str, Any]]:
-    symbols = MANA_SYMBOL_PATTERN.findall(keyword)
+    symbols = extract_mana_symbols(keyword)
     if symbols:
         cost = "".join(f"{{{symbol}}}" for symbol in symbols)
         return [{"type": "mana", "cost": cost}]
@@ -291,7 +364,7 @@ def _parse_ward_keyword(keyword: str) -> List[Dict[str, Any]]:
 
 
 def _parse_cost_segment(segment: str) -> List[Dict[str, Any]]:
-    symbols = MANA_SYMBOL_PATTERN.findall(segment)
+    symbols = extract_mana_symbols(segment)
     if symbols:
         mana_symbols: List[str] = []
         costs: List[Dict[str, Any]] = []
@@ -311,6 +384,7 @@ def _parse_text_cost(text: str, allow_self: bool) -> List[Dict[str, Any]]:
     lower = text.lower().strip()
     if not lower:
         return []
+    tokens = _tokenize(lower)
     number_map = {
         "one": 1,
         "two": 2,
@@ -322,39 +396,69 @@ def _parse_text_cost(text: str, allow_self: bool) -> List[Dict[str, Any]]:
         if raw.isdigit():
             return int(raw)
         return number_map.get(raw, 0)
-    match = re.search(r"pay\s+(\d+)\s+life", lower)
-    if match:
-        return [{"type": "life", "amount": int(match.group(1))}]
-    exile_match = re.search(
-        r"exile\s+(\d+|one|two|three|four|five)\s+(other\s+)?cards?\s+from\s+your\s+graveyard",
-        lower,
-    )
-    if exile_match:
-        amount = _parse_amount(exile_match.group(1))
-        other = bool(exile_match.group(2))
-        return [{"type": "exile_graveyard", "amount": amount, "other": other}]
-    match = re.search(r"discard\s+(\d+)\s+cards?", lower)
-    if match:
-        return [{"type": "discard", "amount": int(match.group(1))}]
-    if "discard a card" in lower:
-        return [{"type": "discard", "amount": 1}]
+    for index in range(len(tokens) - 2):
+        if tokens[index] == "pay" and tokens[index + 2] == "life":
+            amount = _parse_amount(tokens[index + 1])
+            if amount:
+                return [{"type": "life", "amount": amount}]
+
+    if "exile" in tokens and "graveyard" in tokens and "from" in tokens:
+        exile_index = tokens.index("exile")
+        amount = 0
+        other = False
+        if exile_index + 1 < len(tokens):
+            next_token = tokens[exile_index + 1]
+            if next_token in ("another", "other"):
+                other = True
+                amount = 1
+            else:
+                amount = _parse_amount(next_token)
+        if amount:
+            return [{"type": "exile_graveyard", "amount": amount, "other": other}]
+
+    if "discard" in tokens:
+        discard_index = tokens.index("discard")
+        if discard_index + 1 < len(tokens):
+            amount = _parse_amount(tokens[discard_index + 1])
+            if amount:
+                return [{"type": "discard", "amount": amount}]
+        if "discard a card" in lower:
+            return [{"type": "discard", "amount": 1}]
     if "sacrifice this" in lower or "sacrifice ~" in lower or "sacrifice it" in lower:
         return [{"type": "sacrifice_self"}] if allow_self else []
-    match = re.search(r"sacrifice\s+(?:a|an)?\s*(nonland\s+)?([a-z]+)?", lower)
-    if match:
-        nonland = bool(match.group(1))
-        card_type = match.group(2)
+    if "sacrifice" in tokens:
+        sacrifice_index = tokens.index("sacrifice")
+        index = sacrifice_index + 1
+        if index < len(tokens) and tokens[index] in ("a", "an"):
+            index += 1
+        nonland = False
+        if index < len(tokens) and tokens[index] == "nonland":
+            nonland = True
+            index += 1
+        matched_type = index < len(tokens)
+        card_type = tokens[index] if matched_type else None
         if card_type in ("permanent", "permanents"):
             card_type = None
-        return [{"type": "sacrifice", "card_type": card_type, "nonland": nonland}]
+        if matched_type or nonland:
+            return [{"type": "sacrifice", "card_type": card_type, "nonland": nonland}]
     if "tap this" in lower or "tap ~" in lower or lower == "tap":
         return [{"type": "tap_self"}] if allow_self else []
-    match = re.search(r"tap\s+(?:an|a)?\s*(untapped\s+)?(nonland\s+)?([a-z]+)?", lower)
-    if match:
-        nonland = bool(match.group(2))
-        card_type = match.group(3)
+    if "tap" in tokens:
+        tap_index = tokens.index("tap")
+        index = tap_index + 1
+        if index < len(tokens) and tokens[index] in ("a", "an"):
+            index += 1
+        if index < len(tokens) and tokens[index] == "untapped":
+            index += 1
+        nonland = False
+        if index < len(tokens) and tokens[index] == "nonland":
+            nonland = True
+            index += 1
+        matched_type = index < len(tokens)
+        card_type = tokens[index] if matched_type else None
         if card_type in ("permanent", "permanents"):
             card_type = None
-        return [{"type": "tap", "card_type": card_type, "nonland": nonland}]
+        if matched_type or nonland:
+            return [{"type": "tap", "card_type": card_type, "nonland": nonland}]
     return []
 

@@ -1,6 +1,7 @@
 import pytest
 
 from engine import GameObject, GameState, PlayerState, TurnManager
+from tests.engine.cost_helpers import mana_cost_data
 from engine.rules import cast_spell
 from engine.zones import ZONE_BATTLEFIELD, ZONE_GRAVEYARD, ZONE_HAND
 
@@ -208,7 +209,7 @@ def test_ward_multiple_costs_and_discard_two():
         zone=ZONE_BATTLEFIELD,
     )
     warded.ability_graphs = [
-        _ward_graph([{"type": "mana", "cost": "{1}"}]),
+        _ward_graph([{"type": "mana", "cost": mana_cost_data("{1}")}]),
         _ward_graph([{"type": "life", "amount": 3}]),
     ]
     warded_disc = GameObject(

@@ -365,6 +365,25 @@ def _missing_required_global_targets(context: ResolveContext) -> List[str]:
     return _missing_required_targets(context.targets, required)
 
 
+def has_missing_required_targets(context: ResolveContext) -> bool:
+    if _missing_required_global_targets(context):
+        return True
+    if isinstance(context.targets_by_effect, dict):
+        for node_id, override in context.targets_by_effect.items():
+            if not isinstance(override, dict):
+                continue
+            required_keys: List[str] = []
+            if isinstance(context.required_targets_by_effect, dict):
+                required_keys = context.required_targets_by_effect.get(node_id, []) or []
+            if not required_keys:
+                continue
+            merged = dict(context.targets)
+            merged.update(override)
+            if _missing_required_targets(merged, required_keys):
+                return True
+    return False
+
+
 def _collect_target_units(targets: Dict[str, Any]) -> tuple[List[str], List[int]]:
     object_ids: List[str] = []
     player_ids: List[int] = []

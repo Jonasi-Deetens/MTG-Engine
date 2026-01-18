@@ -117,22 +117,33 @@ class TurnManager:
             obj = self.gs.objects.get(obj_id or copy_of) if (obj_id or copy_of) else None
             context_data = payload.get("context") or {}
             context = ResolveContext(**context_data)
-            from engine.targets import has_legal_targets, normalize_targets
+            from engine.targets import has_legal_targets, has_missing_required_targets, normalize_targets
             if obj:
                 if context.source_id is None:
                     context.source_id = obj.id
                 normalize_targets(self.gs, context)
+                missing_required = has_missing_required_targets(context)
                 if not has_legal_targets(self.gs, context, allow_partial=True):
                     if not is_copy:
                         self.gs.move_object(obj.id, ZONE_GRAVEYARD)
                         obj.was_cast = False
                         self.gs.event_bus.publish(Event(
                             type="spell_fizzled",
-                            payload={"object_id": obj.id, "controller_id": obj.controller_id},
+                            payload={
+                                "object_id": obj.id,
+                                "controller_id": obj.controller_id,
+                                "reason": "missing_targets" if missing_required else "illegal_targets",
+                            },
                         ))
-                        self.gs.log(f"Spell fizzles (illegal targets): {obj_id}")
+                        if missing_required:
+                            self.gs.log(f"Spell fizzles (no targets chosen): {obj_id}")
+                        else:
+                            self.gs.log(f"Spell fizzles (illegal targets): {obj_id}")
                     else:
-                        self.gs.log(f"Spell copy fizzles (illegal targets): {copy_of}")
+                        if missing_required:
+                            self.gs.log(f"Spell copy fizzles (no targets chosen): {copy_of}")
+                        else:
+                            self.gs.log(f"Spell copy fizzles (illegal targets): {copy_of}")
                 else:
                     if not is_copy:
                         if destination_zone:
@@ -207,7 +218,10 @@ class TurnManager:
                     ))
                 self.gs.log("Resolved ability graph")
             except ValueError as exc:
-                self.gs.log(f"Ability fizzles: {exc}")
+                if "missing target" in str(exc).lower():
+                    self.gs.log("Ability fizzles (no targets chosen)")
+                else:
+                    self.gs.log(f"Ability fizzles: {exc}")
                 source_id = payload.get("source_object_id")
                 destination_zone = payload.get("destination_zone")
                 if source_id and destination_zone:
@@ -217,7 +231,11 @@ class TurnManager:
                         obj.was_cast = False
                         self.gs.event_bus.publish(Event(
                             type="spell_fizzled",
-                            payload={"object_id": obj.id, "controller_id": obj.controller_id},
+                            payload={
+                                "object_id": obj.id,
+                                "controller_id": obj.controller_id,
+                                "reason": "missing_targets" if "missing target" in str(exc).lower() else "illegal_targets",
+                            },
                         ))
         else:
             self.gs.log(f"Resolved stack item {resolved_item.kind}")

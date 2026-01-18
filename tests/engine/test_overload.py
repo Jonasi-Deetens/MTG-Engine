@@ -1,4 +1,5 @@
 from engine import GameObject, GameState, PlayerState, TurnManager
+from tests.engine.cost_helpers import mana_cost_data
 from engine.rules import cast_spell
 from engine.zones import ZONE_BATTLEFIELD, ZONE_HAND
 
@@ -17,7 +18,11 @@ def _damage_graph() -> dict:
         "abilityType": "activated",
         "nodes": [
             {"id": "a1", "type": "ACTIVATED", "data": {"cost": ""}},
-            {"id": "kw1", "type": "KEYWORD", "data": {"keyword": "overload", "costs": [{"type": "mana", "cost": "{1}{R}"}]}},
+            {
+                "id": "kw1",
+                "type": "KEYWORD",
+                "data": {"keyword": "overload", "costs": [{"type": "mana", "cost": mana_cost_data("{1}{R}")}]},
+            },
             {"id": "e1", "type": "EFFECT", "data": {"type": "damage", "amount": 2, "target": "target_creature"}},
         ],
         "edges": [{"from_": "a1", "to": "e1"}],

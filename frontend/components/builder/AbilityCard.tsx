@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/Card';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { formatEffect } from '@/lib/effectTypes';
 import { formatCondition } from '@/lib/conditionTypes';
+import { buildActivationCosts, formatActivationCostLabel } from '@/lib/activationCosts';
 
 interface AbilityCardProps {
   ability: TriggeredAbility | ActivatedAbility | StaticAbility | ContinuousAbility | KeywordAbility;
@@ -44,7 +45,8 @@ function getAbilitySummary(ability: any, type: string): string {
     case 'activated': {
       const a = ability as ActivatedAbility;
       const effectText = (a.effects ?? []).map((e) => formatEffect(e).toLowerCase()).join(', ');
-      return `${a.cost}: ${effectText}`;
+      const costText = buildActivationCosts(a.costs ?? []).map(formatActivationCostLabel).join(', ');
+      return `${costText}: ${effectText}`;
     }
     case 'static': {
       const a = ability as StaticAbility;
@@ -57,7 +59,9 @@ function getAbilitySummary(ability: any, type: string): string {
     case 'keyword': {
       const a = ability as KeywordAbility;
       let text = a.keyword;
-      if (a.cost) text += ` ${a.cost}`;
+      if (a.costs && a.costs.length > 0) {
+        text += ` ${buildActivationCosts(a.costs).map(formatActivationCostLabel).join(', ')}`;
+      }
       if (a.number !== undefined) text += ` ${a.number}`;
       return text;
     }

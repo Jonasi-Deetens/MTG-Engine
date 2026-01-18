@@ -1,6 +1,7 @@
 import pytest
 
 from engine import GameObject, GameState, PlayerState, TurnManager
+from tests.engine.cost_helpers import mana_cost_data
 from engine.rules import cast_spell
 from engine.zones import ZONE_BATTLEFIELD, ZONE_HAND
 
@@ -34,7 +35,7 @@ def test_ward_requires_payment_choice():
         types=["Creature"],
         zone=ZONE_BATTLEFIELD,
     )
-    warded.ability_graphs = [_ward_graph([{"type": "mana", "cost": "{1}"}])]
+    warded.ability_graphs = [_ward_graph([{"type": "mana", "cost": mana_cost_data("{1}")}])]
     spell = GameObject(
         id="spell",
         name="Spell",
@@ -69,7 +70,7 @@ def test_ward_payment_allows_targeting():
         types=["Creature"],
         zone=ZONE_BATTLEFIELD,
     )
-    warded.ability_graphs = [_ward_graph([{"type": "mana", "cost": "{1}"}])]
+    warded.ability_graphs = [_ward_graph([{"type": "mana", "cost": mana_cost_data("{1}")}])]
     spell = GameObject(
         id="spell",
         name="Spell",
@@ -108,7 +109,7 @@ def test_ward_payment_uses_specific_mana_payment():
         types=["Creature"],
         zone=ZONE_BATTLEFIELD,
     )
-    warded.ability_graphs = [_ward_graph([{"type": "mana", "cost": "{1}"}])]
+    warded.ability_graphs = [_ward_graph([{"type": "mana", "cost": mana_cost_data("{1}")}])]
     spell = GameObject(
         id="spell",
         name="Spell",

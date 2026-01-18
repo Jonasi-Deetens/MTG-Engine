@@ -1,4 +1,5 @@
 from engine import GameObject, GameState, PlayerState, TurnManager
+from tests.engine.cost_helpers import mana_cost_data
 from engine.effects import EffectResolver
 from engine.state import ResolveContext
 from engine.rules import cast_spell
@@ -19,7 +20,11 @@ def _discard_graph() -> dict:
         "abilityType": "activated",
         "nodes": [
             {"id": "e1", "type": "EFFECT", "data": {"type": "discard", "amount": 1, "target": "player"}},
-            {"id": "kw1", "type": "KEYWORD", "data": {"keyword": "overload", "costs": [{"type": "mana", "cost": "{1}{B}"}]}},
+            {
+                "id": "kw1",
+                "type": "KEYWORD",
+                "data": {"keyword": "overload", "costs": [{"type": "mana", "cost": mana_cost_data("{1}{B}")}]},
+            },
         ],
         "edges": [],
     }

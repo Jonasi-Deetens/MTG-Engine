@@ -1,4 +1,5 @@
 import { CostEntry, buildActivationCosts, formatActivationCostLabel } from '@/lib/activationCosts';
+import { parseManaCostSymbols, serializeManaCostSymbols } from '@/lib/wardCosts';
 
 export type OptionalCastCostOption = {
   tag: string;
@@ -66,7 +67,7 @@ export const deriveAlternativeCastCostsFromGraph = (graph?: any): AlternativeCos
   graph.nodes.forEach((node: any) => {
     if (node?.type !== 'KEYWORD') return;
     const keyword = typeof node?.data?.keyword === 'string' ? node.data.keyword.trim().toLowerCase() : '';
-    const costText = typeof node?.data?.cost === 'string' ? node.data.cost.trim() : findManaCost(node?.data);
+  const costText = typeof node?.data?.cost === 'string' ? node.data.cost.trim() : findManaCost(node?.data);
     if (keyword === 'flashback' && costText) {
       options.push({ tag: `flashback:${costText}`, label: `Flashback ${costText}` });
     }
@@ -170,7 +171,7 @@ const normalizeCostEntries = (data?: any): CostEntry[] => {
     });
   }
   if (costs.length === 0 && typeof data.cost === 'string' && data.cost.includes('{')) {
-    costs.push({ type: 'mana', cost: data.cost });
+    costs.push({ type: 'mana', cost: parseManaCostSymbols(data.cost) });
   }
   if (typeof data.lifeCost === 'number' && data.lifeCost > 0) {
     costs.push({ type: 'life', amount: data.lifeCost });
@@ -190,14 +191,15 @@ const findManaCost = (data?: any) => {
   if (!data) return '';
   const costs = normalizeCostEntries(data);
   const mana = costs.find((entry) => entry.type === 'mana') as CostEntry | undefined;
-  return mana && 'cost' in mana ? (mana as any).cost : '';
+  if (!mana || !('cost' in mana)) return '';
+  return serializeManaCostSymbols(mana.cost as any);
 };
 
 const buildCostTag = (costs: CostEntry[]) => {
   if (!costs.length) return '';
   return costs
     .map((cost) => {
-      if (cost.type === 'mana') return cost.cost;
+      if (cost.type === 'mana') return serializeManaCostSymbols(cost.cost as any);
       if (cost.type === 'life' || cost.type === 'discard' || cost.type === 'exile_graveyard') {
         return `${cost.type}:${cost.amount}`;
       }

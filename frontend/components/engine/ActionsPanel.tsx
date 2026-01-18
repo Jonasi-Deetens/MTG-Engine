@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { TargetSelector } from '@/components/engine/TargetSelector';
 import { EnterChoicesPanel } from '@/components/engine/EnterChoicesPanel';
+import { SearchChoicePanel } from '@/components/engine/SearchChoicePanel';
 import { ModalChoicePanel } from '@/components/engine/ModalChoicePanel';
 import { ManaPaymentPanel } from '@/components/engine/ManaPaymentPanel';
 import { WardPaymentPanel } from '@/components/engine/WardPaymentPanel';
@@ -335,8 +336,19 @@ interface ActionsPanelProps {
   onChangeTargetPlayers: (ids: number[]) => void;
   onClearTargets: () => void;
   effectTargetGroups?: EffectTargetGroup[];
+  copyEffectTargetGroups?: Array<EffectTargetGroup & { copyIndex: number }>;
   targetSelectionErrors?: string[];
   copyTargetSelections?: Array<{ objectIds: string[]; playerIds: number[] }>;
+  searchChoiceEntries?: Array<{
+    id: string;
+    label: string;
+    zone: string;
+    candidates: Array<{ id: string; label: string }>;
+    selectedIds: string[];
+    maxSelections?: number | null;
+    onChange: (ids: string[]) => void;
+  }>;
+  searchChoiceErrors?: string[];
   onChangeCopyTarget: (index: number, objectIds: string[], playerIds: number[]) => void;
 }
 
@@ -468,7 +480,10 @@ export function ActionsPanel({
   onClearTargets,
   effectTargetGroups,
   targetSelectionErrors,
+  copyEffectTargetGroups,
   copyTargetSelections,
+  searchChoiceEntries,
+  searchChoiceErrors,
   onChangeCopyTarget,
 }: ActionsPanelProps) {
   return (
@@ -785,6 +800,17 @@ export function ActionsPanel({
         </div>
       )}
 
+      {searchChoiceEntries && searchChoiceEntries.length > 0 && (
+        <div className="space-y-2">
+          <SearchChoicePanel entries={searchChoiceEntries} cardMap={cardMap} />
+          {searchChoiceErrors && searchChoiceErrors.length > 0 && (
+            <div className="text-xs text-[color:var(--theme-status-error)]">
+              {searchChoiceErrors.join(' ')}
+            </div>
+          )}
+        </div>
+      )}
+
       {effectTargetGroups && effectTargetGroups.length > 0 ? (
         <div className="space-y-4">
           {effectTargetGroups.map((group) => (
@@ -837,7 +863,49 @@ export function ActionsPanel({
           onClear={onClearTargets}
         />
       )}
-      {copyTargetSelections && copyTargetSelections.length > 0 && (
+      {copyEffectTargetGroups && copyEffectTargetGroups.length > 0 && (
+        <div className="space-y-3">
+          <div className="text-xs uppercase text-[color:var(--theme-text-secondary)]">Copy Targets</div>
+          {Array.from(new Set(copyEffectTargetGroups.map((entry) => entry.copyIndex))).map((copyIndex) => {
+            const groups = copyEffectTargetGroups.filter((entry) => entry.copyIndex === copyIndex);
+            return (
+              <div key={`copy-effect-${copyIndex}`} className="space-y-2">
+                <div className="text-xs text-[color:var(--theme-text-secondary)]">Copy {copyIndex + 1}</div>
+                {groups.map((group) => (
+                  <div key={group.id} className="space-y-2">
+                    <div className="text-xs uppercase text-[color:var(--theme-text-secondary)]">{group.label}</div>
+                    <TargetSelector
+                      objects={group.objects}
+                      players={group.players}
+                      cardMap={cardMap}
+                      selectedObjectIds={group.selectedObjectIds}
+                      selectedPlayerIds={group.selectedPlayerIds}
+                      objectLabel={group.objectLabel || objectLabel}
+                      playerLabel={group.playerLabel || 'Players'}
+                      maxObjectTargets={group.maxObjectTargets ?? undefined}
+                      maxPlayerTargets={group.maxPlayerTargets ?? undefined}
+                      onChangeObjects={group.onChangeObjects}
+                      onChangePlayers={group.onChangePlayers}
+                      onClear={group.onClear}
+                    />
+                    {typeof group.minTargets === 'number' && group.minTargets > 0 && (
+                      <div className="text-xs text-[color:var(--theme-text-secondary)]">
+                        Minimum targets: {group.minTargets}
+                      </div>
+                    )}
+                    {group.errors && group.errors.length > 0 && (
+                      <div className="text-xs text-[color:var(--theme-status-error)]">{group.errors.join(' ')}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {(!copyEffectTargetGroups || copyEffectTargetGroups.length === 0) &&
+        copyTargetSelections &&
+        copyTargetSelections.length > 0 && (
         <div className="space-y-3">
           <div className="text-xs uppercase text-[color:var(--theme-text-secondary)]">Copy Targets</div>
           {copyTargetSelections.map((entry, index) => (
@@ -861,6 +929,7 @@ export function ActionsPanel({
               />
             </div>
           ))}
+        </div>
         </div>
       )}
       {targetSelectionErrors && targetSelectionErrors.length > 0 && (

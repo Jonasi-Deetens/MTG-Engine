@@ -21,6 +21,10 @@ interface UseCastContextArgs {
   minTargetsGlobal?: Record<string, number>;
   copyChooseNewTargets?: boolean;
   copyTargetsList?: Array<Record<string, any>>;
+  copyTargetsByEffectList?: Array<Record<string, Record<string, any>>>;
+  copyRequiredTargetsByEffectList?: Array<Record<string, string[]>>;
+  copyDistinctTargetsByEffectList?: Array<Record<string, string[]>>;
+  copyMinTargetsByEffectList?: Array<Record<string, Record<string, number>>>;
   enterChoices: Record<string, string>;
   modalChoices?: string[];
   optionalCostSelections?: Record<string, number>;
@@ -58,6 +62,10 @@ export const useCastContext = ({
   minTargetsGlobal = {},
   copyChooseNewTargets = false,
   copyTargetsList = [],
+  copyTargetsByEffectList = [],
+  copyRequiredTargetsByEffectList = [],
+  copyDistinctTargetsByEffectList = [],
+  copyMinTargetsByEffectList = [],
   enterChoices,
   modalChoices = [],
   optionalCostSelections = {},
@@ -115,6 +123,18 @@ export const useCastContext = ({
     }
     if (copyTargetsList.length > 0) {
       choices.copy_targets_list = copyTargetsList;
+    }
+    if (copyTargetsByEffectList.length > 0) {
+      choices.copy_targets_by_effect_list = copyTargetsByEffectList;
+    }
+    if (copyRequiredTargetsByEffectList.length > 0) {
+      choices.copy_required_targets_by_effect_list = copyRequiredTargetsByEffectList;
+    }
+    if (copyDistinctTargetsByEffectList.length > 0) {
+      choices.copy_distinct_targets_by_effect_list = copyDistinctTargetsByEffectList;
+    }
+    if (copyMinTargetsByEffectList.length > 0) {
+      choices.copy_min_targets_by_effect_list = copyMinTargetsByEffectList;
     }
     const usePerEffectTargets = !!(targetsByEffect && Object.keys(targetsByEffect).length > 0);
     const targets = usePerEffectTargets
@@ -187,6 +207,10 @@ export const useCastContext = ({
     minTargetsGlobal,
     copyChooseNewTargets,
     copyTargetsList,
+    copyTargetsByEffectList,
+    copyRequiredTargetsByEffectList,
+    copyDistinctTargetsByEffectList,
+    copyMinTargetsByEffectList,
   ]);
 
   return { buildCastContext };

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from .effects_helpers import resolve_target_objects, resolve_target_object, resolve_effect_players, resolve_target_list_for_player
+from .effects_helpers import resolve_target_objects, resolve_target_object, resolve_effect_players, resolve_target_list_for_player, normalize_card_type
 from .events import Event
 from .targets import resolve_object_id, resolve_player_id
 from .zones import ZONE_BATTLEFIELD, ZONE_EXILE, ZONE_GRAVEYARD, ZONE_HAND, ZONE_LIBRARY
@@ -77,9 +77,117 @@ def handle_search(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
     for player_id in player_ids:
         player = resolver.game_state.get_player(player_id)
         pool = getattr(player, zone, [])
+        filtered_pool = _filter_search_pool(resolver, effect, context, player_id, pool)
         found_ids = resolve_target_list_for_player(context, "search_results", player_id)
-        results.append({"player_id": player_id, "zone": zone, "found": [obj_id for obj_id in found_ids if obj_id in pool]})
+        results.append({
+            "player_id": player_id,
+            "zone": zone,
+            "found": [obj_id for obj_id in found_ids if obj_id in filtered_pool],
+        })
     return {"type": "search", "results": results} if len(results) > 1 else {"type": "search", **results[0]}
+
+
+def _filter_search_pool(
+    resolver,
+    effect: Dict[str, Any],
+    context,
+    player_id: int,
+    pool: List[str],
+) -> List[str]:
+    if not pool:
+        return []
+    card_type = effect.get("cardType")
+    if isinstance(card_type, str) and card_type.lower() == "any":
+        card_type = None
+    if isinstance(card_type, str):
+        card_type = normalize_card_type(card_type)
+
+    compare_op = effect.get("manaValueComparison")
+    compare_source = effect.get("manaValueComparisonSource")
+    compare_value = effect.get("manaValueComparisonValue")
+    if compare_source and compare_source != "fixed_value":
+        source_id = None
+        if compare_source == "triggering_source":
+            source_id = context.triggering_source_id
+        elif compare_source == "triggering_aura":
+            source_id = context.triggering_aura_id
+        elif compare_source == "triggering_spell":
+            source_id = context.triggering_spell_id
+        source_obj = resolver.game_state.objects.get(source_id) if source_id else None
+        compare_value = source_obj.mana_value if source_obj else None
+    compare_value = compare_value if isinstance(compare_value, int) else None
+
+    different_name = effect.get("differentName")
+    different_config = {}
+    if isinstance(different_name, dict) and different_name.get("enabled"):
+        different_config = different_name
+    elif different_name is True:
+        different_config = {"enabled": True}
+
+    compare_against_type = different_config.get("compareAgainstType")
+    if compare_against_type and compare_against_type != "any":
+        compare_against_type = normalize_card_type(compare_against_type)
+    else:
+        compare_against_type = None
+    compare_against_zone = different_config.get("compareAgainstZone", "controlled")
+
+    compare_names: set[str] = set()
+    if different_config:
+        compare_candidates: List[str] = []
+        player = resolver.game_state.get_player(player_id)
+        if compare_against_zone == "controlled":
+            compare_candidates = [
+                obj.id
+                for obj in resolver.game_state.objects.values()
+                if obj.zone == ZONE_BATTLEFIELD and obj.controller_id == player_id
+            ]
+        elif compare_against_zone == "battlefield":
+            compare_candidates = [
+                obj.id
+                for obj in resolver.game_state.objects.values()
+                if obj.zone == ZONE_BATTLEFIELD
+            ]
+        elif compare_against_zone in ("graveyard", "hand", "library", "exile"):
+            compare_candidates = list(getattr(player, compare_against_zone, []))
+        for obj_id in compare_candidates:
+            obj = resolver.game_state.objects.get(obj_id)
+            if not obj:
+                continue
+            if compare_against_type and compare_against_type not in (obj.types or []):
+                continue
+            if obj.name:
+                compare_names.add(obj.name)
+
+    def _compare(value: Optional[int]) -> bool:
+        if compare_value is None or compare_op is None:
+            return True
+        if value is None:
+            return False
+        if compare_op == "<=":
+            return value <= compare_value
+        if compare_op == "<":
+            return value < compare_value
+        if compare_op == ">=":
+            return value >= compare_value
+        if compare_op == ">":
+            return value > compare_value
+        if compare_op == "==":
+            return value == compare_value
+        return True
+
+    filtered: List[str] = []
+    for obj_id in pool:
+        obj = resolver.game_state.objects.get(obj_id)
+        if not obj:
+            continue
+        if card_type and card_type not in (obj.types or []):
+            continue
+        if not _compare(obj.mana_value):
+            continue
+        if compare_names and obj.name in compare_names:
+            continue
+        filtered.append(obj_id)
+    return filtered
 
 
 def handle_put_onto_battlefield(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:

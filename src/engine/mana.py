@@ -1,13 +1,31 @@
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
 from .state import GameObject, GameState
 
-MANA_SYMBOL_PATTERN = re.compile(r"\{([^}]+)\}")
 MANA_COLORS = {"W", "U", "B", "R", "G"}
+
+
+def extract_mana_symbols(text: Optional[str]) -> List[str]:
+    if not text:
+        return []
+    symbols: List[str] = []
+    index = 0
+    length = len(text)
+    while index < length:
+        if text[index] != "{":
+            index += 1
+            continue
+        end = text.find("}", index + 1)
+        if end == -1:
+            break
+        symbol = text[index + 1 : end]
+        if symbol:
+            symbols.append(symbol)
+        index = end + 1
+    return symbols
 
 
 @dataclass
@@ -19,6 +37,7 @@ class ManaCost:
     phyrexian: List[str] = None
     colorless: int = 0
     x_value: int = 0
+    x_count: int = 0
 
     def __post_init__(self) -> None:
         self.colored = self.colored or {}
@@ -36,21 +55,75 @@ def mana_cost_snapshot(cost: ManaCost) -> Dict[str, Any]:
         "phyrexian": list(cost.phyrexian),
         "colorless": cost.colorless,
         "x_value": cost.x_value,
+        "x_count": cost.x_count,
     }
 
 
-def parse_mana_cost(cost: Optional[str], x_value: int = 0) -> ManaCost:
+def mana_cost_from_data(data: Dict[str, Any], x_value: int = 0) -> ManaCost:
+    result = ManaCost(x_value=x_value)
+    if not isinstance(data, dict):
+        return result
+    result.generic = int(data.get("generic", 0) or 0)
+    result.colorless = int(data.get("colorless", 0) or 0)
+    result.colored = {k.upper(): int(v or 0) for k, v in (data.get("colored") or {}).items()}
+    result.hybrids = [tuple(entry) for entry in data.get("hybrids", []) if isinstance(entry, (list, tuple)) and len(entry) == 2]
+    result.two_brids = [
+        (int(entry[0]), str(entry[1]).upper())
+        for entry in data.get("two_brids", [])
+        if isinstance(entry, (list, tuple)) and len(entry) == 2
+    ]
+    result.phyrexian = [str(color).upper() for color in data.get("phyrexian", []) if color]
+    result.x_count = int(data.get("x", data.get("x_count", 0)) or 0)
+    if result.x_count > 0:
+        result.generic += int(x_value) * result.x_count
+    return result
+
+
+def serialize_mana_cost_symbols(data: Dict[str, Any]) -> str:
+    if not isinstance(data, dict):
+        return ""
+    parts: List[str] = []
+    x_count = int(data.get("x", data.get("x_count", 0)) or 0)
+    for _ in range(x_count):
+        parts.append("{X}")
+    generic = int(data.get("generic", 0) or 0)
+    if generic > 0:
+        parts.append(f"{{{generic}}}")
+    colored = data.get("colored") or {}
+    for color in ("W", "U", "B", "R", "G"):
+        count = int(colored.get(color, 0) or 0)
+        for _ in range(count):
+            parts.append(f"{{{color}}}")
+    colorless = int(data.get("colorless", 0) or 0)
+    for _ in range(colorless):
+        parts.append("{C}")
+    for hybrid in data.get("hybrids", []) or []:
+        if isinstance(hybrid, (list, tuple)) and len(hybrid) == 2:
+            parts.append(f"{{{hybrid[0]}/{hybrid[1]}}}")
+    for two_brid in data.get("two_brids", []) or []:
+        if isinstance(two_brid, (list, tuple)) and len(two_brid) == 2:
+            parts.append(f"{{{two_brid[0]}/{two_brid[1]}}}")
+    for phyrexian in data.get("phyrexian", []) or []:
+        if phyrexian:
+            parts.append(f"{{{phyrexian}/P}}")
+    return "".join(parts)
+
+
+def parse_mana_cost(cost: Optional[Any], x_value: int = 0) -> ManaCost:
+    if isinstance(cost, dict):
+        return mana_cost_from_data(cost, x_value=x_value)
     result = ManaCost(x_value=x_value)
     if not cost:
         return result
 
-    symbols = MANA_SYMBOL_PATTERN.findall(cost)
+    symbols = extract_mana_symbols(cost)
     for symbol in symbols:
         symbol = symbol.upper()
         if symbol.isdigit():
             result.generic += int(symbol)
             continue
         if symbol == "X":
+            result.x_count += 1
             result.generic += x_value
             continue
         if symbol == "C":
@@ -325,7 +398,7 @@ def produce_mana_for_object(game_state: GameState, obj: GameObject) -> Dict[str,
             return {mana: 1}
 
     if obj.oracle_text:
-        symbols = MANA_SYMBOL_PATTERN.findall(obj.oracle_text)
+        symbols = extract_mana_symbols(obj.oracle_text)
         mana: Dict[str, int] = {}
         for symbol in symbols:
             symbol = symbol.upper()

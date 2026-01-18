@@ -153,6 +153,10 @@ export const useCasting = ({
     if (!preparedCast || preparedCast.objectId !== selectedHandId) return '';
     const cost = preparedCast.cost;
     const parts: string[] = [];
+    const xCount = Number((cost as any).x_count ?? (cost as any).x ?? 0);
+    if (xCount > 0) {
+      parts.push(`${xCount}X`);
+    }
     if (cost.colored) {
       Object.entries(cost.colored).forEach(([color, amount]) => {
         const count = Number(amount || 0);

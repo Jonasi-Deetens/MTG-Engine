@@ -179,10 +179,28 @@ export interface EngineCardMap {
   [objectId: string]: CardData | undefined;
 }
 
+const splitOnWhitespace = (value: string): string[] => {
+  const tokens: string[] = [];
+  let current = '';
+  for (let i = 0; i < value.length; i += 1) {
+    const char = value[i];
+    if (char === ' ' || char === '\t' || char === '\n' || char === '\r') {
+      if (current) {
+        tokens.push(current);
+        current = '';
+      }
+    } else {
+      current += char;
+    }
+  }
+  if (current) tokens.push(current);
+  return tokens;
+};
+
 const parseTypes = (typeLine?: string): string[] => {
   if (!typeLine) return [];
   const parts = typeLine.split('—');
-  return parts[0].trim().split(/\s+/).filter(Boolean);
+  return splitOnWhitespace(parts[0].trim()).filter(Boolean);
 };
 
 const parseKeywords = (oracleText?: string): string[] => {
@@ -212,14 +230,50 @@ const parseKeywords = (oracleText?: string): string[] => {
   return found;
 };
 
+const splitProtectionTargets = (value: string): string[] => {
+  const tokens: string[] = [];
+  const lower = value.toLowerCase();
+  let current = '';
+  let index = 0;
+  while (index < value.length) {
+    if (value[index] === ',') {
+      if (current.trim()) tokens.push(current.trim());
+      current = '';
+      index += 1;
+      continue;
+    }
+    if (lower.startsWith(' and ', index)) {
+      if (current.trim()) tokens.push(current.trim());
+      current = '';
+      index += 5;
+      continue;
+    }
+    if (lower.startsWith(' or ', index)) {
+      if (current.trim()) tokens.push(current.trim());
+      current = '';
+      index += 4;
+      continue;
+    }
+    current += value[index];
+    index += 1;
+  }
+  if (current.trim()) tokens.push(current.trim());
+  return tokens.filter(Boolean);
+};
+
 const parseProtections = (oracleText?: string): string[] => {
   if (!oracleText) return [];
-  const matches = oracleText.match(/Protection from ([^\n]+)/gi) || [];
-  return matches
-    .map((match) => match.replace(/Protection from /i, '').trim())
-    .flatMap((value) => value.split(/\s+and\s+|,|\s+or\s+/i))
-    .map((token) => token.trim())
-    .filter(Boolean);
+  const results: string[] = [];
+  const marker = 'protection from ';
+  oracleText.split('\n').forEach((line) => {
+    const lower = line.toLowerCase();
+    const start = lower.indexOf(marker);
+    if (start === -1) return;
+    const tail = line.slice(start + marker.length).trim();
+    if (!tail) return;
+    results.push(...splitProtectionTargets(tail));
+  });
+  return results;
 };
 
 const parseStat = (value?: string): number | null => {

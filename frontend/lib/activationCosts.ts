@@ -1,7 +1,7 @@
-import { parseManaCostSymbols, formatManaCostLabel } from '@/lib/wardCosts';
+import { ManaCostData, formatManaCostLabel } from '@/lib/wardCosts';
 
 export type CostEntry =
-  | { type: 'mana'; cost: string }
+  | { type: 'mana'; cost: ManaCostData }
   | { type: 'tap_self' }
   | { type: 'life'; amount: number }
   | { type: 'discard'; amount: number }
@@ -11,7 +11,7 @@ export type CostEntry =
   | { type: 'exile_graveyard'; amount: number; other?: boolean };
 
 export type ActivationCost =
-  | { type: 'mana'; costText: string; cost: ReturnType<typeof parseManaCostSymbols> }
+  | { type: 'mana'; cost: ManaCostData }
   | { type: 'tap_self' }
   | { type: 'life'; amount: number }
   | { type: 'discard'; amount: number }
@@ -22,10 +22,6 @@ export type ActivationCost =
 
 export const buildActivationCosts = (costs: CostEntry[]): ActivationCost[] =>
   costs.map((entry) => {
-    if (entry.type === 'mana') {
-      const costText = entry.cost;
-      return { type: 'mana', costText, cost: parseManaCostSymbols(costText) };
-    }
     return entry;
   });
 

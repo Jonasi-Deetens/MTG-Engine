@@ -92,7 +92,13 @@ export function ManaCurveChart({ cards }: ManaCurveChartProps) {
 function parseManaCost(manaCost: string): number {
   // Remove curly braces and count symbols
   // This is simplified - real parsing would handle hybrid mana, X costs, etc.
-  const cleaned = manaCost.replace(/{/g, '').replace(/}/g, '');
+  let cleaned = '';
+  for (let i = 0; i < manaCost.length; i += 1) {
+    const char = manaCost[i];
+    if (char !== '{' && char !== '}') {
+      cleaned += char;
+    }
+  }
   let cmc = 0;
   
   for (const char of cleaned) {

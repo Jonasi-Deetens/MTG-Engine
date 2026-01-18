@@ -1,6 +1,7 @@
 import pytest
 
 from engine import AbilityGraphRuntimeAdapter, GameObject, GameState, PlayerState, ResolveContext, TurnManager
+from tests.engine.cost_helpers import mana_cost_data
 from engine.rules import cast_spell
 from engine.zones import ZONE_BATTLEFIELD, ZONE_GRAVEYARD, ZONE_HAND
 
@@ -45,7 +46,11 @@ def test_kicker_optional_cost_sets_kicked_flag():
     player = game_state.get_player(0)
     player.mana_pool["G"] = 2
     graph = _spell_graph_with_keywords([
-        {"id": "kw1", "type": "KEYWORD", "data": {"keyword": "kicker", "costs": [{"type": "mana", "cost": "{1}{G}"}]}},
+        {
+            "id": "kw1",
+            "type": "KEYWORD",
+            "data": {"keyword": "kicker", "costs": [{"type": "mana", "cost": mana_cost_data("{1}{G}")}]},
+        },
     ])
 
     cast_spell(
@@ -78,7 +83,11 @@ def test_buyback_returns_to_hand_on_resolution():
     player = game_state.get_player(0)
     player.mana_pool["G"] = 2
     graph = _spell_graph_with_keywords([
-        {"id": "kw1", "type": "KEYWORD", "data": {"keyword": "buyback", "costs": [{"type": "mana", "cost": "{1}{G}"}]}},
+        {
+            "id": "kw1",
+            "type": "KEYWORD",
+            "data": {"keyword": "buyback", "costs": [{"type": "mana", "cost": mana_cost_data("{1}{G}")}]},
+        },
     ])
 
     cast_spell(
@@ -146,7 +155,11 @@ def test_entwine_sets_all_modes_on_cast():
         },
         "nodes": [
             {"id": "act-1", "type": "ACTIVATED", "data": {"cost": ""}},
-            {"id": "kw1", "type": "KEYWORD", "data": {"keyword": "entwine", "costs": [{"type": "mana", "cost": "{1}{G}"}]}},
+            {
+                "id": "kw1",
+                "type": "KEYWORD",
+                "data": {"keyword": "entwine", "costs": [{"type": "mana", "cost": mana_cost_data("{1}{G}")}]},
+            },
             {"id": "e1", "type": "EFFECT", "data": {"type": "lose_life", "amount": 1, "target": "player", "modeId": "mode-a"}},
             {"id": "e2", "type": "EFFECT", "data": {"type": "lose_life", "amount": 2, "target": "player", "modeId": "mode-b"}},
         ],
@@ -216,7 +229,11 @@ def test_replicate_creates_spell_copies():
     player = game_state.get_player(0)
     player.mana_pool["G"] = 3
     graph = _spell_graph_with_keywords([
-        {"id": "kw1", "type": "KEYWORD", "data": {"keyword": "replicate", "costs": [{"type": "mana", "cost": "{1}"}]}},
+        {
+            "id": "kw1",
+            "type": "KEYWORD",
+            "data": {"keyword": "replicate", "costs": [{"type": "mana", "cost": mana_cost_data("{1}")}]},
+        },
     ])
 
     cast_spell(

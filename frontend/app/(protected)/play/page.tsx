@@ -13,6 +13,8 @@ import { ReplacementChoicePanel } from '@/components/engine/ReplacementChoicePan
 import { useAbilityGraphs } from '@/hooks/useAbilityGraphs';
 import { useTargeting } from '@/hooks/useTargeting';
 import { useEffectTargeting } from '@/hooks/useEffectTargeting';
+import { useCopyEffectTargeting } from '@/hooks/useCopyEffectTargeting';
+import { useSearchChoices } from '@/hooks/useSearchChoices';
 import { useCasting } from '@/hooks/useCasting';
 import { useCombatSelection } from '@/hooks/useCombatSelection';
 import { useEngineActions } from '@/hooks/useEngineActions';
@@ -286,6 +288,12 @@ export default function PlayPage() {
     return { enabled: chooseNewTargets && amount > 0, amount: Math.max(amount, 1) };
   }, [selectedGraph]);
   const [copyTargetSelections, setCopyTargetSelections] = useState<Array<{ objectIds: string[]; playerIds: number[] }>>([]);
+  const [copyTargetErrorsGlobal, setCopyTargetErrorsGlobal] = useState<string[]>([]);
+  useEffect(() => {
+    if (!copySpellConfig.enabled) {
+      setCopyTargetErrorsGlobal([]);
+    }
+  }, [copySpellConfig.enabled]);
   const {
     targetHints,
     selectedTargetObjectIds,
@@ -328,9 +336,108 @@ export default function PlayPage() {
     modalConfig: modalChoiceConfig,
     selectedModes: selectedModalModes,
   });
-  const hasEffectTargets = effectTargetGroups.length > 0;
+  const hasEffectTargets = effectTargetGroups.length > 0 || searchEntries.length > 0;
+  const {
+    searchEntries,
+    searchTargetsByEffect,
+    searchErrors,
+  } = useSearchChoices({
+    gameState,
+    selectedGraph,
+    currentPriority,
+    modalConfig: modalChoiceConfig,
+    selectedModes: selectedModalModes,
+  });
+  const mergedTargetsByEffect = useMemo(() => {
+    const result: Record<string, Record<string, any>> = { ...(targetsByEffect || {}) };
+    Object.entries(searchTargetsByEffect).forEach(([nodeId, extra]) => {
+      result[nodeId] = { ...(result[nodeId] || {}), ...(extra || {}) };
+    });
+    return result;
+  }, [searchTargetsByEffect, targetsByEffect]);
+  const copyTargetsByEffectCount = copySpellConfig.enabled && hasEffectTargets ? copySpellConfig.amount : 0;
+  const {
+    copyTargetGroups: copyEffectTargetGroups,
+    copyTargetsByEffectList,
+    copyRequiredTargetsByEffectList,
+    copyDistinctTargetsByEffectList,
+    copyMinTargetsByEffectList,
+    copyTargetErrors,
+  } = useCopyEffectTargeting({
+    gameState,
+    selectedGraph,
+    currentPriority,
+    selectedHandId,
+    modalConfig: modalChoiceConfig,
+    selectedModes: selectedModalModes,
+    copies: copyTargetsByEffectCount,
+  });
   const resolvedTargetObjectIds = hasEffectTargets ? effectTargetObjectIds : selectedTargetObjectIds;
   const resolvedTargetPlayerIds = hasEffectTargets ? effectTargetPlayerIds : selectedTargetPlayerIds;
+  useEffect(() => {
+    if (!gameState || !copySpellConfig.enabled || hasEffectTargets) {
+      setCopyTargetErrorsGlobal([]);
+      return;
+    }
+    if (copyTargetSelections.length === 0) {
+      setCopyTargetErrorsGlobal([]);
+      return;
+    }
+    const contexts = copyTargetSelections.map((entry) => {
+      const targets: Record<string, any> = {
+        ...(entry.objectIds.length > 0 ? { target: entry.objectIds[0], targets: entry.objectIds } : {}),
+        ...(entry.playerIds.length > 0 ? { target_player: entry.playerIds[0], target_players: entry.playerIds } : {}),
+      };
+      if (targetHints.playerFilter !== 'any') {
+        targets.target_scope = targetHints.playerFilter;
+      }
+      if (targetHints.objectFilter !== 'any') {
+        targets.target_object_scope = targetHints.objectFilter === 'controller' ? 'you_control' : 'opponent_control';
+      }
+      if (targetHints.objectTypes.size > 0) {
+        targets.target_object_types = Array.from(targetHints.objectTypes);
+      }
+      return {
+        controller_id: currentPriority,
+        source_id: selectedHandId ?? undefined,
+        targets,
+        ...(requiredTargetsGlobal.length > 0 ? { required_targets_by_effect: { _global: requiredTargetsGlobal } } : {}),
+        ...(distinctTargetsGlobal.length > 0 ? { distinct_targets_by_effect: { _global: distinctTargetsGlobal } } : {}),
+        ...(Object.keys(minTargetsGlobal ?? {}).length > 0 ? { min_targets_by_effect: { _global: minTargetsGlobal } } : {}),
+      };
+    });
+    const checkTargets = async () => {
+      try {
+        const response = await engineApi.execute({
+          action: 'check_targets',
+          game_state: gameState,
+          contexts,
+        });
+        const checks = (response.result?.checks as Array<{ issues?: string[] }> | undefined) ?? [];
+        const errors: string[] = [];
+        checks.forEach((check, index) => {
+          (check.issues ?? []).forEach((issue) => {
+            errors.push(`Copy ${index + 1}: ${issue}`);
+          });
+        });
+        setCopyTargetErrorsGlobal(errors);
+      } catch {
+        setCopyTargetErrorsGlobal([]);
+      }
+    };
+    checkTargets();
+  }, [
+    copySpellConfig.enabled,
+    copyTargetSelections,
+    currentPriority,
+    distinctTargetsGlobal,
+    gameState,
+    hasEffectTargets,
+    minTargetsGlobal,
+    requiredTargetsGlobal,
+    selectedHandId,
+    targetHints,
+  ]);
   const targetSelectionErrors = useMemo(() => {
     if (hasEffectTargets) {
       const errors: string[] = [];
@@ -342,9 +449,20 @@ export default function PlayPage() {
             errors.push(`${group.label}: select at least ${min} target${min === 1 ? '' : 's'}.`);
           }
         }
+        if (group.errors && group.errors.length > 0) {
+          group.errors.forEach((error) => {
+            errors.push(`${group.label}: ${error}`);
+          });
+        }
       });
       if (globalTargetErrors.length > 0) {
         errors.push(...globalTargetErrors);
+      }
+      if (searchErrors.length > 0) {
+        errors.push(...searchErrors);
+      }
+      if (copyTargetErrors.length > 0) {
+        errors.push(...copyTargetErrors);
       }
       return errors;
     }
@@ -353,12 +471,18 @@ export default function PlayPage() {
     if (min > 0 && count < min) {
       return [`Select at least ${min} target${min === 1 ? '' : 's'}.`];
     }
+    if (copyTargetErrorsGlobal.length > 0) {
+      return copyTargetErrorsGlobal;
+    }
     return [];
   }, [
     effectTargetGroups,
     globalTargetErrors,
+    searchErrors,
     hasEffectTargets,
     minTargetsGlobal,
+    copyTargetErrors,
+    copyTargetErrorsGlobal,
     resolvedTargetObjectIds.length,
     resolvedTargetPlayerIds.length,
   ]);
@@ -812,7 +936,7 @@ export default function PlayPage() {
     targetPlayerFilter: targetHints.playerFilter,
     targetObjectFilter: targetHints.objectFilter,
     targetObjectTypes: Array.from(targetHints.objectTypes ?? []),
-    targetsByEffect: hasEffectTargets ? targetsByEffect : undefined,
+    targetsByEffect: hasEffectTargets ? mergedTargetsByEffect : undefined,
     requiredTargetsByEffect: hasEffectTargets ? requiredTargetsByEffect : undefined,
     requiredTargetsGlobal: !hasEffectTargets ? requiredTargetsGlobal : undefined,
     distinctTargetsByEffect: hasEffectTargets ? distinctTargetsByEffect : undefined,
@@ -820,10 +944,28 @@ export default function PlayPage() {
     minTargetsByEffect: hasEffectTargets ? minTargetsByEffect : undefined,
     minTargetsGlobal: !hasEffectTargets ? minTargetsGlobal : undefined,
     copyChooseNewTargets: copyTargetsEnabled,
-    copyTargetsList: copyTargetSelections.map((entry) => ({
-      ...(entry.objectIds.length > 0 ? { target: entry.objectIds[0], targets: entry.objectIds } : {}),
-      ...(entry.playerIds.length > 0 ? { target_player: entry.playerIds[0], target_players: entry.playerIds } : {}),
-    })),
+    copyTargetsList: !hasEffectTargets
+      ? copyTargetSelections.map((entry) => ({
+          ...(entry.objectIds.length > 0 ? { target: entry.objectIds[0], targets: entry.objectIds } : {}),
+          ...(entry.playerIds.length > 0 ? { target_player: entry.playerIds[0], target_players: entry.playerIds } : {}),
+        }))
+      : [],
+    copyTargetsByEffectList: hasEffectTargets ? copyTargetsByEffectList : [],
+    copyRequiredTargetsByEffectList: hasEffectTargets
+      ? copyRequiredTargetsByEffectList
+      : copyTargetsEnabled
+      ? copyTargetSelections.map(() => ({ _global: requiredTargetsGlobal }))
+      : [],
+    copyDistinctTargetsByEffectList: hasEffectTargets
+      ? copyDistinctTargetsByEffectList
+      : copyTargetsEnabled
+      ? copyTargetSelections.map(() => ({ _global: distinctTargetsGlobal }))
+      : [],
+    copyMinTargetsByEffectList: hasEffectTargets
+      ? copyMinTargetsByEffectList
+      : copyTargetsEnabled
+      ? copyTargetSelections.map(() => ({ _global: minTargetsGlobal }))
+      : [],
     enterChoices,
     modalChoices: modalChoicesForCast,
     optionalCostSelections,
@@ -1169,8 +1311,11 @@ export default function PlayPage() {
               setSelectedTargetPlayerIds([]);
             }}
             effectTargetGroups={hasEffectTargets ? effectTargetGroups : undefined}
+            copyEffectTargetGroups={copyTargetsByEffectCount > 0 ? copyEffectTargetGroups : undefined}
             targetSelectionErrors={targetSelectionErrors}
             copyTargetSelections={copyTargetsEnabled ? copyTargetSelections : undefined}
+            searchChoiceEntries={searchEntries}
+            searchChoiceErrors={searchErrors}
             onChangeCopyTarget={(index, objectIds, playerIds) =>
               setCopyTargetSelections((prev) => {
                 const next = [...prev];

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, Iterable, List, Optional
 
+from .mana import serialize_mana_cost_symbols
+
 
 
 _OPTIONAL_KEYWORDS = {
@@ -54,22 +56,26 @@ def extract_alternative_costs_from_graph(graph: Dict[str, Any]) -> List[Dict[str
     for data in _iter_keyword_data(graph):
         key = _normalize_keyword(data.get("keyword"))
         if key in ("flashback", "overload", "escape"):
-            cost_text = _get_cost_text(data) or _first_mana_cost(_costs_from_keyword_data(data))
+            costs = _costs_from_keyword_data(data)
+            cost_text = _get_cost_text(data) or _first_mana_cost_tag(costs)
+            cost_value = _get_cost_text(data) or _first_mana_cost_value(costs)
             tag = f"{key}:{cost_text}" if cost_text else key
             results.append({
                 "tag": tag,
                 "type": "mana",
-                "cost": cost_text,
+                "cost": cost_value or cost_text,
                 "keyword": key,
                 "extra_costs": _alternative_extra_costs_from_keyword_data(data, key),
             })
         elif key in ("alternative cost", "alternative_cost", "alternate cost", "alternate_cost", "alternate"):
-            cost_text = _get_cost_text(data) or _first_mana_cost(_costs_from_keyword_data(data))
+            costs = _costs_from_keyword_data(data)
+            cost_text = _get_cost_text(data) or _first_mana_cost_tag(costs)
+            cost_value = _get_cost_text(data) or _first_mana_cost_value(costs)
             if cost_text:
                 results.append({
                     "tag": cost_text,
                     "type": "mana",
-                    "cost": cost_text,
+                    "cost": cost_value or cost_text,
                     "keyword": "alternate",
                     "extra_costs": _alternative_extra_costs_from_keyword_data(data, "alternate"),
                 })
@@ -185,7 +191,11 @@ def _build_cost_tag(costs: List[Dict[str, Any]]) -> str:
     for cost in costs:
         cost_type = cost.get("type")
         if cost_type == "mana":
-            parts.append(str(cost.get("cost", "")))
+            raw_cost = cost.get("cost")
+            if isinstance(raw_cost, dict):
+                parts.append(serialize_mana_cost_symbols(raw_cost))
+            else:
+                parts.append(str(raw_cost or ""))
         elif cost_type in ("life", "discard", "exile_graveyard"):
             parts.append(f"{cost_type}:{cost.get('amount', 0)}")
         elif cost_type == "tap_self":
@@ -201,9 +211,18 @@ def _build_cost_tag(costs: List[Dict[str, Any]]) -> str:
     return "+".join(parts)
 
 
-def _first_mana_cost(costs: List[Dict[str, Any]]) -> Optional[str]:
+def _first_mana_cost_value(costs: List[Dict[str, Any]]) -> Optional[Any]:
     for cost in costs:
-        if cost.get("type") == "mana" and isinstance(cost.get("cost"), str):
+        if cost.get("type") == "mana":
             return cost.get("cost")
+    return None
+
+
+def _first_mana_cost_tag(costs: List[Dict[str, Any]]) -> Optional[str]:
+    value = _first_mana_cost_value(costs)
+    if isinstance(value, dict):
+        return serialize_mana_cost_symbols(value)
+    if isinstance(value, str):
+        return value
     return None
 

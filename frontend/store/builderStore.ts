@@ -2,6 +2,7 @@
 
 import { create } from 'zustand';
 import type { CostEntry } from '@/lib/activationCosts';
+import { parseManaCostSymbols } from '@/lib/wardCosts';
 
 export interface CardData {
   card_id: string;
@@ -618,7 +619,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
           if (raw === '{T}' || raw.toLowerCase() === 'tap') {
             costs = [{ type: 'tap_self' }];
           } else if (raw.includes('{')) {
-            costs = [{ type: 'mana', cost: raw }];
+            costs = [{ type: 'mana', cost: parseManaCostSymbols(raw) }];
           }
         }
         const modal = activatedNode.data.modal || (graph as any).modal;
@@ -669,7 +670,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
         
         let keywordCosts = Array.isArray(data.costs) ? data.costs : [];
         if (keywordCosts.length === 0 && typeof data.cost === 'string' && data.cost.includes('{')) {
-          keywordCosts = [{ type: 'mana', cost: data.cost }];
+          keywordCosts = [{ type: 'mana', cost: parseManaCostSymbols(data.cost) }];
         }
         keywords.push({
           id: abilityId,
