@@ -12,7 +12,6 @@ import { isEditableTarget } from '@/context/ShortcutContext';
 
 export default function CollectionDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const collectionId = parseInt(params.collectionId as string);
   
   const [collection, setCollection] = useState<CollectionDetailResponse | null>(null);

@@ -117,29 +117,35 @@ export default function DeckBuilderPage() {
 
       if (key === 'x') {
         if (!focusedDeckCard) return;
+        const latestCard = currentDeck.cards.find((card) => card.card_id === focusedDeckCard.card_id);
+        const currentQty = latestCard?.quantity ?? focusedDeckCard.quantity;
         e.preventDefault();
         e.stopPropagation();
         if (e.shiftKey) {
           handleRemoveCard(focusedDeckCard.card_id);
         } else {
-          handleQuantityChange(focusedDeckCard.card_id, focusedDeckCard.quantity - 1);
+          handleQuantityChange(focusedDeckCard.card_id, currentQty - 1);
         }
         return;
       }
 
       if (key === '+' || key === '=') {
         if (!focusedDeckCard) return;
+        const latestCard = currentDeck.cards.find((card) => card.card_id === focusedDeckCard.card_id);
+        const currentQty = latestCard?.quantity ?? focusedDeckCard.quantity;
         e.preventDefault();
         e.stopPropagation();
-        handleQuantityChange(focusedDeckCard.card_id, focusedDeckCard.quantity + 1);
+        handleQuantityChange(focusedDeckCard.card_id, currentQty + 1);
         return;
       }
 
       if (key === '-' || key === '_') {
         if (!focusedDeckCard) return;
+        const latestCard = currentDeck.cards.find((card) => card.card_id === focusedDeckCard.card_id);
+        const currentQty = latestCard?.quantity ?? focusedDeckCard.quantity;
         e.preventDefault();
         e.stopPropagation();
-        handleQuantityChange(focusedDeckCard.card_id, focusedDeckCard.quantity - 1);
+        handleQuantityChange(focusedDeckCard.card_id, currentQty - 1);
       }
     };
 
