@@ -122,7 +122,7 @@ export default function DeckBuilderPage() {
         if (e.shiftKey) {
           handleRemoveCard(focusedDeckCard.card_id);
         } else {
-          handleQuantityChange(focusedDeckCard.card_id, -1);
+          handleQuantityChange(focusedDeckCard.card_id, focusedDeckCard.quantity - 1);
         }
         return;
       }
@@ -131,7 +131,7 @@ export default function DeckBuilderPage() {
         if (!focusedDeckCard) return;
         e.preventDefault();
         e.stopPropagation();
-        handleQuantityChange(focusedDeckCard.card_id, 1);
+        handleQuantityChange(focusedDeckCard.card_id, focusedDeckCard.quantity + 1);
         return;
       }
 
@@ -139,7 +139,7 @@ export default function DeckBuilderPage() {
         if (!focusedDeckCard) return;
         e.preventDefault();
         e.stopPropagation();
-        handleQuantityChange(focusedDeckCard.card_id, -1);
+        handleQuantityChange(focusedDeckCard.card_id, focusedDeckCard.quantity - 1);
       }
     };
 
