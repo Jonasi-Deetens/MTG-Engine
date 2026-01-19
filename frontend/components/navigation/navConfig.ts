@@ -61,4 +61,3 @@ export const navItems: NavItem[] = [
   ...navGroups.flatMap(group => group.items),
   ...standaloneNavItems,
 ];
-

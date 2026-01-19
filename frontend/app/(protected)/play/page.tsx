@@ -336,7 +336,6 @@ export default function PlayPage() {
     modalConfig: modalChoiceConfig,
     selectedModes: selectedModalModes,
   });
-  const hasEffectTargets = effectTargetGroups.length > 0 || searchEntries.length > 0;
   const {
     searchEntries,
     searchTargetsByEffect,
@@ -348,6 +347,7 @@ export default function PlayPage() {
     modalConfig: modalChoiceConfig,
     selectedModes: selectedModalModes,
   });
+  const hasEffectTargets = effectTargetGroups.length > 0 || searchEntries.length > 0;
   const mergedTargetsByEffect = useMemo(() => {
     const result: Record<string, Record<string, any>> = { ...(targetsByEffect || {}) };
     Object.entries(searchTargetsByEffect).forEach(([nodeId, extra]) => {
@@ -581,10 +581,6 @@ export default function PlayPage() {
   const hasActivatedAbility =
     selectedBattlefieldObject?.ability_graphs && selectedBattlefieldObject.ability_graphs.length > 0;
   const selectedHandObject = gameState?.objects.find((obj) => obj.id === selectedHandId);
-  const objectMap = useMemo(
-    () => new Map((gameState?.objects ?? []).map((obj) => [obj.id, obj])),
-    [gameState]
-  );
   const activatedCosts = useMemo(() => {
     if (!selectedBattlefieldObject?.ability_graphs?.length) return [];
     const graph = selectedBattlefieldObject.ability_graphs[0];
@@ -634,7 +630,7 @@ export default function PlayPage() {
     () => deriveAlternativeCastCostsFromGraph(selectedGraph),
     [selectedGraph]
   );
-  const alternativeExtraCosts = useMemo(
+  const alternativeExtraCostOptions = useMemo(
     () => deriveAlternativeExtraCostsFromGraph(selectedGraph, selectedAlternativeCostTag),
     [selectedGraph, selectedAlternativeCostTag]
   );
@@ -677,7 +673,7 @@ export default function PlayPage() {
     });
   }, [copyTargetsCount, copyTargetsEnabled]);
   const {
-    costEntries: alternativeExtraCosts,
+    costEntries: alternativeExtraCostEntries,
     payments: alternativeExtraPayments,
     setPayments: setAlternativeExtraPayments,
     paymentDetails: alternativeExtraPaymentDetails,
@@ -685,7 +681,7 @@ export default function PlayPage() {
     paymentErrors: alternativeExtraCostErrors,
     paymentsPayload: alternativeExtraPaymentsPayload,
   } = useActivationCosts({
-    costs: alternativeExtraCosts,
+    costs: alternativeExtraCostOptions,
     objects: gameState?.objects ?? [],
     players: gameState?.players ?? [],
     cardMap,
@@ -843,14 +839,6 @@ export default function PlayPage() {
     currentPlayerId: currentPriority,
     manaPool,
   });
-  const hasOptionalCostErrors =
-    optionalCostPaymentErrors.length > 0 ||
-    spliceCostErrors.length > 0 ||
-    (conspireSelected && conspireTaps.length !== 2);
-  const optionalCostErrors = useMemo(
-    () => optionalCostPaymentErrors,
-    [optionalCostPaymentErrors]
-  );
   const {
     costEntries: spliceCosts,
     payments: splicePayments,
@@ -867,6 +855,14 @@ export default function PlayPage() {
     currentPlayerId: currentPriority,
     manaPool,
   });
+  const hasOptionalCostErrors =
+    optionalCostPaymentErrors.length > 0 ||
+    spliceCostErrors.length > 0 ||
+    (conspireSelected && conspireTaps.length !== 2);
+  const optionalCostErrors = useMemo(
+    () => optionalCostPaymentErrors,
+    [optionalCostPaymentErrors]
+  );
 
   useEffect(() => {
     if (enterChoiceConfig.length === 0) {
@@ -1204,7 +1200,7 @@ export default function PlayPage() {
                 [index]: updater(prev[index] ?? { hybrid_choices: [], two_brid_choices: [], phyrexian_choices: [] }),
               }))
             }
-            alternativeExtraCosts={alternativeExtraCosts}
+            alternativeExtraCosts={alternativeExtraCostEntries}
             alternativeExtraPayments={alternativeExtraPayments}
             alternativeExtraPaymentDetails={alternativeExtraPaymentDetails}
             alternativeExtraCostErrors={alternativeExtraCostErrors}

@@ -24,8 +24,8 @@ export const useTargeting = ({
   const [selectedTargetObjectIds, setSelectedTargetObjectIds] = useState<string[]>([]);
   const [selectedTargetPlayerIds, setSelectedTargetPlayerIds] = useState<number[]>([]);
   useEffect(() => {
-    setSelectedTargetObjectIds([]);
-    setSelectedTargetPlayerIds([]);
+    setSelectedTargetObjectIds((prev) => (prev.length === 0 ? prev : []));
+    setSelectedTargetPlayerIds((prev) => (prev.length === 0 ? prev : []));
   }, [selectedGraph, selectedHandId, selectedModes.join('|')]);
   const [objectTargetStatus, setObjectTargetStatus] = useState<Record<string, boolean | null>>({});
   const [playerTargetStatus, setPlayerTargetStatus] = useState<Record<number, boolean | null>>({});
@@ -250,47 +250,58 @@ export const useTargeting = ({
   }, [checkSelectionTargets]);
 
   useEffect(() => {
+    const isSameSelection = (next: string[]) =>
+      next.length === selectedTargetObjectIds.length &&
+      next.every((id, index) => id === selectedTargetObjectIds[index]);
     if (!targetHints.allowObjects) {
-      setSelectedTargetObjectIds([]);
+      if (selectedTargetObjectIds.length > 0) {
+        setSelectedTargetObjectIds([]);
+      }
       return;
     }
     if (shouldUseStackTargets) {
-      setSelectedTargetObjectIds((prev) => prev.filter((id) => stackSpellTargets.includes(id)));
+      const next = selectedTargetObjectIds.filter((id) => stackSpellTargets.includes(id));
+      if (!isSameSelection(next)) {
+        setSelectedTargetObjectIds(next);
+      }
       return;
     }
-    setSelectedTargetObjectIds((prev) =>
-      prev.filter((id) => {
-        const obj = gameState?.objects.find((entry) => entry.id === id);
-        if (!obj) return false;
-        if (targetHints.objectFilter === 'opponent') {
-          if (currentPriority !== null && obj.controller_id === currentPriority) return false;
-        }
-        if (targetHints.objectFilter === 'controller') {
-          if (currentPriority !== null && obj.controller_id !== currentPriority) return false;
-        }
-        if (targetHints.objectTypes.size === 0) return true;
-        return obj.types.some((type) => targetHints.objectTypes.has(type));
-      })
-    );
-  }, [currentPriority, gameState, targetHints, shouldUseStackTargets, stackSpellTargets]);
+    const next = selectedTargetObjectIds.filter((id) => {
+      const obj = gameState?.objects.find((entry) => entry.id === id);
+      if (!obj) return false;
+      if (targetHints.objectFilter === 'opponent') {
+        if (currentPriority !== null && obj.controller_id === currentPriority) return false;
+      }
+      if (targetHints.objectFilter === 'controller') {
+        if (currentPriority !== null && obj.controller_id !== currentPriority) return false;
+      }
+      if (targetHints.objectTypes.size === 0) return true;
+      return obj.types.some((type) => targetHints.objectTypes.has(type));
+    });
+    if (!isSameSelection(next)) {
+      setSelectedTargetObjectIds(next);
+    }
+  }, [currentPriority, gameState, selectedTargetObjectIds, shouldUseStackTargets, stackSpellTargets, targetHints]);
 
   useEffect(() => {
     if (targetHints.allowPlayers) return;
     if (shouldUseStackTargets) {
-      setSelectedTargetPlayerIds([]);
+      setSelectedTargetPlayerIds((prev) => (prev.length === 0 ? prev : []));
       return;
     }
-    setSelectedTargetPlayerIds([]);
+    setSelectedTargetPlayerIds((prev) => (prev.length === 0 ? prev : []));
   }, [targetHints, shouldUseStackTargets]);
 
   useEffect(() => {
     if (!targetHints.allowPlayers) return;
     if (targetHints.playerFilter === 'any' || currentPriority === null) return;
-    setSelectedTargetPlayerIds((prev) =>
-      prev.filter((playerId) =>
+    setSelectedTargetPlayerIds((prev) => {
+      const next = prev.filter((playerId) =>
         targetHints.playerFilter === 'opponent' ? playerId !== currentPriority : playerId === currentPriority
-      )
-    );
+      );
+      if (next.length === prev.length && next.every((id, index) => id === prev[index])) return prev;
+      return next;
+    });
   }, [currentPriority, targetHints]);
 
   return {

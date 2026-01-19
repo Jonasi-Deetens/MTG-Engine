@@ -930,7 +930,6 @@ export function ActionsPanel({
             </div>
           ))}
         </div>
-        </div>
       )}
       {targetSelectionErrors && targetSelectionErrors.length > 0 && (
         <div className="text-xs text-[color:var(--theme-status-error)]">

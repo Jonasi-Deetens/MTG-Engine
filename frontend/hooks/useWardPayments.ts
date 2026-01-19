@@ -14,7 +14,7 @@ import { EngineCardMap } from '@/lib/engine';
 
 type WardCostEntry = {
   cost: ReturnType<typeof buildActivationCosts>[number];
-  costLabel?: string;
+  costLabel: string;
   discardOptions: Array<{ value: string; label: string }>;
   sacrificeOptions: Array<{ value: string; label: string }>;
   tapOptions: Array<{ value: string; label: string }>;
@@ -25,6 +25,107 @@ type WardTarget = {
   name: string;
   costs: WardCostEntry[];
   hasMultipleCosts: boolean;
+};
+
+const EMPTY_WARD_TARGETS: WardTarget[] = [];
+const EMPTY_MANA_POOL: Record<string, number> = {};
+
+type WardPaymentsUpdate = {
+  next: Record<string, WardPaymentEntry[]>;
+  changed: boolean;
+};
+
+type WardDetailsUpdate = {
+  next: Record<string, ManaPaymentDetail>;
+  changed: boolean;
+};
+
+const buildWardPaymentsUpdate = (
+  prev: Record<string, WardPaymentEntry[]>,
+  wardTargets: WardTarget[],
+  manaPool: Record<string, number>
+): WardPaymentsUpdate => {
+  if (wardTargets.length === 0) {
+    return {
+      next: Object.keys(prev).length === 0 ? prev : {},
+      changed: Object.keys(prev).length > 0,
+    };
+  }
+
+  const activeIds = new Set(wardTargets.map((target) => target.objectId));
+  let next = prev;
+  let changed = false;
+
+  Object.keys(prev).forEach((key) => {
+    if (!activeIds.has(key)) {
+      if (next === prev) next = { ...prev };
+      delete next[key];
+      changed = true;
+    }
+  });
+
+  wardTargets.forEach((target) => {
+    const existing = next[target.objectId] ?? [];
+    let entries = existing;
+    target.costs.forEach((entry, index) => {
+      if (entries[index]) return;
+      if (entries === existing) entries = [...existing];
+      changed = true;
+      if (entry.cost.type === 'mana' && !hasComplexManaCost(entry.cost.cost)) {
+        entries[index] = { mana_payment: buildDefaultManaPayment(entry.cost.cost, manaPool) };
+        return;
+      }
+      if (entry.cost.type === 'life') {
+        entries[index] = { life_payment: entry.cost.amount };
+        return;
+      }
+      entries[index] = {};
+    });
+
+    if (entries !== existing || !(target.objectId in next)) {
+      if (next === prev) next = { ...next };
+      next[target.objectId] = entries;
+    }
+  });
+
+  return { next: changed ? next : prev, changed };
+};
+
+const buildWardPaymentDetailsUpdate = (
+  prev: Record<string, ManaPaymentDetail>,
+  wardTargets: WardTarget[],
+  manaPool: Record<string, number>
+): WardDetailsUpdate => {
+  if (wardTargets.length === 0) {
+    return {
+      next: Object.keys(prev).length === 0 ? prev : {},
+      changed: Object.keys(prev).length > 0,
+    };
+  }
+
+  const activeIds = new Set(wardTargets.map((target) => target.objectId));
+  let next = prev;
+  let changed = false;
+
+  Object.keys(prev).forEach((key) => {
+    if (!activeIds.has(key)) {
+      if (next === prev) next = { ...prev };
+      delete next[key];
+      changed = true;
+    }
+  });
+
+  wardTargets.forEach((target) => {
+    if (next[target.objectId]) return;
+    const manaCost = target.costs.find((entry) => entry.cost.type === 'mana');
+    if (manaCost && manaCost.cost.type === 'mana') {
+      if (next === prev) next = { ...next };
+      next[target.objectId] = buildDefaultPaymentDetail(manaCost.cost.cost, manaPool);
+      changed = true;
+    }
+  });
+
+  return { next: changed ? next : prev, changed };
 };
 
 export type WardPaymentEntry = {
@@ -57,8 +158,12 @@ export const useWardPayments = ({
   autoPayWard,
 }: UseWardPaymentsArgs) => {
   const player = players.find((entry) => entry.id === currentPlayerId);
-  const wardTargets = useMemo<WardTarget[]>(() => {
-    if (!selectedTargetObjectIds.length) return [];
+  const effectiveManaPool = useMemo(
+    () => (Object.keys(manaPool).length ? manaPool : EMPTY_MANA_POOL),
+    [manaPool]
+  );
+  const wardTargets = useMemo((): WardTarget[] => {
+    if (!selectedTargetObjectIds.length) return EMPTY_WARD_TARGETS;
     const objectMap = new Map(objects.map((obj) => [obj.id, obj]));
     const cardName = (objectId: string) =>
       cardMap[objectId]?.name || objectMap.get(objectId)?.name || objectId;
@@ -85,7 +190,7 @@ export const useWardPayments = ({
           return entry.types?.includes(cardType);
         };
         const costEntries = costs.map((cost) => {
-          const costLabel = formatActivationCostLabel(cost);
+          const costLabel = formatActivationCostLabel(cost) ?? '';
           const discardOptions = cost.type === 'discard' ? handOptions : [];
           const sacrificeOptions =
             cost.type === 'sacrifice'
@@ -125,47 +230,9 @@ export const useWardPayments = ({
   const [wardPaymentDetails, setWardPaymentDetails] = useState<Record<string, ManaPaymentDetail>>({});
 
   useEffect(() => {
-    setWardPayments((prev) => {
-      const next: Record<string, WardPaymentEntry[]> = {};
-      wardTargets.forEach((target) => {
-        const existing = prev[target.objectId];
-        const entries: WardPaymentEntry[] = [];
-        target.costs.forEach((entry, index) => {
-          const existingEntry = existing?.[index];
-          if (existingEntry) {
-            entries.push(existingEntry);
-            return;
-          }
-          if (entry.cost.type === 'mana' && !hasComplexManaCost(entry.cost.cost)) {
-            entries.push({ mana_payment: buildDefaultManaPayment(entry.cost.cost, manaPool) });
-            return;
-          }
-          if (entry.cost.type === 'life') {
-            entries.push({ life_payment: entry.cost.amount });
-            return;
-          }
-          entries.push({});
-        });
-        next[target.objectId] = entries;
-      });
-      return next;
-    });
-    setWardPaymentDetails((prev) => {
-      const next: Record<string, ManaPaymentDetail> = {};
-      wardTargets.forEach((target) => {
-        const existing = prev[target.objectId];
-        if (existing) {
-          next[target.objectId] = existing;
-          return;
-        }
-        const manaCost = target.costs.find((entry) => entry.cost.type === 'mana');
-        if (manaCost && manaCost.cost.type === 'mana') {
-          next[target.objectId] = buildDefaultPaymentDetail(manaCost.cost.cost, manaPool);
-        }
-      });
-      return next;
-    });
-  }, [manaPool, wardTargets]);
+    setWardPayments((prev) => buildWardPaymentsUpdate(prev, wardTargets, effectiveManaPool).next);
+    setWardPaymentDetails((prev) => buildWardPaymentDetailsUpdate(prev, wardTargets, effectiveManaPool).next);
+  }, [effectiveManaPool, wardTargets]);
 
   const wardPaymentErrors = useMemo(() => {
     const errors: Record<string, string[]> = {};

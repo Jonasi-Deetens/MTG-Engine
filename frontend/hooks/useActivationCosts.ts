@@ -39,6 +39,9 @@ interface UseActivationCostsArgs {
   manaPool: Record<string, number>;
 }
 
+const EMPTY_COST_ENTRIES: ActivationCostEntry[] = [];
+const EMPTY_MANA_POOL: Record<string, number> = {};
+
 export const useActivationCosts = ({
   costs,
   objects,
@@ -49,8 +52,12 @@ export const useActivationCosts = ({
 }: UseActivationCostsArgs) => {
   const player = players.find((entry) => entry.id === currentPlayerId);
   const objectMap = useMemo(() => new Map(objects.map((obj) => [obj.id, obj])), [objects]);
+  const effectiveManaPool = useMemo(
+    () => (Object.keys(manaPool).length ? manaPool : EMPTY_MANA_POOL),
+    [manaPool]
+  );
   const costEntries = useMemo<ActivationCostEntry[]>(() => {
-    if (!costs.length) return [];
+    if (!costs.length) return EMPTY_COST_ENTRIES;
     const cardName = (objectId: string) => cardMap[objectId]?.name || objectMap.get(objectId)?.name || objectId;
     const handOptions = player?.hand?.map((objectId) => ({
       value: objectId,
@@ -104,30 +111,54 @@ export const useActivationCosts = ({
 
   useEffect(() => {
     setPayments((prev) => {
-      const next = costEntries.map((entry, index) => {
-        const existing = prev[index];
-        if (existing) return existing;
-        if (entry.cost.type === 'mana' && !hasComplexManaCost(entry.cost.cost)) {
-          return { mana_payment: buildDefaultManaPayment(entry.cost.cost, manaPool) };
-        }
-        if (entry.cost.type === 'life') {
-          return { life_payment: entry.cost.amount };
-        }
-        return {};
-      });
-      return next;
-    });
-    setPaymentDetails((prev) => {
-      const next: Record<number, ManaPaymentDetail> = { ...prev };
+      if (costEntries.length === 0) {
+        return prev.length === 0 ? prev : [];
+      }
+      let next = prev;
+      let changed = false;
+      if (prev.length > costEntries.length) {
+        next = prev.slice(0, costEntries.length);
+        changed = true;
+      }
       costEntries.forEach((entry, index) => {
         if (next[index]) return;
-        if (entry.cost.type === 'mana') {
-          next[index] = buildDefaultPaymentDetail(entry.cost.cost, manaPool);
+        if (next === prev) next = [...prev];
+        changed = true;
+        if (entry.cost.type === 'mana' && !hasComplexManaCost(entry.cost.cost)) {
+          next[index] = { mana_payment: buildDefaultManaPayment(entry.cost.cost, effectiveManaPool) };
+          return;
+        }
+        if (entry.cost.type === 'life') {
+          next[index] = { life_payment: entry.cost.amount };
+          return;
+        }
+        next[index] = {};
+      });
+      return changed ? next : prev;
+    });
+    setPaymentDetails((prev) => {
+      if (costEntries.length === 0) {
+        return Object.keys(prev).length === 0 ? prev : {};
+      }
+      let next = prev;
+      let changed = false;
+      Object.keys(prev).forEach((key) => {
+        const index = Number(key);
+        if (Number.isNaN(index) || index >= costEntries.length) {
+          if (next === prev) next = { ...prev };
+          delete next[index];
+          changed = true;
         }
       });
-      return next;
+      costEntries.forEach((entry, index) => {
+        if (entry.cost.type !== 'mana' || next[index]) return;
+        if (next === prev) next = { ...next };
+        next[index] = buildDefaultPaymentDetail(entry.cost.cost, effectiveManaPool);
+        changed = true;
+      });
+      return changed ? next : prev;
     });
-  }, [costEntries, manaPool]);
+  }, [costEntries, effectiveManaPool]);
 
   const paymentErrors = useMemo(() => {
     const errors: string[] = [];
