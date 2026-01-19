@@ -10,7 +10,7 @@ import React, {
   type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
-import { QuickSearchModal } from "@/components/search/QuickSearchModal";
+import { QuickSearchModal } from "@/components/ui/QuickSearchModal";
 
 type ShortcutContextValue = {
   openQuickSearch: () => void;
