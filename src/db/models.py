@@ -152,6 +152,7 @@ class CollectionItem(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     collection_id = Column(Integer, ForeignKey("collections.id"), nullable=False, index=True)
     card_id = Column(String, nullable=False, index=True)  # Reference to Axis1CardModel.card_id
+    quantity = Column(Integer, default=1, nullable=False)
     
     created_at = Column(DateTime, default=datetime.utcnow)
     

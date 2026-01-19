@@ -11,6 +11,7 @@ import { useDebounce } from '@/lib/hooks';
 interface UnifiedCardSearchProps {
   onAddCard?: (card: CardData) => void;
   onAddCommander?: (card: CardData) => void;
+  onCardHover?: (card: CardData | null) => void;
   isCommanderFormat?: boolean;
   maxCommanders?: number;
   currentCommanderCount?: number;
@@ -19,6 +20,7 @@ interface UnifiedCardSearchProps {
 export function UnifiedCardSearch({
   onAddCard,
   onAddCommander,
+  onCardHover,
   isCommanderFormat = false,
   maxCommanders = 2,
   currentCommanderCount = 0,
@@ -71,6 +73,8 @@ export function UnifiedCardSearch({
               <div
                 key={card.card_id}
                 className="flex items-center gap-2 px-1.5 py-1 hover:bg-[color:var(--theme-card-hover)] rounded text-xs transition-colors"
+                onMouseEnter={() => onCardHover?.(card)}
+                onMouseLeave={() => onCardHover?.(null)}
               >
                 <span className="text-[color:var(--theme-text-primary)] flex-1">
                   {card.name}

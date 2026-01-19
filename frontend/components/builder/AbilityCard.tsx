@@ -2,7 +2,7 @@
 
 // frontend/components/builder/AbilityCard.tsx
 
-import { TriggeredAbility, ActivatedAbility, StaticAbility, ContinuousAbility, KeywordAbility } from '@/store/builderStore';
+import { TriggeredAbility, ActivatedAbility, StaticAbility, ContinuousAbility, KeywordAbility, SpellAbility } from '@/store/builderStore';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { StatusBadge } from '@/components/ui/StatusBadge';
@@ -11,8 +11,8 @@ import { formatCondition } from '@/lib/conditionTypes';
 import { buildActivationCosts, formatActivationCostLabel } from '@/lib/activationCosts';
 
 interface AbilityCardProps {
-  ability: TriggeredAbility | ActivatedAbility | StaticAbility | ContinuousAbility | KeywordAbility;
-  type: 'triggered' | 'activated' | 'static' | 'continuous' | 'keyword';
+  ability: TriggeredAbility | ActivatedAbility | SpellAbility | StaticAbility | ContinuousAbility | KeywordAbility;
+  type: 'triggered' | 'activated' | 'spell' | 'static' | 'continuous' | 'keyword';
   onEdit: () => void;
   onDelete: () => void;
 }
@@ -48,6 +48,11 @@ function getAbilitySummary(ability: any, type: string): string {
       const costText = buildActivationCosts(a.costs ?? []).map(formatActivationCostLabel).join(', ');
       return `${costText}: ${effectText}`;
     }
+    case 'spell': {
+      const a = ability as SpellAbility;
+      const effectText = (a.effects ?? []).map((e) => formatEffect(e).toLowerCase()).join(', ');
+      return effectText || 'Spell effect';
+    }
     case 'static': {
       const a = ability as StaticAbility;
       return `${a.appliesTo}: ${a.effect}`;
@@ -76,6 +81,8 @@ function getTypeBadgeVariant(type: string): 'default' | 'success' | 'warning' | 
       return 'info';
     case 'activated':
       return 'warning';
+    case 'spell':
+      return 'info';
     case 'static':
       return 'success';
     case 'continuous':

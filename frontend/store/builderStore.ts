@@ -69,6 +69,12 @@ export interface ActivatedAbility {
   limit?: { scope: string; max: number };
 }
 
+export interface SpellAbility {
+  id: string;
+  effects: Effect[];
+  modal?: ModalChoiceConfig;
+}
+
 export interface StaticAbility {
   id: string;
   appliesTo: string; // e.g., "self", "creatures_you_control", "enchanted_creature"
@@ -146,7 +152,7 @@ export interface Effect {
 // Graph format for API compatibility
 export interface AbilityNode {
   id: string;
-  type: 'TRIGGER' | 'CONDITION' | 'EFFECT' | 'TARGET' | 'MODIFIER' | 'ACTIVATED' | 'KEYWORD';
+  type: 'TRIGGER' | 'CONDITION' | 'EFFECT' | 'TARGET' | 'MODIFIER' | 'ACTIVATED' | 'KEYWORD' | 'SPELL';
   data: Record<string, any>;
 }
 
@@ -160,7 +166,7 @@ export interface AbilityGraph {
   rootNodeId: string;
   nodes: AbilityNode[];
   edges: AbilityEdge[];
-  abilityType: 'triggered' | 'activated' | 'static' | 'keyword';
+  abilityType: 'triggered' | 'activated' | 'static' | 'keyword' | 'spell';
 }
 
 export interface ValidationError {
@@ -176,6 +182,7 @@ interface BuilderState {
   // Ability lists
   triggeredAbilities: TriggeredAbility[];
   activatedAbilities: ActivatedAbility[];
+  spellAbilities: SpellAbility[];
   staticAbilities: StaticAbility[];
   continuousAbilities: ContinuousAbility[];
   keywords: KeywordAbility[];
@@ -197,6 +204,10 @@ interface BuilderState {
   updateActivatedAbility: (id: string, ability: Partial<ActivatedAbility>) => void;
   removeActivatedAbility: (id: string) => void;
   
+  addSpellAbility: (ability: SpellAbility) => void;
+  updateSpellAbility: (id: string, ability: Partial<SpellAbility>) => void;
+  removeSpellAbility: (id: string) => void;
+
   addStaticAbility: (ability: StaticAbility) => void;
   updateStaticAbility: (id: string, ability: Partial<StaticAbility>) => void;
   removeStaticAbility: (id: string) => void;
@@ -225,6 +236,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
   currentCard: null,
   triggeredAbilities: [],
   activatedAbilities: [],
+  spellAbilities: [],
   staticAbilities: [],
   continuousAbilities: [],
   keywords: [],
@@ -261,6 +273,19 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
     activatedAbilities: state.activatedAbilities.filter((a) => a.id !== id),
   })),
   
+  // Spell Abilities
+  addSpellAbility: (ability) => set((state) => ({
+    spellAbilities: [...state.spellAbilities, ability],
+  })),
+  updateSpellAbility: (id, ability) => set((state) => ({
+    spellAbilities: state.spellAbilities.map((a) =>
+      a.id === id ? { ...a, ...ability } : a
+    ),
+  })),
+  removeSpellAbility: (id) => set((state) => ({
+    spellAbilities: state.spellAbilities.filter((a) => a.id !== id),
+  })),
+
   // Static Abilities
   addStaticAbility: (ability) => set((state) => ({
     staticAbilities: [...state.staticAbilities, ability],
@@ -350,7 +375,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
     const nodes: AbilityNode[] = [];
     const edges: AbilityEdge[] = [];
     let rootNodeId = '';
-    let abilityType: 'triggered' | 'activated' | 'static' | 'keyword' = 'triggered';
+    let abilityType: 'triggered' | 'activated' | 'static' | 'keyword' | 'spell' = 'triggered';
     
     // Process triggered abilities
     state.triggeredAbilities.forEach((ability) => {
@@ -420,6 +445,24 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
         },
       });
       createEffectChain(ability.effects ?? [], ability.id, activatedId, nodes, edges);
+    });
+
+    // Process spell abilities
+    state.spellAbilities.forEach((ability) => {
+      const spellId = `spell-${ability.id}`;
+      if (!rootNodeId) {
+        rootNodeId = spellId;
+        abilityType = 'spell';
+      }
+
+      nodes.push({
+        id: spellId,
+        type: 'SPELL',
+        data: {
+          ...(ability.modal ? { modal: ability.modal } : {}),
+        },
+      });
+      createEffectChain(ability.effects ?? [], ability.id, spellId, nodes, edges);
     });
     
     // Process keywords
@@ -498,6 +541,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
   loadFromGraph: (graph: AbilityGraph) => {
     const triggeredAbilities: TriggeredAbility[] = [];
     const activatedAbilities: ActivatedAbility[] = [];
+    const spellAbilities: SpellAbility[] = [];
     const staticAbilities: StaticAbility[] = [];
     const continuousAbilities: ContinuousAbility[] = [];
     const keywords: KeywordAbility[] = [];
@@ -658,6 +702,47 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
         
         processedNodes.add(activatedNode.id);
       });
+
+    // Process spell abilities (spell-* nodes)
+    graph.nodes
+      .filter(node => node.id.startsWith('spell-'))
+      .forEach(spellNode => {
+        if (processedNodes.has(spellNode.id)) return;
+
+        const abilityId = spellNode.id.replace('spell-', '');
+        const modal = spellNode.data.modal || (graph as any).modal;
+        const effectNodeMap = new Map<string, { node: AbilityNode; index: number }>();
+        graph.nodes
+          .filter(node => node.id.startsWith(`effect-${abilityId}-`))
+          .forEach((node, idx) => {
+            effectNodeMap.set(node.id, { node, index: idx });
+          });
+        const effects: Effect[] = [];
+        const visitedEffects = new Set<string>();
+        const buildEffectChain = (currentNodeId: string): void => {
+          const nextEffectIds = adjacency[currentNodeId] || [];
+          for (const nextId of nextEffectIds) {
+            const effectInfo = effectNodeMap.get(nextId);
+            if (effectInfo && !visitedEffects.has(nextId)) {
+              visitedEffects.add(nextId);
+              effects.push(effectInfo.node.data as Effect);
+              buildEffectChain(nextId);
+            }
+          }
+        };
+        buildEffectChain(spellNode.id);
+        if (effects.length === 0 && spellNode.data.effect) {
+          effects.push(spellNode.data.effect as Effect);
+        }
+
+        spellAbilities.push({
+          id: abilityId,
+          effects,
+          ...(modal ? { modal } : {}),
+        });
+
+        processedNodes.add(spellNode.id);
+      });
     
     // Process keywords (keyword-* nodes)
     graph.nodes
@@ -727,6 +812,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
     set({
       triggeredAbilities,
       activatedAbilities,
+      spellAbilities,
       staticAbilities,
       continuousAbilities,
       keywords,
@@ -737,6 +823,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
   clearAll: () => set({
     triggeredAbilities: [],
     activatedAbilities: [],
+    spellAbilities: [],
     staticAbilities: [],
     continuousAbilities: [],
     keywords: [],

@@ -58,6 +58,12 @@ export function useDeckBuilder() {
     }
   }, [currentDeck]);
 
+  useEffect(() => {
+    if (!currentDeck?.id) return;
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem('lastDeckId', String(currentDeck.id));
+  }, [currentDeck?.id]);
+
   const handleSave = async () => {
     if (!deckName.trim()) {
       alert('Please enter a deck name');

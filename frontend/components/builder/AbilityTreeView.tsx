@@ -11,6 +11,7 @@ export function AbilityTreeView() {
   const {
     triggeredAbilities,
     activatedAbilities,
+    spellAbilities,
     staticAbilities,
     continuousAbilities,
     keywords,
@@ -19,6 +20,7 @@ export function AbilityTreeView() {
   const totalAbilities =
     triggeredAbilities.length +
     activatedAbilities.length +
+    spellAbilities.length +
     staticAbilities.length +
     continuousAbilities.length +
     keywords.length;
@@ -100,6 +102,30 @@ export function AbilityTreeView() {
                 <div className="ml-4 border-l-2 border-[color:var(--theme-accent-primary)] pl-3">
                   <span className="text-xs text-[color:var(--theme-accent-primary)]">Effect:</span>
                   <div className="text-sm text-[color:var(--theme-text-primary)] mt-1">{formatEffect(ability.effect)}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Spell Effects */}
+      {spellAbilities.length > 0 && (
+        <div>
+          <h3 className="text-sm font-semibold text-[color:var(--theme-status-info)] mb-3 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[color:var(--theme-status-info)]"></span>
+            Spell Effects ({spellAbilities.length})
+          </h3>
+          <div className="space-y-4 ml-4">
+            {spellAbilities.map((ability) => (
+              <div key={ability.id} className="border-l-2 border-[color:var(--theme-border-default)] pl-4 space-y-2">
+                <div className="ml-4 border-l-2 border-[color:var(--theme-accent-primary)] pl-3 space-y-1">
+                  <span className="text-xs text-[color:var(--theme-accent-primary)]">Effects:</span>
+                  {ability.effects.map((effect, idx) => (
+                    <div key={idx} className="text-sm text-[color:var(--theme-text-primary)]">
+                      • {formatEffect(effect)}
+                    </div>
+                  ))}
                 </div>
               </div>
             ))}

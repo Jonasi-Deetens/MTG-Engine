@@ -332,6 +332,7 @@ export function formatDuration(duration: string | undefined): string {
 }
 
 export function formatEffect(effect: any): string {
+  if (!effect) return '';
   const maxTargetsText = effect.maxTargets ? ` (up to ${effect.maxTargets})` : '';
   if (effect.type === 'damage') {
     return `Deal ${effect.amount || 0} damage${effect.target ? ` to ${effect.target}` : ''}${maxTargetsText}`;

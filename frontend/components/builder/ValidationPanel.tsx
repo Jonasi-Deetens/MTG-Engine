@@ -5,6 +5,7 @@
 import { useEffect, useState } from 'react';
 import { useBuilderStore } from '@/store/builderStore';
 import { abilities } from '@/lib/abilities';
+import { getErrorMessage } from '@/lib/utils/errors';
 import { Button } from '@/components/ui/Button';
 
 export function ValidationPanel() {
@@ -17,6 +18,7 @@ export function ValidationPanel() {
     isValid,
     triggeredAbilities,
     activatedAbilities,
+    spellAbilities,
     staticAbilities,
     continuousAbilities,
     keywords,
@@ -42,7 +44,7 @@ export function ValidationPanel() {
       } catch (error) {
         console.error('Validation error:', error);
         setValidation(
-          [{ type: 'error', message: 'Failed to validate abilities' }],
+          [{ type: 'error', message: getErrorMessage(error) || 'Failed to validate abilities' }],
           [],
           false
         );
@@ -68,6 +70,7 @@ export function ValidationPanel() {
   const totalAbilities =
     triggeredAbilities.length +
     activatedAbilities.length +
+    spellAbilities.length +
     staticAbilities.length +
     continuousAbilities.length +
     keywords.length;
@@ -144,7 +147,7 @@ export function ValidationPanel() {
       console.error('Save error:', error);
       setSaveMessage({ 
         type: 'error', 
-        text: error.message || 'Failed to save ability graph' 
+        text: getErrorMessage(error) || 'Failed to save ability graph' 
       });
     } finally {
       setSaving(false);

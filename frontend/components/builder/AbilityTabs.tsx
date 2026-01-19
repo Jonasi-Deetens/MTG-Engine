@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { AbilityList } from './AbilityList';
 import { AbilityModal } from './AbilityModal';
 
-type TabType = 'triggered' | 'activated' | 'static' | 'continuous' | 'keyword';
+type TabType = 'triggered' | 'activated' | 'spell' | 'static' | 'continuous' | 'keyword';
 
 export function AbilityTabs() {
   const [activeTab, setActiveTab] = useState<TabType>('triggered');
@@ -16,6 +16,7 @@ export function AbilityTabs() {
   const tabs: { id: TabType; label: string }[] = [
     { id: 'triggered', label: 'Triggered' },
     { id: 'activated', label: 'Activated' },
+    { id: 'spell', label: 'Spell' },
     { id: 'static', label: 'Static' },
     { id: 'continuous', label: 'Continuous' },
     { id: 'keyword', label: 'Keywords' },

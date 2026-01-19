@@ -7,7 +7,7 @@ from typing import Dict, Any, List, Literal, Optional
 class AbilityNode(BaseModel):
     """Represents a single node in an ability graph."""
     id: str
-    type: Literal["TRIGGER", "CONDITION", "EFFECT", "TARGET", "MODIFIER", "ACTIVATED", "KEYWORD"]
+    type: Literal["TRIGGER", "CONDITION", "EFFECT", "TARGET", "MODIFIER", "ACTIVATED", "KEYWORD", "SPELL"]
     data: Dict[str, Any]  # Type-specific data
 
 
@@ -33,7 +33,7 @@ class AbilityGraph(BaseModel):
     rootNodeId: str
     nodes: List[AbilityNode]
     edges: List[AbilityEdge]
-    abilityType: Literal["triggered", "activated", "static", "keyword"]
+    abilityType: Literal["triggered", "activated", "static", "keyword", "spell"]
 
 
 class ValidationError(BaseModel):

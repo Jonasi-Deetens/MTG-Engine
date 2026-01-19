@@ -4,6 +4,16 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://api:8000';
 
+async function parseJsonResponse(response: Response) {
+  const text = await response.text();
+  if (!text) return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { detail: text };
+  }
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ collectionId: string }> }
@@ -19,7 +29,7 @@ export async function GET(
       credentials: 'include',
     });
 
-    const data = await response.json();
+    const data = await parseJsonResponse(response);
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
     return NextResponse.json(
@@ -46,7 +56,7 @@ export async function PUT(
       credentials: 'include',
     });
 
-    const data = await response.json();
+    const data = await parseJsonResponse(response);
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
     return NextResponse.json(
@@ -71,7 +81,7 @@ export async function DELETE(
       credentials: 'include',
     });
 
-    const data = await response.json();
+    const data = await parseJsonResponse(response);
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
     return NextResponse.json(

@@ -326,6 +326,7 @@ def update_card_quantity(
     user: User = Depends(get_current_user)
 ):
     """Update card quantity in deck."""
+    print(f"[DEBUG] update_card_quantity deck_id={deck_id} card_id={card_id} quantity={card.quantity} user_id={user.id}")
     # Verify deck belongs to user
     deck = db.query(Deck).filter(
         and_(
@@ -334,6 +335,7 @@ def update_card_quantity(
         )
     ).first()
     if not deck:
+        print(f"[DEBUG] update_card_quantity deck not found deck_id={deck_id} user_id={user.id}")
         raise HTTPException(status_code=404, detail="Deck not found")
     
     deck_card = db.query(DeckCard).filter(
@@ -344,6 +346,8 @@ def update_card_quantity(
     ).first()
     
     if not deck_card:
+        count = db.query(DeckCard).filter(DeckCard.deck_id == deck_id).count()
+        print(f"[DEBUG] update_card_quantity card not found deck_id={deck_id} card_id={card_id} deck_cards={count}")
         raise HTTPException(status_code=404, detail="Card not found in deck")
     
     if card.quantity <= 0:
@@ -816,6 +820,7 @@ def move_card_to_list(
 ):
     """Move a card to a custom list (or remove from list if list_id is null)."""
     # Verify deck belongs to user
+    print(f"[DEBUG] move_card_to_list deck_id={deck_id} card_id={card_id} list_id={update.list_id} user_id={user.id}")
     deck = db.query(Deck).filter(
         and_(
             Deck.id == deck_id,
@@ -823,6 +828,7 @@ def move_card_to_list(
         )
     ).first()
     if not deck:
+        print(f"[DEBUG] move_card_to_list deck not found for deck_id={deck_id} user_id={user.id}")
         raise HTTPException(status_code=404, detail="Deck not found")
     
     # Verify list exists if list_id is provided
@@ -834,6 +840,7 @@ def move_card_to_list(
             )
         ).first()
         if not custom_list:
+            print(f"[DEBUG] move_card_to_list list not found deck_id={deck_id} list_id={update.list_id}")
             raise HTTPException(status_code=404, detail="Custom list not found")
     
     deck_card = db.query(DeckCard).filter(
@@ -844,9 +851,11 @@ def move_card_to_list(
     ).first()
     
     if not deck_card:
+        print(f"[DEBUG] move_card_to_list card not found in deck deck_id={deck_id} card_id={card_id}")
         raise HTTPException(status_code=404, detail="Card not found in deck")
     
     if hasattr(deck_card, 'list_id'):
+        print(f"[DEBUG] move_card_to_list updating list_id from {getattr(deck_card, 'list_id', None)} to {update.list_id}")
         deck_card.list_id = update.list_id
     db.commit()
     db.refresh(deck_card)

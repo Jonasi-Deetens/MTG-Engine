@@ -32,6 +32,19 @@ try:
                     END IF;
                 END $$;
             """))
+            # Add quantity column to collection_items if it doesn't exist
+            conn.execute(text("""
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name='collection_items' AND column_name='quantity'
+                    ) THEN
+                        ALTER TABLE collection_items ADD COLUMN quantity INTEGER DEFAULT 1;
+                        UPDATE collection_items SET quantity = 1 WHERE quantity IS NULL;
+                    END IF;
+                END $$;
+            """))
             # Create deck_custom_lists table if it doesn't exist
             conn.execute(text("""
                 CREATE TABLE IF NOT EXISTS deck_custom_lists (

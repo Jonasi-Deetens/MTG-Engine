@@ -240,3 +240,217 @@ def test_copy_spell_invalid_new_target_raises():
     except ValueError as exc:
         assert "target" in str(exc).lower()
 
+
+def test_copy_spell_multiple_copies_use_per_copy_targets_by_effect():
+    players = [PlayerState(id=0)]
+    game_state = GameState(players=players)
+    resolver = EffectResolver(game_state)
+    creature_a = GameObject(
+        id="a",
+        name="Creature A",
+        owner_id=0,
+        controller_id=0,
+        types=["Creature"],
+        zone=ZONE_BATTLEFIELD,
+    )
+    creature_b = GameObject(
+        id="b",
+        name="Creature B",
+        owner_id=0,
+        controller_id=0,
+        types=["Creature"],
+        zone=ZONE_BATTLEFIELD,
+    )
+    creature_c = GameObject(
+        id="c",
+        name="Creature C",
+        owner_id=0,
+        controller_id=0,
+        types=["Creature"],
+        zone=ZONE_BATTLEFIELD,
+    )
+    spell = GameObject(
+        id="spell",
+        name="Spell Source",
+        owner_id=0,
+        controller_id=0,
+        types=["Instant"],
+        zone=ZONE_HAND,
+    )
+    game_state.add_object(creature_a)
+    game_state.add_object(creature_b)
+    game_state.add_object(creature_c)
+    game_state.add_object(spell)
+    graph = {
+        "rootNodeId": "act-1",
+        "abilityType": "activated",
+        "nodes": [
+            {"id": "act-1", "type": "ACTIVATED", "data": {"cost": ""}},
+            {"id": "e1", "type": "EFFECT", "data": {"type": "damage", "amount": 1, "target": "target_creature"}},
+        ],
+        "edges": [{"from_": "act-1", "to": "e1"}],
+    }
+    game_state.stack.push(
+        StackItem(
+            kind="ability_graph",
+            payload={
+                "graph": graph,
+                "context": {"targets_by_effect": {"e1": {"target": creature_a.id}}},
+                "source_object_id": spell.id,
+            },
+            controller_id=0,
+        )
+    )
+    context = ResolveContext(
+        controller_id=0,
+        targets={"target": spell.id},
+        choices={
+            "copy_choose_new_targets": True,
+            "copy_targets_by_effect_list": [
+                {"e1": {"target": creature_b.id}},
+                {"e1": {"target": creature_c.id}},
+            ],
+        },
+    )
+
+    result = resolver.apply({"type": "copy_spell", "target": "spell", "amount": 2, "chooseNewTargets": True}, context)
+
+    assert result["copies"] == 2
+    copied_targets = [
+        item.payload.get("context", {}).get("targets_by_effect", {}).get("e1", {}).get("target")
+        for item in game_state.stack.items[-2:]
+    ]
+    assert set(copied_targets) == {creature_b.id, creature_c.id}
+
+
+def test_copy_spell_requires_targets_by_effect_per_copy():
+    players = [PlayerState(id=0)]
+    game_state = GameState(players=players)
+    resolver = EffectResolver(game_state)
+    creature_a = GameObject(
+        id="a",
+        name="Creature A",
+        owner_id=0,
+        controller_id=0,
+        types=["Creature"],
+        zone=ZONE_BATTLEFIELD,
+    )
+    spell = GameObject(
+        id="spell",
+        name="Spell Source",
+        owner_id=0,
+        controller_id=0,
+        types=["Instant"],
+        zone=ZONE_HAND,
+    )
+    game_state.add_object(creature_a)
+    game_state.add_object(spell)
+    graph = {
+        "rootNodeId": "act-1",
+        "abilityType": "activated",
+        "nodes": [
+            {"id": "act-1", "type": "ACTIVATED", "data": {"cost": ""}},
+            {"id": "e1", "type": "EFFECT", "data": {"type": "damage", "amount": 1, "target": "target_creature"}},
+        ],
+        "edges": [{"from_": "act-1", "to": "e1"}],
+    }
+    game_state.stack.push(
+        StackItem(
+            kind="ability_graph",
+            payload={
+                "graph": graph,
+                "context": {"targets_by_effect": {"e1": {"target": creature_a.id}}},
+                "source_object_id": spell.id,
+            },
+            controller_id=0,
+        )
+    )
+    context = ResolveContext(
+        controller_id=0,
+        targets={"target": spell.id},
+        choices={
+            "copy_choose_new_targets": True,
+            "copy_targets_by_effect_list": [{}, {}],
+            "copy_required_targets_by_effect_list": [{"e1": ["target"]}, {"e1": ["target"]}],
+        },
+    )
+
+    try:
+        resolver.apply({"type": "copy_spell", "target": "spell", "amount": 2, "chooseNewTargets": True}, context)
+        assert False, "Expected missing per-copy target to raise."
+    except ValueError as exc:
+        assert "target" in str(exc).lower()
+
+
+def test_copy_spell_distinct_targets_by_effect_enforced():
+    players = [PlayerState(id=0)]
+    game_state = GameState(players=players)
+    resolver = EffectResolver(game_state)
+    creature_a = GameObject(
+        id="a",
+        name="Creature A",
+        owner_id=0,
+        controller_id=0,
+        types=["Creature"],
+        zone=ZONE_BATTLEFIELD,
+    )
+    creature_b = GameObject(
+        id="b",
+        name="Creature B",
+        owner_id=0,
+        controller_id=0,
+        types=["Creature"],
+        zone=ZONE_BATTLEFIELD,
+    )
+    spell = GameObject(
+        id="spell",
+        name="Spell Source",
+        owner_id=0,
+        controller_id=0,
+        types=["Instant"],
+        zone=ZONE_HAND,
+    )
+    game_state.add_object(creature_a)
+    game_state.add_object(creature_b)
+    game_state.add_object(spell)
+    graph = {
+        "rootNodeId": "act-1",
+        "abilityType": "activated",
+        "nodes": [
+            {"id": "act-1", "type": "ACTIVATED", "data": {"cost": ""}},
+            {
+                "id": "e1",
+                "type": "EFFECT",
+                "data": {"type": "fight", "yourCreature": "target_creature", "opponentCreature": "target_creature"},
+            },
+        ],
+        "edges": [{"from_": "act-1", "to": "e1"}],
+    }
+    game_state.stack.push(
+        StackItem(
+            kind="ability_graph",
+            payload={
+                "graph": graph,
+                "context": {"targets_by_effect": {"e1": {"yourCreature": creature_a.id, "opponentCreature": creature_b.id}}},
+                "source_object_id": spell.id,
+            },
+            controller_id=0,
+        )
+    )
+    context = ResolveContext(
+        controller_id=0,
+        targets={"target": spell.id},
+        choices={
+            "copy_choose_new_targets": True,
+            "copy_targets_by_effect_list": [{"e1": {"yourCreature": creature_a.id, "opponentCreature": creature_a.id}}],
+            "copy_required_targets_by_effect_list": [{"e1": ["yourCreature", "opponentCreature"]}],
+            "copy_distinct_targets_by_effect_list": [{"e1": ["yourCreature", "opponentCreature"]}],
+        },
+    )
+
+    try:
+        resolver.apply({"type": "copy_spell", "target": "spell", "chooseNewTargets": True}, context)
+        assert False, "Expected distinct target violation."
+    except ValueError as exc:
+        assert "distinct" in str(exc).lower()
+
