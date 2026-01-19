@@ -1,6 +1,8 @@
 // frontend/store/builderStore.ts
 
 import { create } from 'zustand';
+import type { CostEntry } from '@/lib/activationCosts';
+import { parseManaCostSymbols } from '@/lib/wardCosts';
 
 export interface CardData {
   card_id: string;
@@ -36,11 +38,19 @@ export interface CardData {
 import type { StructuredCondition } from '@/lib/conditionTypes';
 
 // Ability Type Interfaces
+export interface ModalChoiceConfig {
+  min: number;
+  max?: number | null;
+  modes: Array<{ id: string; label: string }>;
+}
+
 export interface TriggeredAbility {
   id: string;
   event: string; // e.g., "enters_battlefield", "dies", "becomes_target", "card_enters"
+  scope?: string; // "self", "any", "you_control", "opponent_control", "you", "opponent"
   condition?: StructuredCondition | string; // Structured condition or legacy string
   effects: Effect[];
+  modal?: ModalChoiceConfig;
   // For card_enters event
   entersWhere?: string; // Zone where card enters (battlefield, graveyard, hand, etc.)
   entersFrom?: string; // Optional: zone card came from (hand, library, graveyard, etc.)
@@ -52,29 +62,33 @@ export type { StructuredCondition };
 
 export interface ActivatedAbility {
   id: string;
-  cost: string; // e.g., "{T}", "{1}{R}", "Sacrifice a creature"
-  effect: Effect;
+  costs: CostEntry[];
+  effects: Effect[];
+  modal?: ModalChoiceConfig;
+  timing?: string;
+  limit?: { scope: string; max: number };
 }
 
 export interface StaticAbility {
   id: string;
   appliesTo: string; // e.g., "self", "creatures_you_control", "enchanted_creature"
   effect: string; // Description of the static effect
+  effectData?: Effect;
 }
 
 export interface ContinuousAbility {
   id: string;
   appliesTo: string;
   effect: string; // Description of the continuous effect
+  effectData?: Effect;
 }
 
 export interface KeywordAbility {
   id: string;
   keyword: string; // Keyword name from database
-  cost?: string; // For keywords with costs (e.g., Ward {2})
+  costs?: CostEntry[];
   number?: number; // For keywords with numbers (e.g., Annihilator 2)
-  lifeCost?: number; // For keywords with life costs
-  sacrificeCost?: boolean; // For keywords with sacrifice costs
+  extraCosts?: CostEntry[];
 }
 
 // Re-export KeywordInfo from abilities for convenience
@@ -84,6 +98,8 @@ export interface Effect {
   type: string; // e.g., "damage", "draw", "token", "counters", "life", "search", "put_onto_battlefield", "attach", "shuffle"
   amount?: number;
   target?: string;
+  maxTargets?: number;
+  modeId?: string;
   manaType?: string;
   untapTarget?: string;
   zone?: string; // For search (library, graveyard, hand, exile)
@@ -101,6 +117,7 @@ export interface Effect {
   // New fields for additional effect types
   duration?: string; // For temporary effects (until_end_of_turn, permanent, etc.)
   choice?: string; // For effects requiring player choice (color, creature_type, etc.)
+  choiceValue?: string; // Optional fixed choice value
   protectionType?: string; // For protection effects
   keyword?: string; // For gain keyword effects
   powerChange?: number; // For change power/toughness effects
@@ -112,6 +129,17 @@ export interface Effect {
   returnUnderOwner?: boolean; // For flicker effects
   sourceTarget?: string; // For redirect damage effects
   redirectTarget?: string; // For redirect damage effects
+  cdaSource?: string;
+  cdaType?: string;
+  cdaZone?: string;
+  cdaSet?: string;
+  fromZone?: string;
+  toZone?: string;
+  replacementZone?: string;
+  uses?: number;
+  distinctTargets?: boolean;
+  minTargets?: number;
+  chooseNewTargets?: boolean;
   [key: string]: any; // Additional effect-specific data
 }
 
@@ -337,9 +365,15 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
         type: 'TRIGGER',
         data: { 
           event: ability.event,
+          scope: ability.scope || 'self',
+          ...(ability.modal && {
+            modal: ability.modal,
+          }),
           ...(ability.event === 'card_enters' && {
             entersWhere: ability.entersWhere,
             entersFrom: ability.entersFrom,
+          }),
+          ...(ability.cardType && ability.cardType !== '' && {
             cardType: ability.cardType,
           }),
         },
@@ -378,8 +412,14 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
       nodes.push({
         id: activatedId,
         type: 'ACTIVATED',
-        data: { cost: ability.cost, effect: ability.effect },
+        data: {
+          costs: ability.costs,
+          timing: ability.timing,
+          limit: ability.limit,
+          ...(ability.modal ? { modal: ability.modal } : {}),
+        },
       });
+      createEffectChain(ability.effects ?? [], ability.id, activatedId, nodes, edges);
     });
     
     // Process keywords
@@ -395,10 +435,9 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
         type: 'KEYWORD',
         data: {
           keyword: keyword.keyword,
-          cost: keyword.cost,
+          costs: keyword.costs,
           number: keyword.number,
-          lifeCost: keyword.lifeCost,
-          sacrificeCost: keyword.sacrificeCost,
+          extraCosts: keyword.extraCosts,
         },
       });
     });
@@ -411,12 +450,13 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
         abilityType = 'static';
       }
       
+      const effectPayload = ability.effectData ?? ability.effect;
       nodes.push({
         id: staticId,
         type: 'EFFECT',
         data: {
           appliesTo: ability.appliesTo,
-          effect: ability.effect,
+          effect: effectPayload,
           abilityType: 'static',
         },
       });
@@ -430,12 +470,13 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
         abilityType = 'static'; // Continuous abilities are a type of static
       }
       
+      const effectPayload = ability.effectData ?? ability.effect;
       nodes.push({
         id: continuousId,
         type: 'EFFECT',
         data: {
           appliesTo: ability.appliesTo,
-          effect: ability.effect,
+          effect: effectPayload,
           abilityType: 'continuous',
         },
       });
@@ -541,16 +582,19 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
         }
         
         // Extract card_enters specific fields from trigger data
+        const modal = triggerNode.data.modal || (graph as any).modal;
         const triggeredAbility: TriggeredAbility = {
           id: abilityId,
           event,
+          scope: triggerNode.data.scope || 'self',
           condition,
           effects,
+          ...(modal ? { modal } : {}),
           ...(event === 'card_enters' && {
             entersWhere: triggerNode.data.entersWhere,
             entersFrom: triggerNode.data.entersFrom,
-            cardType: triggerNode.data.cardType,
           }),
+          ...(triggerNode.data.cardType && { cardType: triggerNode.data.cardType }),
         };
         
         triggeredAbilities.push(triggeredAbility);
@@ -569,13 +613,47 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
         if (processedNodes.has(activatedNode.id)) return;
         
         const abilityId = activatedNode.id.replace('activated-', '');
-        const cost = activatedNode.data.cost || '';
-        const effect = activatedNode.data.effect as Effect;
+        let costs = Array.isArray(activatedNode.data.costs) ? activatedNode.data.costs : [];
+        if (costs.length === 0 && typeof activatedNode.data.cost === 'string') {
+          const raw = activatedNode.data.cost.trim();
+          if (raw === '{T}' || raw.toLowerCase() === 'tap') {
+            costs = [{ type: 'tap_self' }];
+          } else if (raw.includes('{')) {
+            costs = [{ type: 'mana', cost: parseManaCostSymbols(raw) }];
+          }
+        }
+        const modal = activatedNode.data.modal || (graph as any).modal;
+        const effectNodeMap = new Map<string, { node: AbilityNode; index: number }>();
+        graph.nodes
+          .filter(node => node.id.startsWith(`effect-${abilityId}-`))
+          .forEach((node, idx) => {
+            effectNodeMap.set(node.id, { node, index: idx });
+          });
+        const effects: Effect[] = [];
+        const visitedEffects = new Set<string>();
+        const buildEffectChain = (currentNodeId: string): void => {
+          const nextEffectIds = adjacency[currentNodeId] || [];
+          for (const nextId of nextEffectIds) {
+            const effectInfo = effectNodeMap.get(nextId);
+            if (effectInfo && !visitedEffects.has(nextId)) {
+              visitedEffects.add(nextId);
+              effects.push(effectInfo.node.data as Effect);
+              buildEffectChain(nextId);
+            }
+          }
+        };
+        buildEffectChain(activatedNode.id);
+        if (effects.length === 0 && activatedNode.data.effect) {
+          effects.push(activatedNode.data.effect as Effect);
+        }
         
         activatedAbilities.push({
           id: abilityId,
-          cost,
-          effect,
+          costs,
+          effects,
+          ...(modal ? { modal } : {}),
+          timing: activatedNode.data.timing,
+          limit: activatedNode.data.limit,
         });
         
         processedNodes.add(activatedNode.id);
@@ -590,13 +668,16 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
         const abilityId = keywordNode.id.replace('keyword-', '');
         const data = keywordNode.data;
         
+        let keywordCosts = Array.isArray(data.costs) ? data.costs : [];
+        if (keywordCosts.length === 0 && typeof data.cost === 'string' && data.cost.includes('{')) {
+          keywordCosts = [{ type: 'mana', cost: parseManaCostSymbols(data.cost) }];
+        }
         keywords.push({
           id: abilityId,
           keyword: data.keyword || '',
-          cost: data.cost,
+          costs: keywordCosts,
           number: data.number,
-          lifeCost: data.lifeCost,
-          sacrificeCost: data.sacrificeCost,
+          extraCosts: Array.isArray(data.extraCosts) ? data.extraCosts : [],
         });
         
         processedNodes.add(keywordNode.id);
@@ -615,7 +696,8 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
           staticAbilities.push({
             id: abilityId,
             appliesTo: data.appliesTo || '',
-            effect: data.effect || '',
+            effect: typeof data.effect === 'string' ? data.effect : '',
+            effectData: typeof data.effect === 'object' ? data.effect : undefined,
           });
           processedNodes.add(staticNode.id);
         }
@@ -634,7 +716,8 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
           continuousAbilities.push({
             id: abilityId,
             appliesTo: data.appliesTo || '',
-            effect: data.effect || '',
+            effect: typeof data.effect === 'string' ? data.effect : '',
+            effectData: typeof data.effect === 'object' ? data.effect : undefined,
           });
           processedNodes.add(continuousNode.id);
         }

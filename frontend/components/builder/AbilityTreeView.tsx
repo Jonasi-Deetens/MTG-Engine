@@ -3,6 +3,7 @@
 // frontend/components/builder/AbilityTreeView.tsx
 
 import { useBuilderStore } from '@/store/builderStore';
+import { buildActivationCosts, formatActivationCostLabel } from '@/lib/activationCosts';
 import { formatEffect } from '@/lib/effectTypes';
 import { formatCondition } from '@/lib/conditionTypes';
 
@@ -92,7 +93,9 @@ export function AbilityTreeView() {
               <div key={ability.id} className="border-l-2 border-[color:var(--theme-border-default)] pl-4 space-y-2">
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-[color:var(--theme-text-secondary)]">Cost:</span>
-                  <span className="text-sm text-[color:var(--theme-text-primary)] font-mono">{ability.cost}</span>
+                  <span className="text-sm text-[color:var(--theme-text-primary)] font-mono">
+                    {buildActivationCosts(ability.costs ?? []).map(formatActivationCostLabel).join(', ')}
+                  </span>
                 </div>
                 <div className="ml-4 border-l-2 border-[color:var(--theme-accent-primary)] pl-3">
                   <span className="text-xs text-[color:var(--theme-accent-primary)]">Effect:</span>
@@ -168,17 +171,18 @@ export function AbilityTreeView() {
                   <span className="text-sm text-[color:var(--theme-text-primary)] font-semibold capitalize">
                     {keyword.keyword}
                   </span>
-                  {keyword.cost && (
-                    <span className="text-xs text-[color:var(--theme-text-secondary)] font-mono">({keyword.cost})</span>
+                  {keyword.costs && keyword.costs.length > 0 && (
+                    <span className="text-xs text-[color:var(--theme-text-secondary)] font-mono">
+                      ({buildActivationCosts(keyword.costs).map(formatActivationCostLabel).join(', ')})
+                    </span>
                   )}
                   {keyword.number !== undefined && (
                     <span className="text-xs text-[color:var(--theme-text-secondary)]">{keyword.number}</span>
                   )}
-                  {keyword.lifeCost !== undefined && (
-                    <span className="text-xs text-[color:var(--theme-text-secondary)]">Pay {keyword.lifeCost} life</span>
-                  )}
-                  {keyword.sacrificeCost && (
-                    <span className="text-xs text-[color:var(--theme-text-secondary)]">Sacrifice</span>
+                  {keyword.extraCosts && keyword.extraCosts.length > 0 && (
+                    <span className="text-xs text-[color:var(--theme-text-secondary)]">
+                      Extra: {buildActivationCosts(keyword.extraCosts).map(formatActivationCostLabel).join(', ')}
+                    </span>
                   )}
                 </div>
               </div>

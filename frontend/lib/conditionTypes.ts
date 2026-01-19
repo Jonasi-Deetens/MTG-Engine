@@ -28,6 +28,8 @@ export const CONDITION_TYPE_OPTIONS: ConditionTypeOption[] = [
   { value: 'has_counter', label: 'Has Counter', requiresValue: true, requiresTarget: true },
   { value: 'was_cast', label: 'Was Cast', requiresTarget: true },
   { value: 'mana_value_comparison', label: 'Mana Value Comparison', requiresComparison: true, requiresValue: true, requiresTarget: true },
+  { value: 'kicked', label: 'Was Kicked' },
+  { value: 'kicker_count', label: 'Kicker Count', requiresComparison: true, requiresValue: true },
 ];
 
 export const COMPARISON_OPERATORS = [
@@ -159,6 +161,14 @@ export function formatCondition(condition: StructuredCondition | string): string
       } else {
         return `Mana value ${mvOpLabel} ${mvSource}'s mana value`;
       }
+
+    case 'kicked':
+      return 'Spell was kicked';
+
+    case 'kicker_count':
+      const kcOp = cond.comparison || '>=';
+      const kcOpLabel = COMPARISON_OPERATORS.find(o => o.value === kcOp)?.label.split('(')[0].trim() || kcOp;
+      return `Kicker count ${kcOpLabel} ${cond.value || 0}`;
     
     default:
       return 'Unknown condition';

@@ -68,3 +68,11 @@ class CardAbilityGraphResponse(BaseModel):
     created_at: str
     updated_at: str
 
+
+class CardAbilityGraphBulkRequest(BaseModel):
+    card_ids: List[str]
+
+
+class CardAbilityGraphBulkResponse(BaseModel):
+    graphs: List[CardAbilityGraphResponse]
+    missing: List[str]
