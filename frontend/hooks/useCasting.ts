@@ -64,7 +64,7 @@ export const useCasting = ({
   }, [selectedHandId]);
 
   const handlePrepareCast = async () => {
-    if (!selectedHandId) return;
+    if (!selectedHandId || currentPriority === null) return;
     const response = await runEngineAction('prepare_cast', {
       player_id: currentPriority,
       object_id: selectedHandId,
@@ -94,6 +94,7 @@ export const useCasting = ({
 
   const handleFinalizeCast = async () => {
     if (!selectedHandId || !preparedCast || preparedCast.objectId !== selectedHandId) return;
+    if (currentPriority === null) return;
     const response = await runEngineAction('finalize_cast', {
       player_id: currentPriority,
       object_id: selectedHandId,

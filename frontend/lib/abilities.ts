@@ -1,6 +1,6 @@
 // frontend/lib/abilities.ts
 
-import { api } from './api';
+import { api, apiRequest } from './api';
 import { AbilityGraph, ValidationResponse, NormalizedAbility } from '@/store/builderStore';
 
 export interface KeywordOption {
@@ -57,10 +57,11 @@ export interface CardAbilityGraphBulkResponse {
 export const abilities = {
   // Validate an ability graph
   validate: async (graph: AbilityGraph, cardColors?: string[]): Promise<ValidationResponse> => {
-    return api.post<ValidationResponse>('/api/abilities/validate', {
-      ...graph,
-      card_colors: cardColors,
-    });
+    const params = new URLSearchParams();
+    (cardColors || []).forEach((color) => params.append('card_colors', color));
+    const query = params.toString();
+    const endpoint = query ? `/api/abilities/validate?${query}` : '/api/abilities/validate';
+    return api.post<ValidationResponse>(endpoint, graph);
   },
 
   // Normalize graph to engine format
@@ -90,14 +91,21 @@ export const abilities = {
 
   // Get card ability graph
   getCardGraph: async (cardId: string): Promise<CardAbilityGraphResponse> => {
-    return api.get<CardAbilityGraphResponse>(`/api/abilities/cards/${cardId}/graph`);
+    return apiRequest<CardAbilityGraphResponse>(`/api/abilities/cards/${cardId}/graph`, {
+      method: 'GET',
+      timeoutMs: 20000,
+    });
   },
 
   // Get multiple card ability graphs
   getCardGraphs: async (cardIds: string[]): Promise<CardAbilityGraphBulkResponse> => {
-    return api.post<CardAbilityGraphBulkResponse>('/api/abilities/cards/graphs', {
-      card_ids: cardIds,
-    } satisfies CardAbilityGraphBulkRequest);
+    return apiRequest<CardAbilityGraphBulkResponse>('/api/abilities/cards/graphs', {
+      method: 'POST',
+      body: JSON.stringify({
+        card_ids: cardIds,
+      } satisfies CardAbilityGraphBulkRequest),
+      timeoutMs: 20000,
+    });
   },
 
   // Delete card ability graph

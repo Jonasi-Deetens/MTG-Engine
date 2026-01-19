@@ -46,17 +46,22 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return response.json();
 }
 
+export interface ApiRequestOptions extends RequestInit {
+  timeoutMs?: number;
+}
+
 export async function apiRequest<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: ApiRequestOptions = {}
 ): Promise<T> {
   const url = `${API_URL}${endpoint}`;
-  
+
+  const { timeoutMs = 10000, ...requestOptions } = options;
   const config: RequestInit = {
-    ...options,
+    ...requestOptions,
     headers: {
       'Content-Type': 'application/json',
-      ...options.headers,
+      ...requestOptions.headers,
     },
     credentials: 'include', // Important for cookies
   };
@@ -65,7 +70,7 @@ export async function apiRequest<T>(
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
       controller.abort();
-    }, 10000);
+    }, timeoutMs);
 
     const response = await fetch(url, {
       ...config,
@@ -80,7 +85,7 @@ export async function apiRequest<T>(
     }
     if (error instanceof Error && (error.name === 'AbortError' || error.message.includes('aborted'))) {
       throw new ApiClientError(
-        `Request timeout: API did not respond within 10 seconds.`,
+        `Request timeout: API did not respond within ${Math.round(timeoutMs / 1000)} seconds.`,
         0
       );
     }

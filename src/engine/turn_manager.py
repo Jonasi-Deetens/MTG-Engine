@@ -51,14 +51,19 @@ class TurnManager:
         if getattr(current, "has_lost", False):
             self.state.active_player_index = self._next_active_index(self.state.active_player_index)
 
-    def _sync_priority(self, current_player_id: Optional[int] = None) -> None:
+    def _sync_priority(self, current_player_id: Optional[int] = None, preserve_pass_state: bool = False) -> None:
         alive_ids = self._alive_player_ids()
         if not alive_ids:
             return
         self._place_pending_triggers()
         if current_player_id is None:
             current_player_id = alive_ids[0]
+        saved_pass_state = None
+        if preserve_pass_state and alive_ids == self.priority.player_order:
+            saved_pass_state = (self.priority.pass_count, self.priority.last_passed_player)
         self.priority.update_order(alive_ids, current_player_id)
+        if saved_pass_state:
+            self.priority.pass_count, self.priority.last_passed_player = saved_pass_state
         self._persist_priority()
 
     def _place_pending_triggers(self) -> bool:
@@ -83,7 +88,7 @@ class TurnManager:
         self._begin_step()
 
     def handle_player_pass(self, player_id: int) -> None:
-        self._sync_priority(self.priority.current)
+        self._sync_priority(self.priority.current, preserve_pass_state=True)
         if player_id != self.priority.current:
             return
         if self.state.step == Step.DECLARE_ATTACKERS:

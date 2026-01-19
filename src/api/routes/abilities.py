@@ -94,13 +94,14 @@ def validate_graph(graph: AbilityGraph, card_colors: Optional[List[str]] = None)
     trigger_nodes = [n for n in graph.nodes if n.type == "TRIGGER"]
     activated_nodes = [n for n in graph.nodes if n.type == "ACTIVATED"]
     keyword_nodes = [n for n in graph.nodes if n.type == "KEYWORD"]
+    spell_nodes = [n for n in graph.nodes if n.type == "SPELL"]
     
-    root_nodes = trigger_nodes + activated_nodes + keyword_nodes
+    root_nodes = trigger_nodes + activated_nodes + keyword_nodes + spell_nodes
     
     if len(root_nodes) == 0:
         errors.append(ValidationError(
             type="error",
-            message="At least one TRIGGER, ACTIVATED, or KEYWORD node is required",
+            message="At least one TRIGGER, ACTIVATED, KEYWORD, or SPELL node is required",
             nodeId=None
         ))
     elif len(root_nodes) > 1:

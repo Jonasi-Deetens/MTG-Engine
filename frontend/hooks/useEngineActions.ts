@@ -36,7 +36,9 @@ export const useEngineActions = ({
         if (typeof response.result?.current_priority === 'number') {
           setPriorityPlayer(response.result.current_priority);
         } else if (typeof response.game_state.turn.priority_current_index === 'number') {
-          setPriorityPlayer(response.game_state.turn.priority_current_index);
+          const alivePlayers = response.game_state.players.filter((player) => !player.has_lost);
+          const current = alivePlayers[response.game_state.turn.priority_current_index];
+          setPriorityPlayer(current?.id ?? null);
         }
         return response;
       } catch (err: any) {

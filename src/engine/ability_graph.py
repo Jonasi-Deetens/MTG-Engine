@@ -36,7 +36,7 @@ class AbilityGraphRuntimeAdapter:
         root_node = nodes.get(root_id)
         if not root_node:
             root_node = next(
-                (node for node in nodes.values() if node.get("type") in ("TRIGGER", "ACTIVATED", "KEYWORD")),
+                (node for node in nodes.values() if node.get("type") in ("TRIGGER", "ACTIVATED", "KEYWORD", "SPELL")),
                 None,
             )
 
@@ -57,6 +57,8 @@ class AbilityGraphRuntimeAdapter:
                 activation_limit = root_node["data"].get("limit")
             elif root_node["type"] == "KEYWORD":
                 keyword = root_node["data"].get("keyword")
+            elif root_node["type"] == "SPELL":
+                pass
 
         adjacency: Dict[str, List[str]] = {node_id: [] for node_id in nodes.keys()}
         for edge in edges:

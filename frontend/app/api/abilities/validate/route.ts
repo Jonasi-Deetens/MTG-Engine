@@ -6,8 +6,12 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://api:8000';
 
 export async function POST(request: NextRequest) {
   try {
+    const search = request.nextUrl.searchParams.toString();
     const body = await request.json();
-    const response = await fetch(`${API_URL}/api/abilities/validate`, {
+    const url = search
+      ? `${API_URL}/api/abilities/validate?${search}`
+      : `${API_URL}/api/abilities/validate`;
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

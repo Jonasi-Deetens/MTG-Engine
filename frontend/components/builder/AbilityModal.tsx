@@ -5,16 +5,16 @@
 import { useEffect } from 'react';
 import { TriggeredAbilityForm } from './forms/TriggeredAbilityForm';
 import { ActivatedAbilityForm } from './forms/ActivatedAbilityForm';
+import { SpellAbilityForm } from './forms/SpellAbilityForm';
 import { StaticAbilityForm } from './forms/StaticAbilityForm';
 import { ContinuousAbilityForm } from './forms/ContinuousAbilityForm';
 import { KeywordAbilityForm } from './forms/KeywordAbilityForm';
-import { TriggeredAbility, ActivatedAbility, StaticAbility, ContinuousAbility, KeywordAbility } from '@/store/builderStore';
 import { Button } from '@/components/ui/Button';
 
 interface AbilityModalProps {
   isOpen: boolean;
   onClose: () => void;
-  type: 'triggered' | 'activated' | 'static' | 'continuous' | 'keyword';
+  type: 'triggered' | 'activated' | 'spell' | 'static' | 'continuous' | 'keyword';
   abilityId?: string; // If provided, we're editing
 }
 
@@ -34,8 +34,13 @@ export function AbilityModal({ isOpen, onClose, type, abilityId }: AbilityModalP
 
   const getTitle = () => {
     const action = abilityId ? 'Edit' : 'Add';
-    const typeName = type === 'continuous' ? 'Continuous' : type.charAt(0).toUpperCase() + type.slice(1);
-    return `${action} ${typeName} Ability`;
+    const typeName =
+      type === 'continuous'
+        ? 'Continuous'
+        : type === 'spell'
+          ? 'Spell'
+          : type.charAt(0).toUpperCase() + type.slice(1);
+    return `${action} ${typeName} ${type === 'spell' ? 'Effect' : 'Ability'}`;
   };
 
   return (
@@ -69,6 +74,9 @@ export function AbilityModal({ isOpen, onClose, type, abilityId }: AbilityModalP
           )}
           {type === 'activated' && (
             <ActivatedAbilityForm abilityId={abilityId} onSave={onClose} onCancel={onClose} />
+          )}
+          {type === 'spell' && (
+            <SpellAbilityForm abilityId={abilityId} onSave={onClose} onCancel={onClose} />
           )}
           {type === 'static' && (
             <StaticAbilityForm abilityId={abilityId} onSave={onClose} onCancel={onClose} />
