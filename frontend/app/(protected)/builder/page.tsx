@@ -2,7 +2,7 @@
 
 // frontend/app/(protected)/builder/page.tsx
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useBuilderStore, CardData } from '@/store/builderStore';
@@ -14,14 +14,23 @@ import { CardPreview } from '@/components/cards/CardPreview';
 import { AbilityTabs } from '@/components/builder/AbilityTabs';
 import { ValidationPanel } from '@/components/builder/ValidationPanel';
 import { AbilityTreeView } from '@/components/builder/AbilityTreeView';
+import { isEditableTarget } from '@/context/ShortcutContext';
 
 export default function BuilderPage() {
   const searchParams = useSearchParams();
-  const { currentCard, setCurrentCard, loadFromGraph, clearAll } = useBuilderStore();
+  const {
+    currentCard,
+    setCurrentCard,
+    loadFromGraph,
+    clearAll,
+    convertToGraph,
+    setValidation,
+  } = useBuilderStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [searching, setSearching] = useState(false);
+  const [debugOpen, setDebugOpen] = useState(false);
 
   const handleGetRandomCard = async () => {
     setLoading(true);
@@ -89,6 +98,25 @@ export default function BuilderPage() {
     }
   };
 
+  const runValidation = useCallback(async () => {
+    const graph = convertToGraph();
+    if (!graph) {
+      setValidation([], [], false);
+      return;
+    }
+    try {
+      const result = await abilities.validate(graph, currentCard?.colors);
+      setValidation(result.errors, result.warnings, result.valid);
+    } catch (err: any) {
+      console.error('Validation error:', err);
+      setValidation(
+        [{ type: 'error', message: 'Failed to validate abilities' }],
+        [],
+        false
+      );
+    }
+  }, [convertToGraph, currentCard?.colors, setValidation]);
+
   const loadSavedGraph = async (cardId: string) => {
     try {
       console.log('Loading graph for card_id:', cardId);
@@ -142,6 +170,32 @@ export default function BuilderPage() {
       loadCardFromQuery();
     }
   }, [searchParams, currentCard, setCurrentCard, clearAll]);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.isComposing) return;
+      if (isEditableTarget(e.target)) return;
+
+      const key = e.key.toLowerCase();
+      if ((e.ctrlKey || e.metaKey) && key === 'r') {
+        e.preventDefault();
+        e.stopPropagation();
+        runValidation();
+        return;
+      }
+
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+
+      if (key === 'd') {
+        e.preventDefault();
+        e.stopPropagation();
+        setDebugOpen((prev) => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown, { passive: false });
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [runValidation]);
 
   return (
     <div className="p-4">
@@ -291,6 +345,25 @@ export default function BuilderPage() {
         <div className="bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] rounded-lg p-6">
           <ValidationPanel />
         </div>
+
+        {debugOpen && (
+          <div className="bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] rounded-lg p-6">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-[color:var(--theme-text-primary)]">
+                Debug Overlay
+              </h3>
+              <Button variant="outline" size="sm" onClick={() => setDebugOpen(false)}>
+                Close
+              </Button>
+            </div>
+            <div className="text-xs text-[color:var(--theme-text-secondary)] mb-3">
+              Current graph snapshot
+            </div>
+            <pre className="text-xs text-[color:var(--theme-text-secondary)] whitespace-pre-wrap max-h-64 overflow-auto bg-[color:var(--theme-bg-secondary)]/60 border border-[color:var(--theme-card-border)] rounded p-3">
+              {JSON.stringify(convertToGraph(), null, 2) || 'No graph'}
+            </pre>
+          </div>
+        )}
       </div>
     </div>
   );

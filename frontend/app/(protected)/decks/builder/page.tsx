@@ -2,7 +2,7 @@
 
 // frontend/app/(protected)/decks/builder/page.tsx
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { DndContext, DragOverlay } from '@dnd-kit/core';
 import { useDeckBuilder } from '@/hooks/decks/useDeckBuilder';
 import { useTypeLists } from '@/hooks/decks/useTypeLists';
@@ -23,9 +23,11 @@ import { CardTypeBreakdown } from '@/components/decks/CardTypeBreakdown';
 import { DeckImport } from '@/components/decks/DeckImport';
 import { EditableTypeList } from '@/components/decks/EditableTypeList';
 import { extractCardId } from '@/utils/dragAndDrop';
-import { DeckCustomListResponse } from '@/lib/decks';
+import { DeckCardResponse, DeckCustomListResponse } from '@/lib/decks';
 import { CardType } from '@/lib/utils/cardTypes';
 import { findListForType, getCardsForType } from '@/utils/deckBuilder/cardGrouping';
+import { CardData } from '@/components/cards/CardPreview';
+import { isEditableTarget } from '@/context/ShortcutContext';
 
 export default function DeckBuilderPage() {
   const {
@@ -93,6 +95,66 @@ export default function DeckBuilderPage() {
     },
   });
 
+  const [focusedDeckCard, setFocusedDeckCard] = useState<DeckCardResponse | null>(null);
+  const [focusedSearchCard, setFocusedSearchCard] = useState<CardData | null>(null);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.isComposing) return;
+      if (isEditableTarget(e.target)) return;
+      if (!currentDeck || isModalOpen) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      const key = e.key.toLowerCase();
+      if (key === 'a') {
+        const card = focusedSearchCard ?? focusedDeckCard?.card;
+        if (!card) return;
+        e.preventDefault();
+        e.stopPropagation();
+        handleAddCard(card);
+        return;
+      }
+
+      if (key === 'x') {
+        if (!focusedDeckCard) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.shiftKey) {
+          handleRemoveCard(focusedDeckCard.card_id);
+        } else {
+          handleQuantityChange(focusedDeckCard.card_id, -1);
+        }
+        return;
+      }
+
+      if (key === '+' || key === '=') {
+        if (!focusedDeckCard) return;
+        e.preventDefault();
+        e.stopPropagation();
+        handleQuantityChange(focusedDeckCard.card_id, 1);
+        return;
+      }
+
+      if (key === '-' || key === '_') {
+        if (!focusedDeckCard) return;
+        e.preventDefault();
+        e.stopPropagation();
+        handleQuantityChange(focusedDeckCard.card_id, -1);
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown, { passive: false });
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [
+    currentDeck,
+    focusedDeckCard,
+    focusedSearchCard,
+    handleAddCard,
+    handleQuantityChange,
+    handleRemoveCard,
+    isModalOpen,
+  ]);
+
   // Initialize type lists when deck loads (only for new decks with no lists)
   useEffect(() => {
     if (currentDeck && typeLists.length === 0) {
@@ -141,6 +203,7 @@ export default function DeckBuilderPage() {
                   <UnifiedCardSearch
                     onAddCard={handleAddCard}
                     onAddCommander={deckFormat === 'Commander' ? handleAddCommanderFromSearch : undefined}
+                    onCardHover={setFocusedSearchCard}
                     isCommanderFormat={deckFormat === 'Commander'}
                     currentCommanderCount={currentDeck.commanders.length}
                   />
@@ -162,7 +225,10 @@ export default function DeckBuilderPage() {
                             cards={typeCards}
                             onQuantityChange={handleQuantityChange}
                             onRemove={handleRemoveCard}
-                            onCardHover={handleCardHover}
+                            onCardHover={(card) => {
+                              handleCardHover(card);
+                              setFocusedDeckCard(card);
+                            }}
                             onCardClick={(deckCard) => {
                               setModalCard(deckCard.card);
                               setIsModalOpen(true);
@@ -187,7 +253,10 @@ export default function DeckBuilderPage() {
                             cards={typeCards}
                             onQuantityChange={handleQuantityChange}
                             onRemove={handleRemoveCard}
-                            onCardHover={handleCardHover}
+                            onCardHover={(card) => {
+                              handleCardHover(card);
+                              setFocusedDeckCard(card);
+                            }}
                             onCardClick={(deckCard) => {
                               setModalCard(deckCard.card);
                               setIsModalOpen(true);
@@ -205,7 +274,10 @@ export default function DeckBuilderPage() {
                     {deckFormat === 'Commander' && (
                       <CommanderSection
                         commanders={currentDeck.commanders}
-                        onCommanderHover={handleCardHover}
+                        onCommanderHover={(card) => {
+                          handleCardHover(card);
+                          setFocusedDeckCard(card);
+                        }}
                         onCommanderClick={(card) => {
                           setModalCard(card);
                           setIsModalOpen(true);
@@ -231,7 +303,10 @@ export default function DeckBuilderPage() {
                             cards={typeCards}
                             onQuantityChange={handleQuantityChange}
                             onRemove={handleRemoveCard}
-                            onCardHover={handleCardHover}
+                            onCardHover={(card) => {
+                              handleCardHover(card);
+                              setFocusedDeckCard(card);
+                            }}
                             onCardClick={(deckCard) => {
                               setModalCard(deckCard.card);
                               setIsModalOpen(true);
@@ -256,7 +331,10 @@ export default function DeckBuilderPage() {
                             cards={typeCards}
                             onQuantityChange={handleQuantityChange}
                             onRemove={handleRemoveCard}
-                            onCardHover={handleCardHover}
+                            onCardHover={(card) => {
+                              handleCardHover(card);
+                              setFocusedDeckCard(card);
+                            }}
                             onCardClick={(deckCard) => {
                               setModalCard(deckCard.card);
                               setIsModalOpen(true);

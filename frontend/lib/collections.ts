@@ -19,7 +19,14 @@ export interface CollectionResponse {
 }
 
 export interface CollectionDetailResponse extends CollectionResponse {
-  cards: CardData[];
+  cards: CollectionCardResponse[];
+}
+
+export interface CollectionCardResponse {
+  card_id: string;
+  card: CardData;
+  quantity: number;
+  created_at: string;
 }
 
 export interface CollectionCreate {
@@ -73,14 +80,30 @@ export const collections = {
     return api.delete<{ message: string }>(`/api/collections/${collectionId}`);
   },
 
-  addCardToCollection: async (collectionId: number, cardId: string): Promise<{ message: string; card_id: string }> => {
-    return api.post<{ message: string; card_id: string }>(`/api/collections/${collectionId}/cards`, {
+  addCardToCollection: async (
+    collectionId: number,
+    cardId: string,
+    quantity: number = 1
+  ): Promise<{ message: string; card_id: string; quantity?: number }> => {
+    return api.post<{ message: string; card_id: string; quantity?: number }>(`/api/collections/${collectionId}/cards`, {
       card_id: cardId,
+      quantity,
     });
   },
 
   removeCardFromCollection: async (collectionId: number, cardId: string): Promise<{ message: string }> => {
     return api.delete<{ message: string }>(`/api/collections/${collectionId}/cards/${encodeURIComponent(cardId)}`);
+  },
+
+  updateCollectionCardQuantity: async (
+    collectionId: number,
+    cardId: string,
+    quantity: number
+  ): Promise<{ message: string; card_id?: string; quantity?: number }> => {
+    return api.patch<{ message: string; card_id?: string; quantity?: number }>(
+      `/api/collections/${collectionId}/cards/${encodeURIComponent(cardId)}`,
+      { quantity }
+    );
   },
 };
 

@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import and_
+from sqlalchemy import and_, func, text
 from typing import List, Optional
 from pydantic import BaseModel
 from datetime import datetime
@@ -22,6 +22,15 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def ensure_collection_quantity_column(db: Session) -> None:
+    """Ensure collection_items.quantity exists for legacy databases."""
+    try:
+        db.execute(text("ALTER TABLE collection_items ADD COLUMN IF NOT EXISTS quantity INTEGER DEFAULT 1"))
+        db.commit()
+    except Exception:
+        db.rollback()
 
 
 # Request/Response models
@@ -56,12 +65,24 @@ class CollectionResponse(BaseModel):
         from_attributes = True
 
 
-class CollectionDetailResponse(CollectionResponse):
-    cards: List[CardResponse]
-
-
 class CollectionItemAdd(BaseModel):
     card_id: str
+    quantity: int = 1
+
+
+class CollectionItemUpdate(BaseModel):
+    quantity: int
+
+
+class CollectionCardResponse(BaseModel):
+    card_id: str
+    card: CardResponse
+    quantity: int
+    created_at: str
+
+
+class CollectionDetailResponse(CollectionResponse):
+    cards: List[CollectionCardResponse]
 
 
 # Favorites endpoints
@@ -174,20 +195,21 @@ def get_collections(
     user: User = Depends(get_current_user)
 ):
     """Get user's collections."""
+    ensure_collection_quantity_column(db)
     collections = db.query(Collection).filter(
         Collection.user_id == user.id
     ).all()
     
     result = []
     for coll in collections:
-        card_count = db.query(CollectionItem).filter(
+        card_count = db.query(func.coalesce(func.sum(CollectionItem.quantity), 0)).filter(
             CollectionItem.collection_id == coll.id
-        ).count()
+        ).scalar()
         result.append(CollectionResponse(
             id=coll.id,
             name=coll.name,
             description=coll.description,
-            card_count=card_count,
+            card_count=int(card_count or 0),
             created_at=coll.created_at.isoformat(),
             updated_at=coll.updated_at.isoformat()
         ))
@@ -228,6 +250,7 @@ def get_collection(
     user: User = Depends(get_current_user)
 ):
     """Get a collection with its cards."""
+    ensure_collection_quantity_column(db)
     collection = db.query(Collection).filter(
         and_(
             Collection.id == collection_id,
@@ -248,13 +271,18 @@ def get_collection(
             Axis1CardModel.card_id == item.card_id
         ).first()
         if card:
-            cards.append(card_model_to_response(card))
+            cards.append(CollectionCardResponse(
+                card_id=item.card_id,
+                card=card_model_to_response(card),
+                quantity=item.quantity,
+                created_at=item.created_at.isoformat()
+            ))
     
     return CollectionDetailResponse(
         id=collection.id,
         name=collection.name,
         description=collection.description,
-        card_count=len(cards),
+        card_count=sum(card.quantity for card in cards),
         created_at=collection.created_at.isoformat(),
         updated_at=collection.updated_at.isoformat(),
         cards=cards
@@ -269,6 +297,7 @@ def update_collection(
     user: User = Depends(get_current_user)
 ):
     """Update a collection."""
+    ensure_collection_quantity_column(db)
     coll = db.query(Collection).filter(
         and_(
             Collection.id == collection_id,
@@ -288,15 +317,15 @@ def update_collection(
     db.commit()
     db.refresh(coll)
     
-    card_count = db.query(CollectionItem).filter(
+    card_count = db.query(func.coalesce(func.sum(CollectionItem.quantity), 0)).filter(
         CollectionItem.collection_id == collection_id
-    ).count()
+    ).scalar()
     
     return CollectionResponse(
         id=coll.id,
         name=coll.name,
         description=coll.description,
-        card_count=card_count,
+        card_count=int(card_count or 0),
         created_at=coll.created_at.isoformat(),
         updated_at=coll.updated_at.isoformat()
     )
@@ -333,6 +362,7 @@ def add_card_to_collection(
     user: User = Depends(get_current_user)
 ):
     """Add a card to a collection."""
+    ensure_collection_quantity_column(db)
     # Verify collection belongs to user
     collection = db.query(Collection).filter(
         and_(
@@ -357,17 +387,23 @@ def add_card_to_collection(
             CollectionItem.card_id == item.card_id
         )
     ).first()
+    if item.quantity <= 0:
+        raise HTTPException(status_code=400, detail="Quantity must be at least 1")
+
     if existing:
-        raise HTTPException(status_code=400, detail="Card already in collection")
+        existing.quantity += item.quantity
+        db.commit()
+        return {"message": "Card quantity updated", "card_id": item.card_id, "quantity": existing.quantity}
     
     collection_item = CollectionItem(
         collection_id=collection_id,
-        card_id=item.card_id
+        card_id=item.card_id,
+        quantity=item.quantity
     )
     db.add(collection_item)
     db.commit()
     
-    return {"message": "Card added to collection", "card_id": item.card_id}
+    return {"message": "Card added to collection", "card_id": item.card_id, "quantity": item.quantity}
 
 
 @router.delete("/{collection_id}/cards/{card_id}", response_model=dict)
@@ -378,6 +414,7 @@ def remove_card_from_collection(
     user: User = Depends(get_current_user)
 ):
     """Remove a card from a collection."""
+    ensure_collection_quantity_column(db)
     # Verify collection belongs to user
     collection = db.query(Collection).filter(
         and_(
@@ -402,4 +439,45 @@ def remove_card_from_collection(
     db.commit()
     
     return {"message": "Card removed from collection"}
+
+
+@router.patch("/{collection_id}/cards/{card_id}", response_model=dict)
+def update_collection_card(
+    collection_id: int,
+    card_id: str,
+    payload: CollectionItemUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    """Update a card quantity in a collection."""
+    ensure_collection_quantity_column(db)
+    collection = db.query(Collection).filter(
+        and_(
+            Collection.id == collection_id,
+            Collection.user_id == user.id
+        )
+    ).first()
+    
+    if not collection:
+        raise HTTPException(status_code=404, detail="Collection not found")
+    
+    item = db.query(CollectionItem).filter(
+        and_(
+            CollectionItem.collection_id == collection_id,
+            CollectionItem.card_id == card_id
+        )
+    ).first()
+    
+    if not item:
+        raise HTTPException(status_code=404, detail="Card not found in collection")
+    
+    if payload.quantity <= 0:
+        db.delete(item)
+        db.commit()
+        return {"message": "Card removed from collection"}
+    
+    item.quantity = payload.quantity
+    db.commit()
+    
+    return {"message": "Card quantity updated", "card_id": card_id, "quantity": item.quantity}
 

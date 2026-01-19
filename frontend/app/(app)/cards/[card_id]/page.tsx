@@ -18,6 +18,7 @@ import { AbilityTreeView } from '@/components/builder/AbilityTreeView';
 import { RarityBadge } from '@/components/ui/RarityBadge';
 import { LegalityDisplay } from '@/components/cards/LegalityDisplay';
 import { useAuth } from '@/context/AuthContext';
+import { isEditableTarget } from '@/context/ShortcutContext';
 
 export default function CardDetailPage() {
   const params = useParams();
@@ -80,6 +81,23 @@ export default function CardDetailPage() {
 
     fetchCard();
   }, [cardId, isAuthenticated]);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.isComposing) return;
+      if (isEditableTarget(e.target)) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      if (e.key.toLowerCase() === 'g' && card) {
+        e.preventDefault();
+        e.stopPropagation();
+        router.push(`/builder?card=${encodeURIComponent(card.card_id)}`);
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown, { passive: false });
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [card, router]);
 
   const handleVersionChange = async (newCard: CardData) => {
     router.push(`/cards/${newCard.card_id}`);
