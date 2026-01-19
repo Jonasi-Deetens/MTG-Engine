@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { NavbarWrapper } from "@/components/navigation/NavbarWrapper";
+import { ShortcutProvider } from "@/context/ShortcutContext";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -50,11 +51,13 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${cinzel.variable} antialiased bg-[color:var(--theme-bg-primary)] text-[color:var(--theme-text-primary)] overflow-x-hidden`}
       >
-        <ThemeProvider>
-          <AuthProvider>
-            <NavbarWrapper>{children}</NavbarWrapper>
-          </AuthProvider>
-        </ThemeProvider>
+        <ShortcutProvider>
+          <ThemeProvider>
+            <AuthProvider>
+              <NavbarWrapper>{children}</NavbarWrapper>
+            </AuthProvider>
+          </ThemeProvider>
+        </ShortcutProvider>
       </body>
     </html>
   );
