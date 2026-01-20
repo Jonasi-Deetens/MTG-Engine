@@ -9,14 +9,15 @@ import { PageBackground } from './PageBackground';
 export function NavbarWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
+  const hideNavbar = pathname === '/play';
   // Landing page uses landing variant, all others use app variant
   const variant = pathname === '/' ? 'landing' : 'app';
   // Landing, login, and register pages don't need spacer since navbar overlays content
-  const showSpacer = pathname !== '/' && pathname !== '/login' && pathname !== '/register';
+  const showSpacer = pathname !== '/' && pathname !== '/login' && pathname !== '/register' && !hideNavbar;
 
   return (
     <PageBackground>
-      <TopNavbar variant={variant} showSpacer={showSpacer} />
+      {!hideNavbar && <TopNavbar variant={variant} showSpacer={showSpacer} />}
       {children}
     </PageBackground>
   );
