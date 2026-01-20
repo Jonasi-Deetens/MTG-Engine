@@ -12,6 +12,8 @@ export type TargetHints = {
 
 const normalizeTarget = (value?: string) => (value || '').toLowerCase();
 
+const ANY_TARGET_OBJECT_TYPES = new Set(['Creature', 'Planeswalker', 'Battle']);
+
 const isGroupSelector = (target: string) =>
   target.startsWith('each_') ||
   (!target.startsWith('target_') && target.endsWith('_you_control')) ||
@@ -74,6 +76,7 @@ export const deriveTargetHintsForTarget = (
   if (normalized === 'any' || normalized === 'target') {
     hints.allowObjects = true;
     hints.allowPlayers = true;
+    ANY_TARGET_OBJECT_TYPES.forEach((type) => hints.objectTypes.add(type));
   } else if (normalized.includes('permanent')) {
     hints.allowObjects = true;
   }
@@ -249,6 +252,7 @@ export const deriveTargetHints = (
     if (target === 'any' || target === 'target') {
       hints.allowObjects = true;
       hints.allowPlayers = true;
+      ANY_TARGET_OBJECT_TYPES.forEach((type) => hints.objectTypes.add(type));
       if (limit) {
         hints.maxObjectTargets = hints.maxObjectTargets ? Math.min(hints.maxObjectTargets, limit) : limit;
         hints.maxPlayerTargets = hints.maxPlayerTargets ? Math.min(hints.maxPlayerTargets, limit) : limit;

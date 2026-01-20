@@ -965,6 +965,7 @@ function usePlayStateInternal() {
     selectedHandId,
     selectedTargetObjectIds: resolvedTargetObjectIds,
     selectedTargetPlayerIds: resolvedTargetPlayerIds,
+    useStackTargets: shouldUseStackTargets,
     maxObjectTargets: targetHints.maxObjectTargets ?? undefined,
     maxPlayerTargets: targetHints.maxPlayerTargets ?? undefined,
     targetPlayerFilter: targetHints.playerFilter,

@@ -7,6 +7,7 @@ interface UseCastContextArgs {
   selectedHandId: string | null;
   selectedTargetObjectIds: string[];
   selectedTargetPlayerIds: number[];
+  useStackTargets?: boolean;
   maxObjectTargets?: number;
   maxPlayerTargets?: number;
   targetPlayerFilter?: 'any' | 'opponent' | 'controller';
@@ -48,6 +49,7 @@ export const useCastContext = ({
   selectedHandId,
   selectedTargetObjectIds,
   selectedTargetPlayerIds,
+  useStackTargets = false,
   maxObjectTargets,
   maxPlayerTargets,
   targetPlayerFilter = 'any',
@@ -137,26 +139,22 @@ export const useCastContext = ({
       choices.copy_min_targets_by_effect_list = copyMinTargetsByEffectList;
     }
     const usePerEffectTargets = !!(targetsByEffect && Object.keys(targetsByEffect).length > 0);
+    const objectTargets = selectedTargetObjectIds.slice(0, maxObjectTargets ?? selectedTargetObjectIds.length);
+    const playerTargets = selectedTargetPlayerIds.slice(0, maxPlayerTargets ?? selectedTargetPlayerIds.length);
     const targets = usePerEffectTargets
       ? {}
       : {
-          ...(selectedTargetObjectIds.length > 0 ? { target: selectedTargetObjectIds[0] } : {}),
-          ...(selectedTargetObjectIds.length > 0
-            ? { targets: selectedTargetObjectIds.slice(0, maxObjectTargets ?? selectedTargetObjectIds.length) }
-            : {}),
-          ...(selectedTargetPlayerIds.length > 0 ? { target_player: selectedTargetPlayerIds[0] } : {}),
-          ...(selectedTargetPlayerIds.length > 0
-            ? { target_players: selectedTargetPlayerIds.slice(0, maxPlayerTargets ?? selectedTargetPlayerIds.length) }
-            : {}),
+          ...(objectTargets.length > 0 && !useStackTargets ? { target: objectTargets[0] } : {}),
+          ...(objectTargets.length > 0 && !useStackTargets ? { targets: objectTargets } : {}),
+          ...(objectTargets.length > 0 && useStackTargets ? { spell_target: objectTargets[0] } : {}),
+          ...(objectTargets.length > 0 && useStackTargets ? { spell_targets: objectTargets } : {}),
+          ...(playerTargets.length > 0 ? { target_player: playerTargets[0] } : {}),
+          ...(playerTargets.length > 0 ? { target_players: playerTargets } : {}),
           ...(targetPlayerFilter !== 'any' ? { target_scope: targetPlayerFilter } : {}),
           ...(targetObjectFilter !== 'any'
             ? { target_object_scope: targetObjectFilter === 'controller' ? 'you_control' : 'opponent_control' }
             : {}),
           ...(targetObjectTypes.length > 0 ? { target_object_types: targetObjectTypes } : {}),
-          ...(selectedTargetObjectIds.length > 0 ? { spell_target: selectedTargetObjectIds[0] } : {}),
-          ...(selectedTargetObjectIds.length > 0
-            ? { spell_targets: selectedTargetObjectIds.slice(0, maxObjectTargets ?? selectedTargetObjectIds.length) }
-            : {}),
         };
     return {
       controller_id: currentPriority,
@@ -195,6 +193,7 @@ export const useCastContext = ({
     selectedHandId,
     selectedTargetObjectIds,
     selectedTargetPlayerIds,
+    useStackTargets,
     targetPlayerFilter,
     targetObjectFilter,
     targetObjectTypes,

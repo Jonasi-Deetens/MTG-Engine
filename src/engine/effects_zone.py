@@ -304,6 +304,9 @@ def handle_phase_out(resolver, effect: Dict[str, Any], context) -> Dict[str, Any
     obj.tapped = False
     obj.is_attacking = False
     obj.is_blocking = False
+    for attached in resolver.game_state.objects.values():
+        if attached.attached_to == obj.id and attached.zone == ZONE_BATTLEFIELD:
+            attached.phased_out = True
     return {"type": "phase_out", "object_id": obj.id}
 
 
@@ -312,6 +315,9 @@ def handle_transform(resolver, effect: Dict[str, Any], context) -> Dict[str, Any
     if not obj:
         return {"type": "transform", "status": "no_target"}
     obj.transformed = not obj.transformed
+    obj.tapped = False
+    obj.is_attacking = False
+    obj.is_blocking = False
     return {"type": "transform", "object_id": obj.id}
 
 
@@ -325,7 +331,7 @@ def handle_flicker(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
     if obj.id in owner.exile:
         owner.exile.remove(obj.id)
     resolver.game_state.move_object(obj.id, ZONE_BATTLEFIELD)
-    if effect.get("returnUnderOwner"):
+    if effect.get("returnUnderOwner", True):
         obj.controller_id = owner_id
     return {"type": "flicker", "object_id": obj.id}
 
@@ -339,6 +345,8 @@ def handle_change_control(resolver, effect: Dict[str, Any], context) -> Dict[str
         return {"type": "change_control", "status": "no_player"}
     original_controller = obj.controller_id
     obj.controller_id = new_controller
+    obj.is_attacking = False
+    obj.is_blocking = False
     duration = effect.get("duration")
     if duration and duration != "permanent":
         resolver._add_temporary_effect(obj, {

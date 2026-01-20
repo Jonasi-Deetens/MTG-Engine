@@ -58,11 +58,12 @@ export const buildTargetsForSpec = (
   const targets: Record<string, any> = {};
   if (spec.key === 'target') {
     if (selection.objectIds.length > 0) {
-      targets.target = selection.objectIds[0];
-      targets.targets = selection.objectIds;
       if (spec.target === 'spell') {
         targets.spell_target = selection.objectIds[0];
         targets.spell_targets = selection.objectIds;
+      } else {
+        targets.target = selection.objectIds[0];
+        targets.targets = selection.objectIds;
       }
     }
     if (selection.playerIds.length > 0) {

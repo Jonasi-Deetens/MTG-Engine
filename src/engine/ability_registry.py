@@ -34,6 +34,13 @@ class AbilityRegistry:
         for graph in obj.ability_graphs:
             runtime = self.adapter.build_runtime(graph)
             if runtime.trigger:
+                if any(
+                    entry.source_id == obj.id
+                    and entry.trigger == runtime.trigger
+                    and entry.graph is graph
+                    for entry in self.registered
+                ):
+                    continue
                 self.registered.append(
                     RegisteredAbility(
                         source_id=obj.id,
@@ -93,15 +100,15 @@ class AbilityRegistry:
                 triggering_source_id=event.payload.get("object_id"),
                 targets=dict(event.payload),
             )
-            self.game_state.pending_triggers.append({
-                "kind": "ability_graph",
-                "payload": {
+            self.game_state.stack.push(StackItem(
+                kind="ability_graph",
+                payload={
                     "graph": entry.graph,
                     "context": context.__dict__,
                     "source_object_id": entry.source_id,
                 },
-                "controller_id": entry.controller_id,
-            })
+                controller_id=entry.controller_id,
+            ))
 
     def _order_triggers(self, entries: List[RegisteredAbility], event: Event) -> List[RegisteredAbility]:
         if len(entries) <= 1:

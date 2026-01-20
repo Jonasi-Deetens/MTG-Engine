@@ -175,6 +175,22 @@ export interface ValidationError {
   nodeId?: string;
 }
 
+export interface ValidationResponse {
+  valid: boolean;
+  errors: ValidationError[];
+  warnings: ValidationError[];
+}
+
+export interface NormalizedAbility {
+  trigger?: string;
+  cost?: string;
+  costs?: Array<Record<string, any>>;
+  keyword?: string;
+  conditions: Array<Record<string, any>>;
+  effects: Array<Record<string, any>>;
+  abilityType: string;
+}
+
 interface BuilderState {
   // Current card
   currentCard: CardData | null;

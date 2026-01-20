@@ -137,18 +137,12 @@ def validate_graph(graph: AbilityGraph, card_colors: Optional[List[str]] = None)
                 nodeId=node.id
             ))
     
-    # Check for invalid connections (EFFECT -> EFFECT, EFFECT -> TRIGGER)
+    # Check for invalid connections (EFFECT -> TRIGGER)
     for edge in graph.edges:
         from_node = next((n for n in graph.nodes if n.id == edge.from_), None)
         to_node = next((n for n in graph.nodes if n.id == edge.to), None)
         
         if from_node and to_node:
-            if from_node.type == "EFFECT" and to_node.type == "EFFECT":
-                errors.append(ValidationError(
-                    type="error",
-                    message=f"Invalid connection: EFFECT nodes cannot connect to other EFFECT nodes",
-                    nodeId=edge.from_
-                ))
             if from_node.type == "EFFECT" and to_node.type == "TRIGGER":
                 errors.append(ValidationError(
                     type="error",
@@ -156,6 +150,21 @@ def validate_graph(graph: AbilityGraph, card_colors: Optional[List[str]] = None)
                     nodeId=edge.from_
                 ))
     
+    # Check for missing or legacy effect type
+    for node in effect_nodes:
+        payload = _get_effect_payload(node)
+        effect_type = payload.get("type") if isinstance(payload, dict) else None
+        legacy_type = payload.get("effect") if isinstance(payload, dict) else None
+        if not effect_type:
+            message = f"Effect {node.id} is missing a type"
+            if legacy_type:
+                message = f"Effect {node.id} must use 'type' (legacy 'effect' field found)"
+            errors.append(ValidationError(
+                type="error",
+                message=message,
+                nodeId=node.id
+            ))
+
     # Check for invalid maxTargets values
     for node in effect_nodes:
         payload = _get_effect_payload(node)
@@ -190,6 +199,40 @@ def validate_graph(graph: AbilityGraph, card_colors: Optional[List[str]] = None)
                 message=f"Effect {node.id} has a large maxTargets value",
                 nodeId=node.id
             ))
+
+    # Check for invalid minTargets values
+    for node in effect_nodes:
+        payload = _get_effect_payload(node)
+        min_targets = payload.get("minTargets")
+        if min_targets is None:
+            continue
+        try:
+            min_targets_int = int(min_targets)
+        except (TypeError, ValueError):
+            errors.append(ValidationError(
+                type="error",
+                message=f"Effect {node.id} has invalid minTargets value",
+                nodeId=node.id
+            ))
+            continue
+        if min_targets_int < 0:
+            errors.append(ValidationError(
+                type="error",
+                message=f"Effect {node.id} must have minTargets >= 0",
+                nodeId=node.id
+            ))
+        max_targets = payload.get("maxTargets")
+        if max_targets is not None:
+            try:
+                max_targets_int = int(max_targets)
+            except (TypeError, ValueError):
+                max_targets_int = None
+            if max_targets_int is not None and min_targets_int > max_targets_int:
+                errors.append(ValidationError(
+                    type="error",
+                    message=f"Effect {node.id} minTargets cannot exceed maxTargets",
+                    nodeId=node.id
+                ))
 
     # Validate type/color inputs for new layer effects
     valid_colors = {"W", "U", "B", "R", "G", "chosen_color"}
@@ -426,12 +469,16 @@ def normalize_graph(graph: AbilityGraph) -> NormalizedAbility:
     
     trigger = None
     cost = None
+    costs: List[Dict[str, Any]] = []
     keyword = None
     
     if root_node:
         if root_node.type == "TRIGGER":
             trigger = root_node.data.get("event", None)
         elif root_node.type == "ACTIVATED":
+            raw_costs = root_node.data.get("costs")
+            if isinstance(raw_costs, list):
+                costs = raw_costs
             cost = root_node.data.get("cost", None)
         elif root_node.type == "KEYWORD":
             keyword = root_node.data.get("keyword", None)
@@ -478,6 +525,7 @@ def normalize_graph(graph: AbilityGraph) -> NormalizedAbility:
     return NormalizedAbility(
         trigger=trigger,
         cost=cost,
+        costs=costs,
         keyword=keyword,
         conditions=conditions,
         effects=effects,
@@ -729,12 +777,12 @@ def get_templates(user: User = Depends(get_current_user)):
                     {
                         "id": "trigger1",
                         "type": "TRIGGER",
-                        "data": {"event": "ON_ENTER_BATTLEFIELD"}
+                        "data": {"event": "enters_battlefield"}
                     },
                     {
                         "id": "effect1",
                         "type": "EFFECT",
-                        "data": {"effect": "DEAL_DAMAGE", "amount": 2, "target": "ANY"}
+                        "data": {"type": "damage", "amount": 2, "target": "any"}
                     }
                 ],
                 "edges": [
@@ -753,12 +801,12 @@ def get_templates(user: User = Depends(get_current_user)):
                     {
                         "id": "trigger1",
                         "type": "TRIGGER",
-                        "data": {"event": "ON_ATTACK"}
+                        "data": {"event": "attacks"}
                     },
                     {
                         "id": "effect1",
                         "type": "EFFECT",
-                        "data": {"effect": "DRAW_CARDS", "amount": 1}
+                        "data": {"type": "draw", "amount": 1}
                     }
                 ],
                 "edges": [
@@ -777,16 +825,16 @@ def get_templates(user: User = Depends(get_current_user)):
                     {
                         "id": "trigger1",
                         "type": "TRIGGER",
-                        "data": {"event": "ON_DEATH"}
+                        "data": {"event": "dies"}
                     },
                     {
                         "id": "effect1",
                         "type": "EFFECT",
                         "data": {
-                            "effect": "CREATE_TOKEN",
+                            "type": "token",
+                            "amount": 1,
                             "power": 1,
-                            "toughness": 1,
-                            "token_type": "creature"
+                            "toughness": 1
                         }
                     }
                 ],

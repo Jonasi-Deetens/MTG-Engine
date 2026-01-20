@@ -43,6 +43,7 @@ export function PlayActionsPanel() {
     blockersPayload,
     hasManualCombatChoices,
     combatDamageAssignments,
+    setCombatDamageAssignments,
     combatDamagePass,
     hasUnresolvedDamageReplacements,
     unresolvedDamageReplacements,
@@ -159,6 +160,9 @@ export function PlayActionsPanel() {
 
   if (!gameState) return null;
 
+  const normalizedCombatDamagePass =
+    combatDamagePass === 'first_strike' || combatDamagePass === 'regular' ? combatDamagePass : undefined;
+
   return (
     <div className="space-y-6">
       <TurnStatusCard
@@ -249,7 +253,7 @@ export function PlayActionsPanel() {
           runEngineAction('assign_combat_damage', {
             player_id: currentPriority,
             ...(hasManualCombatChoices ? { damage_assignments: combatDamageAssignments } : {}),
-            ...(combatDamagePass ? { combat_damage_pass: combatDamagePass } : {}),
+            ...(normalizedCombatDamagePass ? { combat_damage_pass: normalizedCombatDamagePass } : {}),
           })
         }
         hasUnresolvedDamageReplacements={hasUnresolvedDamageReplacements}
@@ -461,7 +465,7 @@ export function PlayActionsPanel() {
         defendingPlayerId={defendingPlayerId ?? null}
         defendingObjectId={defendingObjectId}
         assignments={combatDamageAssignments}
-        damagePass={combatDamagePass}
+        damagePass={normalizedCombatDamagePass}
         onUpdateAssignment={(attackerId, targetId, value) =>
           setCombatDamageAssignments((prev) => ({
             ...prev,

@@ -54,6 +54,7 @@ class NormalizedAbility(BaseModel):
     """Engine-friendly normalized ability structure."""
     trigger: Optional[str] = None
     cost: Optional[str] = None
+    costs: List[Dict[str, Any]] = []
     keyword: Optional[str] = None
     conditions: List[Dict[str, Any]] = []
     effects: List[Dict[str, Any]] = []

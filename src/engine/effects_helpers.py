@@ -5,11 +5,19 @@ from typing import Any, Dict, List, Optional
 from .state import GameState, ResolveContext, GameObject
 from .targets import resolve_object, resolve_object_id, resolve_player_id, is_overloaded, is_legal_object_target
 
+ANY_TARGET_TYPES = {"Creature", "Planeswalker", "Battle"}
+
+
+def _is_any_target_object(obj: GameObject) -> bool:
+    return any(card_type in (obj.types or []) for card_type in ANY_TARGET_TYPES)
+
 
 def resolve_target_object(game_state: GameState, context: ResolveContext, target_key: str) -> Optional[GameObject]:
     fallback = context.source_id if target_key in ("self", "source") else None
     obj = resolve_object(game_state, context, target_key, fallback)
     if obj and not is_overloaded(context):
+        if target_key in ("any", "target") and not _is_any_target_object(obj):
+            return None
         if not is_legal_object_target(game_state, context, obj.id):
             return None
     return obj
@@ -117,6 +125,8 @@ def resolve_target_objects(game_state: GameState, context: ResolveContext, targe
     for obj_id in context.targets.get("targets", []) if isinstance(context.targets.get("targets"), list) else []:
         obj = game_state.objects.get(obj_id)
         if obj and obj not in targets:
+            if target_key in ("any", "target") and not _is_any_target_object(obj):
+                continue
             if not is_overloaded(context) and not is_legal_object_target(game_state, context, obj_id):
                 continue
             targets.append(obj)

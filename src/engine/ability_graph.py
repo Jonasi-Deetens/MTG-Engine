@@ -62,7 +62,10 @@ class AbilityGraphRuntimeAdapter:
 
         adjacency: Dict[str, List[str]] = {node_id: [] for node_id in nodes.keys()}
         for edge in edges:
-            adjacency.setdefault(edge["from_"], []).append(edge["to"])
+            source_id = edge.get("from_") or edge.get("from")
+            if not source_id:
+                continue
+            adjacency.setdefault(source_id, []).append(edge["to"])
 
         conditions: List[Dict[str, Any]] = []
         effects: List[Dict[str, Any]] = []
