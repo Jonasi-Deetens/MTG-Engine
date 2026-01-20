@@ -1,7 +1,7 @@
 // Theme configuration system
 // Defines semantic color structure for all themes
 
-export type Theme = 'light' | 'dark';
+export type Theme = 'light' | 'dark' | 'sakura';
 
 export interface ThemeColors {
   background: {
@@ -122,6 +122,66 @@ export const themes: Record<Theme, ThemeColors> = {
       ghost: {
         text: '#4a4a4a',     // medium slate
         hover: '#fef3c7',   // amber-100 - light amber hover
+      },
+    },
+  },
+  sakura: {
+    background: {
+      primary: '#fffafc',   // softer white with subtle pink tint
+      secondary: '#f9f2f6', // muted blush
+      tertiary: '#f3e6ee',  // pale rose
+    },
+    foreground: {
+      primary: '#1a1a1a',   // dark slate
+      secondary: '#4a4a4a', // medium slate
+      muted: '#7a7a7a',     // light slate
+    },
+    border: {
+      default: '#f4a3c0',   // soft pink
+      hover: '#f08ab0',     // stronger pink
+      focus: '#f08ab0',     // stronger pink
+    },
+    accent: {
+      primary: '#f08ab0',   // sakura pink
+      secondary: '#f4a3c0', // soft pink
+      hover: '#e56a98',     // deeper pink
+    },
+    status: {
+      success: '#22c55e',  // green-500
+      warning: '#eab308',  // amber-500
+      error: '#ef4444',    // red-500
+      info: '#3b82f6',     // blue-500
+    },
+    card: {
+      background: '#ffffff',
+      border: '#f4a3c0',    // soft pink
+      hover: '#fde6f0',     // very light pink hover
+    },
+    input: {
+      background: '#ffffff',
+      border: '#f4a3c0',    // soft pink
+      text: '#1a1a1a',     // dark slate
+      placeholder: '#94a3b8', // slate-400
+    },
+    button: {
+      primary: {
+        bg: '#f08ab0',      // sakura pink
+        text: '#ffffff',
+        hover: '#e56a98',   // deeper pink hover
+      },
+      secondary: {
+        bg: '#fde6f0',      // light pink background
+        text: '#1a1a1a',    // dark slate
+        hover: '#f9cfe0',   // slightly stronger pink
+      },
+      outline: {
+        border: '#f08ab0',  // sakura pink border
+        text: '#f08ab0',    // sakura pink text
+        hover: '#e56a98',   // deeper pink hover
+      },
+      ghost: {
+        text: '#4a4a4a',     // medium slate
+        hover: '#fde6f0',   // light pink hover
       },
     },
   },

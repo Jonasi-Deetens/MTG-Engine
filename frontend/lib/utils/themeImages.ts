@@ -14,21 +14,24 @@ import { Theme } from '@/lib/themes/themeConfig';
  * @param useFallback - Whether to fallback to base image if theme-specific doesn't exist (default: true)
  * @returns Path to the theme-specific image or fallback to base image
  */
+type ThemeWithLegacy = Theme | 'angel';
+
 export function getThemeImage(
   imageName: string,
-  theme: Theme,
+  theme: ThemeWithLegacy,
   extension: string = 'png',
   useFallback: boolean = true
 ): string {
   // Migrate 'angel' to 'light' if found (for backward compatibility)
   const normalizedTheme = theme === 'angel' ? 'light' : theme;
+  const imageTheme = normalizedTheme;
   
   if (useFallback) {
     // Try theme-specific first, but we'll let the browser handle 404s and use base as fallback
     // In a real implementation, you might want to check if file exists, but for now we'll use CSS fallback
-    return `/${imageName}-${normalizedTheme}.${extension}`;
+    return `/${imageName}-${imageTheme}.${extension}`;
   }
-  return `/${imageName}-${normalizedTheme}.${extension}`;
+  return `/${imageName}-${imageTheme}.${extension}`;
 }
 
 /**
@@ -43,6 +46,7 @@ export function getAllThemeImages(
 ): Record<Theme, string> {
   return {
     light: `/${imageName}-light.${extension}`,
+    sakura: `/${imageName}-sakura.${extension}`,
     dark: `/${imageName}-dark.${extension}`,
   };
 }

@@ -23,7 +23,7 @@ export function useThemeImage(
       if (dataTheme === 'angel') {
         return 'light';
       }
-      if (dataTheme && ['light', 'dark'].includes(dataTheme)) {
+      if (dataTheme && ['light', 'sakura', 'dark'].includes(dataTheme)) {
         return dataTheme;
       }
     }
@@ -34,7 +34,7 @@ export function useThemeImage(
         if (storedTheme === 'angel') {
           return 'light';
         }
-        const availableThemes: Theme[] = ['light', 'dark'];
+        const availableThemes: Theme[] = ['light', 'sakura', 'dark'];
         if (storedTheme && availableThemes.includes(storedTheme)) {
           return storedTheme;
         }
@@ -74,7 +74,7 @@ export function useThemeImage(
             // Migrate 'angel' to 'light' if found
             if (newTheme === 'angel') {
               setCurrentTheme('light');
-            } else if (newTheme && ['light', 'dark'].includes(newTheme)) {
+            } else if (newTheme && ['light', 'sakura', 'dark'].includes(newTheme)) {
               setCurrentTheme(newTheme);
             }
           }
@@ -93,7 +93,7 @@ export function useThemeImage(
           // Migrate 'angel' to 'light' if found
           if (newTheme === 'angel') {
             setCurrentTheme('light');
-          } else if (['light', 'dark'].includes(newTheme)) {
+          } else if (['light', 'sakura', 'dark'].includes(newTheme)) {
             setCurrentTheme(newTheme);
           }
         }

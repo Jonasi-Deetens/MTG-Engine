@@ -84,6 +84,48 @@
   --theme-overlay-strong: rgba(0, 0, 0, 0.85);
 }
 
+/* Sakura theme (whitish with pink accents) */
+[data-theme="sakura"] {
+  --theme-bg-primary: #fffafc; /* softer white with subtle pink tint */
+  --theme-bg-secondary: #f9f2f6; /* muted blush */
+  --theme-bg-tertiary: #f3e6ee; /* pale rose */
+  --theme-text-primary: #1a1a1a; /* dark slate */
+  --theme-text-secondary: #4a4a4a; /* medium slate */
+  --theme-text-muted: #7a7a7a; /* light slate */
+  --theme-border-default: #f4a3c0; /* soft pink */
+  --theme-border-hover: #f08ab0; /* stronger pink */
+  --theme-border-focus: #f08ab0; /* stronger pink */
+  --theme-accent-primary: #f08ab0; /* sakura pink */
+  --theme-accent-secondary: #f4a3c0; /* soft pink */
+  --theme-accent-hover: #e56a98; /* deeper pink */
+  --theme-status-success: #22c55e;
+  --theme-status-warning: #eab308;
+  --theme-status-error: #ef4444;
+  --theme-status-info: #3b82f6;
+  --theme-card-bg: #ffffff;
+  --theme-card-border: #f4a3c0; /* soft pink */
+  --theme-card-hover: #fde6f0; /* very light pink hover */
+  --theme-input-bg: #ffffff;
+  --theme-input-border: #f4a3c0; /* soft pink */
+  --theme-input-text: #1a1a1a;
+  --theme-input-placeholder: #94a3b8;
+  --theme-button-primary-bg: #f08ab0; /* sakura pink */
+  --theme-button-primary-text: #ffffff;
+  --theme-button-primary-hover: #e56a98; /* deeper pink hover */
+  --theme-button-secondary-bg: #fde6f0; /* light pink background */
+  --theme-button-secondary-text: #1a1a1a;
+  --theme-button-secondary-hover: #f9cfe0; /* slightly stronger pink */
+  --theme-button-outline-border: #f08ab0; /* sakura pink border */
+  --theme-button-outline-text: #f08ab0; /* sakura pink text */
+  --theme-button-outline-hover: #e56a98; /* deeper pink hover */
+  --theme-button-ghost-text: #4a4a4a;
+  --theme-button-ghost-hover: #fde6f0; /* light pink hover */
+  --theme-nav-active: #f08ab0; /* sakura pink - active nav item */
+  --theme-nav-active-border: #f08ab0; /* sakura pink - active nav border */
+  --theme-overlay: rgba(0, 0, 0, 0.6);
+  --theme-overlay-strong: rgba(0, 0, 0, 0.85);
+}
+
 /* Dark theme (red/black gothic theme) */
 [data-theme="dark"] {
   --theme-bg-primary: #0a0a0a; /* very dark gray (slightly lighter than pure black) */
@@ -167,6 +209,11 @@ body {
 .card-elevated-shadow {
   box-shadow: 0 4px 6px -1px rgba(245, 158, 11, 0.1), 
               0 2px 4px -1px rgba(245, 158, 11, 0.06);
+}
+
+[data-theme="sakura"] .card-elevated-shadow {
+  box-shadow: 0 4px 6px -1px rgba(240, 138, 176, 0.16), 
+              0 2px 4px -1px rgba(240, 138, 176, 0.1);
 }
 
 [data-theme="dark"] .card-elevated-shadow {

@@ -25,7 +25,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [currentTheme, setCurrentThemeState] = useState<Theme>(defaultTheme);
   const [mounted, setMounted] = useState(false);
 
-  const availableThemes: Theme[] = ["light", "dark"];
+  const availableThemes: Theme[] = ["light", "sakura", "dark"];
 
   // Apply theme to document
   const applyTheme = useCallback((theme: Theme) => {
