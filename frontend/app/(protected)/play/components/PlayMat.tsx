@@ -76,15 +76,15 @@ export function PlayMat() {
           </Button>
         </div>
         {viewMode === 'single' && (
-          <label className="text-sm text-[color:var(--theme-text-secondary)] flex items-center gap-2">
-            Focus
+          <div className="text-sm text-[color:var(--theme-text-secondary)] flex items-center gap-2">
+            <span>Focus</span>
             <Select
               className="min-w-[160px]"
               options={playerOptions}
               value={String(selectedPlayerId)}
               onChange={(value) => setSelectedPlayerId(Number(value))}
             />
-          </label>
+          </div>
         )}
       </div>
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { EngineGameStateSnapshot, EngineCardMap, engineApi } from '@/lib/engine';
 import { useAbilityGraphs } from '@/hooks/useAbilityGraphs';
 import { useTargeting } from '@/hooks/useTargeting';
@@ -17,6 +17,7 @@ import { useCastContext } from '@/hooks/useCastContext';
 import { useTurnState } from '@/hooks/useTurnState';
 import { useWardPayments } from '@/hooks/useWardPayments';
 import { useActivationCosts } from '@/hooks/useActivationCosts';
+import { useResolveCleanup } from '../../../hooks/useResolveCleanup';
 import {
   deriveAdditionalCostsFromGraph,
   deriveAlternativeCastCostsFromGraph,
@@ -584,6 +585,40 @@ function usePlayStateInternal() {
   const hasActivatedAbility =
     selectedBattlefieldObject?.ability_graphs && selectedBattlefieldObject.ability_graphs.length > 0;
   const selectedHandObject = gameState?.objects.find((obj) => obj.id === selectedHandId);
+  const clearSelectionsOnResolve = useCallback(() => {
+    setSelectedHandId(null);
+    setSelectedBattlefieldId(null);
+    setSelectedTargetObjectIds([]);
+    setSelectedTargetPlayerIds([]);
+    clearEffectTargets();
+    setSelectedModalModes([]);
+    setSelectedAlternativeCostTag(null);
+    setOptionalCostSelections({});
+    setConspireTaps([]);
+    setSpliceSelections([]);
+    setEnterChoices({});
+    setCopyTargetSelections([]);
+  }, [
+    clearEffectTargets,
+    setConspireTaps,
+    setCopyTargetSelections,
+    setEnterChoices,
+    setOptionalCostSelections,
+    setSelectedAlternativeCostTag,
+    setSelectedBattlefieldId,
+    setSelectedHandId,
+    setSelectedModalModes,
+    setSelectedTargetObjectIds,
+    setSelectedTargetPlayerIds,
+    setSpliceSelections,
+  ]);
+  useResolveCleanup({
+    gameState,
+    selectedHandId,
+    selectedHandZone: selectedHandObject?.zone ?? null,
+    onResolve: clearSelectionsOnResolve,
+    onClearSelectedHand: setSelectedHandId,
+  });
   const activatedCosts = useMemo(() => {
     if (!selectedBattlefieldObject?.ability_graphs?.length) return [];
     const graph = selectedBattlefieldObject.ability_graphs[0];

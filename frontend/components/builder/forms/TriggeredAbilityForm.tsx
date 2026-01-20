@@ -7,6 +7,7 @@ import { useBuilderStore, TriggeredAbility, Effect, StructuredCondition } from '
 import { Button } from '@/components/ui/Button';
 import { ConditionBuilder } from '@/components/builder/ConditionBuilder';
 import { EffectFields } from './EffectFields';
+import { filterValidEffects, sanitizeEffectsForSave } from './abilityFormHelpers';
 import { EFFECT_TYPE_OPTIONS } from '@/lib/effectTypes';
 
 interface TriggeredAbilityFormProps {
@@ -74,7 +75,7 @@ export function TriggeredAbilityForm({ abilityId, onSave, onCancel }: TriggeredA
   const [cardType, setCardType] = useState(existingAbility?.cardType || '');
   const [isModal, setIsModal] = useState(!!existingAbility?.modal);
   const [modalMin, setModalMin] = useState(existingAbility?.modal?.min ?? 1);
-  const [modalMax, setModalMax] = useState(existingAbility?.modal?.max ?? 1);
+  const [modalMax, setModalMax] = useState<number | null | ''>(existingAbility?.modal?.max ?? 1);
   const [modalModes, setModalModes] = useState(existingAbility?.modal?.modes ?? []);
 
   const handleAddEffect = () => {
@@ -151,17 +152,7 @@ export function TriggeredAbilityForm({ abilityId, onSave, onCancel }: TriggeredA
   };
 
   const handleSave = () => {
-    const allowedModes = new Set(modalModes.map((mode) => mode.id));
-    const cleanedEffects = isModal
-      ? effects.map((effect) => {
-          if (!effect.modeId || allowedModes.has(effect.modeId)) return effect;
-          const { modeId, ...rest } = effect;
-          return rest;
-        })
-      : effects.map((effect) => {
-          const { modeId, ...rest } = effect;
-          return rest;
-        });
+    const cleanedEffects = sanitizeEffectsForSave(effects, isModal, modalModes);
     const modal = isModal
       ? {
           min: Math.max(0, Number(modalMin) || 0),
@@ -174,7 +165,7 @@ export function TriggeredAbilityForm({ abilityId, onSave, onCancel }: TriggeredA
       event,
       scope,
       condition: condition || undefined,
-      effects: cleanedEffects.filter((e) => e.type && (e.amount !== undefined || !['damage', 'draw', 'token', 'counters', 'life'].includes(e.type))),
+      effects: filterValidEffects(cleanedEffects),
       ...(modal ? { modal } : {}),
       cardType: cardType || undefined,
       ...(event === 'card_enters' && {

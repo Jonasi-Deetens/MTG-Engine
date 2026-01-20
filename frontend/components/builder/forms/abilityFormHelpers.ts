@@ -3,6 +3,12 @@ import { EFFECT_TYPE_OPTIONS } from '@/lib/effectTypes';
 
 const EFFECTS_REQUIRE_AMOUNT = new Set(['damage', 'draw', 'token', 'counters', 'life']);
 
+const getDefaultTargetForEffect = (effect: Effect) => {
+  if (effect.type === 'counter_spell') return 'spell';
+  if (['replace_draw', 'replace_discard', 'replace_life_loss', 'lose_life'].includes(effect.type)) return 'player';
+  return 'any';
+};
+
 export const updateEffectsWithField = (
   prevEffects: Effect[],
   index: number,
@@ -81,12 +87,28 @@ export const sanitizeEffectsForSave = (
   const allowedModes = new Set(modalModes.map((mode) => mode.id));
   return isModal
     ? effects.map((effect) => {
-        if (!effect.modeId || allowedModes.has(effect.modeId)) return effect;
-        const { modeId, ...rest } = effect;
+        const selectedType = EFFECT_TYPE_OPTIONS.find((opt) => opt.value === effect.type);
+        const nextEffect = { ...effect };
+        if (selectedType?.requiresTarget && !nextEffect.target) {
+          nextEffect.target = getDefaultTargetForEffect(nextEffect);
+        }
+        if (selectedType?.requiresUntapTarget && !nextEffect.untapTarget) {
+          nextEffect.untapTarget = 'self';
+        }
+        if (!nextEffect.modeId || allowedModes.has(nextEffect.modeId)) return nextEffect;
+        const { modeId, ...rest } = nextEffect;
         return rest;
       })
     : effects.map((effect) => {
-        const { modeId, ...rest } = effect;
+        const selectedType = EFFECT_TYPE_OPTIONS.find((opt) => opt.value === effect.type);
+        const nextEffect = { ...effect };
+        if (selectedType?.requiresTarget && !nextEffect.target) {
+          nextEffect.target = getDefaultTargetForEffect(nextEffect);
+        }
+        if (selectedType?.requiresUntapTarget && !nextEffect.untapTarget) {
+          nextEffect.untapTarget = 'self';
+        }
+        const { modeId, ...rest } = nextEffect;
         return rest;
       });
 };
