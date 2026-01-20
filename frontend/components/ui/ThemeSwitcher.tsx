@@ -9,11 +9,15 @@ import { Select, SelectOption } from './Select';
 
 const themeIcons: Record<Theme, React.ComponentType<{ className?: string }>> = {
   light: Sun,
+  sakura: Sun,
+  neon: Moon,
   dark: Moon,
 };
 
 const themeLabels: Record<Theme, string> = {
   light: 'Light',
+  sakura: 'Sakura',
+  neon: 'Neon',
   dark: 'Dark',
 };
 
