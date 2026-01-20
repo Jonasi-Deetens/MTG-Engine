@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { getThemeImage } from '@/lib/utils/themeImages';
 import { Theme, defaultTheme } from '@/lib/themes/themeConfig';
 
+type ThemeWithLegacy = Theme | 'angel';
+
 /**
  * Hook to get theme-based image with automatic fallback
  * Listens to theme changes via data-theme attribute on document
@@ -18,23 +20,23 @@ export function useThemeImage(
   // Helper function to get current theme
   const getCurrentTheme = (): Theme => {
     if (typeof document !== 'undefined') {
-      const dataTheme = document.documentElement.getAttribute('data-theme') as Theme | null;
+      const dataTheme = document.documentElement.getAttribute('data-theme') as ThemeWithLegacy | null;
       // Migrate 'angel' to 'light' if found
       if (dataTheme === 'angel') {
         return 'light';
       }
-      if (dataTheme && ['light', 'sakura', 'dark'].includes(dataTheme)) {
+      if (dataTheme && ['light', 'sakura', 'neon', 'dark'].includes(dataTheme)) {
         return dataTheme;
       }
     }
     if (typeof window !== 'undefined') {
       try {
-        const storedTheme = localStorage.getItem('mtg-engine-theme') as Theme | null;
+        const storedTheme = localStorage.getItem('mtg-engine-theme') as ThemeWithLegacy | null;
         // Migrate 'angel' to 'light' if found
         if (storedTheme === 'angel') {
           return 'light';
         }
-        const availableThemes: Theme[] = ['light', 'sakura', 'dark'];
+        const availableThemes: Theme[] = ['light', 'sakura', 'neon', 'dark'];
         if (storedTheme && availableThemes.includes(storedTheme)) {
           return storedTheme;
         }
@@ -45,14 +47,11 @@ export function useThemeImage(
     return defaultTheme;
   };
 
-  // Initialize with theme-specific image path immediately
-  const getInitialImagePath = (): string => {
-    const theme = getCurrentTheme();
-    return getThemeImage(imageName, theme, extension);
-  };
-
-  const [imagePath, setImagePath] = useState(getInitialImagePath);
-  const [currentTheme, setCurrentTheme] = useState<Theme>(getCurrentTheme);
+  // Use default theme during SSR/first render to avoid hydration mismatch
+  const [imagePath, setImagePath] = useState(() =>
+    getThemeImage(imageName, defaultTheme, extension)
+  );
+  const [currentTheme, setCurrentTheme] = useState<Theme>(defaultTheme);
 
   // Get initial theme from document or localStorage and update image immediately
   useEffect(() => {
@@ -70,11 +69,11 @@ export function useThemeImage(
       const observer = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
           if (mutation.type === 'attributes' && mutation.attributeName === 'data-theme') {
-            const newTheme = document.documentElement.getAttribute('data-theme') as Theme | null;
+            const newTheme = document.documentElement.getAttribute('data-theme') as ThemeWithLegacy | null;
             // Migrate 'angel' to 'light' if found
             if (newTheme === 'angel') {
               setCurrentTheme('light');
-            } else if (newTheme && ['light', 'sakura', 'dark'].includes(newTheme)) {
+            } else if (newTheme && ['light', 'sakura', 'neon', 'dark'].includes(newTheme)) {
               setCurrentTheme(newTheme);
             }
           }
@@ -89,11 +88,11 @@ export function useThemeImage(
       // Also listen to storage events (when theme changes in another tab/window)
       const handleStorageChange = (e: StorageEvent) => {
         if (e.key === 'mtg-engine-theme' && e.newValue) {
-          const newTheme = e.newValue as Theme;
+          const newTheme = e.newValue as ThemeWithLegacy;
           // Migrate 'angel' to 'light' if found
           if (newTheme === 'angel') {
             setCurrentTheme('light');
-          } else if (['light', 'sakura', 'dark'].includes(newTheme)) {
+          } else if (['light', 'sakura', 'neon', 'dark'].includes(newTheme)) {
             setCurrentTheme(newTheme);
           }
         }

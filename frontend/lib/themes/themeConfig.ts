@@ -1,7 +1,7 @@
 // Theme configuration system
 // Defines semantic color structure for all themes
 
-export type Theme = 'light' | 'dark' | 'sakura';
+export type Theme = 'light' | 'dark' | 'sakura' | 'neon';
 
 export interface ThemeColors {
   background: {
@@ -182,6 +182,66 @@ export const themes: Record<Theme, ThemeColors> = {
       ghost: {
         text: '#4a4a4a',     // medium slate
         hover: '#fde6f0',   // light pink hover
+      },
+    },
+  },
+  neon: {
+    background: {
+      primary: '#0b0f1a',   // deep navy
+      secondary: '#111827', // slate-900
+      tertiary: '#1f2937',  // slate-800
+    },
+    foreground: {
+      primary: '#f8fafc',  // slate-50
+      secondary: '#cbd5f5', // cool light
+      muted: '#94a3b8',     // slate-400
+    },
+    border: {
+      default: '#22d3ee',   // cyan-400
+      hover: '#a855f7',     // purple-500
+      focus: '#22d3ee',     // cyan-400
+    },
+    accent: {
+      primary: '#22d3ee',  // cyan-400
+      secondary: '#a855f7', // purple-500
+      hover: '#f472b6',     // pink-400
+    },
+    status: {
+      success: '#22c55e',  // green-500
+      warning: '#f59e0b',  // amber-500
+      error: '#ef4444',    // red-500
+      info: '#38bdf8',     // sky-400
+    },
+    card: {
+      background: '#0f172a', // slate-900
+      border: '#22d3ee',     // cyan-400
+      hover: '#111827',      // slate-900
+    },
+    input: {
+      background: '#0f172a', // slate-900
+      border: '#22d3ee',     // cyan-400
+      text: '#f8fafc',      // slate-50
+      placeholder: '#64748b', // slate-500
+    },
+    button: {
+      primary: {
+        bg: '#22d3ee',      // cyan-400
+        text: '#0b0f1a',    // deep navy
+        hover: '#0ea5e9',   // sky-500
+      },
+      secondary: {
+        bg: '#1f2937',      // slate-800
+        text: '#f8fafc',    // slate-50
+        hover: '#334155',   // slate-700
+      },
+      outline: {
+        border: '#a855f7',  // purple-500
+        text: '#a855f7',    // purple-500
+        hover: '#f472b6',   // pink-400
+      },
+      ghost: {
+        text: '#cbd5f5',     // cool light
+        hover: '#111827',   // slate-900
       },
     },
   },

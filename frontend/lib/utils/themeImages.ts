@@ -47,6 +47,7 @@ export function getAllThemeImages(
   return {
     light: `/${imageName}-light.${extension}`,
     sakura: `/${imageName}-sakura.${extension}`,
+    neon: `/${imageName}-neon.${extension}`,
     dark: `/${imageName}-dark.${extension}`,
   };
 }

@@ -126,6 +126,48 @@
   --theme-overlay-strong: rgba(0, 0, 0, 0.85);
 }
 
+/* Neon theme (dark with neon accents) */
+[data-theme="neon"] {
+  --theme-bg-primary: #0b0f1a; /* deep navy */
+  --theme-bg-secondary: #111827; /* slate-900 */
+  --theme-bg-tertiary: #1f2937; /* slate-800 */
+  --theme-text-primary: #f8fafc; /* slate-50 */
+  --theme-text-secondary: #cbd5f5; /* cool light */
+  --theme-text-muted: #94a3b8; /* slate-400 */
+  --theme-border-default: #22d3ee; /* cyan-400 */
+  --theme-border-hover: #a855f7; /* purple-500 */
+  --theme-border-focus: #22d3ee; /* cyan-400 */
+  --theme-accent-primary: #22d3ee; /* cyan-400 */
+  --theme-accent-secondary: #a855f7; /* purple-500 */
+  --theme-accent-hover: #f472b6; /* pink-400 */
+  --theme-status-success: #22c55e;
+  --theme-status-warning: #f59e0b;
+  --theme-status-error: #ef4444;
+  --theme-status-info: #38bdf8;
+  --theme-card-bg: #0f172a; /* slate-900 */
+  --theme-card-border: #22d3ee; /* cyan-400 */
+  --theme-card-hover: #111827; /* slate-900 */
+  --theme-input-bg: #0f172a; /* slate-900 */
+  --theme-input-border: #22d3ee; /* cyan-400 */
+  --theme-input-text: #f8fafc;
+  --theme-input-placeholder: #64748b;
+  --theme-button-primary-bg: #22d3ee; /* cyan-400 */
+  --theme-button-primary-text: #0b0f1a; /* deep navy */
+  --theme-button-primary-hover: #0ea5e9; /* sky-500 */
+  --theme-button-secondary-bg: #1f2937; /* slate-800 */
+  --theme-button-secondary-text: #f8fafc;
+  --theme-button-secondary-hover: #334155; /* slate-700 */
+  --theme-button-outline-border: #a855f7; /* purple-500 */
+  --theme-button-outline-text: #a855f7;
+  --theme-button-outline-hover: #f472b6; /* pink-400 */
+  --theme-button-ghost-text: #cbd5f5;
+  --theme-button-ghost-hover: #111827;
+  --theme-nav-active: #22d3ee; /* cyan-400 */
+  --theme-nav-active-border: #22d3ee; /* cyan-400 */
+  --theme-overlay: rgba(0, 0, 0, 0.8);
+  --theme-overlay-strong: rgba(0, 0, 0, 0.9);
+}
+
 /* Dark theme (red/black gothic theme) */
 [data-theme="dark"] {
   --theme-bg-primary: #0a0a0a; /* very dark gray (slightly lighter than pure black) */
@@ -214,6 +256,11 @@ body {
 [data-theme="sakura"] .card-elevated-shadow {
   box-shadow: 0 4px 6px -1px rgba(240, 138, 176, 0.16), 
               0 2px 4px -1px rgba(240, 138, 176, 0.1);
+}
+
+[data-theme="neon"] .card-elevated-shadow {
+  box-shadow: 0 4px 6px -1px rgba(34, 211, 238, 0.2), 
+              0 2px 4px -1px rgba(168, 85, 247, 0.12);
 }
 
 [data-theme="dark"] .card-elevated-shadow {
