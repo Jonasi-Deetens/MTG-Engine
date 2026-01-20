@@ -25,9 +25,15 @@ function PlayPageContent() {
       )}
 
       {gameState && (
-        <div className="space-y-6">
-          <PlayActionsPanel />
-          <PlayMat />
+        <div className="play-surface">
+          <div className="play-layout">
+            <div className="play-mat">
+              <PlayMat />
+            </div>
+            <aside className="play-panel">
+              <PlayActionsPanel />
+            </aside>
+          </div>
         </div>
       )}
     </div>

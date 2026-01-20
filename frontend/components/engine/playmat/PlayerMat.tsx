@@ -40,8 +40,8 @@ export function PlayerMat({
   const manaTotal = Object.values(player.mana_pool).reduce((sum, val) => sum + val, 0);
 
   return (
-    <div className="rounded-2xl border border-[color:var(--theme-border)] bg-[color:var(--theme-bg-secondary)]/10 p-4 space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <div className="player-mat">
+      <div className="player-mat-header">
         <div>
           <div className="text-lg font-semibold text-[color:var(--theme-text-primary)]">
             Player {player.id + 1}
@@ -51,14 +51,14 @@ export function PlayerMat({
           </div>
         </div>
         {isActive && (
-          <span className="text-xs uppercase tracking-wide text-[color:var(--theme-accent-primary)]">
+          <span className="player-mat-active">
             Active
           </span>
         )}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-6">
-        <MatZone title="Battlefield" count={battlefieldObjects.length} className="lg:col-span-4">
+      <div className="player-mat-grid">
+        <MatZone title="Battlefield" count={battlefieldObjects.length} className="player-mat-battlefield">
           <div className="flex gap-2 flex-wrap">
             {battlefieldObjects.length === 0 && (
               <span className="text-xs text-[color:var(--theme-text-secondary)]">No permanents</span>
@@ -78,12 +78,57 @@ export function PlayerMat({
                 selected={onToggleBattlefield ? selectedBattlefieldIds?.has(obj.id) : selectedBattlefieldId === obj.id}
                 statusLabel={getTemporaryStatus(obj)}
                 statusDetail={[getTemporaryDetail(obj), getEtbChoiceDetail(obj)].filter(Boolean).join(' · ') || null}
+                className={obj.tapped ? 'zone-card-tapped' : undefined}
               />
             ))}
           </div>
         </MatZone>
 
-        <MatZone title="Hand" count={handObjects.length} className="lg:col-span-2">
+        <div className="player-mat-side">
+          <MatZone title="Library" count={libraryCount}>
+            <div className="deck-stack" aria-label={`Library with ${libraryCount} cards`}>
+              <div className="deck-card deck-card-1" />
+              <div className="deck-card deck-card-2" />
+              <div className="deck-card deck-card-3" />
+              <span className="deck-count">{libraryCount}</span>
+            </div>
+          </MatZone>
+
+          <MatZone title="Graveyard" count={graveyardObjects.length}>
+            <div className="flex gap-2 flex-wrap">
+              {graveyardObjects.length === 0 && (
+                <span className="text-xs text-[color:var(--theme-text-secondary)]">Empty graveyard</span>
+              )}
+              {graveyardObjects.map((obj) => (
+                <ZoneCard key={obj.id} obj={obj} cardMap={cardMap} />
+              ))}
+            </div>
+          </MatZone>
+
+          <MatZone title="Exile" count={exileObjects.length}>
+            <div className="flex gap-2 flex-wrap">
+              {exileObjects.length === 0 && (
+                <span className="text-xs text-[color:var(--theme-text-secondary)]">Empty exile</span>
+              )}
+              {exileObjects.map((obj) => (
+                <ZoneCard key={obj.id} obj={obj} cardMap={cardMap} />
+              ))}
+            </div>
+          </MatZone>
+
+          <MatZone title="Command" count={commandObjects.length}>
+            <div className="flex gap-2 flex-wrap">
+              {commandObjects.length === 0 && (
+                <span className="text-xs text-[color:var(--theme-text-secondary)]">No commander</span>
+              )}
+              {commandObjects.map((obj) => (
+                <ZoneCard key={obj.id} obj={obj} cardMap={cardMap} />
+              ))}
+            </div>
+          </MatZone>
+        </div>
+
+        <MatZone title="Hand" count={handObjects.length} className="player-mat-hand">
           <div className="flex gap-2 flex-wrap">
             {handObjects.length === 0 && (
               <span className="text-xs text-[color:var(--theme-text-secondary)]">Empty hand</span>
@@ -98,43 +143,6 @@ export function PlayerMat({
               />
             ))}
           </div>
-        </MatZone>
-
-        <MatZone title="Command" count={commandObjects.length} className="lg:col-span-2">
-          <div className="flex gap-2 flex-wrap">
-            {commandObjects.length === 0 && (
-              <span className="text-xs text-[color:var(--theme-text-secondary)]">No commander</span>
-            )}
-            {commandObjects.map((obj) => (
-              <ZoneCard key={obj.id} obj={obj} cardMap={cardMap} />
-            ))}
-          </div>
-        </MatZone>
-
-        <MatZone title="Graveyard" count={graveyardObjects.length} className="lg:col-span-2">
-          <div className="flex gap-2 flex-wrap">
-            {graveyardObjects.length === 0 && (
-              <span className="text-xs text-[color:var(--theme-text-secondary)]">Empty graveyard</span>
-            )}
-            {graveyardObjects.map((obj) => (
-              <ZoneCard key={obj.id} obj={obj} cardMap={cardMap} />
-            ))}
-          </div>
-        </MatZone>
-
-        <MatZone title="Exile" count={exileObjects.length} className="lg:col-span-2">
-          <div className="flex gap-2 flex-wrap">
-            {exileObjects.length === 0 && (
-              <span className="text-xs text-[color:var(--theme-text-secondary)]">Empty exile</span>
-            )}
-            {exileObjects.map((obj) => (
-              <ZoneCard key={obj.id} obj={obj} cardMap={cardMap} />
-            ))}
-          </div>
-        </MatZone>
-
-        <MatZone title="Library" count={libraryCount} className="lg:col-span-2">
-          <div className="text-sm text-[color:var(--theme-text-secondary)]">{libraryCount} cards</div>
         </MatZone>
       </div>
     </div>

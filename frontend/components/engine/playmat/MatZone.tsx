@@ -13,9 +13,9 @@ interface MatZoneProps {
 export function MatZone({ title, count, emptyLabel = 'Empty', className, children }: MatZoneProps) {
   return (
     <section
-      className={`rounded-xl border border-[color:var(--theme-border)] bg-[color:var(--theme-bg-secondary)]/20 p-3 ${className || ''}`.trim()}
+      className={`mat-zone ${className || ''}`.trim()}
     >
-      <div className="flex items-center justify-between text-xs uppercase tracking-wide text-[color:var(--theme-text-secondary)] mb-2">
+      <div className="mat-zone-header">
         <span>{title}</span>
         {typeof count === 'number' && <span>{count}</span>}
       </div>

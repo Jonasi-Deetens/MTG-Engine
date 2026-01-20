@@ -5,7 +5,7 @@ import { CardPreview, CardData } from '@/components/cards/CardPreview';
 import { Card } from '@/components/ui/Card';
 import { EngineGameObjectSnapshot, EngineCardMap } from '@/lib/engine';
 
-interface ZoneCardProps {
+export interface ZoneCardProps {
   obj: EngineGameObjectSnapshot;
   cardMap: EngineCardMap;
   onClick?: () => void;
@@ -25,8 +25,10 @@ export function ZoneCard({
   className,
 }: ZoneCardProps) {
   const card = cardMap[obj.id];
+  const showsTappedClass = Boolean(className?.includes('zone-card-tapped'));
+  const isTapped = Boolean(obj.tapped && showsTappedClass);
   const selectedClass = selected ? 'ring-2 ring-amber-500 rounded-lg' : '';
-  const wrapperClass = `${onClick ? 'cursor-pointer' : 'cursor-default'} ${selectedClass} ${className || ''}`.trim();
+  const wrapperClass = `${onClick ? 'cursor-pointer' : 'cursor-default'} zone-card ${selectedClass} ${className || ''}`.trim();
 
   if (!card) {
     return (
@@ -53,7 +55,10 @@ export function ZoneCard({
   return (
     <button type="button" onClick={onClick} className={`w-24 ${wrapperClass}`} title={statusDetail || undefined}>
       <div className="space-y-1">
-        <CardPreview card={card as CardData} disableClick />
+        <div className="zone-card-face">
+          <CardPreview card={card as CardData} disableClick />
+          {isTapped && <span className="zone-card-overlay" aria-hidden="true" />}
+        </div>
         {statusLabel && (
           <div className="text-[10px] text-[color:var(--theme-text-secondary)] text-center">{statusLabel}</div>
         )}
