@@ -117,8 +117,10 @@ export interface Effect {
     enabled: boolean;
     compareAgainstType?: string; // e.g., "aura", "creature", "artifact" - if not set, means "any card"
     compareAgainstZone?: string; // e.g., "controlled", "battlefield", "graveyard" - defaults to "controlled"
+    compareAgainstSource?: string; // e.g., "triggering_source", "triggering_aura", "source"
   };
   attachTo?: string; // For attach effect
+  attachSource?: boolean; // For attach effect (attach source to target)
   fromEffect?: number; // Index of previous effect to reference (0-based, e.g., 0 = first effect, 1 = second effect)
   // New fields for additional effect types
   duration?: string; // For temporary effects (until_end_of_turn, permanent, etc.)

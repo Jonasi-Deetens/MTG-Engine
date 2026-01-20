@@ -60,11 +60,13 @@ function usePlayStateInternal() {
   const [cardMap, setCardMap] = useState<EngineCardMap>({});
   const [priorityPlayer, setPriorityPlayer] = useState<number | null>(null);
   const [selectedHandId, setSelectedHandId] = useState<string | null>(null);
+  const [selectedCommandId, setSelectedCommandId] = useState<string | null>(null);
   const [selectedBattlefieldId, setSelectedBattlefieldId] = useState<string | null>(null);
   const [replacementChoices, setReplacementChoices] = useState<Record<string, string>>({});
   const [enterChoices, setEnterChoices] = useState<Record<string, string>>({});
   const [highlightedReplacementKey, setHighlightedReplacementKey] = useState<string | null>(null);
   const [combatDamageAssignments, setCombatDamageAssignments] = useState<Record<string, Record<string, number>>>({});
+  const [selectedStackIndex, setSelectedStackIndex] = useState<number | null>(null);
   const [autoPayWard, setAutoPayWard] = useState(true);
   const [selectedAlternativeCostTag, setSelectedAlternativeCostTag] = useState<string | null>(null);
   const [selectedModalModes, setSelectedModalModes] = useState<string[]>([]);
@@ -349,6 +351,28 @@ function usePlayStateInternal() {
     gameState,
     selectedGraph,
     currentPriority,
+    context: (() => {
+      const stackContext =
+        selectedStackIndex !== null
+          ? (gameState?.stack?.[selectedStackIndex]?.payload?.context as Record<string, any> | undefined)
+          : undefined;
+      const targets = stackContext?.targets as Record<string, any> | undefined;
+      if (stackContext) {
+        return {
+          sourceId: stackContext.source_id ?? null,
+          triggeringSourceId: stackContext.triggering_source_id ?? null,
+          triggeringAuraId: stackContext.triggering_aura_id ?? stackContext.triggering_source_id ?? null,
+          triggeringSpellId: stackContext.triggering_spell_id ?? stackContext.triggering_source_id ?? null,
+          targetId: targets?.target ?? targets?.spell_target ?? null,
+        };
+      }
+      return {
+        sourceId: selectedHandId ?? selectedBattlefieldId ?? null,
+        triggeringSourceId: selectedHandId ?? null,
+        triggeringAuraId: selectedHandId ?? null,
+        targetId: selectedBattlefieldId ?? null,
+      };
+    })(),
     modalConfig: modalChoiceConfig,
     selectedModes: selectedModalModes,
   });
@@ -1024,6 +1048,7 @@ function usePlayStateInternal() {
     handleFinalizeCast,
   } = useCasting({
     selectedHandId,
+    selectedCommandId,
     currentPriority,
     abilityGraphs,
     cardMap,
@@ -1046,6 +1071,8 @@ function usePlayStateInternal() {
     setPriorityPlayer,
     selectedHandId,
     setSelectedHandId,
+    selectedCommandId,
+    setSelectedCommandId,
     selectedBattlefieldId,
     setSelectedBattlefieldId,
     replacementChoices,
@@ -1056,6 +1083,8 @@ function usePlayStateInternal() {
     setHighlightedReplacementKey,
     combatDamageAssignments,
     setCombatDamageAssignments,
+    selectedStackIndex,
+    setSelectedStackIndex,
     autoPayWard,
     setAutoPayWard,
     selectedAlternativeCostTag,

@@ -1,4 +1,4 @@
-import { api } from './api';
+import { api, apiRequest } from './api';
 import { DeckDetailResponse } from './decks';
 import { CardData } from '@/components/cards/CardPreview';
 
@@ -171,7 +171,11 @@ export interface EngineActionResponse {
 
 export const engineApi = {
   execute: async (payload: EngineActionRequest): Promise<EngineActionResponse> => {
-    return api.post<EngineActionResponse>('/api/engine/execute', payload);
+    return apiRequest<EngineActionResponse>('/api/engine/execute', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      timeoutMs: 30000,
+    });
   },
 };
 

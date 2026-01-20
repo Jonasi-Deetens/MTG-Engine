@@ -52,7 +52,7 @@ export const EFFECT_TYPE_OPTIONS: EffectTypeOption[] = [
   { value: 'sacrifice', label: 'Sacrifice', requiresTarget: true },
   { value: 'search', label: 'Search', requiresSearchFilters: true, requiresZone: true },
   { value: 'put_onto_battlefield', label: 'Put onto Battlefield', requiresTarget: false }, // Can use fromEffect instead
-  { value: 'attach', label: 'Attach', requiresAttachTarget: true }, // Can use fromEffect or attachTo
+  { value: 'attach', label: 'Attach', requiresTarget: true, requiresAttachTarget: true }, // Can use fromEffect or attachTo
   { value: 'shuffle', label: 'Shuffle Library', requiresTarget: false },
   // New effect types
   { value: 'protection', label: 'Gain Protection', requiresTarget: true, requiresDuration: true, requiresProtectionType: true, requiresChoice: true },
@@ -143,6 +143,7 @@ export const TARGET_OPTIONS = [
 
 export const ATTACH_TARGET_OPTIONS = [
   { value: 'self', label: 'This Permanent' },
+  { value: 'target', label: 'Selected Target' },
   { value: 'target_creature', label: 'Target Creature' },
   { value: 'target_permanent', label: 'Target Permanent' },
   { value: 'triggering_aura', label: 'The Triggering Aura\'s Target' },
@@ -191,6 +192,14 @@ export const COMPARE_AGAINST_ZONE_OPTIONS = [
   { value: 'hand', label: 'In Hand' },
   { value: 'library', label: 'In Library' },
   { value: 'exile', label: 'In Exile' },
+];
+
+export const COMPARE_AGAINST_SOURCE_OPTIONS = [
+  { value: 'triggering_source', label: 'Triggering Source' },
+  { value: 'triggering_aura', label: 'Triggering Aura' },
+  { value: 'triggering_spell', label: 'Triggering Spell' },
+  { value: 'source', label: 'Ability Source' },
+  { value: 'target', label: 'Selected Target' },
 ];
 
 export const MANA_TYPE_OPTIONS = [

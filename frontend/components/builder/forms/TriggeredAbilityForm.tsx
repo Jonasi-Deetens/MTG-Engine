@@ -247,10 +247,30 @@ export function TriggeredAbilityForm({ abilityId, onSave, onCancel }: TriggeredA
 
       {/* Modal Configuration */}
       <div className="space-y-3">
-        <label className="flex items-center gap-2 text-sm font-medium text-[color:var(--theme-text-secondary)]">
-          <input type="checkbox" checked={isModal} onChange={(e) => setIsModal(e.target.checked)} />
-          Modal ability (choose modes on cast/activation)
-        </label>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <label className="flex items-center gap-2 text-sm font-medium text-[color:var(--theme-text-secondary)]">
+            <input type="checkbox" checked={isModal} onChange={(e) => setIsModal(e.target.checked)} />
+            Modal ability (choose modes on cast/activation)
+          </label>
+          <Button
+            type="button"
+            size="xs"
+            variant="outline"
+            onClick={() => {
+              setIsModal(true);
+              setModalMin(0);
+              setModalMax(1);
+              setModalModes((prev) =>
+                prev.length > 0 ? prev : [{ id: 'mode-1', label: 'Optional' }]
+              );
+            }}
+          >
+            Set as optional (may)
+          </Button>
+        </div>
+        <p className="text-xs text-[color:var(--theme-text-muted)]">
+          Use “Set as optional (may)” to model optional effects without card-specific logic.
+        </p>
         {isModal && (
           <div className="space-y-3 rounded border border-[color:var(--theme-card-border)] p-3 bg-[color:var(--theme-card-hover)]">
             <div className="grid grid-cols-2 gap-2">
@@ -376,6 +396,19 @@ export function TriggeredAbilityForm({ abilityId, onSave, onCancel }: TriggeredA
             </Button>
           )}
         </div>
+        {event === 'card_enters' && cardType === 'aura' && (
+          <div className="flex flex-wrap items-center gap-2 mb-2 text-xs text-[color:var(--theme-text-muted)]">
+            <span>For “if you cast it” triggers, use “Was Cast” with target “Triggering Aura”.</span>
+            <Button
+              type="button"
+              size="xs"
+              variant="outline"
+              onClick={() => setCondition({ type: 'was_cast', target: 'triggering_aura' })}
+            >
+              Apply cast-only condition
+            </Button>
+          </div>
+        )}
         {condition !== undefined && condition !== null && (
           <ConditionBuilder
             condition={condition}

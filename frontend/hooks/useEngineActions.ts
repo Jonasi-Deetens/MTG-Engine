@@ -27,9 +27,11 @@ export const useEngineActions = ({
       setLoading(true);
       setError(null);
       try {
+        const trimmedDebugLog = Array.isArray(gameState.debug_log) ? gameState.debug_log.slice(-200) : [];
+        const trimmedGameState = { ...gameState, debug_log: trimmedDebugLog };
         const response = await engineApi.execute({
           action,
-          game_state: { ...gameState, replacement_choices: replacementChoices },
+          game_state: { ...trimmedGameState, replacement_choices: replacementChoices },
           ...payload,
         });
         setGameState(response.game_state);

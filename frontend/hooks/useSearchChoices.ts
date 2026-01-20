@@ -20,12 +20,20 @@ export const useSearchChoices = ({
   gameState,
   selectedGraph,
   currentPriority,
+  context,
   modalConfig,
   selectedModes = [],
 }: {
   gameState: EngineGameStateSnapshot | null;
   selectedGraph: any;
   currentPriority: number | null;
+  context?: {
+    sourceId?: string | null;
+    triggeringSourceId?: string | null;
+    triggeringAuraId?: string | null;
+    triggeringSpellId?: string | null;
+    targetId?: string | null;
+  };
   modalConfig?: ModalChoiceConfig | null;
   selectedModes?: string[];
 }) => {
@@ -53,7 +61,7 @@ export const useSearchChoices = ({
         if (!player) return;
         const pool = (player as any)[zone] as string[] | undefined;
         if (!Array.isArray(pool)) return;
-        const filtered = filterSearchCandidates(gameState, effect, playerId, pool);
+        const filtered = filterSearchCandidates(gameState, effect, playerId, pool, context);
         const candidates = filtered.map((id) => {
           const obj = gameState.objects.find((entry) => entry.id === id);
           return { id, label: obj?.name || id };
@@ -79,7 +87,7 @@ export const useSearchChoices = ({
       });
     });
     return entries;
-  }, [currentPriority, gameState, searchNodes, selections]);
+  }, [context, currentPriority, gameState, searchNodes, selections]);
 
   const searchTargetsByEffect = useMemo(() => {
     const result: Record<string, Record<string, any>> = {};

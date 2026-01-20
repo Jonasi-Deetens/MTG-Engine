@@ -110,9 +110,9 @@ def _filter_search_pool(
         if compare_source == "triggering_source":
             source_id = context.triggering_source_id
         elif compare_source == "triggering_aura":
-            source_id = context.triggering_aura_id
+            source_id = context.triggering_aura_id or context.triggering_source_id
         elif compare_source == "triggering_spell":
-            source_id = context.triggering_spell_id
+            source_id = context.triggering_spell_id or context.triggering_source_id
         source_obj = resolver.game_state.objects.get(source_id) if source_id else None
         compare_value = source_obj.mana_value if source_obj else None
     compare_value = compare_value if isinstance(compare_value, int) else None
@@ -130,25 +130,41 @@ def _filter_search_pool(
     else:
         compare_against_type = None
     compare_against_zone = different_config.get("compareAgainstZone", "controlled")
+    compare_against_source = different_config.get("compareAgainstSource")
 
     compare_names: set[str] = set()
     if different_config:
         compare_candidates: List[str] = []
         player = resolver.game_state.get_player(player_id)
-        if compare_against_zone == "controlled":
-            compare_candidates = [
-                obj.id
-                for obj in resolver.game_state.objects.values()
-                if obj.zone == ZONE_BATTLEFIELD and obj.controller_id == player_id
-            ]
-        elif compare_against_zone == "battlefield":
-            compare_candidates = [
-                obj.id
-                for obj in resolver.game_state.objects.values()
-                if obj.zone == ZONE_BATTLEFIELD
-            ]
-        elif compare_against_zone in ("graveyard", "hand", "library", "exile"):
-            compare_candidates = list(getattr(player, compare_against_zone, []))
+        if compare_against_source:
+            source_id = None
+            if compare_against_source == "triggering_source":
+                source_id = context.triggering_source_id
+            elif compare_against_source == "triggering_aura":
+                source_id = context.triggering_aura_id or context.triggering_source_id
+            elif compare_against_source == "triggering_spell":
+                source_id = context.triggering_spell_id or context.triggering_source_id
+            elif compare_against_source == "source":
+                source_id = context.source_id
+            elif compare_against_source == "target":
+                source_id = resolve_object_id(context, "target", None)
+            if source_id:
+                compare_candidates = [source_id]
+        if not compare_candidates:
+            if compare_against_zone == "controlled":
+                compare_candidates = [
+                    obj.id
+                    for obj in resolver.game_state.objects.values()
+                    if obj.zone == ZONE_BATTLEFIELD and obj.controller_id == player_id
+                ]
+            elif compare_against_zone == "battlefield":
+                compare_candidates = [
+                    obj.id
+                    for obj in resolver.game_state.objects.values()
+                    if obj.zone == ZONE_BATTLEFIELD
+                ]
+            elif compare_against_zone in ("graveyard", "hand", "library", "exile"):
+                compare_candidates = list(getattr(player, compare_against_zone, []))
         for obj_id in compare_candidates:
             obj = resolver.game_state.objects.get(obj_id)
             if not obj:
@@ -214,10 +230,28 @@ def handle_put_onto_battlefield(resolver, effect: Dict[str, Any], context) -> Di
 
 def handle_attach(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
     attach_to = resolve_object_id(context, "attach_to", effect.get("attachTo"))
+    if attach_to in ("self", "source"):
+        attach_to = context.source_id
+    elif attach_to == "triggering_source":
+        attach_to = context.triggering_source_id or context.source_id
+    elif attach_to == "triggering_spell":
+        attach_to = context.triggering_spell_id or context.triggering_source_id
+    elif attach_to == "triggering_aura":
+        aura_id = context.triggering_aura_id or context.triggering_source_id
+        aura_obj = resolver.game_state.objects.get(aura_id) if aura_id else None
+        if aura_obj and aura_obj.attached_to:
+            attach_to = aura_obj.attached_to
+        else:
+            attach_to = aura_id
+    elif isinstance(attach_to, str) and attach_to.startswith("target_"):
+        attach_to = resolve_object_id(context, "target", attach_to)
     from_effect = effect.get("fromEffect")
     card_ids = []
     if from_effect is not None and from_effect < len(context.previous_results):
         card_ids = context.previous_results[from_effect].get("found", [])
+    elif effect.get("attachSource"):
+        if context.source_id:
+            card_ids = [context.source_id]
     else:
         target_id = resolve_object_id(context, "target", None)
         if target_id:

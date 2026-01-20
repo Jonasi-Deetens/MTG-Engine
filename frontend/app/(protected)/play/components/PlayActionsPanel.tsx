@@ -14,6 +14,7 @@ export function PlayActionsPanel() {
     currentPriority,
     runEngineAction,
     selectedHandId,
+    selectedCommandId,
     selectedBattlefieldId,
     preparedCast,
     enterChoiceErrors,
@@ -49,6 +50,8 @@ export function PlayActionsPanel() {
     unresolvedDamageReplacements,
     blockerErrors,
     blockerErrorMap,
+    selectedStackIndex,
+    setSelectedStackIndex,
     setSelectedDefenderId,
     setActiveAttackerId,
     setSelectedBlockerOrder,
@@ -162,6 +165,9 @@ export function PlayActionsPanel() {
 
   const normalizedCombatDamagePass =
     combatDamagePass === 'first_strike' || combatDamagePass === 'regular' ? combatDamagePass : undefined;
+  const priorityPlayer = gameState.players.find((player) => player.id === currentPriority);
+  const commanderTax = priorityPlayer?.commander_tax ?? 0;
+  const showCommanderTax = !!selectedCommandId && priorityPlayer?.commander_id === selectedCommandId;
 
   return (
     <div className="space-y-6">
@@ -179,6 +185,7 @@ export function PlayActionsPanel() {
       <ActionsPanel
         loading={loading}
         selectedHandId={selectedHandId}
+        selectedCommandId={selectedCommandId}
         selectedBattlefieldId={selectedBattlefieldId}
         preparedCast={preparedCast}
         enterChoiceErrors={enterChoiceErrors}
@@ -298,6 +305,8 @@ export function PlayActionsPanel() {
         manaPayment={manaPayment}
         manaPaymentDetail={manaPaymentDetail}
         costLabel={costLabel}
+        commanderTax={commanderTax}
+        showCommanderTax={showCommanderTax}
         autoPayMana={autoPayMana}
         onToggleAutoPay={setAutoPayMana}
         onUpdatePaymentDetail={setManaPaymentDetail}
@@ -504,6 +513,8 @@ export function PlayActionsPanel() {
         objects={gameState.objects}
         cardMap={cardMap}
         targetChecks={stackTargetChecks}
+        selectedIndex={selectedStackIndex}
+        onSelectIndex={setSelectedStackIndex}
       />
     </div>
   );

@@ -12,9 +12,11 @@ interface PlayerMatProps {
   cardMap: EngineCardMap;
   isActive: boolean;
   selectedHandId?: string | null;
+  selectedCommandId?: string | null;
   selectedBattlefieldIds?: Set<string>;
   selectedBattlefieldId?: string | null;
   onSelectHand?: (objectId: string) => void;
+  onSelectCommand?: (objectId: string) => void;
   onToggleBattlefield?: (objectId: string) => void;
   onSelectBattlefield?: (objectId: string) => void;
 }
@@ -25,9 +27,11 @@ export function PlayerMat({
   cardMap,
   isActive,
   selectedHandId,
+  selectedCommandId,
   selectedBattlefieldIds,
   selectedBattlefieldId,
   onSelectHand,
+  onSelectCommand,
   onToggleBattlefield,
   onSelectBattlefield,
 }: PlayerMatProps) {
@@ -122,7 +126,13 @@ export function PlayerMat({
                 <span className="text-xs text-[color:var(--theme-text-secondary)]">No commander</span>
               )}
               {commandObjects.map((obj) => (
-                <ZoneCard key={obj.id} obj={obj} cardMap={cardMap} />
+              <ZoneCard
+                key={obj.id}
+                obj={obj}
+                cardMap={cardMap}
+                onClick={onSelectCommand ? () => onSelectCommand(obj.id) : undefined}
+                selected={selectedCommandId === obj.id}
+              />
               ))}
             </div>
           </MatZone>

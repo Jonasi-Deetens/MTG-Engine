@@ -29,6 +29,14 @@ def is_overloaded(context: ResolveContext) -> bool:
 def resolve_object_id(context: ResolveContext, key: str, fallback: Optional[str]) -> Optional[str]:
     if key in context.targets:
         return context.targets[key]
+    if key in ("triggering_source", "triggering_aura", "triggering_spell"):
+        return {
+            "triggering_source": getattr(context, "triggering_source_id", None),
+            "triggering_aura": getattr(context, "triggering_aura_id", None) or getattr(context, "triggering_source_id", None),
+            "triggering_spell": getattr(context, "triggering_spell_id", None) or getattr(context, "triggering_source_id", None),
+        }.get(key)
+    if key in ("source", "self"):
+        return getattr(context, "source_id", None)
     if key == "target":
         spell_target = context.targets.get("spell_target")
         if spell_target:

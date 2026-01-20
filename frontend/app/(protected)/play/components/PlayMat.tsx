@@ -20,11 +20,13 @@ export function PlayMat() {
     selectedBlockers,
     activeAttackerId,
     selectedHandId,
+    selectedCommandId,
     selectedBattlefieldId,
     toggleAttacker,
     toggleBlocker,
     loadAbilityGraphForObject,
     setSelectedHandId,
+    setSelectedCommandId,
     setSelectedBattlefieldId,
     defendingPlayerId,
   } = usePlayState();
@@ -101,10 +103,23 @@ export function PlayMat() {
               cardMap={cardMap}
               isActive={isActive}
               selectedHandId={player.id === currentPriority ? selectedHandId : null}
+              selectedCommandId={player.id === currentPriority ? selectedCommandId : null}
               onSelectHand={
                 player.id === currentPriority
                   ? (objectId) => {
                       setSelectedHandId(objectId);
+                      setSelectedCommandId(null);
+                      setSelectedBattlefieldId(null);
+                      loadAbilityGraphForObject(objectId);
+                    }
+                  : undefined
+              }
+              onSelectCommand={
+                player.id === currentPriority
+                  ? (objectId) => {
+                      setSelectedCommandId(objectId);
+                      setSelectedHandId(null);
+                      setSelectedBattlefieldId(null);
                       loadAbilityGraphForObject(objectId);
                     }
                   : undefined
@@ -132,6 +147,8 @@ export function PlayMat() {
                 !isDeclareAttackers && !isDeclareBlockers && player.id === currentPriority
                   ? (objectId) => {
                       setSelectedBattlefieldId(objectId);
+                      setSelectedHandId(null);
+                      setSelectedCommandId(null);
                       loadAbilityGraphForObject(objectId);
                     }
                   : undefined

@@ -98,6 +98,11 @@ class AbilityRegistry:
                 source_id=entry.source_id,
                 controller_id=entry.controller_id,
                 triggering_source_id=event.payload.get("object_id"),
+                triggering_aura_id=(
+                    event.payload.get("object_id")
+                    if "Aura" in (event.payload.get("cardTypes") or [])
+                    else None
+                ),
                 targets=dict(event.payload),
             )
             self.game_state.stack.push(StackItem(

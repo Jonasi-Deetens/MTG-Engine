@@ -8,9 +8,11 @@ interface StackViewProps {
   objects: EngineGameObjectSnapshot[];
   cardMap: EngineCardMap;
   targetChecks?: Record<number, { legal: boolean; issues: string[] }>;
+  selectedIndex?: number | null;
+  onSelectIndex?: (index: number | null) => void;
 }
 
-export function StackView({ stack, objects, cardMap, targetChecks }: StackViewProps) {
+export function StackView({ stack, objects, cardMap, targetChecks, selectedIndex, onSelectIndex }: StackViewProps) {
   const objectMap = new Map(objects.map((obj) => [obj.id, obj]));
 
   const getStackLabel = (item: EngineStackItemSnapshot) => {
@@ -108,10 +110,17 @@ export function StackView({ stack, objects, cardMap, targetChecks }: StackViewPr
       {stack.length === 0 && (
         <div className="text-xs text-[color:var(--theme-text-secondary)]">Stack is empty</div>
       )}
-      {stack.map((item, index) => (
-        <div key={`${item.kind}-${index}`} className="text-xs text-[color:var(--theme-text-secondary)] space-y-1">
+      {stack.map((item, index) => {
+        const isSelected = selectedIndex === index;
+        return (
+        <button
+          type="button"
+          key={`${item.kind}-${index}`}
+          onClick={() => onSelectIndex?.(isSelected ? null : index)}
+          className={`w-full text-left rounded-md px-2 py-1 text-xs text-[color:var(--theme-text-secondary)] space-y-1 ${isSelected ? 'ring-1 ring-[color:var(--theme-accent-primary)] bg-[color:var(--theme-card-hover)]' : ''}`}
+        >
           <div>
-          {getStackLabel(item)} · controller {item.controller_id ?? 'N/A'}
+            {getStackLabel(item)} · controller {item.controller_id ?? 'N/A'}
           </div>
           {getTargetSummary(item) && (
             <div className="text-[color:var(--theme-text-secondary)]">{getTargetSummary(item)}</div>
@@ -155,8 +164,9 @@ export function StackView({ stack, objects, cardMap, targetChecks }: StackViewPr
                 .join(' ')}
             </div>
           )}
-        </div>
-      ))}
+        </button>
+      );
+      })}
     </Card>
   );
 }

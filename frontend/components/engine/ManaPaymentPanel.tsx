@@ -6,6 +6,8 @@ interface ManaPaymentPanelProps {
   active: boolean;
   cost: any;
   costLabel: string;
+  commanderTax?: number;
+  showCommanderTax?: boolean;
   autoPayMana: boolean;
   isComplexCost: boolean;
   manaPool: Record<string, number>;
@@ -21,6 +23,8 @@ export function ManaPaymentPanel({
   active,
   cost,
   costLabel,
+  commanderTax = 0,
+  showCommanderTax = false,
   autoPayMana,
   isComplexCost,
   manaPool,
@@ -46,6 +50,11 @@ export function ManaPaymentPanel({
         Auto-pay (use recommended payment)
       </label>
       <div className="text-xs text-[color:var(--theme-text-secondary)]">Cost: {costLabel}</div>
+      {showCommanderTax && commanderTax > 0 && (
+        <div className="text-xs text-[color:var(--theme-text-secondary)]">
+          Commander tax: +{commanderTax} generic
+        </div>
+      )}
       {isComplexCost && (
         <div className="text-xs text-[color:var(--theme-text-secondary)]">
           Choose how to pay hybrid/phyrexian/two-brid symbols.

@@ -13,6 +13,7 @@ import {
   CARD_TYPE_FILTERS, 
   SEARCH_ZONE_OPTIONS,
   COMPARE_AGAINST_ZONE_OPTIONS,
+  COMPARE_AGAINST_SOURCE_OPTIONS,
   DURATION_OPTIONS,
   CHOICE_TYPE_OPTIONS,
   PROTECTION_TYPE_OPTIONS,
@@ -729,6 +730,43 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
                 </div>
                 <div>
                   <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">
+                    Compare Against Source <span className="text-[color:var(--theme-text-muted)]">(optional)</span>
+                  </label>
+                  <select
+                    value={
+                      typeof effect.differentName === 'object'
+                        ? (effect.differentName.compareAgainstSource || '')
+                        : ''
+                    }
+                    onChange={(e) => {
+                      const current =
+                        typeof effect.differentName === 'object'
+                          ? effect.differentName
+                          : { enabled: true, compareAgainstZone: 'controlled' };
+                      const nextValue = e.target.value || undefined;
+                      onUpdate('differentName', {
+                        ...current,
+                        compareAgainstSource: nextValue,
+                      });
+                    }}
+                    className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+                  >
+                    <option value="">None</option>
+                    {COMPARE_AGAINST_SOURCE_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-[color:var(--theme-text-muted)] mt-1">
+                    Uses a specific source card name (e.g., the triggering Aura) instead of zone-wide matching.
+                  </p>
+                  <p className="text-xs text-[color:var(--theme-text-muted)]">
+                    Tip: For Light-Paws-style effects, set this to “Triggering Source”.
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">
                     Compare Against Zone
                   </label>
                   <select
@@ -764,7 +802,7 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
         <div>
           <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Attach To</label>
           <select
-            value={effect.attachTo || 'self'}
+            value={effect.attachTo || (effect.type === 'attach' ? 'target' : 'self')}
             onChange={(e) => onUpdate('attachTo', e.target.value)}
             className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
           >
@@ -774,6 +812,17 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
               </option>
             ))}
           </select>
+          {effect.type === 'attach' && (
+            <label className="flex items-center gap-2 text-xs text-[color:var(--theme-text-secondary)] mt-2">
+              <input
+                type="checkbox"
+                checked={!!effect.attachSource}
+                onChange={(e) => onUpdate('attachSource', e.target.checked)}
+                className="w-4 h-4 rounded border-[color:var(--theme-input-border)] bg-[color:var(--theme-input-bg)] text-[color:var(--theme-accent-primary)] focus:ring-[color:var(--theme-border-focus)]"
+              />
+              Attach source to the target (Aura/Equipment)
+            </label>
+          )}
         </div>
       )}
 

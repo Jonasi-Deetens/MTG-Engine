@@ -30,6 +30,7 @@ const DEFAULT_TARGET_BY_EFFECT: Record<string, string> = {
   replace_destroy: 'target_permanent',
   replace_sacrifice: 'target_permanent',
   replace_zone_change: 'target_permanent',
+  attach: 'target_permanent',
   set_types: 'target_permanent',
   add_type: 'target_permanent',
   remove_type: 'target_permanent',

@@ -232,6 +232,8 @@ def normalize_card_type(value: str) -> str:
         "creature": "Creature",
         "artifact": "Artifact",
         "enchantment": "Enchantment",
+        "aura": "Aura",
+        "equipment": "Equipment",
         "land": "Land",
         "planeswalker": "Planeswalker",
         "instant": "Instant",

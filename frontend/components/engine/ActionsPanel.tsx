@@ -12,7 +12,7 @@ import { ActivationCostPanel } from '@/components/engine/ActivationCostPanel';
 import { OptionalCostPanel } from '@/components/engine/OptionalCostPanel';
 import { ConspirePanel } from '@/components/engine/ConspirePanel';
 import { SplicePanel } from '@/components/engine/SplicePanel';
-import { EngineCardMap, EngineCombatStateSnapshot } from '@/lib/engine';
+import { EngineCardMap, EngineCombatStateSnapshot, EnginePlayerSnapshot } from '@/lib/engine';
 import { EffectTargetGroup } from '@/hooks/useEffectTargeting';
 import { ReplacementConflictEntry } from '@/hooks/useReplacementConflicts';
 import { EnterChoiceConfig } from '@/lib/enterChoices';
@@ -24,6 +24,7 @@ import { AlternativeCostOption, OptionalCastCostOption } from '@/lib/graphCosts'
 interface ActionsPanelProps {
   loading: boolean;
   selectedHandId: string | null;
+  selectedCommandId: string | null;
   selectedBattlefieldId: string | null;
   preparedCast: { objectId: string; cost: any } | null;
   enterChoiceErrors: string[];
@@ -77,6 +78,8 @@ interface ActionsPanelProps {
   manaPayment: Record<string, number>;
   manaPaymentDetail: ManaPaymentDetail;
   costLabel: string;
+  commanderTax: number;
+  showCommanderTax: boolean;
   autoPayMana: boolean;
   onToggleAutoPay: (value: boolean) => void;
   onUpdatePaymentDetail: (updater: (prev: ManaPaymentDetail) => ManaPaymentDetail) => void;
@@ -355,6 +358,7 @@ interface ActionsPanelProps {
 export function ActionsPanel({
   loading,
   selectedHandId,
+  selectedCommandId,
   selectedBattlefieldId,
   preparedCast,
   enterChoiceErrors,
@@ -408,6 +412,8 @@ export function ActionsPanel({
   manaPayment,
   manaPaymentDetail,
   costLabel,
+  commanderTax,
+  showCommanderTax,
   autoPayMana,
   onToggleAutoPay,
   onUpdatePaymentDetail,
@@ -486,6 +492,7 @@ export function ActionsPanel({
   searchChoiceErrors,
   onChangeCopyTarget,
 }: ActionsPanelProps) {
+  const selectedCastId = selectedCommandId ?? selectedHandId;
   return (
     <Card variant="bordered" className="p-4 space-y-4">
       <div className="text-sm font-semibold text-[color:var(--theme-text-primary)]">Actions</div>
@@ -493,7 +500,7 @@ export function ActionsPanel({
         <Button variant="outline" onClick={onPlayLand} disabled={!selectedHandId || !isMainPhase || !isPriorityActivePlayer || loading}>
           Play Land
         </Button>
-        <Button variant="outline" onClick={onPrepareCast} disabled={!selectedHandId || loading}>
+        <Button variant="outline" onClick={onPrepareCast} disabled={!selectedCastId || loading}>
           Prepare Cast
         </Button>
         <Button
@@ -501,7 +508,7 @@ export function ActionsPanel({
           onClick={onFinalizeCast}
           disabled={
             !preparedCast ||
-            preparedCast.objectId !== selectedHandId ||
+            preparedCast.objectId !== selectedCastId ||
             enterChoiceErrors.length > 0 ||
             modalChoiceErrors.length > 0 ||
             manaPaymentErrors.length > 0 ||
@@ -689,9 +696,11 @@ export function ActionsPanel({
       />
 
       <ManaPaymentPanel
-        active={!!(preparedCast && preparedCast.objectId === selectedHandId)}
+        active={!!(preparedCast && preparedCast.objectId === selectedCastId)}
         cost={preparedCast?.cost}
         costLabel={costLabel}
+        commanderTax={commanderTax}
+        showCommanderTax={showCommanderTax}
         autoPayMana={autoPayMana}
         isComplexCost={isComplexCost}
         manaPool={manaPool}
@@ -729,7 +738,7 @@ export function ActionsPanel({
       />
 
       <ActivationCostPanel
-        active={!!selectedHandId}
+        active={!!selectedCastId}
         title="Additional Casting Costs"
         costEntries={additionalCastCosts}
         manaPool={manaPool}
@@ -763,7 +772,7 @@ export function ActionsPanel({
       />
 
       <ActivationCostPanel
-        active={!!selectedHandId}
+        active={!!selectedCastId}
         title="Alternative Cost Extras"
         costEntries={alternativeExtraCosts}
         manaPool={manaPool}

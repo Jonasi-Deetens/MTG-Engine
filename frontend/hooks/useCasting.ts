@@ -11,6 +11,7 @@ import {
 
 interface UseCastingArgs {
   selectedHandId: string | null;
+  selectedCommandId?: string | null;
   currentPriority: number | null;
   abilityGraphs: Record<string, any>;
   cardMap: EngineCardMap;
@@ -20,6 +21,9 @@ interface UseCastingArgs {
     wardOptions?: {
       wardAutoPay?: boolean;
       wardPayments?: Record<string, any>;
+      additionalCostPayments?: any;
+      alternativeCostTag?: string | null;
+      alternativeCostPayments?: any;
     }
   ) => EngineActionRequest['context'];
   wardPayments?: Record<string, any>;
@@ -35,6 +39,7 @@ interface UseCastingArgs {
 
 export const useCasting = ({
   selectedHandId,
+  selectedCommandId,
   currentPriority,
   abilityGraphs,
   cardMap,
@@ -47,6 +52,7 @@ export const useCasting = ({
   alternativeCostPayments,
   runEngineAction,
 }: UseCastingArgs) => {
+  const selectedCastId = selectedCommandId ?? selectedHandId;
   const [preparedCast, setPreparedCast] = useState<{ objectId: string; cost: any } | null>(null);
   const [manaPayment, setManaPayment] = useState<Record<string, number>>({});
   const [manaPaymentDetail, setManaPaymentDetail] = useState<ManaPaymentDetail>({
@@ -61,15 +67,15 @@ export const useCasting = ({
     setManaPayment({});
     setManaPaymentDetail({ hybrid_choices: [], two_brid_choices: [], phyrexian_choices: [] });
     setAutoPayMana(true);
-  }, [selectedHandId]);
+  }, [selectedCastId]);
 
   const handlePrepareCast = async () => {
-    if (!selectedHandId || currentPriority === null) return;
+    if (!selectedCastId || currentPriority === null) return;
     const response = await runEngineAction('prepare_cast', {
       player_id: currentPriority,
-      object_id: selectedHandId,
-      ability_graph: abilityGraphs[cardMap[selectedHandId]?.card_id ?? ''],
-      context: buildCastContext(undefined, {
+      object_id: selectedCastId,
+      ability_graph: abilityGraphs[cardMap[selectedCastId]?.card_id ?? ''],
+      context: buildCastContext(selectedCastId, {
         wardAutoPay: autoPayWard,
         wardPayments,
         additionalCostPayments,
@@ -79,7 +85,7 @@ export const useCasting = ({
     });
     const cost = response?.result?.cost;
     if (cost) {
-      setPreparedCast({ objectId: selectedHandId, cost });
+      setPreparedCast({ objectId: selectedCastId, cost });
       const detail = buildDefaultPaymentDetail(cost, manaPool);
       setManaPaymentDetail(detail);
       if (hasComplexManaCost(cost)) {
@@ -93,13 +99,13 @@ export const useCasting = ({
   };
 
   const handleFinalizeCast = async () => {
-    if (!selectedHandId || !preparedCast || preparedCast.objectId !== selectedHandId) return;
+    if (!selectedCastId || !preparedCast || preparedCast.objectId !== selectedCastId) return;
     if (currentPriority === null) return;
     const response = await runEngineAction('finalize_cast', {
       player_id: currentPriority,
-      object_id: selectedHandId,
-      ability_graph: abilityGraphs[cardMap[selectedHandId]?.card_id ?? ''],
-      context: buildCastContext(undefined, {
+      object_id: selectedCastId,
+      ability_graph: abilityGraphs[cardMap[selectedCastId]?.card_id ?? ''],
+      context: buildCastContext(selectedCastId, {
         wardAutoPay: autoPayWard,
         wardPayments,
         additionalCostPayments,
@@ -117,12 +123,12 @@ export const useCasting = ({
   };
 
   const isComplexCost = useMemo(() => {
-    if (!preparedCast || preparedCast.objectId !== selectedHandId) return false;
+    if (!preparedCast || preparedCast.objectId !== selectedCastId) return false;
     return hasComplexManaCost(preparedCast.cost);
-  }, [preparedCast, selectedHandId]);
+  }, [preparedCast, selectedCastId]);
 
   useEffect(() => {
-    if (!preparedCast || preparedCast.objectId !== selectedHandId) return;
+    if (!preparedCast || preparedCast.objectId !== selectedCastId) return;
     if (!autoPayMana) return;
     if (isComplexCost) {
       const { payment } = buildPaymentFromDetail(preparedCast.cost, manaPool, manaPaymentDetail);
@@ -130,17 +136,17 @@ export const useCasting = ({
       return;
     }
     setManaPayment(buildDefaultManaPayment(preparedCast.cost, manaPool));
-  }, [autoPayMana, isComplexCost, manaPaymentDetail, manaPool, preparedCast, selectedHandId]);
+  }, [autoPayMana, isComplexCost, manaPaymentDetail, manaPool, preparedCast, selectedCastId]);
 
   useEffect(() => {
-    if (!preparedCast || preparedCast.objectId !== selectedHandId) return;
+    if (!preparedCast || preparedCast.objectId !== selectedCastId) return;
     if (!isComplexCost) return;
     const { payment } = buildPaymentFromDetail(preparedCast.cost, manaPool, manaPaymentDetail);
     setManaPayment(payment);
-  }, [isComplexCost, manaPaymentDetail, manaPool, preparedCast, selectedHandId]);
+  }, [isComplexCost, manaPaymentDetail, manaPool, preparedCast, selectedCastId]);
 
   const manaPaymentStatus = useMemo(() => {
-    if (!preparedCast || preparedCast.objectId !== selectedHandId) {
+    if (!preparedCast || preparedCast.objectId !== selectedCastId) {
       return { errors: [] as string[], totalRequired: 0 };
     }
     if (isComplexCost) {
@@ -148,10 +154,10 @@ export const useCasting = ({
       return { errors, totalRequired: 0 };
     }
     return getManaPaymentErrors(preparedCast.cost, manaPayment, manaPool);
-  }, [preparedCast, selectedHandId, manaPayment, manaPool, isComplexCost, manaPaymentDetail]);
+  }, [preparedCast, selectedCastId, manaPayment, manaPool, isComplexCost, manaPaymentDetail]);
 
   const costLabel = useMemo(() => {
-    if (!preparedCast || preparedCast.objectId !== selectedHandId) return '';
+    if (!preparedCast || preparedCast.objectId !== selectedCastId) return '';
     const cost = preparedCast.cost;
     const parts: string[] = [];
     const xCount = Number((cost as any).x_count ?? (cost as any).x ?? 0);
@@ -170,7 +176,7 @@ export const useCasting = ({
       parts.push('hybrid/phyrexian');
     }
     return parts.join(' + ') || '0';
-  }, [preparedCast, selectedHandId]);
+  }, [preparedCast, selectedCastId]);
 
   useEffect(() => {
     if (!isComplexCost) return;

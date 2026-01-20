@@ -9,6 +9,7 @@ type SearchEffect = {
     enabled: boolean;
     compareAgainstType?: string;
     compareAgainstZone?: string;
+    compareAgainstSource?: string;
   };
 };
 
@@ -19,6 +20,8 @@ const normalizeCardType = (value?: string) => {
     creature: 'Creature',
     artifact: 'Artifact',
     enchantment: 'Enchantment',
+    aura: 'Aura',
+    equipment: 'Equipment',
     land: 'Land',
     planeswalker: 'Planeswalker',
     instant: 'Instant',
@@ -45,20 +48,45 @@ const getCompareNames = (
   gameState: EngineGameStateSnapshot,
   playerId: number,
   compareAgainstType?: string,
-  compareAgainstZone?: string
+  compareAgainstZone?: string,
+  compareAgainstSource?: string,
+  context?: {
+    sourceId?: string | null;
+    triggeringSourceId?: string | null;
+    triggeringAuraId?: string | null;
+    triggeringSpellId?: string | null;
+    targetId?: string | null;
+  }
 ) => {
   const names = new Set<string>();
   const normalizedType = compareAgainstType && compareAgainstType !== 'any' ? normalizeCardType(compareAgainstType) : undefined;
   const player = gameState.players.find((entry) => entry.id === playerId);
   if (!player) return names;
   let candidates: string[] = [];
-  if (compareAgainstZone === 'controlled') {
+  if (compareAgainstSource) {
+    const resolved =
+      compareAgainstSource === 'triggering_source'
+        ? context?.triggeringSourceId
+        : compareAgainstSource === 'triggering_aura'
+          ? context?.triggeringAuraId ?? context?.triggeringSourceId
+          : compareAgainstSource === 'triggering_spell'
+            ? context?.triggeringSpellId ?? context?.triggeringSourceId
+            : compareAgainstSource === 'source'
+              ? context?.sourceId
+              : compareAgainstSource === 'target'
+                ? context?.targetId
+                : undefined;
+    if (resolved) {
+      candidates = [resolved];
+    }
+  }
+  if (candidates.length === 0 && compareAgainstZone === 'controlled') {
     candidates = gameState.objects
       .filter((obj) => obj.zone === 'battlefield' && obj.controller_id === playerId)
       .map((obj) => obj.id);
-  } else if (compareAgainstZone === 'battlefield') {
+  } else if (candidates.length === 0 && compareAgainstZone === 'battlefield') {
     candidates = gameState.objects.filter((obj) => obj.zone === 'battlefield').map((obj) => obj.id);
-  } else if (compareAgainstZone && compareAgainstZone !== 'controlled') {
+  } else if (candidates.length === 0 && compareAgainstZone && compareAgainstZone !== 'controlled') {
     const zoneList = (player as any)[compareAgainstZone] as string[] | undefined;
     if (Array.isArray(zoneList)) candidates = zoneList;
   }
@@ -75,7 +103,14 @@ export const filterSearchCandidates = (
   gameState: EngineGameStateSnapshot,
   effect: SearchEffect,
   playerId: number,
-  pool: string[]
+  pool: string[],
+  context?: {
+    sourceId?: string | null;
+    triggeringSourceId?: string | null;
+    triggeringAuraId?: string | null;
+    triggeringSpellId?: string | null;
+    targetId?: string | null;
+  }
 ) => {
   const cardType = effect.cardType && effect.cardType !== 'any' ? normalizeCardType(effect.cardType) : undefined;
   const compareOp = effect.manaValueComparison;
@@ -97,7 +132,9 @@ export const filterSearchCandidates = (
         gameState,
         playerId,
         differentConfig.compareAgainstType,
-        differentConfig.compareAgainstZone ?? 'controlled'
+        differentConfig.compareAgainstZone ?? 'controlled',
+        differentConfig.compareAgainstSource,
+        context
       )
     : new Set<string>();
 
