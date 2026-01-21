@@ -4,7 +4,6 @@ import { EngineGameStateSnapshot } from '@/lib/engine';
 interface ResolveCleanupArgs {
   gameState: EngineGameStateSnapshot | null;
   selectedHandId: string | null;
-  selectedHandZone: string | null;
   onResolve: () => void;
   onClearSelectedHand: (next: string | null) => void;
 }
@@ -12,7 +11,6 @@ interface ResolveCleanupArgs {
 export const useResolveCleanup = ({
   gameState,
   selectedHandId,
-  selectedHandZone,
   onResolve,
   onClearSelectedHand,
 }: ResolveCleanupArgs) => {
@@ -26,11 +24,11 @@ export const useResolveCleanup = ({
         .filter((id): id is string => Boolean(id))
     );
     const inStack = stackIds.has(selectedHandId);
-    const inHand = selectedHandZone === 'hand';
+    const inHand = gameState.players.some((player) => player.hand.includes(selectedHandId));
     if (!inHand && !inStack) {
       onClearSelectedHand(null);
     }
-  }, [gameState, onClearSelectedHand, selectedHandId, selectedHandZone]);
+  }, [gameState, onClearSelectedHand, selectedHandId]);
 
   useEffect(() => {
     if (!gameState) return;

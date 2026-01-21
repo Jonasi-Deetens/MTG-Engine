@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict, List
 
 from .effects_helpers import resolve_target_objects, resolve_target_object, resolve_effect_players, resolve_target_list_for_player, normalize_card_type
+from .state import ResolveContext
 from .events import Event
 from .targets import resolve_object_id, resolve_player_id
 from .zones import ZONE_BATTLEFIELD, ZONE_EXILE, ZONE_GRAVEYARD, ZONE_HAND, ZONE_LIBRARY
@@ -73,12 +74,20 @@ def handle_search(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
     player_ids = resolve_effect_players(resolver.game_state, context, effect, context.controller_id)
     if not player_ids:
         return {"type": "search", "status": "no_player"}
+    merged_targets = dict(context.targets or {})
+    targets_by_effect = getattr(context, "targets_by_effect", None)
+    if isinstance(targets_by_effect, dict):
+        node_id = effect.get("_node_id")
+        override = targets_by_effect.get(node_id) if node_id else None
+        if isinstance(override, dict):
+            merged_targets.update(override)
     results = []
     for player_id in player_ids:
         player = resolver.game_state.get_player(player_id)
         pool = getattr(player, zone, [])
         filtered_pool = _filter_search_pool(resolver, effect, context, player_id, pool)
-        found_ids = resolve_target_list_for_player(context, "search_results", player_id)
+        temp_context = ResolveContext(targets=merged_targets)
+        found_ids = resolve_target_list_for_player(temp_context, "search_results", player_id)
         results.append({
             "player_id": player_id,
             "zone": zone,
@@ -245,6 +254,8 @@ def handle_attach(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
             attach_to = aura_id
     elif isinstance(attach_to, str) and attach_to.startswith("target_"):
         attach_to = resolve_object_id(context, "target", attach_to)
+    if not attach_to:
+        attach_to = resolve_object_id(context, "target", None)
     from_effect = effect.get("fromEffect")
     card_ids = []
     if from_effect is not None and from_effect < len(context.previous_results):

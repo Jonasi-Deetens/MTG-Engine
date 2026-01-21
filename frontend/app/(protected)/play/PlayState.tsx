@@ -312,7 +312,10 @@ function usePlayStateInternal() {
     return map;
   }, [cardMap, combatState, gameState, isDeclareBlockers, selectedBlockers]);
   const selectedGraph = selectedHandId ? abilityGraphs[cardMap[selectedHandId]?.card_id ?? ''] : undefined;
-  const modalChoiceConfig = useMemo(() => deriveModalConfig(selectedGraph), [selectedGraph]);
+  const selectedStackGraph =
+    selectedStackIndex !== null ? (gameState?.stack?.[selectedStackIndex]?.payload as any)?.graph : undefined;
+  const activeGraph = selectedStackGraph ?? selectedGraph;
+  const modalChoiceConfig = useMemo(() => deriveModalConfig(activeGraph), [activeGraph]);
   const modalChoiceErrors = useMemo(
     () => buildModalChoiceErrors(modalChoiceConfig, selectedModalModes),
     [modalChoiceConfig, selectedModalModes]
@@ -373,7 +376,7 @@ function usePlayStateInternal() {
     clearAllTargets: clearEffectTargets,
   } = useEffectTargeting({
     gameState,
-    selectedGraph,
+    selectedGraph: activeGraph,
     currentPriority,
     selectedHandId,
     modalConfig: modalChoiceConfig,
@@ -385,7 +388,7 @@ function usePlayStateInternal() {
     searchErrors,
   } = useSearchChoices({
     gameState,
-    selectedGraph,
+    selectedGraph: activeGraph,
     currentPriority,
     context: (() => {
       const stackContext =
@@ -430,7 +433,7 @@ function usePlayStateInternal() {
     copyTargetErrors,
   } = useCopyEffectTargeting({
     gameState,
-    selectedGraph,
+    selectedGraph: activeGraph,
     currentPriority,
     selectedHandId,
     modalConfig: modalChoiceConfig,
@@ -599,6 +602,20 @@ function usePlayStateInternal() {
 
   useEffect(() => {
     if (!gameState) return;
+    const stackLength = gameState.stack.length;
+    if (stackLength === 0) {
+      if (selectedStackIndex !== null) {
+        setSelectedStackIndex(null);
+      }
+      return;
+    }
+    if (selectedStackIndex === null || selectedStackIndex >= stackLength) {
+      setSelectedStackIndex(stackLength - 1);
+    }
+  }, [gameState, selectedStackIndex]);
+
+  useEffect(() => {
+    if (!gameState) return;
     if (gameState.replacement_choices) {
       setReplacementChoices(gameState.replacement_choices);
     }
@@ -675,7 +692,6 @@ function usePlayStateInternal() {
   useResolveCleanup({
     gameState,
     selectedHandId,
-    selectedHandZone: selectedHandObject?.zone ?? null,
     onResolve: clearSelectionsOnResolve,
     onClearSelectedHand: setSelectedHandId,
   });

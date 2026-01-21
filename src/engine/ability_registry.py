@@ -94,6 +94,10 @@ class AbilityRegistry:
                     continue
             matching.append(entry)
         for entry in self._order_triggers(matching, event):
+            event_obj = None
+            obj_id = event.payload.get("object_id")
+            if obj_id:
+                event_obj = self.game_state.objects.get(obj_id)
             context = ResolveContext(
                 source_id=entry.source_id,
                 controller_id=entry.controller_id,
@@ -105,6 +109,8 @@ class AbilityRegistry:
                 ),
                 targets=dict(event.payload),
             )
+            if context.triggering_aura_id is None and event_obj and "Aura" in (event_obj.types or []):
+                context.triggering_aura_id = event_obj.id
             self.game_state.stack.push(StackItem(
                 kind="ability_graph",
                 payload={

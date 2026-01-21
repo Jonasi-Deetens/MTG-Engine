@@ -35,11 +35,11 @@ export function PlayerMat({
   onToggleBattlefield,
   onSelectBattlefield,
 }: PlayerMatProps) {
-  const handObjects = getObjectsByIds(player.hand, objects);
-  const battlefieldObjects = getObjectsByIds(player.battlefield, objects);
-  const commandObjects = getObjectsByIds(player.command, objects);
-  const graveyardObjects = getObjectsByIds(player.graveyard, objects);
-  const exileObjects = getObjectsByIds(player.exile, objects);
+  const handObjects = getObjectsByIds(player.hand, objects, 'hand');
+  const battlefieldObjects = getObjectsByIds(player.battlefield, objects, 'battlefield');
+  const commandObjects = getObjectsByIds(player.command, objects, 'command');
+  const graveyardObjects = getObjectsByIds(player.graveyard, objects, 'graveyard');
+  const exileObjects = getObjectsByIds(player.exile, objects, 'exile');
   const libraryCount = player.library.length;
   const manaTotal = Object.values(player.mana_pool).reduce((sum, val) => sum + val, 0);
 

@@ -55,6 +55,9 @@ const normalizeEffectForSave = (effect: Effect) => {
   if (selectedType?.requiresTarget && !nextEffect.target) {
     nextEffect.target = getDefaultTargetForEffect(nextEffect);
   }
+  if (nextEffect.type === 'attach' && !nextEffect.attachTo) {
+    nextEffect.attachTo = 'target';
+  }
   if (selectedType?.requiresUntapTarget && !nextEffect.untapTarget) {
     nextEffect.untapTarget = 'self';
   }

@@ -107,6 +107,8 @@ export function PlayMat() {
               onSelectHand={
                 player.id === currentPriority
                   ? (objectId) => {
+                      const obj = gameState.objects.find((entry) => entry.id === objectId);
+                      if (!obj || obj.zone !== 'hand') return;
                       setSelectedHandId(objectId);
                       setSelectedCommandId(null);
                       setSelectedBattlefieldId(null);

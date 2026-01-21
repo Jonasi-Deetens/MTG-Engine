@@ -560,8 +560,12 @@ class TurnManager:
                 if not player.removed_from_game:
                     self.gs.remove_player_from_game(player.id)
                 return
-            card_id = player.library.pop(0)
-            player.hand.append(card_id)
+            card_id = player.library[0]
+            if card_id not in self.gs.objects:
+                player.library.pop(0)
+                self.gs.log(f"Removed missing card id from library: {card_id}")
+                continue
+            self.gs.move_object(card_id, ZONE_HAND)
 
     def _reset_activation_limits(self, scope: str) -> None:
         for obj in self.gs.objects.values():

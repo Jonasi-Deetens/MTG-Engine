@@ -29,6 +29,8 @@ export function ZoneCard({
   const isTapped = Boolean(obj.tapped && showsTappedClass);
   const selectedClass = selected ? 'ring-2 ring-amber-500 rounded-lg' : '';
   const wrapperClass = `${onClick ? 'cursor-pointer' : 'cursor-default'} zone-card ${selectedClass} ${className || ''}`.trim();
+  const showPowerToughness = obj.power !== null && obj.power !== undefined && obj.toughness !== null && obj.toughness !== undefined;
+  const showAttachment = Boolean(obj.attached_to);
 
   if (!card) {
     return (
@@ -58,6 +60,16 @@ export function ZoneCard({
         <div className="zone-card-face">
           <CardPreview card={card as CardData} disableClick />
           {isTapped && <span className="zone-card-overlay" aria-hidden="true" />}
+          {showPowerToughness && (
+            <span className="zone-card-pt" aria-label={`Power toughness ${obj.power}/${obj.toughness}`}>
+              {obj.power}/{obj.toughness}
+            </span>
+          )}
+          {showAttachment && (
+            <span className="zone-card-attachment" aria-label={`Attached to ${obj.attached_to}`}>
+              ⛓
+            </span>
+          )}
         </div>
         {statusLabel && (
           <div className="text-[10px] text-[color:var(--theme-text-secondary)] text-center">{statusLabel}</div>
