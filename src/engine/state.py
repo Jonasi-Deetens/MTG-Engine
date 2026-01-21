@@ -11,10 +11,10 @@ from .stack import Stack
 from .turn import TurnState
 
 # Import managers
-from .state.zone_manager import ZoneManager
-from .state.object_manager import ObjectManager, next_object_id
-from .state.attachment_manager import AttachmentManager
-from .state.replacement_manager import ReplacementManager
+from .managers.zone_manager import ZoneManager
+from .managers.object_manager import ObjectManager, next_object_id
+from .managers.attachment_manager import AttachmentManager
+from .managers.replacement_manager import ReplacementManager
 
 # Re-export for backward compatibility
 __all__ = [

@@ -1,4 +1,4 @@
-"""State management module - zone, object, attachment, and replacement managers."""
+"""State managers module - zone, object, attachment, and replacement managers."""
 
 from .zone_manager import ZoneManager
 from .object_manager import ObjectManager

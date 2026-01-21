@@ -6,7 +6,7 @@ from .state import GameState, ResolveContext
 from .targets import resolve_object, resolve_player_id
 
 # Import from new module
-from .effects.condition_evaluator import ConditionEvaluator, _compare
+from .effects_internal.condition_evaluator import ConditionEvaluator, _compare
 
 
 def evaluate_condition(game_state: GameState, condition: Dict[str, Any], context: ResolveContext) -> bool:

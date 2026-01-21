@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import Any, Callable, Dict
 
-from .effects.effect_router import EffectRouter, create_default_router
-from .effects.target_resolver import TargetResolver
-from .effects.condition_evaluator import ConditionEvaluator
+from .effects_internal.effect_router import EffectRouter, create_default_router
+from .effects_internal.target_resolver import TargetResolver
+from .effects_internal.condition_evaluator import ConditionEvaluator
 from .state import GameObject, GameState, ResolveContext
 
 

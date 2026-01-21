@@ -10,10 +10,10 @@ from .events import Event
 from .priority import PriorityManager
 from .replacements import resolve_replacement
 from .stack import StackItem
-from .stack.stack_resolver import StackResolver
+from .stack_resolution.stack_resolver import StackResolver
 from .state import GameState, ResolveContext
 from .turn import Phase, Step, PHASE_STEP_ORDER
-from .turn.phase_handler import PhaseHandler
+from .turn_handling.phase_handler import PhaseHandler
 from .zones import ZONE_BATTLEFIELD, ZONE_GRAVEYARD, ZONE_HAND
 
 

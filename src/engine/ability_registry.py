@@ -5,8 +5,8 @@ from typing import Dict, List, Optional
 
 from .ability_graph import AbilityGraphRuntimeAdapter
 from .events import Event
-from .events.trigger_registry import TriggerRegistry, RegisteredTrigger
-from .events.trigger_handler import TriggerHandler
+from .triggers.trigger_registry import TriggerRegistry, RegisteredTrigger
+from .triggers.trigger_handler import TriggerHandler
 from .state import GameObject, GameState, ResolveContext
 from .stack import StackItem
 
