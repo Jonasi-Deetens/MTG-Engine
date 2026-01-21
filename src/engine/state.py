@@ -10,12 +10,20 @@ from .events import Event, EventBus
 from .stack import Stack
 from .turn import TurnState
 
+# Import managers
+from .state.zone_manager import ZoneManager
+from .state.object_manager import ObjectManager, next_object_id
+from .state.attachment_manager import AttachmentManager
+from .state.replacement_manager import ReplacementManager
 
-_id_counter = itertools.count(1)
-
-
-def next_object_id() -> str:
-    return f"obj_{next(_id_counter)}"
+# Re-export for backward compatibility
+__all__ = [
+    "GameObject",
+    "PlayerState",
+    "ResolveContext",
+    "GameState",
+    "next_object_id",
+]
 
 
 @dataclass
@@ -123,6 +131,62 @@ class GameState:
     effect_timestamp_counter: int = 0
     replacement_effect_counter: int = 0
 
+    # Managers (initialized in __post_init__)
+    _zone_manager: Optional[ZoneManager] = field(default=None, repr=False)
+    _object_manager: Optional[ObjectManager] = field(default=None, repr=False)
+    _attachment_manager: Optional[AttachmentManager] = field(default=None, repr=False)
+    _replacement_manager: Optional[ReplacementManager] = field(default=None, repr=False)
+
+    def __post_init__(self) -> None:
+        """Initialize managers after dataclass initialization."""
+        self._zone_manager = ZoneManager(
+            objects=self.objects,
+            players=self.players,
+            get_player=self.get_player,
+        )
+        self._object_manager = ObjectManager(
+            objects=self.objects,
+            get_turn_number=lambda: self.turn.turn_number,
+        )
+        self._attachment_manager = AttachmentManager(
+            objects=self.objects,
+            move_object=self.move_object,
+        )
+        self._replacement_manager = ReplacementManager(
+            replacement_effects=self.replacement_effects,
+            replacement_choices=self.replacement_choices,
+            queue_choice_fn=lambda choice: queue_choice(self, choice),
+            log_fn=self.log,
+        )
+
+    @property
+    def zone_manager(self) -> ZoneManager:
+        """Get the zone manager."""
+        if self._zone_manager is None:
+            self.__post_init__()
+        return self._zone_manager  # type: ignore
+
+    @property
+    def object_manager(self) -> ObjectManager:
+        """Get the object manager."""
+        if self._object_manager is None:
+            self.__post_init__()
+        return self._object_manager  # type: ignore
+
+    @property
+    def attachment_manager(self) -> AttachmentManager:
+        """Get the attachment manager."""
+        if self._attachment_manager is None:
+            self.__post_init__()
+        return self._attachment_manager  # type: ignore
+
+    @property
+    def replacement_manager(self) -> ReplacementManager:
+        """Get the replacement manager."""
+        if self._replacement_manager is None:
+            self.__post_init__()
+        return self._replacement_manager  # type: ignore
+
     def next_replacement_effect_id(self) -> str:
         self.replacement_effect_counter += 1
         return f"repl_{self.replacement_effect_counter}"
@@ -134,26 +198,9 @@ class GameState:
         return next(p for p in self.players if p.id == player_id)
 
     def add_object(self, obj: GameObject) -> None:
-        self.objects[obj.id] = obj
-        if obj.zone == ZONE_BATTLEFIELD and obj.entered_turn is None:
-            obj.entered_turn = self.turn.turn_number
-        if obj.base_controller_id is None:
-            obj.base_controller_id = obj.controller_id
-        if obj.base_name is None:
-            obj.base_name = obj.name
-        if obj.base_mana_cost is None:
-            obj.base_mana_cost = obj.mana_cost
-        if obj.base_mana_value is None:
-            obj.base_mana_value = obj.mana_value
-        if obj.base_type_line is None:
-            obj.base_type_line = obj.type_line
-        if obj.base_oracle_text is None:
-            obj.base_oracle_text = obj.oracle_text
-        if not obj.base_ability_graphs and obj.ability_graphs:
-            obj.base_ability_graphs = list(obj.ability_graphs)
-        if not obj.base_etb_choices and obj.etb_choices:
-            obj.base_etb_choices = dict(obj.etb_choices)
-        self._add_to_zone(obj.zone, obj.id)
+        """Add an object to the game."""
+        self.object_manager.add(obj)
+        self.zone_manager.add_to_zone(obj.zone, obj.id)
 
     def create_token(
         self,
@@ -209,13 +256,13 @@ class GameState:
         ):
             destination = ZONE_COMMAND
         previous_zone = obj.zone
-        destination = self._apply_zone_replacement(obj, previous_zone, destination)
+        destination = self.replacement_manager.apply_zone_replacement(obj, previous_zone, destination)
         if destination != ZONE_HAND:
             self.clear_prepared_casts_for_object(obj_id)
         if destination != ZONE_BATTLEFIELD:
             obj.attached_to = None
         if previous_zone == ZONE_BATTLEFIELD and destination != ZONE_BATTLEFIELD:
-            self._clear_battlefield_state(obj)
+            self.object_manager.clear_battlefield_state(obj)
             for attached in list(self.objects.values()):
                 if attached.zone != ZONE_BATTLEFIELD:
                     continue
@@ -225,7 +272,7 @@ class GameState:
                 if "Aura" in attached.types:
                     self.move_object(attached.id, ZONE_GRAVEYARD)
             self.event_bus.publish(Event(type="leaves_battlefield", payload={"object_id": obj.id}))
-        self._remove_from_zone(obj.zone, obj_id)
+        self.zone_manager.remove_from_zone(obj.zone, obj_id)
         obj.zone = destination
         if obj.is_token and destination != ZONE_BATTLEFIELD:
             del self.objects[obj_id]
@@ -233,8 +280,8 @@ class GameState:
             return
         if destination == ZONE_BATTLEFIELD:
             obj.entered_turn = self.turn.turn_number
-        self._add_to_zone(destination, obj_id)
-        if destination == ZONE_BATTLEFIELD and self._enforce_attachment_legality(obj):
+        self.zone_manager.add_to_zone(destination, obj_id)
+        if destination == ZONE_BATTLEFIELD and self.attachment_manager.enforce_legality(obj):
             return
         if destination == ZONE_BATTLEFIELD and previous_zone != ZONE_BATTLEFIELD:
             self.event_bus.publish(Event(
@@ -258,16 +305,6 @@ class GameState:
                     "owner_id": obj.owner_id,
                 },
             ))
-
-    def _clear_battlefield_state(self, obj: GameObject) -> None:
-        obj.damage = 0
-        obj.tapped = False
-        obj.is_attacking = False
-        obj.is_blocking = False
-        obj.attached_to = None
-        obj.counters = {}
-        obj.temporary_effects = []
-        obj.protections = set()
     def remove_player_from_game(self, player_id: int) -> None:
         player = self.get_player(player_id)
         if getattr(player, "removed_from_game", False):
@@ -305,8 +342,8 @@ class GameState:
                 prev_player = self.get_player(prev_controller)
                 if obj.id in prev_player.battlefield:
                     prev_player.battlefield.remove(obj.id)
-                self._add_to_zone(ZONE_BATTLEFIELD, obj.id)
-                self._enforce_attachment_legality(obj)
+                self.zone_manager.add_to_zone(ZONE_BATTLEFIELD, obj.id)
+                self.attachment_manager.enforce_legality(obj)
 
         player.library = []
         player.hand = []
@@ -335,7 +372,7 @@ class GameState:
                 attached.attached_to = None
                 if "Aura" in attached.types:
                     self.move_object(attached.id, ZONE_GRAVEYARD)
-        self._remove_from_zone(previous_zone, obj.id)
+        self.zone_manager.remove_from_zone(previous_zone, obj.id)
         obj.attached_to = None
         obj.zone = ZONE_EXILE
         if obj.is_token:
@@ -344,229 +381,6 @@ class GameState:
         owner = self.get_player(obj.owner_id)
         if obj.id not in owner.exile:
             owner.exile.append(obj.id)
-
-    def _apply_zone_replacement(self, obj: GameObject, from_zone: str, to_zone: str) -> str:
-        def matches(effect: Dict[str, Any]) -> bool:
-            if effect.get("type") != "replace_zone_change":
-                return False
-            if effect.get("from_zone") and effect.get("from_zone") != from_zone:
-                return False
-            if effect.get("to_zone") and effect.get("to_zone") != to_zone:
-                return False
-            if effect.get("object_id") and effect.get("object_id") != obj.id:
-                return False
-            if effect.get("controller_id") is not None and effect.get("controller_id") != obj.controller_id:
-                return False
-            if effect.get("owner_id") is not None and effect.get("owner_id") != obj.owner_id:
-                return False
-            return True
-
-        def consume(effect: Dict[str, Any], container: List[Dict[str, Any]]) -> None:
-            remaining = effect.get("uses")
-            if remaining is None:
-                return
-            remaining = int(remaining) - 1
-            if remaining <= 0:
-                container.remove(effect)
-            else:
-                effect["uses"] = remaining
-
-        matches_temp = [effect for effect in list(obj.temporary_effects) if matches(effect)]
-        matches_global = [effect for effect in list(self.replacement_effects) if matches(effect)]
-        matches_all = [(effect, obj.temporary_effects) for effect in matches_temp] + [
-            (effect, self.replacement_effects) for effect in matches_global
-        ]
-
-        event_key = f"{obj.id}:{from_zone}:{to_zone}"
-        if len(matches_all) > 1:
-            choice_id = self.replacement_choices.get(event_key)
-            if choice_id:
-                for effect, container in matches_all:
-                    if effect.get("effect_id") == choice_id:
-                        replacement = effect.get("replacement_zone")
-                        if replacement:
-                            consume(effect, container)
-                            self.replacement_choices.pop(event_key, None)
-                            return replacement
-            queue_choice(self, {
-                "type": "zone_replacement",
-                "key": event_key,
-                "player_id": obj.controller_id,
-                "options": [
-                    {"id": effect.get("effect_id"), "replacement_zone": effect.get("replacement_zone")}
-                    for effect, _ in matches_all
-                ],
-            })
-            matches_all.sort(key=lambda item: int(item[0].get("timestamp_order", 0)), reverse=True)
-            effect, container = matches_all[0]
-            replacement = effect.get("replacement_zone")
-            if replacement:
-                consume(effect, container)
-                self.log(f"Multiple replacements for {obj.id}; defaulted to most recent.")
-                return replacement
-
-        for effect, container in matches_all:
-            replacement = effect.get("replacement_zone")
-            if replacement:
-                consume(effect, container)
-                return replacement
-
-        return to_zone
-
-    def _apply_object_replacement(self, obj: GameObject, effect_type: str, default_zone: str) -> str:
-        def matches(effect: Dict[str, Any]) -> bool:
-            if effect.get("type") != effect_type:
-                return False
-            if effect.get("object_id") and effect.get("object_id") != obj.id:
-                return False
-            if effect.get("controller_id") is not None and effect.get("controller_id") != obj.controller_id:
-                return False
-            if effect.get("owner_id") is not None and effect.get("owner_id") != obj.owner_id:
-                return False
-            return True
-
-        def consume(effect: Dict[str, Any], container: List[Dict[str, Any]]) -> None:
-            remaining = effect.get("uses")
-            if remaining is None:
-                return
-            remaining = int(remaining) - 1
-            if remaining <= 0:
-                container.remove(effect)
-            else:
-                effect["uses"] = remaining
-
-        matches_temp = [effect for effect in list(obj.temporary_effects) if matches(effect)]
-        matches_global = [effect for effect in list(self.replacement_effects) if matches(effect)]
-        matches_all = [(effect, obj.temporary_effects) for effect in matches_temp] + [
-            (effect, self.replacement_effects) for effect in matches_global
-        ]
-
-        event_key = f"{obj.id}:{effect_type}"
-        if len(matches_all) > 1:
-            choice_id = self.replacement_choices.get(event_key)
-            if choice_id:
-                for effect, container in matches_all:
-                    if effect.get("effect_id") == choice_id:
-                        replacement = effect.get("replacement_zone")
-                        if replacement:
-                            consume(effect, container)
-                            self.replacement_choices.pop(event_key, None)
-                            return replacement
-            queue_choice(self, {
-                "type": "object_replacement",
-                "key": event_key,
-                "player_id": obj.controller_id,
-                "options": [
-                    {"id": effect.get("effect_id"), "replacement_zone": effect.get("replacement_zone")}
-                    for effect, _ in matches_all
-                ],
-            })
-            matches_all.sort(key=lambda item: int(item[0].get("timestamp_order", 0)), reverse=True)
-            effect, container = matches_all[0]
-            replacement = effect.get("replacement_zone")
-            if replacement:
-                consume(effect, container)
-                self.log(f"Multiple replacements for {obj.id}; defaulted to most recent.")
-                return replacement
-
-        for effect, container in matches_all:
-            replacement = effect.get("replacement_zone")
-            if replacement:
-                consume(effect, container)
-                return replacement
-
-        return default_zone
-
-    def _is_illegal_attachment(self, attachment: GameObject, attached: GameObject) -> bool:
-        if "Shroud" in attached.keywords:
-            return True
-        if "Hexproof" in attached.keywords and attachment.controller_id != attached.controller_id:
-            return True
-        if attached.protections and attachment.colors:
-            if any(color in attached.protections for color in attachment.colors):
-                return True
-        return False
-
-    def _enforce_attachment_legality(self, obj: GameObject) -> bool:
-        if obj.zone != ZONE_BATTLEFIELD:
-            return False
-        if obj.phased_out:
-            return False
-        if "Aura" in obj.types:
-            if not obj.attached_to:
-                self.move_object(obj.id, ZONE_GRAVEYARD)
-                return True
-            attached = self.objects.get(obj.attached_to)
-            if not attached or attached.zone != ZONE_BATTLEFIELD:
-                obj.attached_to = None
-                self.move_object(obj.id, ZONE_GRAVEYARD)
-                return True
-            if attached.phased_out:
-                obj.phased_out = True
-                return False
-            if self._is_illegal_attachment(obj, attached):
-                obj.attached_to = None
-                self.move_object(obj.id, ZONE_GRAVEYARD)
-                return True
-            return False
-        if "Equipment" in obj.types:
-            if not obj.attached_to:
-                return False
-            attached = self.objects.get(obj.attached_to)
-            if not attached or attached.zone != ZONE_BATTLEFIELD:
-                obj.attached_to = None
-                return False
-            if attached.phased_out:
-                obj.phased_out = True
-                return False
-            if "Creature" not in attached.types:
-                obj.attached_to = None
-                return False
-            return False
-        if obj.attached_to:
-            attached = self.objects.get(obj.attached_to)
-            if not attached or attached.zone != ZONE_BATTLEFIELD:
-                obj.attached_to = None
-                return False
-            if attached.phased_out:
-                obj.phased_out = True
-        return False
-
-    def _apply_enter_copy(self, obj: GameObject, source_id: str) -> None:
-        source = self.objects.get(source_id)
-        if not source:
-            return
-        obj.base_name = source.name
-        obj.base_mana_cost = source.mana_cost
-        obj.base_mana_value = source.mana_value
-        obj.base_type_line = source.type_line
-        obj.base_oracle_text = source.oracle_text
-        obj.base_types = list(source.types)
-        obj.base_colors = list(source.colors)
-        obj.base_power = source.power
-        obj.base_toughness = source.toughness
-        obj.base_keywords = set(source.keywords)
-        obj.base_ability_graphs = list(source.ability_graphs)
-        obj.base_etb_choices = dict(getattr(source, "etb_choices", {}) or {})
-        obj.etb_choices = dict(obj.base_etb_choices)
-
-        obj.name = obj.base_name or obj.name
-        obj.mana_cost = obj.base_mana_cost
-        obj.mana_value = obj.base_mana_value
-        obj.type_line = obj.base_type_line
-        obj.oracle_text = obj.base_oracle_text
-        obj.types = list(obj.base_types)
-        obj.colors = list(obj.base_colors)
-        obj.power = obj.base_power
-        obj.toughness = obj.base_toughness
-        obj.keywords = set(obj.base_keywords)
-        obj.ability_graphs = list(obj.base_ability_graphs)
-
-    def _apply_enter_choices(self, obj: GameObject, choices: Dict[str, Any]) -> None:
-        if not choices:
-            return
-        obj.etb_choices.update(choices)
-        obj.base_etb_choices.update(choices)
 
     def destroy_object(self, obj_id: str, allow_regen: bool = True) -> None:
         obj = self.objects.get(obj_id)
@@ -583,7 +397,7 @@ class GameState:
             obj.is_blocking = False
             self.log(f"Regenerated: {obj_id}")
             return
-        replacement = self._apply_object_replacement(obj, "replace_destroy", ZONE_GRAVEYARD)
+        replacement = self.replacement_manager.apply_object_replacement(obj, "replace_destroy", ZONE_GRAVEYARD)
         if replacement == "skip":
             self.log(f"Destroy skipped: {obj_id}")
             return
@@ -601,7 +415,7 @@ class GameState:
             },
         ))
         if obj.is_token:
-            self._remove_from_zone(obj.zone, obj_id)
+            self.zone_manager.remove_from_zone(obj.zone, obj_id)
             del self.objects[obj_id]
             self.log(f"Token destroyed: {obj_id}")
             return
@@ -612,7 +426,7 @@ class GameState:
         obj = self.objects.get(obj_id)
         if not obj:
             return
-        replacement = self._apply_object_replacement(obj, "replace_sacrifice", ZONE_GRAVEYARD)
+        replacement = self.replacement_manager.apply_object_replacement(obj, "replace_sacrifice", ZONE_GRAVEYARD)
         if replacement == "skip":
             self.log(f"Sacrifice skipped: {obj_id}")
             return
@@ -630,7 +444,7 @@ class GameState:
             },
         ))
         if obj.is_token:
-            self._remove_from_zone(obj.zone, obj_id)
+            self.zone_manager.remove_from_zone(obj.zone, obj_id)
             del self.objects[obj_id]
             self.log(f"Token sacrificed: {obj_id}")
             return
@@ -651,7 +465,7 @@ class GameState:
             },
         ))
         if obj.is_token:
-            self._remove_from_zone(obj.zone, obj_id)
+            self.zone_manager.remove_from_zone(obj.zone, obj_id)
             del self.objects[obj_id]
             self.log(f"Token removed by SBA: {obj_id}")
             return
@@ -666,72 +480,3 @@ class GameState:
                     if entry.get("object_id") == obj_id]
         for player_id in to_clear:
             self.prepared_casts.pop(player_id, None)
-
-    def _add_to_zone(self, zone: str, obj_id: str) -> None:
-        if zone == ZONE_BATTLEFIELD:
-            controller_id = self.objects[obj_id].controller_id
-            player = self.get_player(controller_id)
-            if obj_id not in player.battlefield:
-                player.battlefield.append(obj_id)
-            return
-        if zone == ZONE_LIBRARY:
-            owner = self.objects[obj_id].owner_id
-            self.get_player(owner).library.append(obj_id)
-            return
-        if zone == ZONE_HAND:
-            owner = self.objects[obj_id].owner_id
-            self.get_player(owner).hand.append(obj_id)
-            return
-        if zone == ZONE_GRAVEYARD:
-            owner = self.objects[obj_id].owner_id
-            self.get_player(owner).graveyard.append(obj_id)
-            return
-        if zone == ZONE_EXILE:
-            owner = self.objects[obj_id].owner_id
-            self.get_player(owner).exile.append(obj_id)
-            return
-        if zone == ZONE_COMMAND:
-            owner = self.objects[obj_id].owner_id
-            self.get_player(owner).command.append(obj_id)
-            return
-        if zone.startswith("battlefield:"):
-            controller_id = int(zone.split(":")[1])
-            self.get_player(controller_id).battlefield.append(obj_id)
-            return
-
-    def _remove_from_zone(self, zone: str, obj_id: str) -> None:
-        if zone == ZONE_LIBRARY:
-            owner = self.objects[obj_id].owner_id
-            self._safe_remove(self.get_player(owner).library, obj_id)
-            return
-        if zone == ZONE_HAND:
-            owner = self.objects[obj_id].owner_id
-            self._safe_remove(self.get_player(owner).hand, obj_id)
-            return
-        if zone == ZONE_GRAVEYARD:
-            owner = self.objects[obj_id].owner_id
-            self._safe_remove(self.get_player(owner).graveyard, obj_id)
-            return
-        if zone == ZONE_EXILE:
-            owner = self.objects[obj_id].owner_id
-            self._safe_remove(self.get_player(owner).exile, obj_id)
-            return
-        if zone == ZONE_COMMAND:
-            owner = self.objects[obj_id].owner_id
-            self._safe_remove(self.get_player(owner).command, obj_id)
-            return
-        if zone == ZONE_BATTLEFIELD:
-            for player in self.players:
-                self._safe_remove(player.battlefield, obj_id)
-            return
-        if zone.startswith("battlefield:"):
-            controller_id = int(zone.split(":")[1])
-            self._safe_remove(self.get_player(controller_id).battlefield, obj_id)
-            return
-
-    @staticmethod
-    def _safe_remove(container: List[str], obj_id: str) -> None:
-        try:
-            container.remove(obj_id)
-        except ValueError:
-            return

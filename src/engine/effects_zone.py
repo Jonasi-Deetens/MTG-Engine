@@ -235,10 +235,12 @@ def handle_put_onto_battlefield(resolver, effect: Dict[str, Any], context) -> Di
         if obj:
             enter_copy_of = context.choices.get("enter_copy_of")
             if enter_copy_of:
-                resolver.game_state._apply_enter_copy(obj, enter_copy_of)
+                source = resolver.game_state.objects.get(enter_copy_of)
+                if source:
+                    resolver.game_state.object_manager.apply_enter_copy(obj, source)
             enter_choices = context.choices.get("enter_choices")
             if isinstance(enter_choices, dict):
-                resolver.game_state._apply_enter_choices(obj, enter_choices)
+                resolver.game_state.object_manager.apply_enter_choices(obj, enter_choices)
         resolver.game_state.move_object(obj_id, ZONE_BATTLEFIELD)
     message = f"[graph] put_onto_battlefield cards={card_ids}"
     resolver.game_state.log(message)

@@ -150,7 +150,7 @@ export default function SearchPage() {
           typeFilter={typeFilter}
           setFilter={setFilter}
           showFilters={showFilters}
-          hasActiveFilters={hasActiveFilters}
+          hasActiveFilters={Boolean(hasActiveFilters)}
           onToggleFilters={() => setShowFilters(!showFilters)}
           onToggleColor={handleToggleColor}
           onTypeFilterChange={handleTypeFilterChange}

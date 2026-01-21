@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List
+from typing import List, Optional
 import os
 
 from .ability_graph import AbilityGraphRuntimeAdapter
@@ -9,18 +9,40 @@ from .sba import apply_state_based_actions
 from .events import Event
 from .priority import PriorityManager
 from .replacements import resolve_replacement
+from .stack import StackItem
+from .stack.stack_resolver import StackResolver
 from .state import GameState, ResolveContext
 from .turn import Phase, Step, PHASE_STEP_ORDER
+from .turn.phase_handler import PhaseHandler
 from .zones import ZONE_BATTLEFIELD, ZONE_GRAVEYARD, ZONE_HAND
 
 
 class TurnManager:
+    """Manages turn structure, priority, and phase/step transitions.
+
+    Delegates:
+    - Stack resolution to StackResolver
+    - Phase/step handling to PhaseHandler
+    """
+
     def __init__(self, game_state: GameState):
         self.gs = game_state
         self.state = self.gs.turn
         player_ids = self._alive_player_ids()
         self.priority = PriorityManager(player_order=player_ids)
+        self._stack_resolver = StackResolver(game_state)
+        self._phase_handler = PhaseHandler(game_state, self.current_active_player_id)
         self._hydrate_priority()
+
+    @property
+    def stack_resolver(self) -> StackResolver:
+        """Get the StackResolver."""
+        return self._stack_resolver
+
+    @property
+    def phase_handler(self) -> PhaseHandler:
+        """Get the PhaseHandler."""
+        return self._phase_handler
 
     def _hydrate_priority(self) -> None:
         self.priority.current_index = self.state.priority_current_index
@@ -113,154 +135,8 @@ class TurnManager:
             self._advance_phase_step()
             return
 
-        resolved_item = self.gs.stack.pop()
-        self.gs.log(f"[graph] resolving stack item kind={resolved_item.kind} payload={resolved_item.payload}")
-        print(f"[graph] resolving stack item kind={resolved_item.kind} payload={resolved_item.payload}", flush=True)
-        if resolved_item.kind == "spell":
-            payload = resolved_item.payload or {}
-            obj_id = payload.get("object_id")
-            copy_of = payload.get("copy_of")
-            is_copy = bool(payload.get("is_copy"))
-            destination_zone = payload.get("destination_zone")
-            obj = self.gs.objects.get(obj_id or copy_of) if (obj_id or copy_of) else None
-            context_data = payload.get("context") or {}
-            context = ResolveContext(**context_data)
-            from engine.targets import has_legal_targets, has_missing_required_targets, normalize_targets
-            if obj:
-                if context.source_id is None:
-                    context.source_id = obj.id
-                normalize_targets(self.gs, context)
-                missing_required = has_missing_required_targets(context)
-                if not has_legal_targets(self.gs, context, allow_partial=True):
-                    if not is_copy:
-                        self.gs.move_object(obj.id, ZONE_GRAVEYARD)
-                        obj.was_cast = False
-                        self.gs.event_bus.publish(Event(
-                            type="spell_fizzled",
-                            payload={
-                                "object_id": obj.id,
-                                "controller_id": obj.controller_id,
-                                "reason": "missing_targets" if missing_required else "illegal_targets",
-                            },
-                        ))
-                        if missing_required:
-                            self.gs.log(f"Spell fizzles (no targets chosen): {obj_id}")
-                        else:
-                            self.gs.log(f"Spell fizzles (illegal targets): {obj_id}")
-                    else:
-                        if missing_required:
-                            self.gs.log(f"Spell copy fizzles (no targets chosen): {copy_of}")
-                        else:
-                            self.gs.log(f"Spell copy fizzles (illegal targets): {copy_of}")
-                else:
-                    if not is_copy:
-                        if destination_zone:
-                            resolved_destination = destination_zone
-                        elif "Instant" in obj.types or "Sorcery" in obj.types:
-                            resolved_destination = ZONE_GRAVEYARD
-                        else:
-                            resolved_destination = ZONE_BATTLEFIELD
-                        if context.choices.get("buyback_paid") and resolved_destination == ZONE_GRAVEYARD:
-                            resolved_destination = ZONE_HAND
-                        if resolved_destination == ZONE_BATTLEFIELD:
-                            enter_copy_of = context.choices.get("enter_copy_of")
-                            if enter_copy_of:
-                                self.gs._apply_enter_copy(obj, enter_copy_of)
-                            enter_choices = context.choices.get("enter_choices")
-                            if isinstance(enter_choices, dict):
-                                self.gs._apply_enter_choices(obj, enter_choices)
-                        self.gs.move_object(obj.id, resolved_destination)
-                        obj.was_cast = False
-                        self.gs.event_bus.publish(Event(
-                            type="spell_resolved",
-                            payload={"object_id": obj.id, "controller_id": obj.controller_id},
-                        ))
-                        self.gs.log(f"Resolved spell {obj_id}")
-                    else:
-                        self.gs.event_bus.publish(Event(
-                            type="spell_resolved",
-                            payload={"copy_of": copy_of, "controller_id": context.controller_id},
-                        ))
-                        self.gs.log(f"Resolved spell copy of {copy_of}")
-            else:
-                self.gs.log(f"Resolved spell {obj_id or copy_of}")
-        elif resolved_item.kind == "ability_graph":
-            payload = resolved_item.payload or {}
-            is_copy = bool(payload.get("is_copy"))
-            graph = payload.get("graph")
-            context_data = payload.get("context") or {}
-            context = ResolveContext(**context_data)
-            from engine.targets import normalize_targets, validate_targets
-            from engine.choices import validate_enter_choices, validate_modal_choices
-            try:
-                node_count = len(graph.get("nodes", [])) if isinstance(graph, dict) else 0
-                message = f"[graph] ability_graph resolve start nodes={node_count} copy={is_copy}"
-                self.gs.log(message)
-                print(message, flush=True)
-                if context.source_id is None and payload.get("copy_of"):
-                    context.source_id = payload.get("copy_of")
-                normalize_targets(self.gs, context)
-                validate_targets(self.gs, context, allow_partial=True)
-                adapter = AbilityGraphRuntimeAdapter(self.gs)
-                if graph:
-                    validate_enter_choices(graph, context.__dict__)
-                    validate_modal_choices(graph, context.__dict__)
-                    adapter.resolve(graph, context)
-                message = "[graph] ability_graph resolve done"
-                self.gs.log(message)
-                print(message, flush=True)
-                source_id = payload.get("source_object_id")
-                destination_zone = payload.get("destination_zone")
-                if source_id and destination_zone and not is_copy:
-                    obj = self.gs.objects.get(source_id)
-                    if obj:
-                        resolved_destination = destination_zone
-                        if context.choices.get("buyback_paid") and resolved_destination == ZONE_GRAVEYARD:
-                            resolved_destination = ZONE_HAND
-                        if resolved_destination == ZONE_BATTLEFIELD:
-                            if graph and not obj.ability_graphs:
-                                obj.ability_graphs = [graph]
-                                if not obj.base_ability_graphs:
-                                    obj.base_ability_graphs = [graph]
-                            enter_copy_of = context.choices.get("enter_copy_of")
-                            if enter_copy_of:
-                                self.gs._apply_enter_copy(obj, enter_copy_of)
-                            enter_choices = context.choices.get("enter_choices")
-                            if isinstance(enter_choices, dict):
-                                self.gs._apply_enter_choices(obj, enter_choices)
-                        self.gs.move_object(obj.id, resolved_destination)
-                        obj.was_cast = False
-                if context.source_id:
-                    self.gs.event_bus.publish(Event(
-                        type="ability_resolved",
-                        payload={"source_id": context.source_id, "controller_id": context.controller_id},
-                    ))
-                self.gs.log("Resolved ability graph")
-            except ValueError as exc:
-                message = f"[graph] ability_graph resolve error: {exc}"
-                self.gs.log(message)
-                print(message, flush=True)
-                if "missing target" in str(exc).lower():
-                    self.gs.log("Ability fizzles (no targets chosen)")
-                else:
-                    self.gs.log(f"Ability fizzles: {exc}")
-                source_id = payload.get("source_object_id")
-                destination_zone = payload.get("destination_zone")
-                if source_id and destination_zone:
-                    obj = self.gs.objects.get(source_id)
-                    if obj:
-                        self.gs.move_object(obj.id, destination_zone)
-                        obj.was_cast = False
-                        self.gs.event_bus.publish(Event(
-                            type="spell_fizzled",
-                            payload={
-                                "object_id": obj.id,
-                                "controller_id": obj.controller_id,
-                                "reason": "missing_targets" if "missing target" in str(exc).lower() else "illegal_targets",
-                            },
-                        ))
-        else:
-            self.gs.log(f"Resolved stack item {resolved_item.kind}")
+        # Delegate stack resolution to StackResolver
+        self._stack_resolver.resolve_top()
         self.gs.clear_prepared_casts()
         apply_continuous_effects(self.gs)
         apply_state_based_actions(self.gs)
@@ -436,157 +312,33 @@ class TurnManager:
         self._begin_step()
 
     def _handle_untap_step(self) -> None:
-        active_player_id = self.current_active_player_id()
-        self.gs.event_bus.publish(Event(
-            type="untap",
-            payload={"active_player": active_player_id}
-        ))
-        for obj_id in self.gs.get_player(active_player_id).battlefield:
-            obj = self.gs.objects.get(obj_id)
-            if obj:
-                if obj.phased_out:
-                    obj.phased_out = False
-                    continue
-                obj.tapped = False
+        """Handle the untap step. Delegates to PhaseHandler."""
+        self._phase_handler.handle_untap()
 
     def _handle_draw_step(self) -> None:
-        active_player_id = self.current_active_player_id()
-        if self.state.turn_number == 1 and self.state.active_player_index == 0:
-            return
-        self._draw_cards(active_player_id, 1)
+        """Handle the draw step. Delegates to PhaseHandler."""
+        self._phase_handler.handle_draw()
 
     def _handle_combat_damage_step(self) -> None:
-        self.gs.event_bus.publish(Event(
-            type="combat_damage",
-            payload={"active_player": self.current_active_player_id()}
-        ))
+        """Handle the combat damage step. Delegates to PhaseHandler."""
+        self._phase_handler.handle_combat_damage()
 
     def _handle_cleanup_step(self) -> None:
-        if os.getenv("ENGINE_TRACE") == "1":
-            print(
-                f"[engine] cleanup_step t{self.state.turn_number} {self.state.phase.value}:{self.state.step.value}",
-                flush=True,
-            )
-        for obj in self.gs.objects.values():
-            if obj.zone == ZONE_BATTLEFIELD:
-                obj.damage = 0
-                obj.is_attacking = False
-                obj.is_blocking = False
-        active_player = self.gs.get_player(self.current_active_player_id())
-        self._discard_to_hand_size(active_player)
-        self.state.combat_state = None
+        """Handle the cleanup step. Delegates to PhaseHandler."""
+        self._phase_handler.handle_cleanup()
 
     def _discard_to_hand_size(self, player) -> None:
-        max_hand_size = getattr(player, "max_hand_size", 7)
-        if max_hand_size is None or max_hand_size < 0:
-            return
-        attempts = 0
-        no_progress = 0
-        while len(player.hand) > max_hand_size and player.hand:
-            hand_len_before = len(player.hand)
-            card_id = player.hand[-1]
-            if os.getenv("ENGINE_TRACE") == "1":
-                print(
-                    f"[engine] discard_check player={player.id} hand={len(player.hand)} card={card_id}",
-                    flush=True,
-                )
-            if card_id not in self.gs.objects:
-                player.hand.pop()
-                self.gs.log(f"Removed missing card id from hand: {card_id}")
-                continue
-            replacement = resolve_replacement(
-                self.gs,
-                "replace_discard",
-                player.id,
-                f"discard:event:cleanup:{player.id}",
-            )
-            attempts += 1
-            if replacement:
-                replacement_zone = replacement.get("replacement_zone")
-                if replacement_zone == "skip":
-                    if attempts >= len(player.hand):
-                        break
-                    player.hand.insert(0, player.hand.pop())
-                    continue
-                if replacement_zone == ZONE_HAND:
-                    if attempts >= len(player.hand):
-                        break
-                    player.hand.insert(0, player.hand.pop())
-                    continue
-                if replacement_zone:
-                    self.gs.move_object(card_id, replacement_zone)
-                else:
-                    self.gs.move_object(card_id, ZONE_GRAVEYARD)
-            else:
-                self.gs.move_object(card_id, ZONE_GRAVEYARD)
-            if len(player.hand) >= hand_len_before:
-                no_progress += 1
-                if no_progress >= len(player.hand):
-                    self.gs.log(f"Discard cleanup made no progress for player {player.id}; stopping.")
-                    break
-            else:
-                no_progress = 0
+        """Discard to hand size. Delegates to PhaseHandler."""
+        self._phase_handler.discard_to_hand_size(player)
 
     def _expire_temporary_effects(self, step: Step) -> None:
-        active_player_id = self.current_active_player_id()
-        for obj in self.gs.objects.values():
-            if not obj.temporary_effects:
-                continue
-            remaining = []
-            for effect in obj.temporary_effects:
-                duration = effect.get("duration")
-                controller_id = effect.get("controller_id")
-                if duration == "until_end_of_combat" and step == Step.END_COMBAT:
-                    if effect.get("type") == "set_controller" and effect.get("original_controller") is not None:
-                        obj.controller_id = effect.get("original_controller")
-                    if effect.get("type") == "add_protection" and effect.get("protection"):
-                        obj.protections.discard(effect.get("protection"))
-                    continue
-                if duration == "until_end_of_turn" and step == Step.CLEANUP:
-                    if effect.get("type") == "set_controller" and effect.get("original_controller") is not None:
-                        obj.controller_id = effect.get("original_controller")
-                    if effect.get("type") == "add_protection" and effect.get("protection"):
-                        obj.protections.discard(effect.get("protection"))
-                    continue
-                if duration == "until_end_of_your_next_turn" and step == Step.CLEANUP:
-                    if controller_id == active_player_id:
-                        if effect.get("type") == "set_controller" and effect.get("original_controller") is not None:
-                            obj.controller_id = effect.get("original_controller")
-                        if effect.get("type") == "add_protection" and effect.get("protection"):
-                            obj.protections.discard(effect.get("protection"))
-                        continue
-                if duration == "until_your_next_upkeep" and step == Step.UPKEEP:
-                    if controller_id == active_player_id:
-                        if effect.get("type") == "set_controller" and effect.get("original_controller") is not None:
-                            obj.controller_id = effect.get("original_controller")
-                        if effect.get("type") == "add_protection" and effect.get("protection"):
-                            obj.protections.discard(effect.get("protection"))
-                        continue
-                if duration is None and "prevent_damage" in effect and step == Step.CLEANUP:
-                    continue
-                remaining.append(effect)
-            obj.temporary_effects = remaining
+        """Expire temporary effects. Delegates to PhaseHandler."""
+        self._phase_handler.expire_temporary_effects(step)
 
     def _draw_cards(self, player_id: int, count: int) -> None:
-        player = self.gs.get_player(player_id)
-        for _ in range(count):
-            if not player.library:
-                player.has_lost = True
-                self.gs.log(f"Player {player.id} loses for drawing from empty library.")
-                if not player.removed_from_game:
-                    self.gs.remove_player_from_game(player.id)
-                return
-            card_id = player.library[0]
-            if card_id not in self.gs.objects:
-                player.library.pop(0)
-                self.gs.log(f"Removed missing card id from library: {card_id}")
-                continue
-            self.gs.move_object(card_id, ZONE_HAND)
+        """Draw cards. Delegates to PhaseHandler."""
+        self._phase_handler.draw_cards(player_id, count)
 
     def _reset_activation_limits(self, scope: str) -> None:
-        for obj in self.gs.objects.values():
-            if not obj.activation_limits:
-                continue
-            to_remove = [key for key in obj.activation_limits if key.endswith(f":{scope}")]
-            for key in to_remove:
-                obj.activation_limits.pop(key, None)
+        """Reset activation limits. Delegates to PhaseHandler."""
+        self._phase_handler.reset_activation_limits(scope)

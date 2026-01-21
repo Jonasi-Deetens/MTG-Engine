@@ -11,6 +11,20 @@ from .ability_graph import AbilityGraphRuntimeAdapter
 from .ability_registry import AbilityRegistry
 from .commander import register_commander, apply_commander_tax, record_commander_damage
 
+# Core module exports
+from .core import (
+    Zone,
+    EventType,
+    StackItemKind,
+    EngineError,
+    InvalidTargetError,
+    IllegalActionError,
+    FizzleError,
+    InvalidZoneError,
+    ObjectNotFoundError,
+    InsufficientManaError,
+)
+
 __all__ = [
     "AbilityGraphRuntimeAdapter",
     "AbilityRegistry",
@@ -31,4 +45,15 @@ __all__ = [
     "register_commander",
     "apply_commander_tax",
     "record_commander_damage",
+    # Core types and errors
+    "Zone",
+    "EventType",
+    "StackItemKind",
+    "EngineError",
+    "InvalidTargetError",
+    "IllegalActionError",
+    "FizzleError",
+    "InvalidZoneError",
+    "ObjectNotFoundError",
+    "InsufficientManaError",
 ]
