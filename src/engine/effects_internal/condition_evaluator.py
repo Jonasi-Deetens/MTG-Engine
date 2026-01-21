@@ -186,6 +186,9 @@ class ConditionEvaluator:
             return _compare(counter_value, ">=", value)
 
         if condition_type == "was_cast":
+            # Check event payload first (stored in context.targets for triggered abilities)
+            if context.targets and context.targets.get("was_cast") is True:
+                return True
             obj = resolve_object(self._game_state, context, target_key or "target_permanent", context.source_id)
             return bool(obj and obj.was_cast)
 

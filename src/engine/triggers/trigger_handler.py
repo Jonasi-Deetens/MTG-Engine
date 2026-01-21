@@ -126,10 +126,17 @@ class TriggerHandler:
         # Determine triggering_aura_id
         triggering_aura_id = None
         card_types = event.payload.get("cardTypes") or []
-        if "Aura" in card_types:
+        
+        # Check if this is an Aura - look in cardTypes, object types, and type_line
+        is_aura = "Aura" in card_types
+        if not is_aura and event_obj:
+            is_aura = "Aura" in (event_obj.types or [])
+            # Also check type_line for "Aura" subtype
+            if not is_aura and event_obj.type_line:
+                is_aura = "aura" in event_obj.type_line.lower()
+        
+        if is_aura:
             triggering_aura_id = event.payload.get("object_id")
-        elif event_obj and "Aura" in (event_obj.types or []):
-            triggering_aura_id = event_obj.id
 
         context = ResolveContext(
             source_id=trigger.source_id,
@@ -315,6 +322,21 @@ class TriggerHandler:
             return True
 
         normalized_types = {str(t).lower() for t in payload_types if isinstance(t, str)}
+        
+        # Also check the actual object for types/subtypes (Aura might be in type_line but not types)
+        obj_id = event.payload.get("object_id")
+        if obj_id:
+            obj = self._game_state.objects.get(obj_id)
+            if obj:
+                # Add types from the object
+                for t in (obj.types or []):
+                    normalized_types.add(str(t).lower())
+                # Parse type_line for subtypes (e.g., "Enchantment - Aura" -> add "aura")
+                if obj.type_line:
+                    for part in obj.type_line.replace("—", "-").split("-"):
+                        for word in part.strip().split():
+                            normalized_types.add(word.lower())
+        
         card_type = str(card_type).lower()
 
         if card_type == "permanent":
@@ -338,6 +360,13 @@ class TriggerHandler:
             return False
 
         normalized_types = {str(t).lower() for t in obj.types or []}
+        
+        # Also check type_line for subtypes (e.g., "Enchantment — Aura" -> "aura")
+        if obj.type_line:
+            for part in obj.type_line.replace("—", "-").split("-"):
+                for word in part.strip().split():
+                    normalized_types.add(word.lower())
+        
         card_type = str(card_type).lower()
 
         if card_type == "permanent":

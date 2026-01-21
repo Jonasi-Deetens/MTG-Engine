@@ -291,6 +291,7 @@ class GameState:
                     "cardTypes": list(obj.types or []),
                     "controller_id": obj.controller_id,
                     "owner_id": obj.owner_id,
+                    "was_cast": obj.was_cast,
                 },
             ))
         if previous_zone != destination:
@@ -303,6 +304,7 @@ class GameState:
                     "cardTypes": list(obj.types or []),
                     "controller_id": obj.controller_id,
                     "owner_id": obj.owner_id,
+                    "was_cast": obj.was_cast,
                 },
             ))
     def remove_player_from_game(self, player_id: int) -> None:

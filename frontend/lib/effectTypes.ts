@@ -143,11 +143,12 @@ export const TARGET_OPTIONS = [
 
 export const ATTACH_TARGET_OPTIONS = [
   { value: 'self', label: 'This Permanent' },
+  { value: 'source', label: 'Source of This Ability (e.g., Light-Paws)' },
   { value: 'target', label: 'Selected Target' },
   { value: 'target_creature', label: 'Target Creature' },
   { value: 'target_permanent', label: 'Target Permanent' },
   { value: 'triggering_aura', label: 'The Triggering Aura\'s Target' },
-  { value: 'triggering_source', label: 'The Triggering Source' },
+  { value: 'triggering_source', label: 'The Triggering Source (object that triggered)' },
 ];
 
 export const SEARCH_ZONE_OPTIONS = [

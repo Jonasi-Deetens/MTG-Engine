@@ -85,10 +85,12 @@ class AbilityRegistry:
         for trigger in triggers - special_triggers:
             self.game_state.event_bus.subscribe(trigger, self._handle_event)
 
-        if "enters_battlefield" in triggers:
-            self.game_state.event_bus.subscribe("enters_battlefield", self._handle_enters)
-        if "leaves_battlefield" in triggers:
-            self.game_state.event_bus.subscribe("leaves_battlefield", self._handle_leaves)
+        # ALWAYS subscribe to enters/leaves_battlefield regardless of current triggers.
+        # Objects with triggers can enter the battlefield at any time, so we need to:
+        # 1. Register new triggers when objects enter
+        # 2. Check for matching triggers when objects enter/leave
+        self.game_state.event_bus.subscribe("enters_battlefield", self._handle_enters)
+        self.game_state.event_bus.subscribe("leaves_battlefield", self._handle_leaves)
 
     def _handle_enters(self, event: Event) -> None:
         """Handle enters_battlefield event - register new object and process triggers."""
