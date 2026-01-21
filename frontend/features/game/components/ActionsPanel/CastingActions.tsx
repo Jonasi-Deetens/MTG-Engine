@@ -1,14 +1,14 @@
 'use client';
 
 import { Button } from '@/components/ui/Button';
-import { ManaPaymentPanel } from '@/components/engine/ManaPaymentPanel';
-import { ActivationCostPanel } from '@/components/engine/ActivationCostPanel';
-import { OptionalCostPanel } from '@/components/engine/OptionalCostPanel';
-import { ConspirePanel } from '@/components/engine/ConspirePanel';
-import { SplicePanel } from '@/components/engine/SplicePanel';
+import { ManaPaymentPanel } from '../ManaPaymentPanel';
+import { ActivationCostPanel } from '../ActivationCostPanel';
+import { OptionalCostPanel } from '../OptionalCostPanel';
+import { ConspirePanel } from '../ConspirePanel';
+import { SplicePanel } from '../SplicePanel';
 import { EngineCardMap } from '@/lib/engine';
 import { ManaPaymentDetail } from '@/lib/manaPayment';
-import { ActivationCostEntry } from '@/hooks/useActivationCosts';
+import { ActivationCostEntry } from '../../hooks/useActivationCosts';
 import { AlternativeCostOption, OptionalCastCostOption } from '@/lib/graphCosts';
 
 /**

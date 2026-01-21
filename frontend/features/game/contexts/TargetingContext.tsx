@@ -2,10 +2,10 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { EngineGameStateSnapshot, EngineCardMap, engineApi } from '@/lib/engine';
-import { useTargeting } from '@/hooks/useTargeting';
-import { useEffectTargeting, EffectTargetGroup } from '@/hooks/useEffectTargeting';
-import { useCopyEffectTargeting } from '@/hooks/useCopyEffectTargeting';
-import { useSearchChoices } from '@/hooks/useSearchChoices';
+import { useTargeting } from '../hooks/useTargeting';
+import { useEffectTargeting, EffectTargetGroup } from '../hooks/useEffectTargeting';
+import { useCopyEffectTargeting } from '../hooks/useCopyEffectTargeting';
+import { useSearchChoices } from '../hooks/useSearchChoices';
 import { ModalChoiceConfig } from '@/lib/modalChoices';
 
 /**

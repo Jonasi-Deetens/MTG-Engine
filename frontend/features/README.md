@@ -13,37 +13,66 @@ features/
 │   │   ├── CastingContext   # Spell casting (mana payment, costs)
 │   │   ├── TargetingContext # Target selection and validation
 │   │   └── ChoicesContext   # Modal, enter, search, replacement choices
-│   ├── components/          # Feature components
-│   │   └── ActionsPanel/    # Split actions panel
-│   │       ├── CastingActions
-│   │       ├── CombatActions
-│   │       ├── TargetingSection
-│   │       └── ChoicesSection
+│   ├── components/          # Game UI components
+│   │   ├── ActionsPanel/    # Split actions panel (refactored)
+│   │   ├── playmat/         # Play mat components
+│   │   └── [panels]         # Individual game panels
+│   ├── hooks/               # Game-specific hooks
 │   └── index.ts
-└── builder/                 # Ability builder feature
-    ├── components/
-    │   └── EffectFields/    # Split effect fields
-    │       ├── CommonFields
-    │       ├── DamageEffectFields
-    │       ├── DrawEffectFields
-    │       ├── LifeEffectFields
-    │       └── ManaEffectFields
-    └── index.ts
+│
+├── builder/                 # Ability builder feature
+│   ├── components/
+│   │   ├── EffectFields/    # Split effect fields (refactored)
+│   │   ├── forms/           # Ability form components
+│   │   └── [components]     # Builder UI components
+│   └── index.ts
+│
+├── decks/                   # Deck management feature
+│   ├── components/
+│   │   ├── builder/         # Deck builder components
+│   │   └── [components]     # Deck UI components
+│   ├── hooks/               # Deck-specific hooks
+│   └── index.ts
+│
+├── collections/             # Card collections feature
+│   ├── components/          # Collection UI components
+│   └── index.ts
+│
+├── search/                  # Card search feature
+│   ├── components/          # Search UI components
+│   ├── hooks/               # Search-specific hooks
+│   └── index.ts
+│
+└── index.ts                 # Re-exports all features
 ```
 
 ## Dependency Rules
 
 1. **Pages import from features** - Route pages use feature modules
-2. **Features import from shared** - Features use hooks/, lib/, store/, context/, components/ui/
+2. **Features import from shared** - Features use lib/, store/, context/, components/ui/
 3. **Features do NOT import from other features** - Each feature is independent
 4. **Shared modules do NOT import from features** - Shared code stays decoupled
 
-## Game Feature
+## Remaining Shared Code
+
+The following stay in their original locations (not feature-specific):
+
+- `components/ui/` - Generic UI primitives (Button, Card, Input, etc.)
+- `components/navigation/` - App-wide navigation
+- `components/skeletons/` - Loading skeletons
+- `components/cards/` - Shared card display components
+- `components/landing/` - Landing page components
+- `components/dashboard/` - Dashboard widgets
+- `hooks/useThemeImage.ts` - Generic theme utility
+- `context/` - App-wide contexts (Auth, Theme, Shortcuts)
+
+## Feature Details
+
+### Game Feature
 
 The game feature handles all gameplay functionality:
 
-### Contexts
-
+**Contexts:**
 | Context | Responsibility |
 |---------|---------------|
 | GameContext | Core game state, session management, engine action execution |
@@ -52,29 +81,69 @@ The game feature handles all gameplay functionality:
 | TargetingContext | Target selection, validation, copy spell targets |
 | ChoicesContext | Modal choices, ETB choices, search choices, replacements |
 
-### Components
-
+**Components:**
 | Component | Responsibility |
 |-----------|---------------|
-| ActionsPanel | Coordinator for game action UI |
-| CastingActions | Cast spell, play land, tap for mana buttons |
-| CombatActions | Declare attackers/blockers, combat damage |
-| TargetingSection | Target selection UI |
-| ChoicesSection | Modal, enter, search, replacement choice UI |
+| ActionsPanel | Coordinator for game action UI (refactored version) |
+| LegacyActionsPanel | Original monolithic actions panel (for compatibility) |
+| PlayerMat | Player's play area |
+| StackView | Display of spell/ability stack |
+| TurnStatusCard | Current turn/step display |
+| ManaPaymentPanel, ActivationCostPanel, etc. | Cost payment UIs |
 
-## Builder Feature
+**Hooks:**
+| Hook | Responsibility |
+|------|---------------|
+| useAbilityGraphs | Load ability graphs for cards |
+| useActivationCosts | Handle cost payments |
+| useCasting | Spell casting flow |
+| useCombatSelection | Attacker/blocker selection |
+| useTargeting | Target selection and validation |
+| useEffectTargeting | Effect-based targeting |
+| useEngineActions | Engine API wrapper |
+| useReplacementConflicts | Replacement effect conflicts |
+| useWardPayments | Ward cost handling |
+
+### Builder Feature
 
 The builder feature handles ability graph construction:
 
-### EffectFields Components
+**Components:**
+| Component | Responsibility |
+|-----------|---------------|
+| EffectFields | Effect field coordinator (refactored) |
+| LegacyEffectFields | Original monolithic effect fields (forms/EffectFields.tsx) |
+| AbilityTabs | Ability type selector |
+| AbilityTreeView | Graph visualization |
+| ConditionBuilder | Condition configuration |
+| CostListEditor | Cost entry management |
+| ValidationPanel | Validation error display |
+| *AbilityForm | Form for each ability type |
 
-| Component | Effect Types |
-|-----------|--------------|
-| CommonFields | Shared fields (type, amount, target, duration) |
-| DamageEffectFields | damage, damage_all, prevent_damage |
-| DrawEffectFields | draw, mill, discard, loot |
-| LifeEffectFields | gain_life, lose_life, set_life, pay_life |
-| ManaEffectFields | add_mana, ritual |
+### Decks Feature
+
+The decks feature handles deck building and management:
+
+**Components:**
+- DeckCard, DeckCardList, DeckValidationPanel
+- ManaCurveChart, CardTypeBreakdown
+- DeckImport, DeckImportExport
+- EditableTypeList, UnifiedCardSearch
+- Builder: DeckBuilderHeader, DeckInfoForm, CommanderSection, etc.
+
+**Hooks:**
+- useDeckBuilder, useDeckCardHandlers, useDragAndDrop, useTypeLists
+
+### Collections Feature
+
+Simple feature for card collections and favorites:
+- AddToCollectionButton, FavoriteButton
+
+### Search Feature
+
+Card search functionality:
+- SearchFilters, SearchHeader
+- useCardSearch, useSearchFilters
 
 ## Usage Example
 
@@ -84,22 +153,31 @@ import {
   GameProvider, 
   useGame,
   ActionsPanel,
-  CastingActions 
+  useTargeting,
+  useEngineActions
 } from '@/features/game';
 
 // Importing from the builder feature
 import { 
   EffectFields,
-  DamageEffectFields 
+  AbilityTabs,
+  ValidationPanel
 } from '@/features/builder';
+
+// Importing from the decks feature
+import {
+  DeckCard,
+  useDeckBuilder
+} from '@/features/decks';
 ```
 
 ## Migration Notes
 
-This refactor was done to address SRP violations in:
+This refactor addressed SRP violations by:
 
-1. **PlayState.tsx (1,332 lines)** → Split into 5 focused contexts (~150-250 lines each)
-2. **ActionsPanel.tsx (950 lines, 100+ props)** → Split into coordinator + 4 sub-components
-3. **EffectFields.tsx (1,139 lines)** → Split into coordinator + category components
+1. Moving domain-specific components from `components/` to `features/`
+2. Moving domain-specific hooks from `hooks/` to feature directories
+3. Creating split contexts for PlayState functionality
+4. Creating split ActionsPanel and EffectFields components
 
-The original files remain functional for backward compatibility, but new code should use the feature modules.
+The original monolithic files remain as `Legacy*` versions for backward compatibility.

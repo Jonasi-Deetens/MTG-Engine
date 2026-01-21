@@ -1,7 +1,7 @@
 'use client';
 
 import { ManaPaymentDetail, hasComplexManaCost } from '@/lib/manaPayment';
-import { ActivationCostEntry } from '@/hooks/useActivationCosts';
+import { ActivationCostEntry } from '../hooks/useActivationCosts';
 
 interface ActivationCostPanelProps {
   active: boolean;

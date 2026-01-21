@@ -1,10 +1,11 @@
 'use client';
 
 import { Card } from '@/components/ui/Card';
-import { usePlayState } from '@/app/(protected)/play/PlayState';
+import { usePlayGame } from '@/app/(protected)/play/PlayProviders';
 
 export function PlayHeader() {
-  const { error } = usePlayState();
+  // Using the focused usePlayGame() hook instead of the monolithic usePlayState()
+  const { error } = usePlayGame();
 
   return (
     <div className="space-y-4">

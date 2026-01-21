@@ -2,7 +2,7 @@
 
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { FormatSelector } from '@/components/decks/FormatSelector';
+import { FormatSelector } from '../FormatSelector';
 
 interface DeckInfoFormProps {
   deckName: string;

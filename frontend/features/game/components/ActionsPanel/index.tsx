@@ -6,12 +6,12 @@ import { CombatActions } from './CombatActions';
 import { TargetingSection } from './TargetingSection';
 import { ChoicesSection } from './ChoicesSection';
 import { EngineCardMap, EngineCombatStateSnapshot } from '@/lib/engine';
-import { EffectTargetGroup } from '@/hooks/useEffectTargeting';
-import { ReplacementConflictEntry } from '@/hooks/useReplacementConflicts';
+import { EffectTargetGroup } from '../../hooks/useEffectTargeting';
+import { ReplacementConflictEntry } from '../../hooks/useReplacementConflicts';
 import { EnterChoiceConfig } from '@/lib/enterChoices';
 import { ModalChoiceConfig } from '@/lib/modalChoices';
 import { ManaPaymentDetail } from '@/lib/manaPayment';
-import { ActivationCostEntry } from '@/hooks/useActivationCosts';
+import { ActivationCostEntry } from '../../hooks/useActivationCosts';
 import { AlternativeCostOption, OptionalCastCostOption } from '@/lib/graphCosts';
 
 /**

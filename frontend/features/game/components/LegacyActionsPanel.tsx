@@ -2,23 +2,23 @@
 
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { TargetSelector } from '@/components/engine/TargetSelector';
-import { EnterChoicesPanel } from '@/components/engine/EnterChoicesPanel';
-import { SearchChoicePanel } from '@/components/engine/SearchChoicePanel';
-import { ModalChoicePanel } from '@/components/engine/ModalChoicePanel';
-import { ManaPaymentPanel } from '@/components/engine/ManaPaymentPanel';
-import { WardPaymentPanel } from '@/components/engine/WardPaymentPanel';
-import { ActivationCostPanel } from '@/components/engine/ActivationCostPanel';
-import { OptionalCostPanel } from '@/components/engine/OptionalCostPanel';
-import { ConspirePanel } from '@/components/engine/ConspirePanel';
-import { SplicePanel } from '@/components/engine/SplicePanel';
+import { TargetSelector } from './TargetSelector';
+import { EnterChoicesPanel } from './EnterChoicesPanel';
+import { SearchChoicePanel } from './SearchChoicePanel';
+import { ModalChoicePanel } from './ModalChoicePanel';
+import { ManaPaymentPanel } from './ManaPaymentPanel';
+import { WardPaymentPanel } from './WardPaymentPanel';
+import { ActivationCostPanel } from './ActivationCostPanel';
+import { OptionalCostPanel } from './OptionalCostPanel';
+import { ConspirePanel } from './ConspirePanel';
+import { SplicePanel } from './SplicePanel';
 import { EngineCardMap, EngineCombatStateSnapshot, EnginePlayerSnapshot } from '@/lib/engine';
-import { EffectTargetGroup } from '@/hooks/useEffectTargeting';
-import { ReplacementConflictEntry } from '@/hooks/useReplacementConflicts';
+import { EffectTargetGroup } from '../hooks/useEffectTargeting';
+import { ReplacementConflictEntry } from '../hooks/useReplacementConflicts';
 import { EnterChoiceConfig } from '@/lib/enterChoices';
 import { ModalChoiceConfig } from '@/lib/modalChoices';
 import { ManaPaymentDetail } from '@/lib/manaPayment';
-import { ActivationCostEntry } from '@/hooks/useActivationCosts';
+import { ActivationCostEntry } from '../hooks/useActivationCosts';
 import { AlternativeCostOption, OptionalCastCostOption } from '@/lib/graphCosts';
 
 interface ActionsPanelProps {

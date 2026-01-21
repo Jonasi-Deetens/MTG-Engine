@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useBuilderStore, ActivatedAbility, Effect } from '@/store/builderStore';
 import { Button } from '@/components/ui/Button';
-import { CostListEditor } from '@/components/builder/CostListEditor';
+import { CostListEditor } from '../CostListEditor';
 import { AbilityEffectsSection } from './AbilityEffectsSection';
 import { buildModalConfig, filterValidEffects, sanitizeEffectsForSave } from './abilityFormHelpers';
 

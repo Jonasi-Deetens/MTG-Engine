@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 import { useBuilderStore, KeywordAbility, KeywordInfo } from '@/store/builderStore';
 import { abilities } from '@/lib/abilities';
 import { Button } from '@/components/ui/Button';
-import { CostListEditor } from '@/components/builder/CostListEditor';
+import { CostListEditor } from '../CostListEditor';
 
 interface KeywordAbilityFormProps {
   abilityId?: string;

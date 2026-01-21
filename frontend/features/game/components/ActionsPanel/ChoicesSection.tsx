@@ -1,14 +1,14 @@
 'use client';
 
-import { EnterChoicesPanel } from '@/components/engine/EnterChoicesPanel';
-import { SearchChoicePanel } from '@/components/engine/SearchChoicePanel';
-import { ModalChoicePanel } from '@/components/engine/ModalChoicePanel';
-import { WardPaymentPanel } from '@/components/engine/WardPaymentPanel';
-import { ReplacementChoicePanel } from '@/components/engine/ReplacementChoicePanel';
+import { EnterChoicesPanel } from '../EnterChoicesPanel';
+import { SearchChoicePanel } from '../SearchChoicePanel';
+import { ModalChoicePanel } from '../ModalChoicePanel';
+import { WardPaymentPanel } from '../WardPaymentPanel';
+import { ReplacementChoicePanel } from '../ReplacementChoicePanel';
 import { EnterChoiceConfig } from '@/lib/enterChoices';
 import { ModalChoiceConfig } from '@/lib/modalChoices';
 import { ManaPaymentDetail } from '@/lib/manaPayment';
-import { ReplacementConflictEntry } from '@/hooks/useReplacementConflicts';
+import { ReplacementConflictEntry } from '../../hooks/useReplacementConflicts';
 import { EngineCardMap } from '@/lib/engine';
 
 /**

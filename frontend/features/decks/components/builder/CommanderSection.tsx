@@ -1,7 +1,7 @@
 // frontend/components/decks/builder/CommanderSection.tsx
 
 import { DeckCommanderResponse, DeckCardResponse } from '@/lib/decks';
-import { DroppableList } from '@/components/decks/DroppableList';
+import { DroppableList } from '../DroppableList';
 import { CardData } from '@/components/cards/CardPreview';
 
 interface CommanderSectionProps {

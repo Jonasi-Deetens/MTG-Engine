@@ -1,23 +1,23 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 import { EngineGameStateSnapshot, EngineCardMap, engineApi } from '@/lib/engine';
-import { useAbilityGraphs } from '@/hooks/useAbilityGraphs';
-import { useTargeting } from '@/hooks/useTargeting';
-import { useEffectTargeting } from '@/hooks/useEffectTargeting';
-import { useCopyEffectTargeting } from '@/hooks/useCopyEffectTargeting';
-import { useSearchChoices } from '@/hooks/useSearchChoices';
-import { useCasting } from '@/hooks/useCasting';
-import { useCombatSelection } from '@/hooks/useCombatSelection';
-import { useEngineActions } from '@/hooks/useEngineActions';
-import { useGameSetup } from '@/hooks/useGameSetup';
-import { useTurnReset } from '@/hooks/useTurnReset';
-import { useReplacementConflicts } from '@/hooks/useReplacementConflicts';
-import { useCastContext } from '@/hooks/useCastContext';
-import { useTurnState } from '@/hooks/useTurnState';
-import { useWardPayments } from '@/hooks/useWardPayments';
-import { useActivationCosts } from '@/hooks/useActivationCosts';
-import { useResolveCleanup } from '../../../hooks/useResolveCleanup';
+import { useAbilityGraphs } from '@/features/game/hooks/useAbilityGraphs';
+import { useTargeting } from '@/features/game/hooks/useTargeting';
+import { useEffectTargeting } from '@/features/game/hooks/useEffectTargeting';
+import { useCopyEffectTargeting } from '@/features/game/hooks/useCopyEffectTargeting';
+import { useSearchChoices } from '@/features/game/hooks/useSearchChoices';
+import { useCasting } from '@/features/game/hooks/useCasting';
+import { useCombatSelection } from '@/features/game/hooks/useCombatSelection';
+import { useEngineActions } from '@/features/game/hooks/useEngineActions';
+import { useGameSetup } from '@/features/game/hooks/useGameSetup';
+import { useTurnReset } from '@/features/game/hooks/useTurnReset';
+import { useReplacementConflicts } from '@/features/game/hooks/useReplacementConflicts';
+import { useCastContext } from '@/features/game/hooks/useCastContext';
+import { useTurnState } from '@/features/game/hooks/useTurnState';
+import { useWardPayments } from '@/features/game/hooks/useWardPayments';
+import { useActivationCosts } from '@/features/game/hooks/useActivationCosts';
+import { useResolveCleanup } from '@/features/game/hooks/useResolveCleanup';
 import {
   deriveAdditionalCostsFromGraph,
   deriveAlternativeCastCostsFromGraph,
@@ -37,21 +37,326 @@ import {
   buildEnterChoiceTargetOptions,
 } from '@/lib/enterChoices';
 import { buildModalChoiceErrors, deriveModalConfig } from '@/lib/modalChoices';
+import type { GameContextValue } from '@/features/game/contexts/GameContext';
+import type { ManaPaymentDetail } from '@/lib/manaPayment';
 
-const PlayStateContext = createContext<ReturnType<typeof usePlayStateInternal> | null>(null);
+/**
+ * PlayProviders - Unified context provider with focused APIs for game state
+ * 
+ * This file contains all the state management for the play page and exposes
+ * focused context hooks for different concerns:
+ * - usePlayGame() for game state
+ * - usePlayCombat() for combat state  
+ * - usePlayChoices() for modal/enter/replacement choices
+ * - usePlaySelection() for hand/battlefield selection
+ * - usePlayTurn() for turn/phase state
+ * - usePlayTargeting() for target selection
+ * - usePlayCasting() for spell casting
+ * - usePlaySetup() for deck setup
+ */
 
-export function PlayStateProvider({ children }: { children: React.ReactNode }) {
-  const value = usePlayStateInternal();
-  return <PlayStateContext.Provider value={value}>{children}</PlayStateContext.Provider>;
+// ============================================================================
+// Context Interfaces
+// ============================================================================
+
+export interface SetupContextValue {
+  deckList: any[];
+  selectedDeckIds: (number | null)[];
+  setupLoading: boolean;
+  canStart: boolean;
+  handleSelectDeck: (index: number, deckId: string) => void;
+  startGame: () => void;
 }
 
-export function usePlayState() {
-  const context = useContext(PlayStateContext);
+export interface SelectionContextValue {
+  selectedHandId: string | null;
+  selectedCommandId: string | null;
+  selectedBattlefieldId: string | null;
+  selectedStackIndex: number | null;
+  setSelectedHandId: Dispatch<SetStateAction<string | null>>;
+  setSelectedCommandId: Dispatch<SetStateAction<string | null>>;
+  setSelectedBattlefieldId: Dispatch<SetStateAction<string | null>>;
+  setSelectedStackIndex: Dispatch<SetStateAction<number | null>>;
+  loadAbilityGraphForObject: (objectId: string) => void;
+  abilityGraphs: Record<string, any>;
+  selectedGraph: any;
+}
+
+export interface TurnContextValue {
+  currentPriority: number | null;
+  activePlayerIndex: number;
+  isMainPhase: boolean;
+  isDeclareAttackers: boolean;
+  isDeclareBlockers: boolean;
+  isCombatDamage: boolean;
+  isPriorityActivePlayer: boolean;
+  isPriorityDefender: boolean;
+  objectMap: Map<string, any>;
+}
+
+export interface CastingContextValue {
+  preparedCast: { objectId: string; cost: any } | null;
+  manaPool: Record<string, number>;
+  manaPayment: Record<string, number>;
+  manaPaymentDetail: ManaPaymentDetail;
+  manaPaymentStatus: { errors: string[] };
+  costLabel: string;
+  autoPayMana: boolean;
+  isComplexCost: boolean;
+  handlePrepareCast: () => void;
+  handleFinalizeCast: () => void;
+  setManaPayment: Dispatch<SetStateAction<Record<string, number>>>;
+  setManaPaymentDetail: Dispatch<SetStateAction<ManaPaymentDetail>>;
+  setAutoPayMana: Dispatch<SetStateAction<boolean>>;
+  buildCastContext: (objectId?: string, options?: any) => any;
+  // Activation costs
+  activationCosts: any[];
+  activationPayments: any[];
+  activationPaymentDetails: Record<number, ManaPaymentDetail>;
+  activationCostErrors: string[];
+  hasActivationCostErrors: boolean;
+  activationCostPaymentsPayload: any;
+  setActivationPayments: Dispatch<SetStateAction<any[]>>;
+  setActivationPaymentDetails: Dispatch<SetStateAction<Record<number, ManaPaymentDetail>>>;
+  // Additional costs
+  additionalCastCosts: any[];
+  additionalCastPayments: any[];
+  additionalCastPaymentDetails: Record<number, ManaPaymentDetail>;
+  additionalCastCostErrors: string[];
+  hasAdditionalCastCostErrors: boolean;
+  setAdditionalCastPayments: Dispatch<SetStateAction<any[]>>;
+  setAdditionalCastPaymentDetails: Dispatch<SetStateAction<Record<number, ManaPaymentDetail>>>;
+  // Alternative costs
+  alternativeCostOptions: any[];
+  selectedAlternativeCostTag: string | null;
+  alternativeExtraCostEntries: any[];
+  alternativeExtraPayments: any[];
+  alternativeExtraPaymentDetails: Record<number, ManaPaymentDetail>;
+  alternativeExtraCostErrors: string[];
+  hasAlternativeExtraCostErrors: boolean;
+  setSelectedAlternativeCostTag: Dispatch<SetStateAction<string | null>>;
+  setAlternativeExtraPayments: Dispatch<SetStateAction<any[]>>;
+  setAlternativeExtraPaymentDetails: Dispatch<SetStateAction<Record<number, ManaPaymentDetail>>>;
+  // Optional costs
+  optionalCostOptions: any[];
+  optionalCostSelections: Record<string, number>;
+  optionalCostEntries: any[];
+  optionalCostPayments: any[];
+  optionalCostPaymentDetails: Record<number, ManaPaymentDetail>;
+  optionalCostErrors: string[];
+  optionalCostPaymentErrors: string[];
+  hasOptionalCostErrors: boolean;
+  handleToggleOptionalCost: (tag: string) => void;
+  handleUpdateOptionalCostCount: (tag: string, count: number) => void;
+  setOptionalCostPayments: Dispatch<SetStateAction<any[]>>;
+  setOptionalCostPaymentDetails: Dispatch<SetStateAction<Record<number, ManaPaymentDetail>>>;
+  // Conspire
+  conspireSelected: boolean;
+  conspireOptions: any[];
+  conspireTaps: string[];
+  conspireError: string | null;
+  handleToggleConspireTap: (value: string) => void;
+  // Splice
+  spliceOptions: any[];
+  spliceSelections: string[];
+  spliceCosts: any[];
+  splicePayments: any[];
+  splicePaymentDetails: Record<number, ManaPaymentDetail>;
+  spliceCostErrors: string[];
+  handleToggleSpliceCard: (cardId: string) => void;
+  setSplicePayments: Dispatch<SetStateAction<any[]>>;
+  setSplicePaymentDetails: Dispatch<SetStateAction<Record<number, ManaPaymentDetail>>>;
+}
+
+export interface PlayCombatContextValue {
+  selectedAttackers: Set<string>;
+  selectedBlockers: Record<string, Set<string>>;
+  selectedBlockerOrder: Record<string, string[]>;
+  activeAttackerId: string | null;
+  selectedDefenderId: string | null;
+  combatDamageAssignments: Record<string, Record<string, number>>;
+  combatState: any;
+  defenderOptions: Array<{ value: string; label: string }>;
+  defendingPlayerId: number | null;
+  defendingObjectId: string | null;
+  hasFirstStrikeCombat: boolean;
+  combatDamagePass: 'first_strike' | 'regular' | null;
+  hasManualCombatChoices: boolean;
+  blockerErrors: string[];
+  blockerErrorMap: Record<string, string[]>;
+  activeBlockerOrder: string[];
+  blockersPayload: Record<string, string[]>;
+  setActiveAttackerId: Dispatch<SetStateAction<string | null>>;
+  setSelectedDefenderId: Dispatch<SetStateAction<string | null>>;
+  toggleAttacker: (id: string) => void;
+  toggleBlocker: (id: string) => void;
+  setSelectedBlockerOrder: Dispatch<SetStateAction<Record<string, string[]>>>;
+  setCombatDamageAssignments: Dispatch<SetStateAction<Record<string, Record<string, number>>>>;
+}
+
+export interface PlayChoicesContextValue {
+  modalChoiceConfig: any;
+  selectedModalModes: string[];
+  modalChoiceErrors: string[];
+  modalChoicesForCast: string[];
+  entwineSelected: boolean;
+  handleToggleModalMode: (modeId: string) => void;
+  setSelectedModalModes: Dispatch<SetStateAction<string[]>>;
+  enterChoiceConfig: any[];
+  enterChoices: Record<string, string>;
+  enterChoiceErrors: string[];
+  enterChoiceTargetOptions: Array<{ value: string; label: string }>;
+  setEnterChoices: Dispatch<SetStateAction<Record<string, string>>>;
+  onEnterChoiceChange: (type: string, value: string) => void;
+  replacementChoices: Record<string, string>;
+  replacementConflicts: any[];
+  hasUnresolvedDamageReplacements: boolean;
+  unresolvedDamageReplacements: any[];
+  highlightedReplacementKey: string | null;
+  setReplacementChoices: Dispatch<SetStateAction<Record<string, string>>>;
+  setHighlightedReplacementKey: Dispatch<SetStateAction<string | null>>;
+  wardTargets: any[];
+  wardPayments: Record<string, any>;
+  wardPaymentDetails: Record<string, ManaPaymentDetail>;
+  wardPaymentErrors: Record<string, string[]>;
+  wardPaymentsPayload: Record<string, any>;
+  hasWardPaymentErrors: boolean;
+  autoPayWard: boolean;
+  setWardPayments: Dispatch<SetStateAction<Record<string, any>>>;
+  setWardPaymentDetails: Dispatch<SetStateAction<Record<string, ManaPaymentDetail>>>;
+  setAutoPayWard: Dispatch<SetStateAction<boolean>>;
+}
+
+export interface PlayTargetingContextValue {
+  targetHints: any;
+  selectedTargetObjectIds: string[];
+  selectedTargetPlayerIds: number[];
+  objectTargetStatus: Record<string, boolean | null>;
+  playerTargetStatus: Record<number, boolean | null>;
+  stackTargetChecks: any[];
+  stackSpellObjects: any[];
+  filteredTargetableObjects: any[];
+  filteredTargetPlayers: any[];
+  shouldUseStackTargets: boolean;
+  requiredTargetsGlobal: string[];
+  distinctTargetsGlobal: string[];
+  minTargetsGlobal: Record<string, number> | null;
+  effectTargetGroups: any[];
+  targetsByEffect: Record<string, Record<string, any>>;
+  requiredTargetsByEffect: Record<string, string[]>;
+  distinctTargetsByEffect: Record<string, string[]>;
+  minTargetsByEffect: Record<string, Record<string, number>>;
+  globalTargetErrors: string[];
+  effectTargetObjectIds: string[];
+  effectTargetPlayerIds: number[];
+  hasEffectTargets: boolean;
+  mergedTargetsByEffect: Record<string, Record<string, any>>;
+  searchEntries: any[];
+  searchTargetsByEffect: Record<string, Record<string, any>>;
+  searchErrors: string[];
+  copySpellConfig: { enabled: boolean; amount: number };
+  copyTargetSelections: Array<{ objectIds: string[]; playerIds: number[] }>;
+  copyTargetErrorsGlobal: string[];
+  copyTargetsByEffectCount: number;
+  copyEffectTargetGroups: any[];
+  copyTargetsByEffectList: any[];
+  copyRequiredTargetsByEffectList: any[];
+  copyDistinctTargetsByEffectList: any[];
+  copyMinTargetsByEffectList: any[];
+  copyTargetErrors: string[];
+  resolvedTargetObjectIds: string[];
+  resolvedTargetPlayerIds: number[];
+  targetSelectionErrors: string[];
+  setSelectedTargetObjectIds: Dispatch<SetStateAction<string[]>>;
+  setSelectedTargetPlayerIds: Dispatch<SetStateAction<number[]>>;
+  setCopyTargetSelections: Dispatch<SetStateAction<Array<{ objectIds: string[]; playerIds: number[] }>>>;
+  clearEffectTargets: () => void;
+}
+
+// ============================================================================
+// Contexts
+// ============================================================================
+
+const PlayGameContext = createContext<GameContextValue | null>(null);
+const PlayCombatContext = createContext<PlayCombatContextValue | null>(null);
+const PlayChoicesContext = createContext<PlayChoicesContextValue | null>(null);
+const PlaySelectionContext = createContext<SelectionContextValue | null>(null);
+const PlayTurnContext = createContext<TurnContextValue | null>(null);
+const PlayTargetingContext = createContext<PlayTargetingContextValue | null>(null);
+const PlayCastingContext = createContext<CastingContextValue | null>(null);
+const PlaySetupContext = createContext<SetupContextValue | null>(null);
+
+// ============================================================================
+// Context Hooks
+// ============================================================================
+
+export function usePlayGame(): GameContextValue {
+  const context = useContext(PlayGameContext);
   if (!context) {
-    throw new Error('usePlayState must be used within PlayStateProvider');
+    throw new Error('usePlayGame must be used within PlayProviders');
   }
   return context;
 }
+
+export function usePlayCombat(): PlayCombatContextValue {
+  const context = useContext(PlayCombatContext);
+  if (!context) {
+    throw new Error('usePlayCombat must be used within PlayProviders');
+  }
+  return context;
+}
+
+export function usePlayChoices(): PlayChoicesContextValue {
+  const context = useContext(PlayChoicesContext);
+  if (!context) {
+    throw new Error('usePlayChoices must be used within PlayProviders');
+  }
+  return context;
+}
+
+export function usePlaySelection(): SelectionContextValue {
+  const context = useContext(PlaySelectionContext);
+  if (!context) {
+    throw new Error('usePlaySelection must be used within PlayProviders');
+  }
+  return context;
+}
+
+export function usePlayTurn(): TurnContextValue {
+  const context = useContext(PlayTurnContext);
+  if (!context) {
+    throw new Error('usePlayTurn must be used within PlayProviders');
+  }
+  return context;
+}
+
+export function usePlayTargeting(): PlayTargetingContextValue {
+  const context = useContext(PlayTargetingContext);
+  if (!context) {
+    throw new Error('usePlayTargeting must be used within PlayProviders');
+  }
+  return context;
+}
+
+export function usePlayCasting(): CastingContextValue {
+  const context = useContext(PlayCastingContext);
+  if (!context) {
+    throw new Error('usePlayCasting must be used within PlayProviders');
+  }
+  return context;
+}
+
+export function usePlaySetup(): SetupContextValue {
+  const context = useContext(PlaySetupContext);
+  if (!context) {
+    throw new Error('usePlaySetup must be used within PlayProviders');
+  }
+  return context;
+}
+
+// ============================================================================
+// Internal State Hook
+// ============================================================================
 
 function usePlayStateInternal() {
   const [loading, setLoading] = useState(false);
@@ -930,11 +1235,11 @@ function usePlayStateInternal() {
   );
   const modalChoicesForCast = useMemo(() => {
     if (!entwineSelected || !modalChoiceConfig) return selectedModalModes;
-    return modalChoiceConfig.modes.map((mode) => mode.id);
+    return modalChoiceConfig.modes.map((mode: any) => mode.id);
   }, [entwineSelected, modalChoiceConfig, selectedModalModes]);
   useEffect(() => {
     if (!entwineSelected || !modalChoiceConfig) return;
-    setSelectedModalModes(modalChoiceConfig.modes.map((mode) => mode.id));
+    setSelectedModalModes(modalChoiceConfig.modes.map((mode: any) => mode.id));
   }, [entwineSelected, modalChoiceConfig]);
 
   const {
@@ -1329,4 +1634,467 @@ function usePlayStateInternal() {
     handlePrepareCast,
     handleFinalizeCast,
   };
+}
+
+// ============================================================================
+// Provider Component
+// ============================================================================
+
+export function PlayProviders({ children }: { children: React.ReactNode }) {
+  const playState = usePlayStateInternal();
+
+  // Derive GameContext-compatible value
+  const gameValue = useMemo<GameContextValue>(() => ({
+    gameId: null,
+    gameState: playState.gameState,
+    cardMap: playState.cardMap,
+    loading: playState.loading,
+    error: playState.error,
+    priorityPlayer: playState.priorityPlayer,
+    setGameId: () => {},
+    setGameState: () => {},
+    setCardMap: () => {},
+    setPriorityPlayer: playState.setPriorityPlayer,
+    setLoading: () => {},
+    setError: () => {},
+    runEngineAction: playState.runEngineAction as unknown as GameContextValue['runEngineAction'],
+  }), [
+    playState.gameState,
+    playState.cardMap,
+    playState.loading,
+    playState.error,
+    playState.priorityPlayer,
+    playState.setPriorityPlayer,
+    playState.runEngineAction,
+  ]);
+
+  // Derive CombatContext-compatible value
+  const combatValue = useMemo<PlayCombatContextValue>(() => ({
+    selectedAttackers: playState.selectedAttackers,
+    selectedBlockers: playState.selectedBlockers,
+    selectedBlockerOrder: playState.selectedBlockerOrder,
+    activeAttackerId: playState.activeAttackerId,
+    selectedDefenderId: playState.selectedDefenderId,
+    combatDamageAssignments: playState.combatDamageAssignments,
+    combatState: playState.combatState,
+    defenderOptions: playState.defenderOptions,
+    defendingPlayerId: playState.defendingPlayerId,
+    defendingObjectId: playState.defendingObjectId,
+    hasFirstStrikeCombat: playState.hasFirstStrikeCombat,
+    combatDamagePass: playState.combatDamagePass as 'first_strike' | 'regular' | null,
+    hasManualCombatChoices: playState.hasManualCombatChoices,
+    blockerErrors: playState.blockerErrors,
+    blockerErrorMap: playState.blockerErrorMap,
+    activeBlockerOrder: playState.activeBlockerOrder,
+    blockersPayload: playState.blockersPayload,
+    setActiveAttackerId: playState.setActiveAttackerId,
+    setSelectedDefenderId: playState.setSelectedDefenderId,
+    toggleAttacker: playState.toggleAttacker,
+    toggleBlocker: playState.toggleBlocker,
+    setSelectedBlockerOrder: playState.setSelectedBlockerOrder,
+    setCombatDamageAssignments: playState.setCombatDamageAssignments,
+  }), [
+    playState.selectedAttackers,
+    playState.selectedBlockers,
+    playState.selectedBlockerOrder,
+    playState.activeAttackerId,
+    playState.selectedDefenderId,
+    playState.combatDamageAssignments,
+    playState.combatState,
+    playState.defenderOptions,
+    playState.defendingPlayerId,
+    playState.defendingObjectId,
+    playState.hasFirstStrikeCombat,
+    playState.combatDamagePass,
+    playState.hasManualCombatChoices,
+    playState.blockerErrors,
+    playState.blockerErrorMap,
+    playState.activeBlockerOrder,
+    playState.blockersPayload,
+    playState.setActiveAttackerId,
+    playState.setSelectedDefenderId,
+    playState.toggleAttacker,
+    playState.toggleBlocker,
+    playState.setSelectedBlockerOrder,
+    playState.setCombatDamageAssignments,
+  ]);
+
+  // Derive ChoicesContext-compatible value
+  const choicesValue = useMemo<PlayChoicesContextValue>(() => ({
+    modalChoiceConfig: playState.modalChoiceConfig,
+    selectedModalModes: playState.selectedModalModes,
+    modalChoiceErrors: playState.modalChoiceErrors,
+    modalChoicesForCast: playState.modalChoicesForCast,
+    entwineSelected: playState.entwineSelected,
+    handleToggleModalMode: playState.handleToggleModalMode,
+    setSelectedModalModes: playState.setSelectedModalModes,
+    enterChoiceConfig: playState.enterChoiceConfig,
+    enterChoices: playState.enterChoices,
+    enterChoiceErrors: playState.enterChoiceErrors,
+    enterChoiceTargetOptions: playState.enterChoiceTargetOptions,
+    setEnterChoices: playState.setEnterChoices,
+    onEnterChoiceChange: (type: string, value: string) => {
+      playState.setEnterChoices((prev: Record<string, string>) => ({ ...prev, [type]: value }));
+    },
+    replacementChoices: playState.replacementChoices,
+    replacementConflicts: playState.replacementConflicts,
+    hasUnresolvedDamageReplacements: playState.hasUnresolvedDamageReplacements,
+    unresolvedDamageReplacements: playState.unresolvedDamageReplacements,
+    highlightedReplacementKey: playState.highlightedReplacementKey,
+    setReplacementChoices: playState.setReplacementChoices,
+    setHighlightedReplacementKey: playState.setHighlightedReplacementKey,
+    wardTargets: playState.wardTargets,
+    wardPayments: playState.wardPayments,
+    wardPaymentDetails: playState.wardPaymentDetails,
+    wardPaymentErrors: playState.wardPaymentErrors,
+    wardPaymentsPayload: playState.wardPaymentsPayload ?? {},
+    hasWardPaymentErrors: playState.hasWardPaymentErrors,
+    autoPayWard: playState.autoPayWard,
+    setWardPayments: playState.setWardPayments,
+    setWardPaymentDetails: playState.setWardPaymentDetails,
+    setAutoPayWard: playState.setAutoPayWard,
+  }), [
+    playState.modalChoiceConfig,
+    playState.selectedModalModes,
+    playState.modalChoiceErrors,
+    playState.modalChoicesForCast,
+    playState.entwineSelected,
+    playState.handleToggleModalMode,
+    playState.setSelectedModalModes,
+    playState.enterChoiceConfig,
+    playState.enterChoices,
+    playState.enterChoiceErrors,
+    playState.enterChoiceTargetOptions,
+    playState.setEnterChoices,
+    playState.replacementChoices,
+    playState.replacementConflicts,
+    playState.hasUnresolvedDamageReplacements,
+    playState.unresolvedDamageReplacements,
+    playState.highlightedReplacementKey,
+    playState.setReplacementChoices,
+    playState.setHighlightedReplacementKey,
+    playState.wardTargets,
+    playState.wardPayments,
+    playState.wardPaymentDetails,
+    playState.wardPaymentErrors,
+    playState.wardPaymentsPayload,
+    playState.hasWardPaymentErrors,
+    playState.autoPayWard,
+    playState.setWardPayments,
+    playState.setWardPaymentDetails,
+    playState.setAutoPayWard,
+  ]);
+
+  // Derive SelectionContext-compatible value
+  const selectionValue = useMemo<SelectionContextValue>(() => ({
+    selectedHandId: playState.selectedHandId,
+    selectedCommandId: playState.selectedCommandId,
+    selectedBattlefieldId: playState.selectedBattlefieldId,
+    selectedStackIndex: playState.selectedStackIndex,
+    setSelectedHandId: playState.setSelectedHandId,
+    setSelectedCommandId: playState.setSelectedCommandId,
+    setSelectedBattlefieldId: playState.setSelectedBattlefieldId,
+    setSelectedStackIndex: playState.setSelectedStackIndex,
+    loadAbilityGraphForObject: playState.loadAbilityGraphForObject,
+    abilityGraphs: playState.abilityGraphs,
+    selectedGraph: playState.selectedGraph,
+  }), [
+    playState.selectedHandId,
+    playState.selectedCommandId,
+    playState.selectedBattlefieldId,
+    playState.selectedStackIndex,
+    playState.setSelectedHandId,
+    playState.setSelectedCommandId,
+    playState.setSelectedBattlefieldId,
+    playState.setSelectedStackIndex,
+    playState.loadAbilityGraphForObject,
+    playState.abilityGraphs,
+    playState.selectedGraph,
+  ]);
+
+  // Derive TurnContext-compatible value
+  const turnValue = useMemo<TurnContextValue>(() => ({
+    currentPriority: playState.currentPriority,
+    activePlayerIndex: playState.activePlayerIndex,
+    isMainPhase: playState.isMainPhase,
+    isDeclareAttackers: playState.isDeclareAttackers,
+    isDeclareBlockers: playState.isDeclareBlockers,
+    isCombatDamage: playState.isCombatDamage,
+    isPriorityActivePlayer: playState.isPriorityActivePlayer,
+    isPriorityDefender: playState.isPriorityDefender,
+    objectMap: playState.objectMap,
+  }), [
+    playState.currentPriority,
+    playState.activePlayerIndex,
+    playState.isMainPhase,
+    playState.isDeclareAttackers,
+    playState.isDeclareBlockers,
+    playState.isCombatDamage,
+    playState.isPriorityActivePlayer,
+    playState.isPriorityDefender,
+    playState.objectMap,
+  ]);
+
+  // Derive TargetingContext-compatible value
+  const targetingValue = useMemo<PlayTargetingContextValue>(() => ({
+    targetHints: playState.targetHints,
+    selectedTargetObjectIds: playState.selectedTargetObjectIds ?? [],
+    selectedTargetPlayerIds: playState.selectedTargetPlayerIds ?? [],
+    objectTargetStatus: playState.objectTargetStatus,
+    playerTargetStatus: playState.playerTargetStatus,
+    stackTargetChecks: Object.values(playState.stackTargetChecks ?? {}),
+    stackSpellObjects: playState.stackSpellObjects,
+    filteredTargetableObjects: playState.filteredTargetableObjects,
+    filteredTargetPlayers: playState.filteredTargetPlayers,
+    shouldUseStackTargets: playState.shouldUseStackTargets,
+    requiredTargetsGlobal: playState.requiredTargetsGlobal,
+    distinctTargetsGlobal: playState.distinctTargetsGlobal,
+    minTargetsGlobal: playState.minTargetsGlobal,
+    effectTargetGroups: playState.effectTargetGroups,
+    targetsByEffect: playState.targetsByEffect,
+    requiredTargetsByEffect: playState.requiredTargetsByEffect,
+    distinctTargetsByEffect: playState.distinctTargetsByEffect,
+    minTargetsByEffect: playState.minTargetsByEffect,
+    globalTargetErrors: playState.globalTargetErrors,
+    effectTargetObjectIds: playState.effectTargetObjectIds,
+    effectTargetPlayerIds: playState.effectTargetPlayerIds,
+    hasEffectTargets: playState.hasEffectTargets,
+    mergedTargetsByEffect: playState.mergedTargetsByEffect,
+    searchEntries: playState.searchEntries,
+    searchTargetsByEffect: playState.searchTargetsByEffect,
+    searchErrors: playState.searchErrors,
+    copySpellConfig: playState.copySpellConfig,
+    copyTargetSelections: playState.copyTargetSelections,
+    copyTargetErrorsGlobal: playState.copyTargetErrorsGlobal,
+    copyTargetsByEffectCount: playState.copyTargetsByEffectCount,
+    copyEffectTargetGroups: playState.copyEffectTargetGroups,
+    copyTargetsByEffectList: playState.copyTargetsByEffectList,
+    copyRequiredTargetsByEffectList: playState.copyRequiredTargetsByEffectList,
+    copyDistinctTargetsByEffectList: playState.copyDistinctTargetsByEffectList,
+    copyMinTargetsByEffectList: playState.copyMinTargetsByEffectList,
+    copyTargetErrors: playState.copyTargetErrors,
+    resolvedTargetObjectIds: playState.resolvedTargetObjectIds,
+    resolvedTargetPlayerIds: playState.resolvedTargetPlayerIds,
+    targetSelectionErrors: playState.targetSelectionErrors,
+    setSelectedTargetObjectIds: playState.setSelectedTargetObjectIds,
+    setSelectedTargetPlayerIds: playState.setSelectedTargetPlayerIds,
+    setCopyTargetSelections: playState.setCopyTargetSelections,
+    clearEffectTargets: playState.clearEffectTargets,
+  }), [
+    playState.targetHints,
+    playState.selectedTargetObjectIds,
+    playState.selectedTargetPlayerIds,
+    playState.objectTargetStatus,
+    playState.playerTargetStatus,
+    playState.stackTargetChecks,
+    playState.stackSpellObjects,
+    playState.filteredTargetableObjects,
+    playState.filteredTargetPlayers,
+    playState.shouldUseStackTargets,
+    playState.requiredTargetsGlobal,
+    playState.distinctTargetsGlobal,
+    playState.minTargetsGlobal,
+    playState.effectTargetGroups,
+    playState.targetsByEffect,
+    playState.requiredTargetsByEffect,
+    playState.distinctTargetsByEffect,
+    playState.minTargetsByEffect,
+    playState.globalTargetErrors,
+    playState.effectTargetObjectIds,
+    playState.effectTargetPlayerIds,
+    playState.hasEffectTargets,
+    playState.mergedTargetsByEffect,
+    playState.searchEntries,
+    playState.searchTargetsByEffect,
+    playState.searchErrors,
+    playState.copySpellConfig,
+    playState.copyTargetSelections,
+    playState.copyTargetErrorsGlobal,
+    playState.copyTargetsByEffectCount,
+    playState.copyEffectTargetGroups,
+    playState.copyTargetsByEffectList,
+    playState.copyRequiredTargetsByEffectList,
+    playState.copyDistinctTargetsByEffectList,
+    playState.copyMinTargetsByEffectList,
+    playState.copyTargetErrors,
+    playState.resolvedTargetObjectIds,
+    playState.resolvedTargetPlayerIds,
+    playState.targetSelectionErrors,
+    playState.setSelectedTargetObjectIds,
+    playState.setSelectedTargetPlayerIds,
+    playState.setCopyTargetSelections,
+    playState.clearEffectTargets,
+  ]);
+
+  // Derive CastingContext-compatible value
+  const castingValue = useMemo<CastingContextValue>(() => ({
+    preparedCast: playState.preparedCast,
+    manaPool: playState.manaPool,
+    manaPayment: playState.manaPayment,
+    manaPaymentDetail: playState.manaPaymentDetail,
+    manaPaymentStatus: playState.manaPaymentStatus,
+    costLabel: playState.costLabel,
+    autoPayMana: playState.autoPayMana,
+    isComplexCost: playState.isComplexCost,
+    handlePrepareCast: playState.handlePrepareCast,
+    handleFinalizeCast: playState.handleFinalizeCast,
+    setManaPayment: playState.setManaPayment,
+    setManaPaymentDetail: playState.setManaPaymentDetail,
+    setAutoPayMana: playState.setAutoPayMana,
+    buildCastContext: playState.buildCastContext,
+    activationCosts: playState.activationCosts,
+    activationPayments: playState.activationPayments,
+    activationPaymentDetails: playState.activationPaymentDetails,
+    activationCostErrors: playState.activationCostErrors,
+    hasActivationCostErrors: playState.hasActivationCostErrors,
+    activationCostPaymentsPayload: playState.activationCostPaymentsPayload,
+    setActivationPayments: playState.setActivationPayments,
+    setActivationPaymentDetails: playState.setActivationPaymentDetails,
+    additionalCastCosts: playState.additionalCastCosts,
+    additionalCastPayments: playState.additionalCastPayments,
+    additionalCastPaymentDetails: playState.additionalCastPaymentDetails,
+    additionalCastCostErrors: playState.additionalCastCostErrors,
+    hasAdditionalCastCostErrors: playState.hasAdditionalCastCostErrors,
+    setAdditionalCastPayments: playState.setAdditionalCastPayments,
+    setAdditionalCastPaymentDetails: playState.setAdditionalCastPaymentDetails,
+    alternativeCostOptions: playState.alternativeCostOptions,
+    selectedAlternativeCostTag: playState.selectedAlternativeCostTag,
+    alternativeExtraCostEntries: playState.alternativeExtraCostEntries,
+    alternativeExtraPayments: playState.alternativeExtraPayments,
+    alternativeExtraPaymentDetails: playState.alternativeExtraPaymentDetails,
+    alternativeExtraCostErrors: playState.alternativeExtraCostErrors,
+    hasAlternativeExtraCostErrors: playState.hasAlternativeExtraCostErrors,
+    setSelectedAlternativeCostTag: playState.setSelectedAlternativeCostTag,
+    setAlternativeExtraPayments: playState.setAlternativeExtraPayments,
+    setAlternativeExtraPaymentDetails: playState.setAlternativeExtraPaymentDetails,
+    optionalCostOptions: playState.optionalCostOptions,
+    optionalCostSelections: playState.optionalCostSelections,
+    optionalCostEntries: playState.optionalCostEntries,
+    optionalCostPayments: playState.optionalCostPayments,
+    optionalCostPaymentDetails: playState.optionalCostPaymentDetails,
+    optionalCostErrors: playState.optionalCostErrors,
+    optionalCostPaymentErrors: playState.optionalCostPaymentErrors,
+    hasOptionalCostErrors: playState.hasOptionalCostErrors,
+    handleToggleOptionalCost: playState.handleToggleOptionalCost,
+    handleUpdateOptionalCostCount: playState.handleUpdateOptionalCostCount,
+    setOptionalCostPayments: playState.setOptionalCostPayments,
+    setOptionalCostPaymentDetails: playState.setOptionalCostPaymentDetails,
+    conspireSelected: playState.conspireSelected,
+    conspireOptions: playState.conspireOptions,
+    conspireTaps: playState.conspireTaps,
+    conspireError: playState.conspireError,
+    handleToggleConspireTap: playState.handleToggleConspireTap,
+    spliceOptions: playState.spliceOptions,
+    spliceSelections: playState.spliceSelections,
+    spliceCosts: playState.spliceCosts,
+    splicePayments: playState.splicePayments,
+    splicePaymentDetails: playState.splicePaymentDetails,
+    spliceCostErrors: playState.spliceCostErrors,
+    handleToggleSpliceCard: playState.handleToggleSpliceCard,
+    setSplicePayments: playState.setSplicePayments,
+    setSplicePaymentDetails: playState.setSplicePaymentDetails,
+  }), [
+    playState.preparedCast,
+    playState.manaPool,
+    playState.manaPayment,
+    playState.manaPaymentDetail,
+    playState.manaPaymentStatus,
+    playState.costLabel,
+    playState.autoPayMana,
+    playState.isComplexCost,
+    playState.handlePrepareCast,
+    playState.handleFinalizeCast,
+    playState.setManaPayment,
+    playState.setManaPaymentDetail,
+    playState.setAutoPayMana,
+    playState.buildCastContext,
+    playState.activationCosts,
+    playState.activationPayments,
+    playState.activationPaymentDetails,
+    playState.activationCostErrors,
+    playState.hasActivationCostErrors,
+    playState.activationCostPaymentsPayload,
+    playState.setActivationPayments,
+    playState.setActivationPaymentDetails,
+    playState.additionalCastCosts,
+    playState.additionalCastPayments,
+    playState.additionalCastPaymentDetails,
+    playState.additionalCastCostErrors,
+    playState.hasAdditionalCastCostErrors,
+    playState.setAdditionalCastPayments,
+    playState.setAdditionalCastPaymentDetails,
+    playState.alternativeCostOptions,
+    playState.selectedAlternativeCostTag,
+    playState.alternativeExtraCostEntries,
+    playState.alternativeExtraPayments,
+    playState.alternativeExtraPaymentDetails,
+    playState.alternativeExtraCostErrors,
+    playState.hasAlternativeExtraCostErrors,
+    playState.setSelectedAlternativeCostTag,
+    playState.setAlternativeExtraPayments,
+    playState.setAlternativeExtraPaymentDetails,
+    playState.optionalCostOptions,
+    playState.optionalCostSelections,
+    playState.optionalCostEntries,
+    playState.optionalCostPayments,
+    playState.optionalCostPaymentDetails,
+    playState.optionalCostErrors,
+    playState.optionalCostPaymentErrors,
+    playState.hasOptionalCostErrors,
+    playState.handleToggleOptionalCost,
+    playState.handleUpdateOptionalCostCount,
+    playState.setOptionalCostPayments,
+    playState.setOptionalCostPaymentDetails,
+    playState.conspireSelected,
+    playState.conspireOptions,
+    playState.conspireTaps,
+    playState.conspireError,
+    playState.handleToggleConspireTap,
+    playState.spliceOptions,
+    playState.spliceSelections,
+    playState.spliceCosts,
+    playState.splicePayments,
+    playState.splicePaymentDetails,
+    playState.spliceCostErrors,
+    playState.handleToggleSpliceCard,
+    playState.setSplicePayments,
+    playState.setSplicePaymentDetails,
+  ]);
+
+  // Derive SetupContext-compatible value
+  const setupValue = useMemo<SetupContextValue>(() => ({
+    deckList: playState.deckList,
+    selectedDeckIds: playState.selectedDeckIds,
+    setupLoading: playState.setupLoading,
+    canStart: playState.canStart,
+    handleSelectDeck: playState.handleSelectDeck,
+    startGame: playState.startGame,
+  }), [
+    playState.deckList,
+    playState.selectedDeckIds,
+    playState.setupLoading,
+    playState.canStart,
+    playState.handleSelectDeck,
+    playState.startGame,
+  ]);
+
+  return (
+    <PlayGameContext.Provider value={gameValue}>
+      <PlayCombatContext.Provider value={combatValue}>
+        <PlayChoicesContext.Provider value={choicesValue}>
+          <PlaySelectionContext.Provider value={selectionValue}>
+            <PlayTurnContext.Provider value={turnValue}>
+              <PlayTargetingContext.Provider value={targetingValue}>
+                <PlayCastingContext.Provider value={castingValue}>
+                  <PlaySetupContext.Provider value={setupValue}>
+                    {children}
+                  </PlaySetupContext.Provider>
+                </PlayCastingContext.Provider>
+              </PlayTargetingContext.Provider>
+            </PlayTurnContext.Provider>
+          </PlaySelectionContext.Provider>
+        </PlayChoicesContext.Provider>
+      </PlayCombatContext.Provider>
+    </PlayGameContext.Provider>
+  );
 }

@@ -1,35 +1,44 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { PlayerMat } from '@/components/engine/playmat/PlayerMat';
+import { PlayerMat } from '@/features/game/components/playmat/PlayerMat';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
-import { usePlayState } from '@/app/(protected)/play/PlayState';
+import {
+  usePlayGame,
+  usePlayCombat,
+  usePlaySelection,
+  usePlayTurn,
+} from '@/app/(protected)/play/PlayProviders';
 
 type ViewMode = 'single' | 'all';
 
 export function PlayMat() {
+  // Use focused hooks for specific state slices
+  const { gameState, cardMap } = usePlayGame();
   const {
-    gameState,
-    cardMap,
     currentPriority,
     activePlayerIndex,
     isDeclareAttackers,
     isDeclareBlockers,
+  } = usePlayTurn();
+  const {
     selectedAttackers,
     selectedBlockers,
     activeAttackerId,
+    toggleAttacker,
+    toggleBlocker,
+    defendingPlayerId,
+  } = usePlayCombat();
+  const {
     selectedHandId,
     selectedCommandId,
     selectedBattlefieldId,
-    toggleAttacker,
-    toggleBlocker,
-    loadAbilityGraphForObject,
     setSelectedHandId,
     setSelectedCommandId,
     setSelectedBattlefieldId,
-    defendingPlayerId,
-  } = usePlayState();
+    loadAbilityGraphForObject,
+  } = usePlaySelection();
 
   const [viewMode, setViewMode] = useState<ViewMode>('single');
   const [selectedPlayerId, setSelectedPlayerId] = useState<number>(currentPriority ?? 0);

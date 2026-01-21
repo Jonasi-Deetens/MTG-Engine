@@ -7,7 +7,7 @@ import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import Link from 'next/link';
 import { CardData } from '@/components/cards/CardPreview';
-import { FavoriteButton } from '@/components/collections/FavoriteButton';
+import { FavoriteButton } from '@/features/collections/components/FavoriteButton';
 import { RarityBadge } from '@/components/ui/RarityBadge';
 
 interface CardModalProps {

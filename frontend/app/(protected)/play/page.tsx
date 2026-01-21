@@ -1,13 +1,14 @@
 "use client";
 
-import { DeckSetupPanel } from '@/components/engine/DeckSetupPanel';
-import { PlayStateProvider, usePlayState } from '@/app/(protected)/play/PlayState';
+import { DeckSetupPanel } from '@/features/game/components/DeckSetupPanel';
+import { PlayProviders, usePlayGame, usePlaySetup } from '@/app/(protected)/play/PlayProviders';
 import { PlayActionsPanel } from '@/app/(protected)/play/components/PlayActionsPanel';
 import { PlayHeader } from '@/app/(protected)/play/components/PlayHeader';
 import { PlayMat } from '@/app/(protected)/play/components/PlayMat';
 
 function PlayPageContent() {
-  const { gameState, deckList, selectedDeckIds, setupLoading, canStart, handleSelectDeck, startGame } = usePlayState();
+  const { gameState } = usePlayGame();
+  const { deckList, selectedDeckIds, setupLoading, canStart, handleSelectDeck, startGame } = usePlaySetup();
 
   return (
     <div className="space-y-6">
@@ -42,8 +43,8 @@ function PlayPageContent() {
 
 export default function PlayPage() {
   return (
-    <PlayStateProvider>
+    <PlayProviders>
       <PlayPageContent />
-    </PlayStateProvider>
+    </PlayProviders>
   );
 }

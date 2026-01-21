@@ -1,9 +1,9 @@
 'use client';
 
-import { MatZone } from '@/components/engine/playmat/MatZone';
-import { ZoneCard } from '@/components/engine/ZoneCard';
-import { getObjectsByIds } from '@/components/engine/objectUtils';
-import { getEtbChoiceDetail, getTemporaryDetail, getTemporaryStatus } from '@/components/engine/objectStatus';
+import { MatZone } from './MatZone';
+import { ZoneCard } from '../ZoneCard';
+import { getObjectsByIds } from '../objectUtils';
+import { getEtbChoiceDetail, getTemporaryDetail, getTemporaryStatus } from '../objectStatus';
 import { EngineGameObjectSnapshot, EnginePlayerSnapshot, EngineCardMap } from '@/lib/engine';
 
 interface PlayerMatProps {

@@ -2,7 +2,7 @@
 
 import { DeckCardResponse, DeckCustomListResponse } from '@/lib/decks';
 import { CardType, DEFAULT_TYPE_LABELS } from '@/lib/utils/cardTypes';
-import { EditableTypeList } from '@/components/decks/EditableTypeList';
+import { EditableTypeList } from '../EditableTypeList';
 import { getCardsForType, findListForType } from '@/utils/deckBuilder/cardGrouping';
 import { CardData } from '@/components/cards/CardPreview';
 

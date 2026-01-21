@@ -19,7 +19,7 @@ import {
   AlternativeCostOption,
   OptionalCastCostOption,
 } from '@/lib/graphCosts';
-import { useActivationCosts, ActivationCostEntry } from '@/hooks/useActivationCosts';
+import { useActivationCosts, ActivationCostEntry } from '../hooks/useActivationCosts';
 
 /**
  * CastingContext - Spell casting flow management

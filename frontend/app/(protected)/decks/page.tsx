@@ -8,7 +8,7 @@ import { decks, DeckResponse, DeckDetailResponse } from '@/lib/decks';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { DeckCard } from '@/components/decks/DeckCard';
+import { DeckCard } from '@/features/decks/components/DeckCard';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { DeckListSkeleton } from '@/components/skeletons/DeckListSkeleton';
 import { BookOpen, SearchX } from 'lucide-react';

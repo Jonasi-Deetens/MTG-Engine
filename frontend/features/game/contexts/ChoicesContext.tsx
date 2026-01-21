@@ -2,8 +2,8 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { EngineGameStateSnapshot, EngineCardMap } from '@/lib/engine';
-import { useReplacementConflicts, ReplacementConflictEntry } from '@/hooks/useReplacementConflicts';
-import { useWardPayments } from '@/hooks/useWardPayments';
+import { useReplacementConflicts, ReplacementConflictEntry } from '../hooks/useReplacementConflicts';
+import { useWardPayments } from '../hooks/useWardPayments';
 import {
   buildEnterChoiceConfig,
   buildEnterChoiceDefaults,

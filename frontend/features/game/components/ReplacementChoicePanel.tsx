@@ -1,7 +1,7 @@
 'use client';
 
 import { Card } from '@/components/ui/Card';
-import { ReplacementConflictEntry } from '@/hooks/useReplacementConflicts';
+import { ReplacementConflictEntry } from '../hooks/useReplacementConflicts';
 import { useEffect } from 'react';
 
 interface ReplacementChoicePanelProps {

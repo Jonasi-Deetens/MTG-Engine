@@ -1,7 +1,7 @@
 'use client';
 
-import { TargetSelector } from '@/components/engine/TargetSelector';
-import { EffectTargetGroup } from '@/hooks/useEffectTargeting';
+import { TargetSelector } from '../TargetSelector';
+import { EffectTargetGroup } from '../../hooks/useEffectTargeting';
 import { EngineCardMap } from '@/lib/engine';
 
 /**

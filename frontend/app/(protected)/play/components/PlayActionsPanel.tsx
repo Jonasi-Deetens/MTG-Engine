@@ -1,62 +1,73 @@
 'use client';
 
-import { ActionsPanel } from '@/components/engine/ActionsPanel';
-import { CombatDamagePanel } from '@/components/engine/CombatDamagePanel';
-import { ReplacementChoicePanel } from '@/components/engine/ReplacementChoicePanel';
-import { StackView } from '@/components/engine/StackView';
-import { TurnStatusCard } from '@/components/engine/TurnStatusCard';
-import { usePlayState } from '@/app/(protected)/play/PlayState';
+import { useMemo } from 'react';
+import { ActionsPanel } from '@/features/game/components/LegacyActionsPanel';
+import { CombatDamagePanel } from '@/features/game/components/CombatDamagePanel';
+import { ReplacementChoicePanel } from '@/features/game/components/ReplacementChoicePanel';
+import { StackView } from '@/features/game/components/StackView';
+import { TurnStatusCard } from '@/features/game/components/TurnStatusCard';
+import {
+  usePlayGame,
+  usePlayCombat,
+  usePlayChoices,
+  usePlaySelection,
+  usePlayTurn,
+  usePlayTargeting,
+  usePlayCasting,
+} from '@/app/(protected)/play/PlayProviders';
 
 export function PlayActionsPanel() {
+  // Game state
+  const { gameState, loading, cardMap, runEngineAction } = usePlayGame();
+
+  // Turn state
   const {
-    gameState,
-    loading,
     currentPriority,
-    runEngineAction,
-    selectedHandId,
-    selectedCommandId,
-    selectedBattlefieldId,
-    preparedCast,
-    enterChoiceErrors,
-    manaPaymentStatus,
-    hasWardPaymentErrors,
-    hasActivationCostErrors,
-    hasAdditionalCastCostErrors,
-    hasAlternativeExtraCostErrors,
-    hasOptionalCostErrors,
     isMainPhase,
-    isPriorityActivePlayer,
     isDeclareAttackers,
     isDeclareBlockers,
     isCombatDamage,
+    isPriorityActivePlayer,
     isPriorityDefender,
-    hasActivatedAbility,
+    objectMap,
+  } = usePlayTurn();
+
+  // Selection state
+  const {
+    selectedHandId,
+    selectedCommandId,
+    selectedBattlefieldId,
+    selectedStackIndex,
+    setSelectedStackIndex,
+  } = usePlaySelection();
+
+  // Combat state
+  const {
     selectedAttackers,
     activeAttackerId,
     activeBlockerOrder,
     selectedDefenderId,
     defenderOptions,
     combatState,
-    cardMap,
-    objectMap,
-    handlePrepareCast,
-    handleFinalizeCast,
     blockersPayload,
     hasManualCombatChoices,
     combatDamageAssignments,
     setCombatDamageAssignments,
     combatDamagePass,
-    hasUnresolvedDamageReplacements,
-    unresolvedDamageReplacements,
     blockerErrors,
     blockerErrorMap,
-    selectedStackIndex,
-    setSelectedStackIndex,
     setSelectedDefenderId,
     setActiveAttackerId,
     setSelectedBlockerOrder,
+    defendingPlayerId,
+    defendingObjectId,
+  } = usePlayCombat();
+
+  // Choices state
+  const {
     enterChoiceConfig,
     enterChoices,
+    enterChoiceErrors,
     enterChoiceTargetOptions,
     setEnterChoices,
     modalChoiceConfig,
@@ -64,69 +75,27 @@ export function PlayActionsPanel() {
     modalChoiceErrors,
     handleToggleModalMode,
     entwineSelected,
-    isComplexCost,
-    manaPool,
-    manaPayment,
-    manaPaymentDetail,
-    costLabel,
-    autoPayMana,
-    setAutoPayMana,
-    setManaPaymentDetail,
-    setManaPayment,
-    activationCosts,
-    activationPayments,
-    activationPaymentDetails,
-    activationCostErrors,
-    setActivationPayments,
-    setActivationPaymentDetails,
-    additionalCastCosts,
-    additionalCastPayments,
-    additionalCastPaymentDetails,
-    additionalCastCostErrors,
-    setAdditionalCastPayments,
-    setAdditionalCastPaymentDetails,
-    alternativeExtraCostEntries,
-    alternativeExtraPayments,
-    alternativeExtraPaymentDetails,
-    alternativeExtraCostErrors,
-    setAlternativeExtraPayments,
-    setAlternativeExtraPaymentDetails,
-    alternativeCostOptions,
-    selectedAlternativeCostTag,
-    setSelectedAlternativeCostTag,
-    optionalCostOptions,
-    optionalCostSelections,
-    optionalCostErrors,
-    handleToggleOptionalCost,
-    handleUpdateOptionalCostCount,
-    optionalCostEntries,
-    optionalCostPayments,
-    optionalCostPaymentDetails,
-    optionalCostPaymentErrors,
-    setOptionalCostPayments,
-    setOptionalCostPaymentDetails,
-    conspireSelected,
-    conspireOptions,
-    conspireTaps,
-    conspireError,
-    handleToggleConspireTap,
-    spliceOptions,
-    spliceSelections,
-    handleToggleSpliceCard,
-    spliceCosts,
-    splicePayments,
-    splicePaymentDetails,
-    spliceCostErrors,
-    setSplicePayments,
-    setSplicePaymentDetails,
+    replacementConflicts,
+    replacementChoices,
+    highlightedReplacementKey,
+    setHighlightedReplacementKey,
+    setReplacementChoices,
+    hasUnresolvedDamageReplacements,
+    unresolvedDamageReplacements,
     autoPayWard,
     setAutoPayWard,
     wardTargets,
     wardPayments,
     wardPaymentDetails,
     wardPaymentErrors,
+    hasWardPaymentErrors,
+    wardPaymentsPayload,
     setWardPayments,
     setWardPaymentDetails,
+  } = usePlayChoices();
+
+  // Targeting state
+  const {
     targetHints,
     shouldUseStackTargets,
     stackSpellObjects,
@@ -143,23 +112,91 @@ export function PlayActionsPanel() {
     copyTargetsByEffectCount,
     copyEffectTargetGroups,
     targetSelectionErrors,
-    copyTargetsEnabled,
     copyTargetSelections,
     searchEntries,
     searchErrors,
     setCopyTargetSelections,
-    replacementConflicts,
-    replacementChoices,
-    highlightedReplacementKey,
-    setHighlightedReplacementKey,
-    setReplacementChoices,
-    defendingPlayerId,
-    defendingObjectId,
-    buildCastContext,
-    wardPaymentsPayload,
-    activationCostPaymentsPayload,
     stackTargetChecks,
-  } = usePlayState();
+    copySpellConfig,
+  } = usePlayTargeting();
+
+  // Casting state
+  const {
+    preparedCast,
+    manaPool,
+    manaPayment,
+    manaPaymentDetail,
+    manaPaymentStatus,
+    costLabel,
+    autoPayMana,
+    isComplexCost,
+    handlePrepareCast,
+    handleFinalizeCast,
+    setManaPayment,
+    setManaPaymentDetail,
+    setAutoPayMana,
+    buildCastContext,
+    activationCosts,
+    activationPayments,
+    activationPaymentDetails,
+    activationCostErrors,
+    hasActivationCostErrors,
+    activationCostPaymentsPayload,
+    setActivationPayments,
+    setActivationPaymentDetails,
+    additionalCastCosts,
+    additionalCastPayments,
+    additionalCastPaymentDetails,
+    additionalCastCostErrors,
+    hasAdditionalCastCostErrors,
+    setAdditionalCastPayments,
+    setAdditionalCastPaymentDetails,
+    alternativeCostOptions,
+    selectedAlternativeCostTag,
+    alternativeExtraCostEntries,
+    alternativeExtraPayments,
+    alternativeExtraPaymentDetails,
+    alternativeExtraCostErrors,
+    hasAlternativeExtraCostErrors,
+    setSelectedAlternativeCostTag,
+    setAlternativeExtraPayments,
+    setAlternativeExtraPaymentDetails,
+    optionalCostOptions,
+    optionalCostSelections,
+    optionalCostEntries,
+    optionalCostPayments,
+    optionalCostPaymentDetails,
+    optionalCostErrors,
+    optionalCostPaymentErrors,
+    hasOptionalCostErrors,
+    handleToggleOptionalCost,
+    handleUpdateOptionalCostCount,
+    setOptionalCostPayments,
+    setOptionalCostPaymentDetails,
+    conspireSelected,
+    conspireOptions,
+    conspireTaps,
+    conspireError,
+    handleToggleConspireTap,
+    spliceOptions,
+    spliceSelections,
+    spliceCosts,
+    splicePayments,
+    splicePaymentDetails,
+    spliceCostErrors,
+    handleToggleSpliceCard,
+    setSplicePayments,
+    setSplicePaymentDetails,
+  } = usePlayCasting();
+
+  // Derive copyTargetsEnabled from copySpellConfig or optional costs
+  const copyTargetsEnabled = useMemo(() => {
+    return copySpellConfig?.enabled || Object.values(optionalCostSelections).some((v) => v > 0);
+  }, [copySpellConfig?.enabled, optionalCostSelections]);
+
+  // Derive hasActivatedAbility
+  const selectedBattlefieldObject = gameState?.objects.find((obj) => obj.id === selectedBattlefieldId);
+  const hasActivatedAbility = selectedBattlefieldObject?.ability_graphs && selectedBattlefieldObject.ability_graphs.length > 0;
 
   if (!gameState) return null;
 
@@ -270,7 +307,7 @@ export function PlayActionsPanel() {
         onSelectDefender={(value) => setSelectedDefenderId(value)}
         onSelectActiveAttacker={setActiveAttackerId}
         onReorderBlockerUp={(index) =>
-          setSelectedBlockerOrder((prev) => {
+          setSelectedBlockerOrder((prev: Record<string, string[]>) => {
             if (!activeAttackerId) return prev;
             const order = prev[activeAttackerId] ?? [];
             if (index <= 0) return prev;
@@ -280,7 +317,7 @@ export function PlayActionsPanel() {
           })
         }
         onReorderBlockerDown={(index) =>
-          setSelectedBlockerOrder((prev) => {
+          setSelectedBlockerOrder((prev: Record<string, string[]>) => {
             if (!activeAttackerId) return prev;
             const order = prev[activeAttackerId] ?? [];
             if (index >= order.length - 1) return prev;
@@ -293,7 +330,7 @@ export function PlayActionsPanel() {
         enterChoices={enterChoices}
         enterChoiceTargetOptions={enterChoiceTargetOptions}
         onEnterChoiceChange={(choiceType, value) =>
-          setEnterChoices((prev) => ({ ...prev, [choiceType]: value }))
+          setEnterChoices((prev: Record<string, string>) => ({ ...prev, [choiceType]: value }))
         }
         modalChoiceConfig={modalChoiceConfig}
         selectedModalModes={selectedModalModes}
@@ -316,14 +353,14 @@ export function PlayActionsPanel() {
         activationPaymentDetails={activationPaymentDetails}
         activationCostErrors={activationCostErrors}
         onUpdateActivationPayment={(index, updater) =>
-          setActivationPayments((prev) => {
+          setActivationPayments((prev: any[]) => {
             const next = [...prev];
             next[index] = updater(next[index] ?? {});
             return next;
           })
         }
         onUpdateActivationPaymentDetail={(index, updater) =>
-          setActivationPaymentDetails((prev) => ({
+          setActivationPaymentDetails((prev: Record<number, any>) => ({
             ...prev,
             [index]: updater(prev[index] ?? { hybrid_choices: [], two_brid_choices: [], phyrexian_choices: [] }),
           }))
@@ -333,14 +370,14 @@ export function PlayActionsPanel() {
         additionalCastPaymentDetails={additionalCastPaymentDetails}
         additionalCastCostErrors={additionalCastCostErrors}
         onUpdateAdditionalCastPayment={(index, updater) =>
-          setAdditionalCastPayments((prev) => {
+          setAdditionalCastPayments((prev: any[]) => {
             const next = [...prev];
             next[index] = updater(next[index] ?? {});
             return next;
           })
         }
         onUpdateAdditionalCastPaymentDetail={(index, updater) =>
-          setAdditionalCastPaymentDetails((prev) => ({
+          setAdditionalCastPaymentDetails((prev: Record<number, any>) => ({
             ...prev,
             [index]: updater(prev[index] ?? { hybrid_choices: [], two_brid_choices: [], phyrexian_choices: [] }),
           }))
@@ -350,14 +387,14 @@ export function PlayActionsPanel() {
         alternativeExtraPaymentDetails={alternativeExtraPaymentDetails}
         alternativeExtraCostErrors={alternativeExtraCostErrors}
         onUpdateAlternativeExtraPayment={(index, updater) =>
-          setAlternativeExtraPayments((prev) => {
+          setAlternativeExtraPayments((prev: any[]) => {
             const next = [...prev];
             next[index] = updater(next[index] ?? {});
             return next;
           })
         }
         onUpdateAlternativeExtraPaymentDetail={(index, updater) =>
-          setAlternativeExtraPaymentDetails((prev) => ({
+          setAlternativeExtraPaymentDetails((prev: Record<number, any>) => ({
             ...prev,
             [index]: updater(prev[index] ?? { hybrid_choices: [], two_brid_choices: [], phyrexian_choices: [] }),
           }))
@@ -375,14 +412,14 @@ export function PlayActionsPanel() {
         optionalCostPaymentDetails={optionalCostPaymentDetails}
         optionalCostPaymentErrors={optionalCostPaymentErrors}
         onUpdateOptionalCostPayment={(index, updater) =>
-          setOptionalCostPayments((prev) => {
+          setOptionalCostPayments((prev: any[]) => {
             const next = [...prev];
             next[index] = updater(next[index] ?? {});
             return next;
           })
         }
         onUpdateOptionalCostPaymentDetail={(index, updater) =>
-          setOptionalCostPaymentDetails((prev) => ({
+          setOptionalCostPaymentDetails((prev: Record<number, any>) => ({
             ...prev,
             [index]: updater(prev[index] ?? { hybrid_choices: [], two_brid_choices: [], phyrexian_choices: [] }),
           }))
@@ -400,14 +437,14 @@ export function PlayActionsPanel() {
         splicePaymentDetails={splicePaymentDetails}
         spliceCostErrors={spliceCostErrors}
         onUpdateSplicePayment={(index, updater) =>
-          setSplicePayments((prev) => {
+          setSplicePayments((prev: any[]) => {
             const next = [...prev];
             next[index] = updater(next[index] ?? {});
             return next;
           })
         }
         onUpdateSplicePaymentDetail={(index, updater) =>
-          setSplicePaymentDetails((prev) => ({
+          setSplicePaymentDetails((prev: Record<number, any>) => ({
             ...prev,
             [index]: updater(prev[index] ?? { hybrid_choices: [], two_brid_choices: [], phyrexian_choices: [] }),
           }))
@@ -419,7 +456,7 @@ export function PlayActionsPanel() {
         wardPaymentDetails={wardPaymentDetails}
         wardPaymentErrors={wardPaymentErrors}
         onUpdateWardPayment={(objectId, index, updater) =>
-          setWardPayments((prev) => ({
+          setWardPayments((prev: Record<string, any>) => ({
             ...prev,
             [objectId]: (() => {
               const next = [...(prev[objectId] ?? [])];
@@ -429,7 +466,7 @@ export function PlayActionsPanel() {
           }))
         }
         onUpdateWardPaymentDetail={(objectId, updater) =>
-          setWardPaymentDetails((prev) => ({
+          setWardPaymentDetails((prev: Record<string, any>) => ({
             ...prev,
             [objectId]: updater(
               prev[objectId] ?? { hybrid_choices: [], two_brid_choices: [], phyrexian_choices: [] }
@@ -458,7 +495,7 @@ export function PlayActionsPanel() {
         searchChoiceEntries={searchEntries}
         searchChoiceErrors={searchErrors}
         onChangeCopyTarget={(index, objectIds, playerIds) =>
-          setCopyTargetSelections((prev) => {
+          setCopyTargetSelections((prev: Array<{ objectIds: string[]; playerIds: number[] }>) => {
             const next = [...prev];
             next[index] = { objectIds, playerIds };
             return next;
@@ -476,7 +513,7 @@ export function PlayActionsPanel() {
         assignments={combatDamageAssignments}
         damagePass={normalizedCombatDamagePass}
         onUpdateAssignment={(attackerId, targetId, value) =>
-          setCombatDamageAssignments((prev) => ({
+          setCombatDamageAssignments((prev: Record<string, Record<string, number>>) => ({
             ...prev,
             [attackerId]: { ...(prev[attackerId] ?? {}), [targetId]: value },
           }))
@@ -489,20 +526,20 @@ export function PlayActionsPanel() {
         highlightKey={highlightedReplacementKey}
         onNextHighlight={() => {
           if (unresolvedDamageReplacements.length === 0) return;
-          const keys = unresolvedDamageReplacements.map((entry) => entry.key);
+          const keys = unresolvedDamageReplacements.map((entry: { key: string }) => entry.key);
           const currentIndex = highlightedReplacementKey ? keys.indexOf(highlightedReplacementKey) : -1;
           const nextIndex = (currentIndex + 1) % keys.length;
           setHighlightedReplacementKey(keys[nextIndex]);
         }}
         onSelectChoice={(key, value) =>
           {
-            setReplacementChoices((prev) => ({
+            setReplacementChoices((prev: Record<string, string>) => ({
               ...prev,
               [key]: value,
             }));
             const remaining = unresolvedDamageReplacements
-              .map((entry) => entry.key)
-              .filter((entryKey) => entryKey !== key);
+              .map((entry: { key: string }) => entry.key)
+              .filter((entryKey: string) => entryKey !== key);
             setHighlightedReplacementKey(remaining[0] ?? null);
           }
         }

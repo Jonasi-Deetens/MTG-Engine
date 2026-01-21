@@ -2,9 +2,9 @@
 'use client';
 
 import { Card } from '@/components/ui/Card';
-import { ZoneCard } from '@/components/engine/ZoneCard';
-import { getObjectsByIds } from '@/components/engine/objectUtils';
-import { getTemporaryDetail, getTemporaryStatus, getEtbChoiceDetail } from '@/components/engine/objectStatus';
+import { ZoneCard } from './ZoneCard';
+import { getObjectsByIds } from './objectUtils';
+import { getTemporaryDetail, getTemporaryStatus, getEtbChoiceDetail } from './objectStatus';
 import { EngineGameObjectSnapshot, EnginePlayerSnapshot, EngineCardMap } from '@/lib/engine';
 
 interface PlayerZoneProps {

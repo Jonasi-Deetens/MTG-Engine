@@ -1,9 +1,9 @@
 'use client';
 
 import { Button } from '@/components/ui/Button';
-import { CombatDamagePanel } from '@/components/engine/CombatDamagePanel';
+import { CombatDamagePanel } from '../CombatDamagePanel';
 import { EngineCardMap, EngineCombatStateSnapshot } from '@/lib/engine';
-import { ReplacementConflictEntry } from '@/hooks/useReplacementConflicts';
+import { ReplacementConflictEntry } from '../../hooks/useReplacementConflicts';
 
 /**
  * CombatActions - Combat phase UI

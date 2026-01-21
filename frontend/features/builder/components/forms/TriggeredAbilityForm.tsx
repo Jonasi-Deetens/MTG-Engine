@@ -5,7 +5,7 @@
 import { useState, useEffect } from 'react';
 import { useBuilderStore, TriggeredAbility, Effect, StructuredCondition } from '@/store/builderStore';
 import { Button } from '@/components/ui/Button';
-import { ConditionBuilder } from '@/components/builder/ConditionBuilder';
+import { ConditionBuilder } from '../ConditionBuilder';
 import { EffectFields } from './EffectFields';
 import { filterValidEffects, sanitizeEffectsForSave } from './abilityFormHelpers';
 import { EFFECT_TYPE_OPTIONS } from '@/lib/effectTypes';

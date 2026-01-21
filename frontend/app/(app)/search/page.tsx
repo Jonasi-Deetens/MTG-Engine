@@ -12,12 +12,12 @@ import { Pagination } from '@/components/ui/Pagination';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SearchX } from 'lucide-react';
 import { cards } from '@/lib/api';
-import { useCardSearch } from '@/hooks/search/useCardSearch';
-import { useSearchFilters } from '@/hooks/search/useSearchFilters';
+import { useCardSearch } from '@/features/search/hooks/useCardSearch';
+import { useSearchFilters } from '@/features/search/hooks/useSearchFilters';
 import { applyFilters } from '@/utils/search/filtering';
 import { calculatePagination } from '@/utils/search/pagination';
-import { SearchHeader } from '@/components/search/SearchHeader';
-import { SearchFilters } from '@/components/search/SearchFilters';
+import { SearchHeader } from '@/features/search/components/SearchHeader';
+import { SearchFilters } from '@/features/search/components/SearchFilters';
 import { PAGE_SIZE } from '@/lib/constants/search';
 
 export default function SearchPage() {
