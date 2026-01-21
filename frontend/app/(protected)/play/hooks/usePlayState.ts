@@ -68,6 +68,9 @@ export function usePlayState() {
   const [autoPayWard, setAutoPayWard] = useState(true);
   const [selectedAlternativeCostTag, setSelectedAlternativeCostTag] = useState<string | null>(null);
   const [enterChoices, setEnterChoices] = useState<Record<string, string>>({});
+  
+  // Pending search choices from stack resolution
+  const [pendingSearchChoices, setPendingSearchChoices] = useState<import('@/features/game/hooks/useEngineActions').PendingSearchChoice[]>([]);
 
   // Game session persistence
   useGameSessionPersistence({
@@ -147,6 +150,7 @@ export function usePlayState() {
     setPriorityPlayer,
     setLoading,
     setError,
+    setPendingSearchChoices,
   });
 
   // Turn state
@@ -306,6 +310,7 @@ export function usePlayState() {
     searchEntries,
     searchTargetsByEffect,
     searchErrors,
+    hasPendingSearchChoices,
   } = useSearchChoices({
     gameState,
     selectedGraph: activeGraph,
@@ -333,6 +338,9 @@ export function usePlayState() {
     })(),
     modalConfig: modalChoiceConfig,
     selectedModes: selectedModalModes,
+    pendingSearchChoices,
+    // For stack items, don't show graph-based search UI - only show when engine returns pendingSearchChoices
+    isStackItem: selectedStackIndex !== null,
   });
 
   const hasEffectTargets = effectTargetGroups.length > 0 || searchEntries.length > 0;
@@ -868,6 +876,7 @@ export function usePlayState() {
     searchEntries,
     searchTargetsByEffect,
     searchErrors,
+    hasPendingSearchChoices,
     resolvedTargetObjectIds,
     resolvedTargetPlayerIds,
     targetSelectionErrors,

@@ -147,6 +147,7 @@ export interface PlayTargetingContextValue {
   searchEntries: any[];
   searchTargetsByEffect: Record<string, Record<string, any>>;
   searchErrors: string[];
+  hasPendingSearchChoices: boolean;
   copySpellConfig: { enabled: boolean; amount: number };
   copyTargetSelections: Array<{ objectIds: string[]; playerIds: number[] }>;
   copyTargetErrorsGlobal: string[];

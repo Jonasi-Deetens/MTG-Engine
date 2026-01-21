@@ -257,6 +257,8 @@ function useTargetingInternal({
     })(),
     modalConfig: modalChoiceConfig,
     selectedModes: selectedModalModes,
+    // For stack items, don't show graph-based search UI
+    isStackItem: selectedStackIndex !== null,
   });
 
   const hasEffectTargets = effectTargetGroups.length > 0 || searchEntries.length > 0;

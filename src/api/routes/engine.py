@@ -251,6 +251,7 @@ def _build_game_state(snapshot: GameStateSnapshot) -> GameState:
     game_state.choices = dict(snapshot.choices or {})
     game_state.pending_triggers = list(snapshot.pending_triggers or [])
     game_state.prepared_casts = dict(snapshot.prepared_casts or {})
+    game_state.pending_search_selections = dict(snapshot.pending_search_selections or {})
     return game_state
 
 
@@ -365,6 +366,7 @@ def _serialize_game_state(game_state: GameState) -> GameStateSnapshot:
         choices=dict(game_state.choices),
         pending_triggers=list(game_state.pending_triggers),
         prepared_casts=dict(game_state.prepared_casts),
+        pending_search_selections=dict(game_state.pending_search_selections),
     )
 
 
@@ -552,8 +554,39 @@ def execute_engine_action(
         player_id = payload.player_id
         if player_id is None:
             raise HTTPException(status_code=400, detail="player_id is required for pass_priority")
+        
+        # Debug: Check pending_search_selections before handling pass
+        print(f"[engine] pass_priority player={player_id} pending_search_selections_before={game_state.pending_search_selections}", flush=True)
+        
         turn_manager = TurnManager(game_state)
-        turn_manager.handle_player_pass(player_id)
+        
+        # Build provided context from payload
+        provided_context = None
+        if payload.targets_by_effect:
+            provided_context = {"targets_by_effect": payload.targets_by_effect}
+        
+        print(f"[engine] pass_priority player={player_id} targets_by_effect={payload.targets_by_effect}", flush=True)
+        
+        pass_result = turn_manager.handle_player_pass(player_id, provided_context)
+        
+        # Debug: Check pending_search_selections after handling pass
+        print(f"[engine] pass_priority pending_search_selections_after={game_state.pending_search_selections}", flush=True)
+        print(f"[engine] pass_priority result={pass_result}", flush=True)
+        
+        # Check if input is needed
+        if pass_result.get("status") == "needs_input":
+            response = EngineActionResponse(
+                game_state=_serialize_game_state(game_state),
+                result={
+                    "status": "needs_input",
+                    "current_priority": turn_manager.priority.current,
+                    "pending_search_choices": pass_result.get("pending_search_choices", []),
+                },
+                debug_log=game_state.debug_log,
+            )
+            # Don't snapshot - we're waiting for input
+            return response
+        
         response = EngineActionResponse(
             game_state=_serialize_game_state(game_state),
             result={"status": "passed", "current_priority": turn_manager.priority.current},

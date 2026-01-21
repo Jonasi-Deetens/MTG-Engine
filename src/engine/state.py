@@ -128,6 +128,7 @@ class GameState:
     choices: Dict[str, Any] = field(default_factory=dict)
     pending_triggers: List[Dict[str, Any]] = field(default_factory=list)
     prepared_casts: Dict[int, Dict[str, Any]] = field(default_factory=dict)
+    pending_search_selections: Dict[str, Dict[str, Any]] = field(default_factory=dict)  # node_id -> selections
     effect_timestamp_counter: int = 0
     replacement_effect_counter: int = 0
 

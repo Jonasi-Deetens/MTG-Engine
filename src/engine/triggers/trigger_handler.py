@@ -57,15 +57,25 @@ class TriggerHandler:
 
         created_items: List[StackItem] = []
         for entry in ordered:
+            # Build context first (needed for condition check)
+            context = self.build_context(entry, event)
+            
+            # Check if trigger conditions would pass - if not, skip this trigger
+            if not self._check_trigger_conditions(entry, context):
+                message = (
+                    f"[graph] trigger skipped (condition failed) source={entry.source_id} "
+                    f"controller={entry.controller_id} trigger={entry.trigger}"
+                )
+                self._game_state.log(message)
+                print(message, flush=True)
+                continue
+            
             message = (
                 f"[graph] trigger match source={entry.source_id} "
                 f"controller={entry.controller_id} trigger={entry.trigger}"
             )
             self._game_state.log(message)
             print(message, flush=True)
-
-            # Build context
-            context = self.build_context(entry, event)
 
             # Create pending trigger entry (dict format expected by turn_manager)
             pending_entry = {
@@ -97,11 +107,15 @@ class TriggerHandler:
     def match_triggers(self, event: "Event") -> List[RegisteredTrigger]:
         """Find all triggers that match an event."""
         matching = []
+        print(f"[graph] match_triggers event={event.type} registered_count={len(self._registry.registered)}", flush=True)
         for entry in self._registry.registered:
+            print(f"[graph] checking trigger source={entry.source_id} trigger={entry.trigger} trigger_data={entry.trigger_data}", flush=True)
             if entry.trigger != event.type:
                 continue
 
-            if entry.trigger == "card_enters":
+            # For card_enters and enters_battlefield, use specialized matching
+            # that handles cardType filtering properly (e.g., "aura" subtype check)
+            if entry.trigger in ("card_enters", "enters_battlefield"):
                 if not self._matches_card_enters(entry, event):
                     continue
             else:
@@ -325,6 +339,7 @@ class TriggerHandler:
         
         # Also check the actual object for types/subtypes (Aura might be in type_line but not types)
         obj_id = event.payload.get("object_id")
+        obj = None
         if obj_id:
             obj = self._game_state.objects.get(obj_id)
             if obj:
@@ -338,6 +353,11 @@ class TriggerHandler:
                             normalized_types.add(word.lower())
         
         card_type = str(card_type).lower()
+        
+        # Debug logging for trigger matching
+        print(f"[graph] _matches_card_enters trigger_source={entry.source_id} event_obj={obj_id} "
+              f"card_type={card_type} normalized_types={normalized_types} "
+              f"type_line={getattr(obj, 'type_line', None) if obj else None}", flush=True)
 
         if card_type == "permanent":
             return any(
@@ -387,3 +407,69 @@ class TriggerHandler:
                 if obj:
                     return obj
         return None
+
+    def _check_trigger_conditions(self, entry: RegisteredTrigger, context: "ResolveContext") -> bool:
+        """Check if the trigger's conditions would pass given the context.
+        
+        This prevents triggers from being queued if their conditions will fail,
+        avoiding unnecessary stack items that would just resolve and do nothing.
+        
+        Returns True if all conditions pass (or if there are no conditions).
+        """
+        from ..conditions import evaluate_condition
+        
+        graph = entry.graph
+        if not graph or not isinstance(graph, dict):
+            return True
+        
+        nodes = graph.get("nodes", [])
+        edges = graph.get("edges", [])
+        root_id = graph.get("rootNodeId")
+        
+        if not nodes or not root_id:
+            return True
+        
+        # Build edge map to find condition nodes that come right after the trigger
+        edge_map: Dict[str, List[str]] = {}
+        for edge in edges:
+            from_id = edge.get("from_") or edge.get("from")
+            to_id = edge.get("to")
+            if from_id and to_id:
+                if from_id not in edge_map:
+                    edge_map[from_id] = []
+                edge_map[from_id].append(to_id)
+        
+        # Find the root node (trigger node)
+        root_node = None
+        for node in nodes:
+            if node.get("id") == root_id:
+                root_node = node
+                break
+        
+        if not root_node:
+            return True
+        
+        # Check only CONDITION nodes that are direct children of the trigger
+        # These are "gating" conditions that should prevent the trigger from firing
+        children_ids = edge_map.get(root_id, [])
+        
+        for child_id in children_ids:
+            for node in nodes:
+                if node.get("id") == child_id and node.get("type") == "CONDITION":
+                    condition_data = node.get("data", {})
+                    if not condition_data:
+                        continue
+                    
+                    # Evaluate the condition
+                    result = evaluate_condition(self._game_state, condition_data, context)
+                    
+                    print(
+                        f"[graph] trigger condition check node={child_id} "
+                        f"type={condition_data.get('type')} result={result}",
+                        flush=True
+                    )
+                    
+                    if not result:
+                        return False
+        
+        return True

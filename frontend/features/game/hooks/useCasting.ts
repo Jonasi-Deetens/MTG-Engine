@@ -71,10 +71,13 @@ export const useCasting = ({
 
   const handlePrepareCast = async () => {
     if (!selectedCastId || currentPriority === null) return;
+    // Always send ability_graph so it gets stored on the object for trigger registration
+    // The backend will determine whether to run it as spell effects based on abilityType
+    const graph = abilityGraphs[cardMap[selectedCastId]?.card_id ?? ''];
     const response = await runEngineAction('prepare_cast', {
       player_id: currentPriority,
       object_id: selectedCastId,
-      ability_graph: abilityGraphs[cardMap[selectedCastId]?.card_id ?? ''],
+      ability_graph: graph,
       context: buildCastContext(selectedCastId, {
         wardAutoPay: autoPayWard,
         wardPayments,
@@ -101,10 +104,13 @@ export const useCasting = ({
   const handleFinalizeCast = async () => {
     if (!selectedCastId || !preparedCast || preparedCast.objectId !== selectedCastId) return;
     if (currentPriority === null) return;
+    // Always send ability_graph so it gets stored on the object for trigger registration
+    // The backend will determine whether to run it as spell effects based on abilityType
+    const graph = abilityGraphs[cardMap[selectedCastId]?.card_id ?? ''];
     const response = await runEngineAction('finalize_cast', {
       player_id: currentPriority,
       object_id: selectedCastId,
-      ability_graph: abilityGraphs[cardMap[selectedCastId]?.card_id ?? ''],
+      ability_graph: graph,
       context: buildCastContext(selectedCastId, {
         wardAutoPay: autoPayWard,
         wardPayments,

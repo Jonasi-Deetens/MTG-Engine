@@ -113,6 +113,7 @@ class GameStateSnapshot(BaseModel):
     choices: Dict[str, Any] = Field(default_factory=dict)
     pending_triggers: List[Dict[str, Any]] = Field(default_factory=list)
     prepared_casts: Dict[int, Dict[str, Any]] = Field(default_factory=dict)
+    pending_search_selections: Dict[str, Dict[str, Any]] = Field(default_factory=dict)
 
 
 class ResolveContextSnapshot(BaseModel):
@@ -170,6 +171,8 @@ class EngineActionRequest(BaseModel):
     contexts: List[ResolveContextSnapshot] = Field(default_factory=list)
     x_value: Optional[int] = None
     replacement_choices: Dict[str, str] = Field(default_factory=dict)
+    # Search selections for stack item resolution (used with pass_priority)
+    targets_by_effect: Dict[str, Dict[str, Any]] = Field(default_factory=dict)
 
 
 class EngineActionResponse(BaseModel):

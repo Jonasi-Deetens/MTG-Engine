@@ -33,6 +33,29 @@ const normalizeCardType = (value?: string) => {
   return mapping[lowered] ?? value;
 };
 
+/**
+ * Check if object matches card type (including subtypes like Aura, Equipment).
+ * "Aura" is a subtype found in type_line (e.g., "Enchantment — Aura"), not in types.
+ */
+const matchesCardTypeOrSubtype = (obj: EngineGameObjectSnapshot, cardType: string) => {
+  // Check types array first
+  if ((obj.types ?? []).includes(cardType)) return true;
+  
+  // Check type_line for subtypes (e.g., "Enchantment — Aura")
+  if (obj.type_line) {
+    const typeLine = obj.type_line.toLowerCase();
+    const cardTypeLower = cardType.toLowerCase();
+    // Parse type_line, split by em-dash or regular dash
+    const parts = typeLine.replace(/—/g, '-').replace(/–/g, '-').split('-');
+    for (const part of parts) {
+      for (const word of part.trim().split(/\s+/)) {
+        if (word === cardTypeLower) return true;
+      }
+    }
+  }
+  return false;
+};
+
 const compareManaValue = (value: number | null | undefined, op?: string, compareValue?: number | null) => {
   if (!op || compareValue === null || compareValue === undefined) return true;
   if (value === null || value === undefined) return false;
@@ -93,7 +116,7 @@ const getCompareNames = (
   candidates.forEach((id) => {
     const obj = gameState.objects.find((entry) => entry.id === id);
     if (!obj) return;
-    if (normalizedType && !(obj.types ?? []).includes(normalizedType)) return;
+    if (normalizedType && !matchesCardTypeOrSubtype(obj, normalizedType)) return;
     if (obj.name) names.add(obj.name);
   });
   return names;
@@ -141,7 +164,7 @@ export const filterSearchCandidates = (
   return pool.filter((id) => {
     const obj = gameState.objects.find((entry) => entry.id === id);
     if (!obj) return false;
-    if (cardType && !(obj.types ?? []).includes(cardType)) return false;
+    if (cardType && !matchesCardTypeOrSubtype(obj, cardType)) return false;
     if (!compareManaValue(obj.mana_value ?? null, compareOp, compareValue)) return false;
     if (compareNames.size > 0 && obj.name && compareNames.has(obj.name)) return false;
     return true;

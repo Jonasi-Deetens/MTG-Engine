@@ -70,6 +70,11 @@ def handle_sacrifice(resolver, effect: Dict[str, Any], context) -> Dict[str, Any
 
 
 def handle_search(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
+    """Handle search effect - find cards in a zone matching criteria.
+    
+    Search selections should be provided in context.targets_by_effect[node_id].search_results_by_player
+    before resolution. The stack resolver checks for and requests these choices before calling resolve.
+    """
     zone = effect.get("zone", ZONE_LIBRARY)
     player_ids = resolve_effect_players(resolver.game_state, context, effect, context.controller_id)
     if not player_ids:
@@ -88,12 +93,14 @@ def handle_search(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
         filtered_pool = _filter_search_pool(resolver, effect, context, player_id, pool)
         temp_context = ResolveContext(targets=merged_targets)
         found_ids = resolve_target_list_for_player(temp_context, "search_results", player_id)
+        
         message = (
             f"[graph] search player={player_id} pool={len(pool)} "
             f"filtered={len(filtered_pool)} found={found_ids}"
         )
         resolver.game_state.log(message)
         print(message, flush=True)
+        
         # Filter found_ids against filtered_pool, but fall back to pool check when
         # filtered_pool is empty (e.g. no GameObjects exist, only IDs)
         if filtered_pool:
@@ -104,19 +111,52 @@ def handle_search(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
             "player_id": player_id,
             "zone": zone,
             "found": valid_found,
+            "filtered_pool": filtered_pool,  # Include for frontend reference
         })
     return {"type": "search", "results": results} if len(results) > 1 else {"type": "search", **results[0]}
 
 
+def _matches_card_type_or_subtype(obj, card_type: str) -> bool:
+    """Check if object matches the card type (including subtypes like Aura, Equipment)."""
+    if not card_type:
+        return True
+    # Check types list
+    if card_type in (obj.types or []):
+        return True
+    # Check type_line for subtypes (e.g., "Enchantment — Aura" contains "Aura")
+    if obj.type_line:
+        type_line_lower = obj.type_line.lower()
+        card_type_lower = card_type.lower()
+        # Parse type_line for all words including subtypes
+        for part in type_line_lower.replace("—", "-").replace("–", "-").split("-"):
+            for word in part.strip().split():
+                if word == card_type_lower:
+                    return True
+    return False
+
+
 def _filter_search_pool(
-    resolver,
+    resolver_or_game_state,
     effect: Dict[str, Any],
     context,
     player_id: int,
     pool: List[str],
 ) -> List[str]:
+    """Filter search pool based on effect criteria.
+    
+    Args:
+        resolver_or_game_state: Either an EffectResolver (with .game_state) or GameState directly
+        effect: The search effect configuration
+        context: ResolveContext with triggering info
+        player_id: The searching player's ID
+        pool: List of object IDs to search through
+    """
     if not pool:
         return []
+    
+    # Support both resolver.game_state and game_state directly
+    game_state = getattr(resolver_or_game_state, 'game_state', None) or getattr(resolver_or_game_state, '_gs', None) or resolver_or_game_state
+    
     card_type = effect.get("cardType")
     if isinstance(card_type, str) and card_type.lower() == "any":
         card_type = None
@@ -134,7 +174,7 @@ def _filter_search_pool(
             source_id = context.triggering_aura_id or context.triggering_source_id
         elif compare_source == "triggering_spell":
             source_id = context.triggering_spell_id or context.triggering_source_id
-        source_obj = resolver.game_state.objects.get(source_id) if source_id else None
+        source_obj = game_state.objects.get(source_id) if source_id else None
         compare_value = source_obj.mana_value if source_obj else None
     compare_value = compare_value if isinstance(compare_value, int) else None
 
@@ -156,7 +196,7 @@ def _filter_search_pool(
     compare_names: set[str] = set()
     if different_config:
         compare_candidates: List[str] = []
-        player = resolver.game_state.get_player(player_id)
+        player = game_state.get_player(player_id)
         if compare_against_source:
             source_id = None
             if compare_against_source == "triggering_source":
@@ -175,22 +215,22 @@ def _filter_search_pool(
             if compare_against_zone == "controlled":
                 compare_candidates = [
                     obj.id
-                    for obj in resolver.game_state.objects.values()
+                    for obj in game_state.objects.values()
                     if obj.zone == ZONE_BATTLEFIELD and obj.controller_id == player_id
                 ]
             elif compare_against_zone == "battlefield":
                 compare_candidates = [
                     obj.id
-                    for obj in resolver.game_state.objects.values()
+                    for obj in game_state.objects.values()
                     if obj.zone == ZONE_BATTLEFIELD
                 ]
             elif compare_against_zone in ("graveyard", "hand", "library", "exile"):
                 compare_candidates = list(getattr(player, compare_against_zone, []))
         for obj_id in compare_candidates:
-            obj = resolver.game_state.objects.get(obj_id)
+            obj = game_state.objects.get(obj_id)
             if not obj:
                 continue
-            if compare_against_type and compare_against_type not in (obj.types or []):
+            if compare_against_type and not _matches_card_type_or_subtype(obj, compare_against_type):
                 continue
             if obj.name:
                 compare_names.add(obj.name)
@@ -214,10 +254,10 @@ def _filter_search_pool(
 
     filtered: List[str] = []
     for obj_id in pool:
-        obj = resolver.game_state.objects.get(obj_id)
+        obj = game_state.objects.get(obj_id)
         if not obj:
             continue
-        if card_type and card_type not in (obj.types or []):
+        if card_type and not _matches_card_type_or_subtype(obj, card_type):
             continue
         if not _compare(obj.mana_value):
             continue
@@ -297,7 +337,10 @@ def handle_attach(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
     from_effect = effect.get("fromEffect")
     card_ids = []
     if from_effect is not None and from_effect < len(context.previous_results):
-        card_ids = context.previous_results[from_effect].get("found", [])
+        prev_result = context.previous_results[from_effect]
+        print(f"[graph] attach from_effect={from_effect} prev_result={prev_result}", flush=True)
+        # Check both "found" (from search) and "cards" (from put_onto_battlefield)
+        card_ids = prev_result.get("found", []) or prev_result.get("cards", [])
     elif effect.get("attachSource"):
         if temp_context.source_id:
             card_ids = [temp_context.source_id]

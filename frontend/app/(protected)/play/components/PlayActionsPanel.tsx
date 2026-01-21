@@ -115,6 +115,8 @@ export function PlayActionsPanel() {
     copyTargetSelections,
     searchEntries,
     searchErrors,
+    searchTargetsByEffect,
+    hasPendingSearchChoices,
     setCopyTargetSelections,
     stackTargetChecks,
     copySpellConfig,
@@ -215,7 +217,14 @@ export function PlayActionsPanel() {
         activePlayerIndex={gameState.turn.active_player_index}
         currentPriority={currentPriority}
         loading={loading}
-        onPassPriority={() => runEngineAction('pass_priority', { player_id: currentPriority })}
+        onPassPriority={() => {
+          // Include search selections when there are any search entries (pending or from graph)
+          const payload: Record<string, any> = { player_id: currentPriority };
+          if (Object.keys(searchTargetsByEffect).length > 0) {
+            payload.targets_by_effect = searchTargetsByEffect;
+          }
+          runEngineAction('pass_priority', payload);
+        }}
         onAdvanceStep={() => runEngineAction('advance_turn')}
       />
 

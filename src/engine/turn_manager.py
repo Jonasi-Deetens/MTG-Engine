@@ -110,41 +110,117 @@ class TurnManager:
         self._set_phase_step(Phase.BEGINNING, Step.UNTAP)
         self._begin_step()
 
-    def handle_player_pass(self, player_id: int) -> None:
+    def handle_player_pass(self, player_id: int, provided_context: dict = None) -> dict:
+        """Handle a player passing priority.
+        
+        Args:
+            player_id: The player passing priority
+            provided_context: Optional context with choices like search_results
+        
+        Returns:
+            Dict with status and any pending choices needed
+        """
         self._sync_priority(self.priority.current, preserve_pass_state=True)
         if player_id != self.priority.current:
-            return
+            return {"status": "not_your_priority"}
         if self.state.step == Step.DECLARE_ATTACKERS:
             combat_state = self.state.combat_state
             if not combat_state or not combat_state.attackers_declared:
-                return
+                return {"status": "attackers_not_declared"}
         if self.state.step == Step.DECLARE_BLOCKERS:
             combat_state = self.state.combat_state
             if not combat_state or not combat_state.blockers_declared:
-                return
+                return {"status": "blockers_not_declared"}
+
+        # Store any provided selections BEFORE checking all_passed
+        # This ensures selections are saved even when passing priority early
+        if provided_context and "targets_by_effect" in provided_context:
+            for node_id, targets in provided_context["targets_by_effect"].items():
+                if node_id not in self.gs.pending_search_selections:
+                    self.gs.pending_search_selections[node_id] = {}
+                # Merge in the new selections
+                for key, value in targets.items():
+                    if key == "search_results_by_player" and isinstance(value, dict):
+                        if "search_results_by_player" not in self.gs.pending_search_selections[node_id]:
+                            self.gs.pending_search_selections[node_id]["search_results_by_player"] = {}
+                        self.gs.pending_search_selections[node_id]["search_results_by_player"].update(value)
+                    else:
+                        self.gs.pending_search_selections[node_id][key] = value
+            print(f"[graph] stored pending_search_selections: {self.gs.pending_search_selections}", flush=True)
 
         all_passed = self.priority.pass_priority()
         self._persist_priority()
+        print(f"[graph] handle_player_pass: all_passed={all_passed}", flush=True)
         if not all_passed:
-            return
+            return {"status": "passed"}
+        
+        pending_count = len(self.gs.pending_triggers)
+        print(f"[graph] handle_player_pass: checking pending_triggers count={pending_count}", flush=True)
         if self._place_pending_triggers():
             self._sync_priority(self.current_active_player_id())
-            return
+            print(f"[graph] handle_player_pass: triggers placed, stack_size={len(self.gs.stack.items)}", flush=True)
+            return {"status": "triggers_placed"}
 
         if self.gs.stack.is_empty():
             self._advance_phase_step()
-            return
+            return {"status": "phase_advanced"}
 
+        print(f"[graph] handle_player_pass: calling resolve_top, stack_size={len(self.gs.stack.items)}", flush=True)
+        
+        # Build combined context from stored selections and provided context
+        combined_context = {"targets_by_effect": dict(self.gs.pending_search_selections)}
+        if provided_context and "targets_by_effect" in provided_context:
+            for node_id, targets in provided_context["targets_by_effect"].items():
+                if node_id not in combined_context["targets_by_effect"]:
+                    combined_context["targets_by_effect"][node_id] = {}
+                combined_context["targets_by_effect"][node_id].update(targets)
+        
+        print(f"[graph] combined_context for resolve_top: {combined_context}", flush=True)
+        
         # Delegate stack resolution to StackResolver
-        self._stack_resolver.resolve_top()
+        result = self._stack_resolver.resolve_top(combined_context if combined_context["targets_by_effect"] else None)
+        
+        # Check if input is needed before resolution can proceed
+        if result and result.needs_input:
+            # Reset pass state and give priority to the player who needs to make the choice
+            self.priority._pass_count = 0
+            # Find the first player who needs to make a choice and give them priority
+            if result.pending_search_choices:
+                choice_player = result.pending_search_choices[0].player_id
+                print(f"[graph] needs_input: giving priority to player {choice_player}", flush=True)
+                self._sync_priority(choice_player)
+            self._persist_priority()
+            print(f"[graph] needs_input: priority_current_index={self.state.priority_current_index}", flush=True)
+            return {
+                "status": "needs_input",
+                "pending_search_choices": [
+                    {
+                        "node_id": choice.node_id,
+                        "player_id": choice.player_id,
+                        "zone": choice.zone,
+                        "options": choice.options,
+                        "min_selections": choice.min_selections,
+                        "max_selections": choice.max_selections,
+                        "source_id": choice.source_id,
+                    }
+                    for choice in result.pending_search_choices
+                ],
+            }
+        
+        # Clear pending search selections after successful resolution
+        self.gs.pending_search_selections.clear()
+        
+        print(f"[graph] handle_player_pass: resolved, stack_size_after={len(self.gs.stack.items)}", flush=True)
+        
         self.gs.clear_prepared_casts()
         apply_continuous_effects(self.gs)
         apply_state_based_actions(self.gs)
         self._ensure_active_player()
         if self._place_pending_triggers():
             self._sync_priority(self.current_active_player_id())
-            return
+            return {"status": "triggers_placed"}
         self._sync_priority(self.current_active_player_id())
+        return {"status": "resolved"}
 
     def after_player_action(self, player_id: int) -> None:
         if player_id != self.priority.current:

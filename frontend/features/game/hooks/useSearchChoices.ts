@@ -3,6 +3,7 @@ import { EngineGameStateSnapshot } from '@/lib/engine';
 import { isEffectActiveForModes, ModalChoiceConfig } from '@/lib/modalChoices';
 import { formatEffect } from '@/lib/effectTypes';
 import { filterSearchCandidates, resolvePlayerIdsForEffect } from '@/lib/searchFilters';
+import type { PendingSearchChoice } from './useEngineActions';
 
 type SearchChoiceEntry = {
   id: string;
@@ -23,6 +24,8 @@ export const useSearchChoices = ({
   context,
   modalConfig,
   selectedModes = [],
+  pendingSearchChoices = [],
+  isStackItem = false,
 }: {
   gameState: EngineGameStateSnapshot | null;
   selectedGraph: any;
@@ -36,6 +39,8 @@ export const useSearchChoices = ({
   };
   modalConfig?: ModalChoiceConfig | null;
   selectedModes?: string[];
+  pendingSearchChoices?: PendingSearchChoice[];
+  isStackItem?: boolean;  // True when viewing a stack item (not casting)
 }) => {
   const [selections, setSelections] = useState<Record<string, string[]>>({});
 
@@ -48,7 +53,8 @@ export const useSearchChoices = ({
     });
   }, [modalConfig, selectedGraph, selectedModes]);
 
-  const searchEntries = useMemo<SearchChoiceEntry[]>(() => {
+  // Build entries from selectedGraph (for spell casting)
+  const graphEntries = useMemo<SearchChoiceEntry[]>(() => {
     if (!gameState || searchNodes.length === 0) return [];
     const entries: SearchChoiceEntry[] = [];
     searchNodes.forEach((node: any) => {
@@ -89,6 +95,54 @@ export const useSearchChoices = ({
     return entries;
   }, [context, currentPriority, gameState, searchNodes, selections]);
 
+  // Build entries from pending search choices (for stack resolution)
+  const pendingEntries = useMemo<SearchChoiceEntry[]>(() => {
+    console.log('[useSearchChoices] pendingSearchChoices:', pendingSearchChoices, 'currentPriority:', currentPriority);
+    if (!gameState || pendingSearchChoices.length === 0) return [];
+    return pendingSearchChoices.map((choice) => {
+      const key = `pending:${choice.node_id}:${choice.player_id}`;
+      const selected = selections[key] ?? [];
+      const source = choice.source_id ? gameState.objects.find((o) => o.id === choice.source_id) : null;
+      const label = source?.name 
+        ? `Search for ${source.name}'s ability` 
+        : `Search ${choice.zone}`;
+      return {
+        id: key,
+        nodeId: choice.node_id,
+        label: `${label} (Player ${choice.player_id + 1})`,
+        playerId: choice.player_id,
+        zone: choice.zone,
+        candidates: choice.options.map((opt) => ({ id: opt.id, label: opt.name })),
+        selectedIds: selected,
+        maxSelections: choice.max_selections,
+        onChange: (ids: string[]) =>
+          setSelections((prev) => ({
+            ...prev,
+            [key]: ids,
+          })),
+      };
+    });
+  }, [gameState, pendingSearchChoices, selections]);
+
+  // Combine entries - pending choices take priority
+  // For pending choices, only show entries for the current player (they're the only one who can choose)
+  // For stack items, don't show graph-based entries - only show when engine returns pendingSearchChoices
+  const searchEntries = useMemo(() => {
+    console.log('[useSearchChoices] computing searchEntries: pendingEntries.length=', pendingEntries.length, 'currentPriority=', currentPriority, 'isStackItem=', isStackItem);
+    if (pendingEntries.length > 0) {
+      // Only show pending choices that belong to the current priority player
+      const filtered = pendingEntries.filter((entry) => entry.playerId === currentPriority);
+      console.log('[useSearchChoices] filtered pendingEntries:', filtered.length, 'entries for player', currentPriority);
+      return filtered;
+    }
+    // For stack items (already on stack), don't show graph-based search UI
+    // Search choices for stack items come from pendingSearchChoices only
+    if (isStackItem) {
+      return [];
+    }
+    return graphEntries;
+  }, [pendingEntries, graphEntries, currentPriority, isStackItem]);
+
   const searchTargetsByEffect = useMemo(() => {
     const result: Record<string, Record<string, any>> = {};
     searchEntries.forEach((entry) => {
@@ -119,10 +173,14 @@ export const useSearchChoices = ({
     return errors;
   }, [searchEntries]);
 
+  // Flag to indicate if the current player has pending search choices
+  const hasPendingSearchChoices = searchEntries.length > 0 && pendingEntries.length > 0;
+
   return {
     searchEntries,
     searchTargetsByEffect,
     searchErrors,
+    hasPendingSearchChoices,
   };
 };
 

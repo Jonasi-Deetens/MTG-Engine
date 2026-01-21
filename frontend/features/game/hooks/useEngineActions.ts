@@ -1,6 +1,19 @@
 import { useCallback } from 'react';
 import { engineApi, EngineActionRequest, EngineActionResponse, EngineGameStateSnapshot } from '@/lib/engine';
 
+/**
+ * Pending search choice from the engine when stack resolution needs player input.
+ */
+export interface PendingSearchChoice {
+  node_id: string;
+  player_id: number;
+  zone: string;
+  options: Array<{ id: string; name: string; mana_value?: number; type_line?: string }>;
+  min_selections: number;
+  max_selections: number;
+  source_id?: string;
+}
+
 interface UseEngineActionsArgs {
   gameState: EngineGameStateSnapshot | null;
   gameId: string | null;
@@ -9,6 +22,7 @@ interface UseEngineActionsArgs {
   setPriorityPlayer: React.Dispatch<React.SetStateAction<number | null>>;
   setLoading: React.Dispatch<React.SetStateAction<boolean>>;
   setError: React.Dispatch<React.SetStateAction<string | null>>;
+  setPendingSearchChoices?: React.Dispatch<React.SetStateAction<PendingSearchChoice[]>>;
 }
 
 export const useEngineActions = ({
@@ -19,6 +33,7 @@ export const useEngineActions = ({
   setPriorityPlayer,
   setLoading,
   setError,
+  setPendingSearchChoices,
 }: UseEngineActionsArgs) => {
   const runEngineAction = useCallback(
     async (
@@ -46,6 +61,15 @@ export const useEngineActions = ({
           const current = alivePlayers[response.game_state.turn.priority_current_index];
           setPriorityPlayer(current?.id ?? null);
         }
+        
+        // Handle pending search choices from stack resolution
+        if (response.result?.status === 'needs_input' && response.result?.pending_search_choices) {
+          setPendingSearchChoices?.(response.result.pending_search_choices);
+        } else {
+          // Clear pending choices when resolution proceeds
+          setPendingSearchChoices?.([]);
+        }
+        
         return response;
       } catch (err: any) {
         setError(err?.data?.detail || err?.message || 'Engine action failed');
@@ -54,7 +78,7 @@ export const useEngineActions = ({
         setLoading(false);
       }
     },
-    [gameId, gameState, replacementChoices, setError, setGameState, setLoading, setPriorityPlayer]
+    [gameId, gameState, replacementChoices, setError, setGameState, setLoading, setPriorityPlayer, setPendingSearchChoices]
   );
 
   return { runEngineAction };
