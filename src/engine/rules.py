@@ -397,6 +397,9 @@ def cast_spell(
                 controller_id=player_id,
             )
         )
+        message = f"[graph] cast_spell pushed ability_graph source={obj.id}"
+        game_state.log(message)
+        print(message, flush=True)
     else:
         game_state.stack.push(
             StackItem(
@@ -405,6 +408,9 @@ def cast_spell(
                 controller_id=player_id,
             )
         )
+        message = f"[graph] cast_spell pushed spell source={obj.id}"
+        game_state.log(message)
+        print(message, flush=True)
     if copy_count > 0:
         push_spell_copies(
             game_state,

@@ -88,6 +88,12 @@ def handle_search(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
         filtered_pool = _filter_search_pool(resolver, effect, context, player_id, pool)
         temp_context = ResolveContext(targets=merged_targets)
         found_ids = resolve_target_list_for_player(temp_context, "search_results", player_id)
+        message = (
+            f"[graph] search player={player_id} pool={len(pool)} "
+            f"filtered={len(filtered_pool)} found={found_ids}"
+        )
+        resolver.game_state.log(message)
+        print(message, flush=True)
         results.append({
             "player_id": player_id,
             "zone": zone,
@@ -234,11 +240,35 @@ def handle_put_onto_battlefield(resolver, effect: Dict[str, Any], context) -> Di
             if isinstance(enter_choices, dict):
                 resolver.game_state._apply_enter_choices(obj, enter_choices)
         resolver.game_state.move_object(obj_id, ZONE_BATTLEFIELD)
+    message = f"[graph] put_onto_battlefield cards={card_ids}"
+    resolver.game_state.log(message)
+    print(message, flush=True)
     return {"type": "put_onto_battlefield", "cards": card_ids}
 
 
 def handle_attach(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
-    attach_to = resolve_object_id(context, "attach_to", effect.get("attachTo"))
+    merged_targets = dict(context.targets or {})
+    targets_by_effect = getattr(context, "targets_by_effect", None)
+    if isinstance(targets_by_effect, dict):
+        node_id = effect.get("_node_id")
+        override = targets_by_effect.get(node_id) if node_id else None
+        if isinstance(override, dict):
+            merged_targets.update(override)
+    temp_context = ResolveContext(
+        source_id=context.source_id,
+        controller_id=context.controller_id,
+        triggering_source_id=context.triggering_source_id,
+        triggering_aura_id=context.triggering_aura_id,
+        triggering_spell_id=context.triggering_spell_id,
+        targets=merged_targets,
+        targets_by_effect=context.targets_by_effect,
+        required_targets_by_effect=context.required_targets_by_effect,
+        distinct_targets_by_effect=context.distinct_targets_by_effect,
+        min_targets_by_effect=context.min_targets_by_effect,
+        choices=context.choices,
+        previous_results=context.previous_results,
+    )
+    attach_to = resolve_object_id(temp_context, "attach_to", effect.get("attachTo"))
     if attach_to in ("self", "source"):
         attach_to = context.source_id
     elif attach_to == "triggering_source":
@@ -253,18 +283,18 @@ def handle_attach(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
         else:
             attach_to = aura_id
     elif isinstance(attach_to, str) and attach_to.startswith("target_"):
-        attach_to = resolve_object_id(context, "target", attach_to)
+        attach_to = resolve_object_id(temp_context, "target", attach_to)
     if not attach_to:
-        attach_to = resolve_object_id(context, "target", None)
+        attach_to = resolve_object_id(temp_context, "target", None)
     from_effect = effect.get("fromEffect")
     card_ids = []
     if from_effect is not None and from_effect < len(context.previous_results):
         card_ids = context.previous_results[from_effect].get("found", [])
     elif effect.get("attachSource"):
-        if context.source_id:
-            card_ids = [context.source_id]
+        if temp_context.source_id:
+            card_ids = [temp_context.source_id]
     else:
-        target_id = resolve_object_id(context, "target", None)
+        target_id = resolve_object_id(temp_context, "target", None)
         if target_id:
             card_ids = [target_id]
     attached = resolver.game_state.objects.get(attach_to) if attach_to else None
@@ -287,6 +317,9 @@ def handle_attach(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
             continue
         obj.attached_to = attach_to
         results.append({"object_id": obj.id, "status": "attached"})
+    message = f"[graph] attach cards={card_ids} attach_to={attach_to} results={results}"
+    resolver.game_state.log(message)
+    print(message, flush=True)
     return {"type": "attach", "cards": card_ids, "attach_to": attach_to, "results": results}
 
 

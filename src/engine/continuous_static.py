@@ -170,6 +170,12 @@ def gather_static_layer_effects(game_state: GameState, effect_types: Optional[se
                     effect = build_static_effect(payload, source, game_state)
                     if not effect:
                         continue
+                    message = (
+                        f"[graph] static_effect source={source.id} "
+                        f"target={target.id} effect={payload.get('type')}"
+                    )
+                    game_state.log(message)
+                    print(message, flush=True)
                     by_object.setdefault(target.id, []).append(effect)
     for effects in by_object.values():
         effects.sort(key=effect_sort_key)

@@ -80,6 +80,9 @@ class AbilityRegistry:
             self._unregister_object(obj_id)
 
     def _handle_event(self, event: Event) -> None:
+        message = f"[graph] event {event.type} payload={event.payload}"
+        self.game_state.log(message)
+        print(message, flush=True)
         matching = []
         for entry in self.registered:
             if entry.trigger != event.type:
@@ -94,6 +97,12 @@ class AbilityRegistry:
                     continue
             matching.append(entry)
         for entry in self._order_triggers(matching, event):
+            message = (
+                f"[graph] trigger match source={entry.source_id} "
+                f"controller={entry.controller_id} trigger={entry.trigger}"
+            )
+            self.game_state.log(message)
+            print(message, flush=True)
             event_obj = None
             obj_id = event.payload.get("object_id")
             if obj_id:
@@ -120,6 +129,9 @@ class AbilityRegistry:
                 },
                 controller_id=entry.controller_id,
             ))
+            message = f"[graph] pushed ability_graph source={entry.source_id} trigger={entry.trigger}"
+            self.game_state.log(message)
+            print(message, flush=True)
 
     def _order_triggers(self, entries: List[RegisteredAbility], event: Event) -> List[RegisteredAbility]:
         if len(entries) <= 1:

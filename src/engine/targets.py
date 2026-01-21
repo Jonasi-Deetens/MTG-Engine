@@ -145,6 +145,8 @@ def get_target_issues(game_state: GameState, context: ResolveContext) -> List[st
 
 
 def _normalize_targets_for_targets(game_state: GameState, context: ResolveContext, targets: Dict[str, Any]) -> None:
+    if "attach_to" in targets and "target" not in targets and "targets" not in targets:
+        targets["target"] = targets.get("attach_to")
     if isinstance(targets.get("targets"), list):
         legal = [target_id for target_id in targets["targets"] if _is_legal_object_target(game_state, context, target_id)]
         targets["targets"] = legal

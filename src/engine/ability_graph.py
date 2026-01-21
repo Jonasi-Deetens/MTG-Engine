@@ -109,6 +109,8 @@ class AbilityGraphRuntimeAdapter:
         )
 
     def resolve(self, graph: Dict[str, Any], context: ResolveContext) -> Dict[str, Any]:
+        self.game_state.log(f"[graph] resolve ability_graph root={graph.get('rootNodeId')}")
+        print(f"[graph] resolve ability_graph root={graph.get('rootNodeId')}", flush=True)
         runtime_ability = self.build_runtime(graph)
         if not evaluate_conditions(self.game_state, runtime_ability.conditions, context):
             return {"status": "condition_failed", "effects": []}

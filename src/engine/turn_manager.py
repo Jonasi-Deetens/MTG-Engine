@@ -114,6 +114,8 @@ class TurnManager:
             return
 
         resolved_item = self.gs.stack.pop()
+        self.gs.log(f"[graph] resolving stack item kind={resolved_item.kind} payload={resolved_item.payload}")
+        print(f"[graph] resolving stack item kind={resolved_item.kind} payload={resolved_item.payload}", flush=True)
         if resolved_item.kind == "spell":
             payload = resolved_item.payload or {}
             obj_id = payload.get("object_id")
@@ -191,6 +193,10 @@ class TurnManager:
             from engine.targets import normalize_targets, validate_targets
             from engine.choices import validate_enter_choices, validate_modal_choices
             try:
+                node_count = len(graph.get("nodes", [])) if isinstance(graph, dict) else 0
+                message = f"[graph] ability_graph resolve start nodes={node_count} copy={is_copy}"
+                self.gs.log(message)
+                print(message, flush=True)
                 if context.source_id is None and payload.get("copy_of"):
                     context.source_id = payload.get("copy_of")
                 normalize_targets(self.gs, context)
@@ -200,6 +206,9 @@ class TurnManager:
                     validate_enter_choices(graph, context.__dict__)
                     validate_modal_choices(graph, context.__dict__)
                     adapter.resolve(graph, context)
+                message = "[graph] ability_graph resolve done"
+                self.gs.log(message)
+                print(message, flush=True)
                 source_id = payload.get("source_object_id")
                 destination_zone = payload.get("destination_zone")
                 if source_id and destination_zone and not is_copy:
@@ -209,6 +218,10 @@ class TurnManager:
                         if context.choices.get("buyback_paid") and resolved_destination == ZONE_GRAVEYARD:
                             resolved_destination = ZONE_HAND
                         if resolved_destination == ZONE_BATTLEFIELD:
+                            if graph and not obj.ability_graphs:
+                                obj.ability_graphs = [graph]
+                                if not obj.base_ability_graphs:
+                                    obj.base_ability_graphs = [graph]
                             enter_copy_of = context.choices.get("enter_copy_of")
                             if enter_copy_of:
                                 self.gs._apply_enter_copy(obj, enter_copy_of)
@@ -224,6 +237,9 @@ class TurnManager:
                     ))
                 self.gs.log("Resolved ability graph")
             except ValueError as exc:
+                message = f"[graph] ability_graph resolve error: {exc}"
+                self.gs.log(message)
+                print(message, flush=True)
                 if "missing target" in str(exc).lower():
                     self.gs.log("Ability fizzles (no targets chosen)")
                 else:

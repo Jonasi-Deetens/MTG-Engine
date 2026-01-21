@@ -403,6 +403,7 @@ def execute_engine_action(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    print(f"[engine] execute action={payload.action} game_id={payload.game_id}", flush=True)
     action = payload.action
     game_state: GameState | None = None
     session_version = 0
