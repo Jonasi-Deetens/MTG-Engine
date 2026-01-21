@@ -6,6 +6,7 @@ services:
     container_name: mtg_api
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/mtg
+      - ENGINE_TRACE=${ENGINE_TRACE:-0}
     depends_on:
       - db
     ports:

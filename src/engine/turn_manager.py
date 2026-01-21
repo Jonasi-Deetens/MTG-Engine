@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import List
+import os
 
 from .ability_graph import AbilityGraphRuntimeAdapter
 from .continuous import apply_continuous_effects
@@ -281,6 +282,11 @@ class TurnManager:
         self.state.step = step
 
     def _begin_step(self) -> None:
+        if os.getenv("ENGINE_TRACE") == "1":
+            print(
+                f"[engine] begin_step t{self.state.turn_number} {self.state.phase.value}:{self.state.step.value}",
+                flush=True,
+            )
         self._ensure_active_player()
         self.gs.event_bus.publish(Event(
             type="begin_step",
@@ -302,8 +308,12 @@ class TurnManager:
             self.gs.event_bus.publish(Event(type="draw_step", payload={"player_id": self.current_active_player_id()}))
         if self.state.step == Step.END:
             self.gs.event_bus.publish(Event(type="end_step", payload={"player_id": self.current_active_player_id()}))
+        print("[engine] apply_continuous_effects start", flush=True)
         apply_continuous_effects(self.gs)
+        print("[engine] apply_continuous_effects end", flush=True)
+        print("[engine] apply_state_based_actions start", flush=True)
         apply_state_based_actions(self.gs)
+        print("[engine] apply_state_based_actions end", flush=True)
         self._ensure_active_player()
         self._sync_priority(self.current_active_player_id())
 
@@ -322,11 +332,18 @@ class TurnManager:
             self._sync_priority(self.current_active_player_id())
             return
         if self.state.step == Step.CLEANUP:
+            print("[engine] cleanup_step handler start", flush=True)
             self._handle_cleanup_step()
+            print("[engine] cleanup_step handler end", flush=True)
             self._advance_phase_step()
             return
 
     def _end_step(self) -> None:
+        if os.getenv("ENGINE_TRACE") == "1":
+            print(
+                f"[engine] end_step t{self.state.turn_number} {self.state.phase.value}:{self.state.step.value}",
+                flush=True,
+            )
         self.gs.event_bus.publish(Event(
             type="end_step",
             payload={
@@ -349,16 +366,48 @@ class TurnManager:
         self.gs.replacement_effects = []
 
     def _advance_phase_step(self) -> None:
+        if os.getenv("ENGINE_TRACE") == "1":
+            print(
+                f"[engine] advance_step start t{self.state.turn_number} {self.state.phase.value}:{self.state.step.value}",
+                flush=True,
+            )
+        print(
+            f"[engine] advance_step start t{self.state.turn_number} {self.state.phase.value}:{self.state.step.value}",
+            flush=True,
+        )
         current_pair = (self.state.phase, self.state.step)
         idx = PHASE_STEP_ORDER.index(current_pair)
         self._end_step()
+        print("[engine] advance_step after end_step", flush=True)
 
         if idx == len(PHASE_STEP_ORDER) - 1:
             self._start_next_turn()
+            if os.getenv("ENGINE_TRACE") == "1":
+                print(
+                    f"[engine] advance_step end t{self.state.turn_number} {self.state.phase.value}:{self.state.step.value}",
+                    flush=True,
+                )
+            print(
+                f"[engine] advance_step end t{self.state.turn_number} {self.state.phase.value}:{self.state.step.value}",
+                flush=True,
+            )
             return
         next_phase, next_step = PHASE_STEP_ORDER[idx + 1]
         self._set_phase_step(next_phase, next_step)
+        print(
+            f"[engine] advance_step next t{self.state.turn_number} {self.state.phase.value}:{self.state.step.value}",
+            flush=True,
+        )
         self._begin_step()
+        if os.getenv("ENGINE_TRACE") == "1":
+            print(
+                f"[engine] advance_step end t{self.state.turn_number} {self.state.phase.value}:{self.state.step.value}",
+                flush=True,
+            )
+        print(
+            f"[engine] advance_step end t{self.state.turn_number} {self.state.phase.value}:{self.state.step.value}",
+            flush=True,
+        )
 
     def _start_next_turn(self) -> None:
         self.state.turn_number += 1
@@ -397,6 +446,11 @@ class TurnManager:
         ))
 
     def _handle_cleanup_step(self) -> None:
+        if os.getenv("ENGINE_TRACE") == "1":
+            print(
+                f"[engine] cleanup_step t{self.state.turn_number} {self.state.phase.value}:{self.state.step.value}",
+                flush=True,
+            )
         for obj in self.gs.objects.values():
             if obj.zone == ZONE_BATTLEFIELD:
                 obj.damage = 0
@@ -411,8 +465,15 @@ class TurnManager:
         if max_hand_size is None or max_hand_size < 0:
             return
         attempts = 0
+        no_progress = 0
         while len(player.hand) > max_hand_size and player.hand:
+            hand_len_before = len(player.hand)
             card_id = player.hand[-1]
+            if os.getenv("ENGINE_TRACE") == "1":
+                print(
+                    f"[engine] discard_check player={player.id} hand={len(player.hand)} card={card_id}",
+                    flush=True,
+                )
             if card_id not in self.gs.objects:
                 player.hand.pop()
                 self.gs.log(f"Removed missing card id from hand: {card_id}")
@@ -431,10 +492,24 @@ class TurnManager:
                         break
                     player.hand.insert(0, player.hand.pop())
                     continue
+                if replacement_zone == ZONE_HAND:
+                    if attempts >= len(player.hand):
+                        break
+                    player.hand.insert(0, player.hand.pop())
+                    continue
                 if replacement_zone:
                     self.gs.move_object(card_id, replacement_zone)
-                    continue
-            self.gs.move_object(card_id, ZONE_GRAVEYARD)
+                else:
+                    self.gs.move_object(card_id, ZONE_GRAVEYARD)
+            else:
+                self.gs.move_object(card_id, ZONE_GRAVEYARD)
+            if len(player.hand) >= hand_len_before:
+                no_progress += 1
+                if no_progress >= len(player.hand):
+                    self.gs.log(f"Discard cleanup made no progress for player {player.id}; stopping.")
+                    break
+            else:
+                no_progress = 0
 
     def _expire_temporary_effects(self, step: Step) -> None:
         active_player_id = self.current_active_player_id()

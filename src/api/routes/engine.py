@@ -422,7 +422,11 @@ def execute_engine_action(
         else:
             game_state, session_version = _hydrate_session_from_db(db, payload.game_id, user.id)
 
-    AbilityRegistry(game_state)
+    if action in ("resolve_graph", "check_targets"):
+        AbilityRegistry(game_state)
+    else:
+        if not getattr(game_state, "_ability_registry", None):
+            game_state._ability_registry = AbilityRegistry(game_state)
     if payload.replacement_choices:
         game_state.replacement_choices = dict(payload.replacement_choices)
 
@@ -508,8 +512,18 @@ def execute_engine_action(
     pre_stack_len = len(game_state.stack.items)
 
     if action == "advance_turn":
+        print(
+            f"[engine] advance_turn start game_id={payload.game_id} "
+            f"turn={game_state.turn.turn_number} {game_state.turn.phase.value}:{game_state.turn.step.value}",
+            flush=True,
+        )
         turn_manager = TurnManager(game_state)
         turn_manager._advance_phase_step()
+        print(
+            f"[engine] advance_turn end game_id={payload.game_id} "
+            f"turn={game_state.turn.turn_number} {game_state.turn.phase.value}:{game_state.turn.step.value}",
+            flush=True,
+        )
         response = EngineActionResponse(
             game_state=_serialize_game_state(game_state),
             result={
