@@ -22,7 +22,7 @@ export function getCardType(typeLine: string | null | undefined): CardType {
 }
 
 /**
- * Default labels for card types
+ * Default labels for card types (used for list names)
  */
 export const DEFAULT_TYPE_LABELS: Record<CardType, string> = {
   'Creature': 'Creatures',
@@ -34,4 +34,12 @@ export const DEFAULT_TYPE_LABELS: Record<CardType, string> = {
   'Land': 'Lands',
   'Other': 'Other',
 };
+
+/**
+ * Standard order for card types in deck builder
+ */
+export const TYPE_ORDER: CardType[] = [
+  'Creature', 'Instant', 'Sorcery', 'Artifact',
+  'Enchantment', 'Planeswalker', 'Land', 'Other'
+];
 

@@ -28,7 +28,7 @@ export function DeckBuilderGrid({
   onRename,
 }: DeckBuilderGridProps) {
   const renderTypeList = (type: CardType) => {
-    const list = findListForType(type, typeLists, cards);
+    const list = findListForType(type, typeLists);
     const typeCards = getCardsForType(type, cards, typeLists);
     
     return (

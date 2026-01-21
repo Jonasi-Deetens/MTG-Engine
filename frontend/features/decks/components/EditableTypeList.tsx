@@ -1,44 +1,16 @@
 'use client';
 
-// frontend/components/decks/EditableTypeList.tsx
+// frontend/features/decks/components/EditableTypeList.tsx
 
 import { useState, useEffect } from 'react';
 import { DeckCardResponse, DeckCustomListResponse } from '@/lib/decks';
 import { DroppableList } from './DroppableList';
 import { CardDragHandle } from './CardDragHandle';
-
-type CardType = 'Creature' | 'Instant' | 'Sorcery' | 'Artifact' | 'Enchantment' | 'Planeswalker' | 'Land' | 'Other';
-
-function getCardType(typeLine: string | null | undefined): CardType {
-  if (!typeLine) return 'Other';
-  
-  const typeLineLower = typeLine.toLowerCase();
-  
-  if (typeLineLower.includes('creature')) return 'Creature';
-  if (typeLineLower.includes('instant')) return 'Instant';
-  if (typeLineLower.includes('sorcery')) return 'Sorcery';
-  if (typeLineLower.includes('planeswalker')) return 'Planeswalker';
-  if (typeLineLower.includes('land')) return 'Land';
-  if (typeLineLower.includes('enchantment') && !typeLineLower.includes('creature')) return 'Enchantment';
-  if (typeLineLower.includes('artifact') && !typeLineLower.includes('creature')) return 'Artifact';
-  
-  return 'Other';
-}
-
-const DEFAULT_TYPE_LABELS: Record<CardType, string> = {
-  'Creature': 'Creatures',
-  'Instant': 'Instants',
-  'Sorcery': 'Sorceries',
-  'Artifact': 'Artifacts',
-  'Enchantment': 'Enchantments',
-  'Planeswalker': 'Planeswalkers',
-  'Land': 'Lands',
-  'Other': 'Other',
-};
+import { CardType, DEFAULT_TYPE_LABELS, getCardType } from '@/lib/utils/cardTypes';
 
 interface EditableTypeListProps {
   type: CardType;
-  list: DeckCustomListResponse | null; // null means use default name
+  list: DeckCustomListResponse | null;
   cards: DeckCardResponse[];
   onQuantityChange?: (cardId: string, quantity: number) => void;
   onRemove?: (cardId: string) => void;
@@ -230,6 +202,5 @@ export function EditableTypeList({
   );
 }
 
-// Export the getCardType function for use in other components
+// Re-export for backwards compatibility
 export { getCardType, type CardType, DEFAULT_TYPE_LABELS };
-

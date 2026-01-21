@@ -61,10 +61,7 @@ export default function DeckBuilderPage() {
     router,
   } = useDeckBuilder();
 
-  const { typeLists, setTypeLists, initializeTypeLists } = useTypeLists(
-    currentDeck?.id ?? null,
-    currentDeck?.cards.length ?? 0
-  );
+  const { typeLists, setTypeLists } = useTypeLists(currentDeck?.id ?? null);
 
   const { handleAddCard, handleAddCommanderFromSearch, handleRenameTypeList } = useDeckCardHandlers({
     currentDeck,
@@ -161,13 +158,6 @@ export default function DeckBuilderPage() {
     isModalOpen,
   ]);
 
-  // Initialize type lists when deck loads (only for new decks with no lists)
-  useEffect(() => {
-    if (currentDeck && typeLists.length === 0) {
-      initializeTypeLists();
-    }
-  }, [currentDeck?.id, typeLists.length, initializeTypeLists]);
-
   return (
     <div className="w-full space-y-3">
       <DeckBuilderHeader
@@ -222,7 +212,7 @@ export default function DeckBuilderPage() {
                     <div className="min-w-0">
                       {(() => {
                         const type: CardType = 'Creature';
-                        const list = findListForType(type, typeLists, currentDeck.cards);
+                        const list = findListForType(type, typeLists);
                         const typeCards = getCardsForType(type, currentDeck.cards, typeLists);
                         return (
                           <EditableTypeList
@@ -249,7 +239,7 @@ export default function DeckBuilderPage() {
                     {/* Left Column 2 - Instants & Sorceries */}
                     <div className="space-y-2 min-w-0">
                       {(['Instant', 'Sorcery'] as CardType[]).map((type) => {
-                        const list = findListForType(type, typeLists, currentDeck.cards);
+                        const list = findListForType(type, typeLists);
                         const typeCards = getCardsForType(type, currentDeck.cards, typeLists);
                         return (
                           <EditableTypeList
@@ -299,7 +289,7 @@ export default function DeckBuilderPage() {
                     {/* Right Column 1 - Artifacts & Enchantments */}
                     <div className="space-y-2 min-w-0">
                       {(['Artifact', 'Enchantment'] as CardType[]).map((type) => {
-                        const list = findListForType(type, typeLists, currentDeck.cards);
+                        const list = findListForType(type, typeLists);
                         const typeCards = getCardsForType(type, currentDeck.cards, typeLists);
                         return (
                           <EditableTypeList
@@ -327,7 +317,7 @@ export default function DeckBuilderPage() {
                     {/* Right Column 2 - Lands, Planeswalkers & Other */}
                     <div className="space-y-2 min-w-0">
                       {(['Land', 'Planeswalker', 'Other'] as CardType[]).map((type) => {
-                        const list = findListForType(type, typeLists, currentDeck.cards);
+                        const list = findListForType(type, typeLists);
                         const typeCards = getCardsForType(type, currentDeck.cards, typeLists);
                         return (
                           <EditableTypeList
