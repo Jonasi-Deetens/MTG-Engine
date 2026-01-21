@@ -175,7 +175,15 @@ class GameState:
             is_token=True,
         )
         self.add_object(token)
-        self.event_bus.publish(Event(type="enters_battlefield", payload={"object_id": token.id}))
+        self.event_bus.publish(Event(
+            type="enters_battlefield",
+            payload={
+                "object_id": token.id,
+                "cardTypes": list(token.types or []),
+                "controller_id": token.controller_id,
+                "owner_id": token.owner_id,
+            },
+        ))
         self.event_bus.publish(Event(
             type="card_enters",
             payload={
@@ -229,7 +237,15 @@ class GameState:
         if destination == ZONE_BATTLEFIELD and self._enforce_attachment_legality(obj):
             return
         if destination == ZONE_BATTLEFIELD and previous_zone != ZONE_BATTLEFIELD:
-            self.event_bus.publish(Event(type="enters_battlefield", payload={"object_id": obj.id}))
+            self.event_bus.publish(Event(
+                type="enters_battlefield",
+                payload={
+                    "object_id": obj.id,
+                    "cardTypes": list(obj.types or []),
+                    "controller_id": obj.controller_id,
+                    "owner_id": obj.owner_id,
+                },
+            ))
         if previous_zone != destination:
             self.event_bus.publish(Event(
                 type="card_enters",

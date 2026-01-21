@@ -18,5 +18,7 @@ class EventBus:
         self._handlers.setdefault(event_type, []).append(handler)
 
     def publish(self, event: Event) -> None:
+        if event.type in ("enters_battlefield", "card_enters"):
+            print(f"[graph] event_bus {event.type} payload={event.payload}", flush=True)
         for handler in self._handlers.get(event.type, []):
             handler(event)
