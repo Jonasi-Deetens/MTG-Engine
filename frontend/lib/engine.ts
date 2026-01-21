@@ -141,7 +141,8 @@ export interface EngineActionRequest {
     | 'declare_attackers'
     | 'declare_blockers'
     | 'assign_combat_damage';
-  game_state: EngineGameStateSnapshot;
+  game_id?: string | null;
+  game_state?: EngineGameStateSnapshot;
   ability_graph?: Record<string, any>;
   context?: EngineResolveContextSnapshot;
   player_id?: number;
@@ -161,6 +162,7 @@ export interface EngineActionRequest {
   };
   contexts?: EngineResolveContextSnapshot[];
   x_value?: number | null;
+  replacement_choices?: Record<string, string>;
 }
 
 export interface EngineActionResponse {
@@ -169,11 +171,30 @@ export interface EngineActionResponse {
   debug_log: string[];
 }
 
+export interface GameSessionResponse {
+  game_id: string;
+  game_state: EngineGameStateSnapshot;
+  version: number;
+}
+
 export const engineApi = {
   execute: async (payload: EngineActionRequest): Promise<EngineActionResponse> => {
     return apiRequest<EngineActionResponse>('/api/engine/execute', {
       method: 'POST',
       body: JSON.stringify(payload),
+      timeoutMs: 30000,
+    });
+  },
+  createSession: async (gameState: EngineGameStateSnapshot): Promise<GameSessionResponse> => {
+    return apiRequest<GameSessionResponse>('/api/engine/sessions', {
+      method: 'POST',
+      body: JSON.stringify({ game_state: gameState }),
+      timeoutMs: 30000,
+    });
+  },
+  getSession: async (gameId: string): Promise<GameSessionResponse> => {
+    return apiRequest<GameSessionResponse>(`/api/engine/sessions/${encodeURIComponent(gameId)}`, {
+      method: 'GET',
       timeoutMs: 30000,
     });
   },

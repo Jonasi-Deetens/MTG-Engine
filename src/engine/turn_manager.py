@@ -413,6 +413,10 @@ class TurnManager:
         attempts = 0
         while len(player.hand) > max_hand_size and player.hand:
             card_id = player.hand[-1]
+            if card_id not in self.gs.objects:
+                player.hand.pop()
+                self.gs.log(f"Removed missing card id from hand: {card_id}")
+                continue
             replacement = resolve_replacement(
                 self.gs,
                 "replace_discard",

@@ -57,6 +57,7 @@ function usePlayStateInternal() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [gameState, setGameState] = useState<EngineGameStateSnapshot | null>(null);
+  const [gameId, setGameId] = useState<string | null>(null);
   const [cardMap, setCardMap] = useState<EngineCardMap>({});
   const [priorityPlayer, setPriorityPlayer] = useState<number | null>(null);
   const [selectedHandId, setSelectedHandId] = useState<string | null>(null);
@@ -83,8 +84,42 @@ function usePlayStateInternal() {
     setGameState,
     setCardMap,
     setPriorityPlayer,
+    setGameId,
     setError,
   });
+
+  useEffect(() => {
+    if (gameId || gameState) return;
+    const storedGameId = localStorage.getItem('play.game_id');
+    if (storedGameId) {
+      setGameId(storedGameId);
+    }
+  }, [gameId, gameState]);
+
+  useEffect(() => {
+    if (!gameId || gameState) return;
+    const loadSession = async () => {
+      try {
+        const session = await engineApi.getSession(gameId);
+        setGameState(session.game_state);
+        const storedCardMap = localStorage.getItem('play.card_map');
+        if (storedCardMap) {
+          setCardMap(JSON.parse(storedCardMap));
+        }
+        if (typeof session.game_state.turn.priority_current_index === 'number') {
+          const alivePlayers = session.game_state.players.filter((player) => !player.has_lost);
+          const current = alivePlayers[session.game_state.turn.priority_current_index];
+          setPriorityPlayer(current?.id ?? null);
+        }
+      } catch (err: any) {
+        setError(err?.data?.detail || err?.message || 'Failed to load game session');
+        localStorage.removeItem('play.game_id');
+        localStorage.removeItem('play.card_map');
+        setGameId(null);
+      }
+    };
+    loadSession();
+  }, [gameId, gameState, setCardMap, setError, setGameState, setPriorityPlayer]);
 
   const {
     selectedAttackers,
@@ -152,6 +187,7 @@ function usePlayStateInternal() {
 
   const { runEngineAction } = useEngineActions({
     gameState,
+    gameId,
     replacementChoices,
     setGameState,
     setPriorityPlayer,

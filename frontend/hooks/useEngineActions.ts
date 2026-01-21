@@ -3,6 +3,7 @@ import { engineApi, EngineActionRequest, EngineActionResponse, EngineGameStateSn
 
 interface UseEngineActionsArgs {
   gameState: EngineGameStateSnapshot | null;
+  gameId: string | null;
   replacementChoices: Record<string, string>;
   setGameState: React.Dispatch<React.SetStateAction<EngineGameStateSnapshot | null>>;
   setPriorityPlayer: React.Dispatch<React.SetStateAction<number | null>>;
@@ -12,6 +13,7 @@ interface UseEngineActionsArgs {
 
 export const useEngineActions = ({
   gameState,
+  gameId,
   replacementChoices,
   setGameState,
   setPriorityPlayer,
@@ -31,7 +33,9 @@ export const useEngineActions = ({
         const trimmedGameState = { ...gameState, debug_log: trimmedDebugLog };
         const response = await engineApi.execute({
           action,
-          game_state: { ...trimmedGameState, replacement_choices: replacementChoices },
+          ...(gameId
+            ? { game_id: gameId, replacement_choices: replacementChoices }
+            : { game_state: { ...trimmedGameState, replacement_choices: replacementChoices } }),
           ...payload,
         });
         setGameState(response.game_state);
@@ -50,7 +54,7 @@ export const useEngineActions = ({
         setLoading(false);
       }
     },
-    [gameState, replacementChoices, setError, setGameState, setLoading, setPriorityPlayer]
+    [gameId, gameState, replacementChoices, setError, setGameState, setLoading, setPriorityPlayer]
   );
 
   return { runEngineAction };

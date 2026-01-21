@@ -152,7 +152,8 @@ class EngineActionRequest(BaseModel):
         "declare_blockers",
         "assign_combat_damage",
     ]
-    game_state: GameStateSnapshot
+    game_id: Optional[str] = None
+    game_state: Optional[GameStateSnapshot] = None
     ability_graph: Optional[AbilityGraph] = None
     context: Optional[ResolveContextSnapshot] = None
     player_id: Optional[int] = None
@@ -168,9 +169,20 @@ class EngineActionRequest(BaseModel):
     mana_payment_detail: Optional[ManaPaymentDetail] = None
     contexts: List[ResolveContextSnapshot] = Field(default_factory=list)
     x_value: Optional[int] = None
+    replacement_choices: Dict[str, str] = Field(default_factory=dict)
 
 
 class EngineActionResponse(BaseModel):
     game_state: GameStateSnapshot
     result: Dict[str, Any]
     debug_log: List[str] = Field(default_factory=list)
+
+
+class CreateGameSessionRequest(BaseModel):
+    game_state: GameStateSnapshot
+
+
+class GameSessionResponse(BaseModel):
+    game_id: str
+    game_state: GameStateSnapshot
+    version: int

@@ -8,6 +8,7 @@ interface UseGameSetupArgs {
   setGameState: React.Dispatch<React.SetStateAction<EngineGameStateSnapshot | null>>;
   setCardMap: React.Dispatch<React.SetStateAction<EngineCardMap>>;
   setPriorityPlayer: React.Dispatch<React.SetStateAction<number | null>>;
+  setGameId: React.Dispatch<React.SetStateAction<string | null>>;
   setError: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
@@ -15,6 +16,7 @@ export const useGameSetup = ({
   setGameState,
   setCardMap,
   setPriorityPlayer,
+  setGameId,
   setError,
 }: UseGameSetupArgs) => {
   const [deckList, setDeckList] = useState<DeckResponse[]>([]);
@@ -69,9 +71,13 @@ export const useGameSetup = ({
 
       const { snapshot, cardMap: newCardMap } = buildGameSnapshot(deckDetails);
       setCardMap(newCardMap);
+      const session = await engineApi.createSession(snapshot);
+      setGameId(session.game_id);
+      localStorage.setItem('play.game_id', session.game_id);
+      localStorage.setItem('play.card_map', JSON.stringify(newCardMap));
       const response = await engineApi.execute({
         action: 'advance_turn',
-        game_state: snapshot,
+        game_id: session.game_id,
       });
       setGameState(response.game_state);
       if (typeof response.result?.current_priority === 'number') {
@@ -86,7 +92,7 @@ export const useGameSetup = ({
     } finally {
       setLoading(false);
     }
-  }, [selectedDeckIds, setCardMap, setError, setGameState, setPriorityPlayer]);
+  }, [selectedDeckIds, setCardMap, setError, setGameId, setGameState, setPriorityPlayer]);
 
   return {
     deckList,
