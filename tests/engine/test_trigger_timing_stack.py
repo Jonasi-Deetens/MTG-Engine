@@ -152,6 +152,7 @@ def test_trigger_order_choice_respected_when_pending():
 
 
 def test_priority_returns_to_active_after_pending_triggers():
+    """Test that priority returns to active player after pending triggers are placed on stack."""
     game_state = GameState(players=[PlayerState(id=0), PlayerState(id=1)])
     obj = GameObject(
         id="a",
@@ -178,8 +179,11 @@ def test_priority_returns_to_active_after_pending_triggers():
     game_state.stack.push(StackItem(kind="spell", payload={"object_id": spell.id, "destination_zone": ZONE_GRAVEYARD}, controller_id=0))
     game_state.event_bus.publish(Event(type="dies", payload={"object_id": "victim"}))
 
-    turn_manager.handle_player_pass(turn_manager.current_active_player_id())
+    # Both players pass - spell resolves, then pending triggers are placed
+    turn_manager.handle_player_pass(0)
+    turn_manager.handle_player_pass(1)
 
+    # After pending triggers are placed on stack, priority returns to active player
     assert turn_manager.priority.current == turn_manager.current_active_player_id()
 
 

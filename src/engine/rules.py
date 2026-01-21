@@ -22,7 +22,7 @@ from .costs import (
 from .stack import StackItem
 from .targets import enforce_ward_payment, normalize_targets, validate_targets
 from .turn import Phase, Step
-from .zones import ZONE_BATTLEFIELD, ZONE_COMMAND, ZONE_GRAVEYARD, ZONE_HAND
+from .zones import ZONE_BATTLEFIELD, ZONE_COMMAND, ZONE_EXILE, ZONE_GRAVEYARD, ZONE_HAND
 from .events import Event
 from .state import ResolveContext
 from .choices import extract_modal_config, validate_enter_choices, validate_modal_choices
@@ -242,6 +242,8 @@ def cast_spell(
         resolve_context = ResolveContext(**context)
         if resolve_context.source_id is None:
             resolve_context.source_id = obj.id
+        if resolve_context.controller_id is None:
+            resolve_context.controller_id = player_id
         normalize_targets(game_state, resolve_context)
         validate_targets(game_state, resolve_context)
         enforce_ward_payment(game_state, resolve_context)
@@ -384,13 +386,15 @@ def cast_spell(
     destination_zone = ZONE_GRAVEYARD if ("Instant" in obj.types or "Sorcery" in obj.types) else ZONE_BATTLEFIELD
     if alt_tag and alt_tag.split(":", 1)[0] in ("flashback", "jump-start", "escape"):
         destination_zone = ZONE_EXILE
+    # Use the processed resolve_context which includes choices like alternative_cost_tag
+    stacked_context = resolve_context.__dict__ if resolve_context else (context or {})
     if ability_graph:
         game_state.stack.push(
             StackItem(
                 kind="ability_graph",
                 payload={
                     "graph": ability_graph,
-                    "context": context or {},
+                    "context": stacked_context,
                     "source_object_id": obj.id,
                     "destination_zone": destination_zone,
                 },
@@ -404,7 +408,7 @@ def cast_spell(
         game_state.stack.push(
             StackItem(
                 kind="spell",
-                payload={"object_id": obj.id, "destination_zone": destination_zone, "context": context or {}},
+                payload={"object_id": obj.id, "destination_zone": destination_zone, "context": stacked_context},
                 controller_id=player_id,
             )
         )
@@ -416,7 +420,7 @@ def cast_spell(
             game_state,
             obj.id,
             ability_graph,
-            context or {},
+            stacked_context,
             player_id,
             copy_count,
             resolve_context.choices.get("copy_targets_list") if resolve_context else None,
@@ -459,12 +463,13 @@ def prepare_cast(
 
     _validate_cast_timing(game_state, turn_manager, player_id, obj)
 
+    resolve_context = None
     if context:
         resolve_context = ResolveContext(**context)
         validate_targets(game_state, resolve_context)
 
     cost_override, free_cast, alt_tag, alt_extra_costs = _resolve_alternative_cost(
-        ability_graph, resolve_context if context else None
+        ability_graph, resolve_context
     )
     cost_text = None if free_cast else (cost_override or obj.mana_cost)
     cost = parse_mana_cost(cost_text, x_value=x_value)

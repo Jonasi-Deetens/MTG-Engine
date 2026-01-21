@@ -111,4 +111,21 @@ class AbilityRegistry:
         """Handle an event by delegating to TriggerHandler."""
         self._trigger_handler.handle_event(event)
 
+    def _entry_key(self, entry) -> str:
+        """Generate a unique key for a registered trigger entry.
+        
+        Delegates to TriggerHandler._entry_key for backward compatibility.
+        """
+        # Convert RegisteredAbility back to RegisteredTrigger if needed
+        if isinstance(entry, RegisteredAbility):
+            from .triggers.trigger_registry import RegisteredTrigger
+            entry = RegisteredTrigger(
+                source_id=entry.source_id,
+                controller_id=entry.controller_id,
+                trigger=entry.trigger,
+                graph=entry.graph,
+                trigger_data=entry.trigger_data,
+            )
+        return self._trigger_handler._entry_key(entry)
+
 

@@ -114,7 +114,13 @@ def test_distinct_targets_rejects_duplicate_spell_and_object():
 
 
 def test_min_targets_counts_player_and_object():
+    from engine import GameObject
+    from engine.zones import ZONE_BATTLEFIELD
+
     game_state = GameState(players=[PlayerState(id=0), PlayerState(id=1)])
+    # Create the target object so validation can find it
+    obj = GameObject(id="obj_1", name="Target", owner_id=0, controller_id=0, types=["Creature"], zone=ZONE_BATTLEFIELD)
+    game_state.add_object(obj)
     context = ResolveContext(
         controller_id=0,
         targets={"target": "obj_1", "target_player": 1},

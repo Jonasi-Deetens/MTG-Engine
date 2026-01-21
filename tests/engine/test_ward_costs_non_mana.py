@@ -1,6 +1,6 @@
 import pytest
 
-from engine import GameObject, GameState, PlayerState, TurnManager
+from engine import GameObject, GameState, PlayerState, TurnManager, Phase, Step
 from tests.engine.cost_helpers import mana_cost_data
 from engine.rules import cast_spell
 from engine.zones import ZONE_BATTLEFIELD, ZONE_GRAVEYARD, ZONE_HAND
@@ -11,6 +11,8 @@ def _build_state() -> GameState:
     game_state = GameState(players=players)
     game_state.turn.active_player_index = 0
     game_state.turn.priority_current_index = 0
+    game_state.turn.phase = Phase.PRECOMBAT_MAIN
+    game_state.turn.step = Step.PRECOMBAT_MAIN
     return game_state
 
 
@@ -174,6 +176,10 @@ def test_ward_sacrifice_and_tap():
 
     assert sacrifice.zone == ZONE_GRAVEYARD
 
+    # Resolve the first spell before casting the second (sorcery needs empty stack)
+    turn_manager.handle_player_pass(0)
+    turn_manager.handle_player_pass(1)
+
     second_spell = GameObject(
         id="spell_two",
         name="Spell Two",
@@ -267,8 +273,17 @@ def test_ward_multiple_costs_and_discard_two():
         context={"targets": {"target": warded.id, "targets": [warded.id]}, "choices": {"ward_auto_pay": True}},
     )
 
-    assert game_state.get_player(0).mana_pool.get("G", 0) == 1
+    # Spell cost {G} + ward mana cost {1} = 2 mana, so 2G - 2 = 0G remaining
+    # Ward life cost 3 = 40 - 3 = 37 life
+    assert game_state.get_player(0).mana_pool.get("G", 0) == 0
     assert game_state.get_player(0).life == starting_life - 3
+
+    # Resolve the first spell before casting the second (sorcery needs empty stack)
+    turn_manager.handle_player_pass(0)
+    turn_manager.handle_player_pass(1)
+
+    # Add mana for the second spell
+    game_state.get_player(0).mana_pool["G"] = 1
 
     cast_spell(
         game_state,

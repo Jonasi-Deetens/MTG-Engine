@@ -85,6 +85,9 @@ class EffectRouter:
             effect["timestamp_order"] = self._game_state.effect_timestamp_counter
         obj.temporary_effects.append(effect)
 
+    # Alias for backward compatibility with effect handlers
+    _add_temporary_effect = add_temporary_effect
+
     def log(self, message: str) -> None:
         """Log a message through the game state."""
         self._game_state.log(message)
@@ -130,6 +133,7 @@ def create_default_router(game_state: "GameState") -> EffectRouter:
         handle_cda_power_toughness,
         handle_change_power_toughness,
         handle_gain_keyword,
+        handle_modify_cast_cost,
         handle_protection,
         handle_remove_oracle_text,
         handle_remove_color,
@@ -215,6 +219,7 @@ def create_default_router(game_state: "GameState") -> EffectRouter:
         "set_oracle_text": handle_set_oracle_text,
         "append_oracle_text": handle_append_oracle_text,
         "remove_oracle_text": handle_remove_oracle_text,
+        "modify_cast_cost": handle_modify_cast_cost,
     })
 
     return router

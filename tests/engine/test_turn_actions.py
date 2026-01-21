@@ -87,6 +87,7 @@ def test_declare_attackers_and_blockers():
         zone=ZONE_BATTLEFIELD,
         power=3,
         toughness=3,
+        entered_turn=0,  # Bypass summoning sickness
     )
     blocker = GameObject(
         id="blocker_1",
@@ -145,6 +146,7 @@ def test_declare_blockers_allows_empty():
         zone=ZONE_BATTLEFIELD,
         power=3,
         toughness=3,
+        entered_turn=0,  # Bypass summoning sickness
     )
     game_state.add_object(attacker)
 
@@ -281,6 +283,7 @@ def test_combat_damage_can_target_planeswalker():
         zone=ZONE_BATTLEFIELD,
         power=4,
         toughness=4,
+        entered_turn=0,  # Bypass summoning sickness
     )
     planeswalker = GameObject(
         id="pw_defender",
@@ -425,6 +428,7 @@ def test_assign_combat_damage_to_player():
         zone=ZONE_BATTLEFIELD,
         power=4,
         toughness=4,
+        entered_turn=0,  # Bypass summoning sickness
     )
     game_state.add_object(attacker)
 

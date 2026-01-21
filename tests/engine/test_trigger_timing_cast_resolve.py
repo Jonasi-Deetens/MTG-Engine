@@ -1,4 +1,4 @@
-from engine import AbilityRegistry, GameObject, GameState, PlayerState, TurnManager
+from engine import AbilityRegistry, GameObject, GameState, PlayerState, TurnManager, Phase, Step
 from engine.rules import cast_spell
 from engine.zones import ZONE_BATTLEFIELD, ZONE_HAND
 
@@ -20,6 +20,8 @@ def _build_state() -> GameState:
     game_state = GameState(players=players)
     game_state.turn.active_player_index = 0
     game_state.turn.priority_current_index = 0
+    game_state.turn.phase = Phase.PRECOMBAT_MAIN
+    game_state.turn.step = Step.PRECOMBAT_MAIN
     return game_state
 
 

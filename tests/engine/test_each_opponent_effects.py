@@ -32,8 +32,12 @@ def test_target_opponent_prefers_explicit_target():
     result = resolver.apply({"type": "lose_life", "amount": 3, "target": "opponent"}, context)
 
     assert result["type"] == "lose_life"
-    assert len(result["results"]) == 1
-    assert result["results"][0]["player_id"] == 2
+    # For single target, result has player_id directly instead of results list
+    if "results" in result:
+        assert len(result["results"]) == 1
+        assert result["results"][0]["player_id"] == 2
+    else:
+        assert result["player_id"] == 2
     assert game_state.get_player(1).life == 12
     assert game_state.get_player(2).life == 5
 

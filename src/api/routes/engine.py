@@ -201,6 +201,16 @@ def _build_game_state(snapshot: GameStateSnapshot) -> GameState:
             base_etb_choices=dict(getattr(obj, "etb_choices", {})),
         )
 
+    # Filter zone lists to only include valid object IDs
+    valid_ids = set(game_state.objects.keys())
+    for player in game_state.players:
+        player.library = [obj_id for obj_id in player.library if obj_id in valid_ids]
+        player.hand = [obj_id for obj_id in player.hand if obj_id in valid_ids]
+        player.graveyard = [obj_id for obj_id in player.graveyard if obj_id in valid_ids]
+        player.exile = [obj_id for obj_id in player.exile if obj_id in valid_ids]
+        player.command = [obj_id for obj_id in player.command if obj_id in valid_ids]
+        player.battlefield = [obj_id for obj_id in player.battlefield if obj_id in valid_ids]
+
     game_state.stack.items = [
         StackItem(kind=item.kind, payload=item.payload, controller_id=item.controller_id)
         for item in snapshot.stack

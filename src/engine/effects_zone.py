@@ -94,10 +94,16 @@ def handle_search(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
         )
         resolver.game_state.log(message)
         print(message, flush=True)
+        # Filter found_ids against filtered_pool, but fall back to pool check when
+        # filtered_pool is empty (e.g. no GameObjects exist, only IDs)
+        if filtered_pool:
+            valid_found = [obj_id for obj_id in found_ids if obj_id in filtered_pool]
+        else:
+            valid_found = [obj_id for obj_id in found_ids if obj_id in pool]
         results.append({
             "player_id": player_id,
             "zone": zone,
-            "found": [obj_id for obj_id in found_ids if obj_id in filtered_pool],
+            "found": valid_found,
         })
     return {"type": "search", "results": results} if len(results) > 1 else {"type": "search", **results[0]}
 
@@ -313,7 +319,7 @@ def handle_attach(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
             obj.attached_to = None
             results.append({"object_id": obj.id, "status": "invalid_target"})
             continue
-        if resolver.game_state._is_illegal_attachment(obj, attached):
+        if resolver.game_state.attachment_manager._is_illegal_attachment(obj, attached):
             obj.attached_to = None
             results.append({"object_id": obj.id, "status": "illegal_attachment"})
             continue

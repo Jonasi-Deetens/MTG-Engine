@@ -35,9 +35,12 @@ class TriggerHandler:
         self._game_state = game_state
 
     def handle_event(self, event: "Event") -> List["StackItem"]:
-        """Handle an event by matching triggers and pushing to stack.
+        """Handle an event by matching triggers and adding to pending_triggers.
 
-        Returns the list of StackItems that were pushed.
+        Triggers are not pushed to the stack immediately. They are added to
+        pending_triggers and will be pushed when priority is checked/synced.
+
+        Returns the list of StackItems that were created (but not yet pushed).
         """
         from ..stack import StackItem
         from ..state import ResolveContext
@@ -52,7 +55,7 @@ class TriggerHandler:
         # Order by APNAP
         ordered = self._order_triggers(matching, event)
 
-        pushed_items: List[StackItem] = []
+        created_items: List[StackItem] = []
         for entry in ordered:
             message = (
                 f"[graph] trigger match source={entry.source_id} "
@@ -64,24 +67,32 @@ class TriggerHandler:
             # Build context
             context = self.build_context(entry, event)
 
-            # Create and push stack item
-            item = StackItem(
-                kind="ability_graph",
-                payload={
+            # Create pending trigger entry (dict format expected by turn_manager)
+            pending_entry = {
+                "kind": "ability_graph",
+                "payload": {
                     "graph": entry.graph,
                     "context": context.__dict__,
                     "source_object_id": entry.source_id,
                 },
+                "controller_id": entry.controller_id,
+            }
+            # Add to pending_triggers instead of directly pushing to stack
+            self._game_state.pending_triggers.append(pending_entry)
+            
+            # Also create StackItem for return value
+            item = StackItem(
+                kind="ability_graph",
+                payload=pending_entry["payload"],
                 controller_id=entry.controller_id,
             )
-            self._game_state.stack.push(item)
-            pushed_items.append(item)
+            created_items.append(item)
 
-            message = f"[graph] pushed ability_graph source={entry.source_id} trigger={entry.trigger}"
+            message = f"[graph] queued trigger source={entry.source_id} trigger={entry.trigger}"
             self._game_state.log(message)
             print(message, flush=True)
 
-        return pushed_items
+        return created_items
 
     def match_triggers(self, event: "Event") -> List[RegisteredTrigger]:
         """Find all triggers that match an event."""

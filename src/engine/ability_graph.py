@@ -88,7 +88,8 @@ class AbilityGraphRuntimeAdapter:
                 traverse(next_id)
 
         if root_node:
-            if root_node["type"] == "EFFECT" and graph.get("abilityType") == "static":
+            # Add root EFFECT node directly (for both static and activated/triggered abilities)
+            if root_node["type"] == "EFFECT":
                 effect_data = dict(root_node.get("data", {}))
                 effect_data["_node_id"] = root_node["id"]
                 effects.append(effect_data)

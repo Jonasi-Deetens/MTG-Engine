@@ -141,6 +141,17 @@ def get_target_issues(game_state: GameState, context: ResolveContext) -> List[st
                     issues.append(f"{node_id}: not enough targets selected")
             for issue in _get_target_issues_for_targets(game_state, context, merged):
                 issues.append(f"{node_id}: {issue}")
+    # Check required_targets_by_effect for nodes not in targets_by_effect
+    if isinstance(required_targets_by_effect, dict):
+        checked_nodes = set(targets_by_effect.keys()) if isinstance(targets_by_effect, dict) else set()
+        for node_id, required_keys in required_targets_by_effect.items():
+            if node_id in checked_nodes or node_id == "_global":
+                continue
+            if not isinstance(required_keys, list):
+                continue
+            # For nodes without override, check against base targets
+            for missing in _missing_required_targets(context.targets, required_keys):
+                issues.append(f"{node_id}: missing target {missing}")
     return issues
 
 
@@ -273,6 +284,17 @@ def has_legal_targets(game_state: GameState, context: ResolveContext, allow_part
                 if _has_min_targets_violation(merged, min_targets):
                     return False
             if not _has_legal_targets_for_targets(game_state, context, merged):
+                return False
+    # Check required_targets_by_effect for nodes not in targets_by_effect
+    if isinstance(required_targets_by_effect, dict):
+        checked_nodes = set(targets_by_effect.keys()) if isinstance(targets_by_effect, dict) else set()
+        for node_id, required_keys in required_targets_by_effect.items():
+            if node_id in checked_nodes or node_id == "_global":
+                continue
+            if not isinstance(required_keys, list):
+                continue
+            # For nodes without override, check against base targets
+            if _missing_required_targets(context.targets, required_keys):
                 return False
     return True
 

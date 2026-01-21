@@ -1,6 +1,6 @@
 import pytest
 
-from engine import GameObject, GameState, PlayerState, TurnManager
+from engine import GameObject, GameState, PlayerState, TurnManager, Phase, Step
 from tests.engine.cost_helpers import mana_cost_data
 from engine.rules import cast_spell, prepare_cast
 from engine.zones import ZONE_EXILE, ZONE_GRAVEYARD, ZONE_HAND
@@ -11,6 +11,8 @@ def _build_state() -> GameState:
     game_state = GameState(players=players)
     game_state.turn.active_player_index = 0
     game_state.turn.priority_current_index = 0
+    game_state.turn.phase = Phase.PRECOMBAT_MAIN
+    game_state.turn.step = Step.PRECOMBAT_MAIN
     return game_state
 
 

@@ -56,6 +56,8 @@ class EventType(str, Enum):
     LIFE_GAINED = "life_gained"
     LIFE_LOST = "life_lost"
     DAMAGE_DEALT = "damage_dealt"
+    DEALS_DAMAGE = "deals_damage"
+    TAKES_DAMAGE = "takes_damage"
 
     # Card draw
     CARD_DRAWN = "card_drawn"

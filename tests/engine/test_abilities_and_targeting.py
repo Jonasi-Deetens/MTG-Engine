@@ -46,8 +46,9 @@ def test_triggered_ability_pushes_stack_item():
     AbilityRegistry(game_state)
 
     game_state.event_bus.publish(Event(type="enters_battlefield", payload={"object_id": creature.id}))
-    assert len(game_state.stack.items) == 1
-    assert game_state.stack.items[0].kind == "ability_graph"
+    # Triggers go to pending_triggers first, then to stack when priority is synced
+    assert len(game_state.pending_triggers) == 1
+    assert game_state.pending_triggers[0]["kind"] == "ability_graph"
 
 
 def test_validate_targets_rejects_hexproof():
