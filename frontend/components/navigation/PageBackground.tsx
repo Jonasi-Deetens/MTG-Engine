@@ -21,6 +21,7 @@ export function PageBackground({ children }: { children: React.ReactNode }) {
   const isLoginPage = pathname === '/login';
   const isRegisterPage = pathname === '/register';
   
+  const homeBackgroundImage = useThemeImage('home');
   const dashboardBackgroundImage = useThemeImage('dashboard');
   const decksBackgroundImage = useThemeImage('decks');
   const collectionBackgroundImage = useThemeImage('collection');
@@ -31,10 +32,13 @@ export function PageBackground({ children }: { children: React.ReactNode }) {
   const registerBackgroundImage = useThemeImage('register');
   
   const getBackgroundStyle = (): React.CSSProperties => {
-    // Landing page handles its own background
+    // Landing page uses the shared background + overlay
     if (isLandingPage) {
       return {
-        backgroundColor: 'transparent',
+        backgroundImage: `url('${homeBackgroundImage}')`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'top center',
+        backgroundRepeat: 'no-repeat',
       };
     }
     if (isDashboard) {
@@ -122,7 +126,10 @@ export function PageBackground({ children }: { children: React.ReactNode }) {
       className={`${isFixedHeightPage ? 'h-screen overflow-hidden' : 'min-h-screen overflow-x-hidden'} relative`}
       style={getBackgroundStyle()}
     >
-      {children}
+      <div className="absolute inset-0 bg-[color:var(--theme-bg-primary)]/70 pointer-events-none" />
+      <div className="relative z-10">
+        {children}
+      </div>
     </div>
   );
 }

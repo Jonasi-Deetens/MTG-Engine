@@ -87,11 +87,11 @@ export function CardPreview({ card, onVersionChange, onAddToDeck, showAddButton 
     <>
       <Card
         variant="bare"
-        className="aspect-[63/88] relative overflow-visible rounded-xl flex items-center justify-center"
+        className={`aspect-[63/88] relative overflow-visible rounded-xl flex items-center justify-center transition-transform duration-200 ${disableClick ? '' : 'hover:scale-105'}`}
       >
         <HoverShadow />
         <div 
-          className={`absolute inset-0 ${disableClick ? '' : 'hover:scale-105 cursor-pointer'} rounded-xl`}
+          className={`absolute inset-0 ${disableClick ? '' : 'cursor-pointer'} rounded-xl`}
           onClick={disableClick ? undefined : handleCardClick}
         >
           {imageUrl ? (
