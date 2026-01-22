@@ -389,6 +389,8 @@ def cast_spell(
     # Use the processed resolve_context which includes choices like alternative_cost_tag
     stacked_context = resolve_context.__dict__ if resolve_context else (context or {})
     if ability_graph:
+        # Include ability_id from graph if available
+        ability_id = ability_graph.get("abilityId") or f"{ability_graph.get('abilityType', 'spell')}-0"
         game_state.stack.push(
             StackItem(
                 kind="ability_graph",
@@ -397,11 +399,12 @@ def cast_spell(
                     "context": stacked_context,
                     "source_object_id": obj.id,
                     "destination_zone": destination_zone,
+                    "ability_id": ability_id,
                 },
                 controller_id=player_id,
             )
         )
-        message = f"[graph] cast_spell pushed ability_graph source={obj.id}"
+        message = f"[graph] cast_spell pushed ability_graph source={obj.id} ability_id={ability_id}"
         game_state.log(message)
         print(message, flush=True)
     else:
@@ -691,14 +694,56 @@ def activate_mana_ability(game_state, turn_manager, player_id: int, object_id: s
     turn_manager.after_mana_ability(player_id)
 
 
+def _find_ability_by_type_index(
+    ability_graphs: List[Dict[str, Any]],
+    ability_type: str,
+    ability_index: int,
+) -> Optional[Dict[str, Any]]:
+    """Find an ability graph by type and index.
+    
+    Supports both:
+    - New format: lookup by abilityType and index within that type
+    - Legacy format: fallback to array index for backward compatibility
+    """
+    # Count abilities of the specified type
+    type_abilities = [
+        g for g in ability_graphs
+        if g.get("abilityType", "activated") == ability_type
+    ]
+    
+    if ability_index < len(type_abilities):
+        return type_abilities[ability_index]
+    
+    # Legacy fallback: use raw array index
+    if ability_index < len(ability_graphs):
+        return ability_graphs[ability_index]
+    
+    return None
+
+
 def activate_ability(
     game_state,
     turn_manager,
     player_id: int,
     object_id: str,
     ability_index: int = 0,
+    ability_type: str = "activated",  # New: support type+index lookup
     context: Optional[dict] = None,
-) -> None:
+) -> Dict[str, Any]:
+    """Activate an ability on a permanent.
+    
+    Args:
+        game_state: The current game state
+        turn_manager: The turn manager
+        player_id: The player activating the ability
+        object_id: The permanent with the ability
+        ability_index: Index of the ability within the type (default: 0)
+        ability_type: Type of ability ("activated", "triggered", etc.)
+        context: Additional context (targets, choices, etc.)
+    
+    Returns:
+        Dict with result status. If usesStack is false, returns resolved result.
+    """
     require_priority(turn_manager, player_id)
     obj = game_state.objects.get(object_id)
     if not obj:
@@ -707,10 +752,12 @@ def activate_ability(
         raise ValueError("You do not control this permanent.")
     if not obj.ability_graphs:
         raise ValueError("Permanent has no abilities to activate.")
-    if ability_index < 0 or ability_index >= len(obj.ability_graphs):
-        raise ValueError("Invalid ability index.")
+    
+    # Find ability by type+index (with legacy fallback)
+    graph = _find_ability_by_type_index(obj.ability_graphs, ability_type, ability_index)
+    if not graph:
+        raise ValueError(f"Invalid ability: {ability_type}-{ability_index}")
 
-    graph = obj.ability_graphs[ability_index]
     adapter = AbilityGraphRuntimeAdapter(game_state)
     runtime = adapter.build_runtime(graph)
     _validate_ability_timing(game_state, turn_manager, player_id, obj, runtime)
@@ -742,6 +789,27 @@ def activate_ability(
         )
     _record_activation_use(obj, ability_index, runtime)
 
+    # Check usesStack flag - resolve immediately if false (mana abilities)
+    uses_stack = runtime.uses_stack
+    ability_id = runtime.ability_id or f"{ability_type}-{ability_index}"
+    
+    if not uses_stack:
+        # Resolve immediately without using the stack (mana abilities, etc.)
+        game_state.log(f"[rules] resolving ability immediately (usesStack=false): {ability_id}")
+        print(f"[graph] resolving ability immediately (usesStack=false): {ability_id}", flush=True)
+        
+        # Build resolve context if not already done
+        if not resolve_context:
+            resolve_context = ResolveContext(
+                source_id=obj.id,
+                controller_id=player_id,
+            )
+        
+        result = adapter.resolve(graph, resolve_context)
+        turn_manager.after_mana_ability(player_id)
+        return {"status": "resolved_immediately", "ability_id": ability_id, "result": result}
+
+    # Normal case: push to stack
     stacked_context = context or {}
     stacked_context.setdefault("source_id", obj.id)
     stacked_context.setdefault("controller_id", player_id)
@@ -752,10 +820,12 @@ def activate_ability(
                 "graph": graph,
                 "context": stacked_context,
                 "source_object_id": obj.id,
+                "ability_id": ability_id,  # Include ability ID in payload
             },
             controller_id=player_id,
         )
     )
     _publish_becomes_target(game_state, obj.id, resolve_context)
     turn_manager.after_player_action(player_id)
+    return {"status": "pushed_to_stack", "ability_id": ability_id}
 

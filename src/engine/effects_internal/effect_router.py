@@ -53,13 +53,48 @@ class EffectRouter:
         self._handlers.update(handlers)
 
     def apply(self, effect: Dict[str, Any], context: "ResolveContext") -> Dict[str, Any]:
-        """Apply an effect using the appropriate handler."""
+        """Apply an effect using the appropriate handler.
+        
+        Supports per-effect conditions and optional flags:
+        - If effect has a 'condition', it's evaluated before execution
+        - If effect has 'optional: true' and condition fails, effect is skipped gracefully
+        - If effect is not optional and condition fails, effect is skipped with status
+        """
         effect_type = effect.get("type")
         handler = self._handlers.get(effect_type)
 
         if not handler:
             self._game_state.log(f"Unhandled effect type: {effect_type}")
             return {"type": effect_type, "status": "unhandled"}
+
+        # Check per-effect condition if present
+        effect_condition = effect.get("condition")
+        is_optional = effect.get("optional", False)
+        
+        if effect_condition:
+            from ..conditions import evaluate_condition
+            condition_passed = evaluate_condition(self._game_state, effect_condition, context)
+            
+            node_id = effect.get("_node_id") or effect.get("node_id", "unknown")
+            self._game_state.log(
+                f"[effect] per-effect condition check node={node_id} "
+                f"type={effect_condition.get('type')} passed={condition_passed}"
+            )
+            print(
+                f"[graph] per-effect condition check node={node_id} "
+                f"type={effect_condition.get('type')} passed={condition_passed}",
+                flush=True
+            )
+            
+            if not condition_passed:
+                if is_optional:
+                    # Optional effect with failed condition - skip gracefully
+                    self._game_state.log(f"[effect] optional effect skipped (condition failed): {effect_type}")
+                    return {"type": effect_type, "status": "skipped_optional", "reason": "condition_failed"}
+                else:
+                    # Required effect with failed condition - skip with status
+                    self._game_state.log(f"[effect] effect skipped (condition failed): {effect_type}")
+                    return {"type": effect_type, "status": "condition_failed"}
 
         # Handle effect-specific target overrides
         node_id = effect.get("_node_id") or effect.get("node_id")

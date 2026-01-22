@@ -12,6 +12,57 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def should_infer_targets_from_effect(effect: Dict[str, Any]) -> bool:
+    """Check if targets should be inferred from a previous effect.
+    
+    When `fromEffect` is specified and min/max targets are not explicitly set,
+    targets are inferred from the previous effect's result instead of requiring
+    explicit target selection.
+    
+    Returns True if targets should be inferred from fromEffect.
+    """
+    from_effect = effect.get("fromEffect")
+    if from_effect is None:
+        return False
+    
+    # If fromEffect is specified, check if min/max are explicitly set
+    min_targets = effect.get("minTargets")
+    max_targets = effect.get("maxTargets")
+    
+    # If neither min nor max is set, targets should be inferred
+    return min_targets is None and max_targets is None
+
+
+def get_inferred_targets_from_previous_result(
+    previous_results: List[Dict[str, Any]],
+    from_effect: int
+) -> List[str]:
+    """Get inferred target IDs from a previous effect's result.
+    
+    Different effects store their results in different keys:
+    - search: "found"
+    - put_onto_battlefield: "cards"
+    - other effects: may use "targets" or "object_ids"
+    
+    Returns a list of object IDs.
+    """
+    if from_effect >= len(previous_results):
+        return []
+    
+    prev_result = previous_results[from_effect]
+    
+    # Try common result keys in order of priority
+    for key in ["found", "cards", "targets", "object_ids", "target_id"]:
+        value = prev_result.get(key)
+        if value:
+            if isinstance(value, list):
+                return value
+            elif isinstance(value, str):
+                return [value]
+    
+    return []
+
+
 @dataclass
 class TargetRequirements:
     """Requirements for validating targets."""

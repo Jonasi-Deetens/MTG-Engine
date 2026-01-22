@@ -17,6 +17,8 @@ from api.schemas.ability_schemas import (
     CardAbilityGraphResponse,
     CardAbilityGraphBulkRequest,
     CardAbilityGraphBulkResponse,
+    AbilityIdentifier,
+    ActivateAbilityRequest,
 )
 from api.routes.auth import get_current_user
 from db.models import User, CardAbilityGraph
@@ -471,15 +473,19 @@ def normalize_graph(graph: AbilityGraph) -> NormalizedAbility:
     cost = None
     costs: List[Dict[str, Any]] = []
     keyword = None
+    uses_stack = True  # Default to true
+    ability_condition: Optional[Dict[str, Any]] = None
     
     if root_node:
         if root_node.type == "TRIGGER":
             trigger = root_node.data.get("event", None)
+            uses_stack = root_node.data.get("usesStack", True)
         elif root_node.type == "ACTIVATED":
             raw_costs = root_node.data.get("costs")
             if isinstance(raw_costs, list):
                 costs = raw_costs
             cost = root_node.data.get("cost", None)
+            uses_stack = root_node.data.get("usesStack", True)
         elif root_node.type == "KEYWORD":
             keyword = root_node.data.get("keyword", None)
     
@@ -507,6 +513,10 @@ def normalize_graph(graph: AbilityGraph) -> NormalizedAbility:
             
             if node.type == "CONDITION":
                 conditions.append(node.data)
+                # If this is a direct child of root node, it's the ability-level condition
+                nonlocal ability_condition
+                if ability_condition is None and root_node and node_id in adjacency.get(root_node.id, []):
+                    ability_condition = node.data
             elif node.type == "EFFECT":
                 effects.append(node.data)
             elif node.type == "ACTIVATED":
@@ -522,6 +532,9 @@ def normalize_graph(graph: AbilityGraph) -> NormalizedAbility:
         for next_id in adjacency.get(root_node.id, []):
             traverse(next_id)
     
+    # Get ability ID from graph or generate one
+    ability_id = getattr(graph, 'abilityId', None) or f"{graph.abilityType}-0"
+    
     return NormalizedAbility(
         trigger=trigger,
         cost=cost,
@@ -529,7 +542,10 @@ def normalize_graph(graph: AbilityGraph) -> NormalizedAbility:
         keyword=keyword,
         conditions=conditions,
         effects=effects,
-        abilityType=graph.abilityType
+        abilityType=graph.abilityType,
+        abilityId=ability_id,
+        usesStack=uses_stack,
+        abilityCondition=ability_condition
     )
 
 
@@ -940,12 +956,24 @@ def save_card_ability_graph(
         
         print(f"[DEBUG] Saved graph to {len(saved_graphs)} versions, returning graph for card_id: {result.card_id}")
         
+        # Extract ability type and index from the graph
+        graph_data = result.ability_graph_json
+        ability_type = graph_data.get("abilityType", "triggered")
+        ability_id = graph_data.get("abilityId", f"{ability_type}-0")
+        # Parse index from ability_id (e.g., "triggered-0" -> 0)
+        try:
+            ability_index = int(ability_id.split("-")[-1])
+        except (ValueError, IndexError):
+            ability_index = 0
+        
         return CardAbilityGraphResponse(
             id=result.id,
             card_id=result.card_id,
             ability_graph=AbilityGraph(**result.ability_graph_json),
             created_at=result.created_at.isoformat(),
-            updated_at=result.updated_at.isoformat()
+            updated_at=result.updated_at.isoformat(),
+            ability_type=ability_type,
+            ability_index=ability_index
         )
     except HTTPException:
         raise
@@ -1036,6 +1064,100 @@ def get_card_ability_graphs(
         else:
             graphs.append(response)
     return CardAbilityGraphBulkResponse(graphs=graphs, missing=missing)
+
+
+@router.get("/cards/{card_id}/ability/{ability_type}/{ability_index}")
+def get_card_ability_by_type_index(
+    card_id: str,
+    ability_type: str,
+    ability_index: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    """Get a specific ability from a card by type and index.
+    
+    This endpoint returns a normalized ability structure for the specified
+    ability type (triggered, activated, static, spell) and index.
+    """
+    # First, get the ability graph for this card
+    response = _find_card_ability_graph(db, user, card_id)
+    if response is None:
+        raise HTTPException(status_code=404, detail="Ability graph not found for this card")
+    
+    graph = response.ability_graph
+    
+    # Find all nodes of the specified type
+    type_to_node_type = {
+        "triggered": "TRIGGER",
+        "activated": "ACTIVATED",
+        "static": "EFFECT",  # Static abilities use EFFECT nodes with abilityType: 'static'
+        "spell": "SPELL",
+    }
+    
+    node_type = type_to_node_type.get(ability_type)
+    if not node_type:
+        raise HTTPException(status_code=400, detail=f"Invalid ability type: {ability_type}")
+    
+    # Find matching nodes
+    if ability_type == "static":
+        # Static abilities are EFFECT nodes with abilityType: 'static' or 'continuous'
+        matching_nodes = [
+            n for n in graph.nodes 
+            if n.type == "EFFECT" and n.data.get("abilityType") in ("static", "continuous")
+        ]
+    else:
+        matching_nodes = [n for n in graph.nodes if n.type == node_type]
+    
+    if ability_index >= len(matching_nodes):
+        raise HTTPException(
+            status_code=404, 
+            detail=f"Ability index {ability_index} not found for type {ability_type}. Found {len(matching_nodes)} abilities."
+        )
+    
+    # Get the specific node
+    target_node = matching_nodes[ability_index]
+    
+    # Build a sub-graph containing just this ability and its effects
+    # First, find all connected nodes
+    adjacency: Dict[str, List[str]] = {node.id: [] for node in graph.nodes}
+    for edge in graph.edges:
+        if edge.from_ in adjacency:
+            adjacency[edge.from_].append(edge.to)
+    
+    connected_node_ids = {target_node.id}
+    
+    def collect_connected(node_id: str):
+        for child_id in adjacency.get(node_id, []):
+            if child_id not in connected_node_ids:
+                connected_node_ids.add(child_id)
+                collect_connected(child_id)
+    
+    collect_connected(target_node.id)
+    
+    # Build a new graph with just this ability
+    sub_nodes = [n for n in graph.nodes if n.id in connected_node_ids]
+    sub_edges = [e for e in graph.edges if e.from_ in connected_node_ids and e.to in connected_node_ids]
+    
+    sub_graph = AbilityGraph(
+        rootNodeId=target_node.id,
+        nodes=sub_nodes,
+        edges=sub_edges,
+        abilityType=ability_type,
+        abilityId=f"{ability_type}-{ability_index}",
+        usesStack=target_node.data.get("usesStack", True)
+    )
+    
+    # Normalize the sub-graph
+    normalized = normalize_graph(sub_graph)
+    
+    return {
+        "card_id": card_id,
+        "ability_type": ability_type,
+        "ability_index": ability_index,
+        "ability_id": f"{ability_type}-{ability_index}",
+        "ability": normalized.model_dump(),
+        "graph": sub_graph.model_dump()
+    }
 
 
 @router.delete("/cards/{card_id}/graph")

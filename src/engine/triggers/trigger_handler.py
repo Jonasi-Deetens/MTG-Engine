@@ -70,9 +70,13 @@ class TriggerHandler:
                 print(message, flush=True)
                 continue
             
+            # Extract ability_id from the graph (new refactored system)
+            ability_id = entry.graph.get("abilityId") or f"triggered-{entry.index}"
+            
             message = (
                 f"[graph] trigger match source={entry.source_id} "
-                f"controller={entry.controller_id} trigger={entry.trigger}"
+                f"controller={entry.controller_id} trigger={entry.trigger} "
+                f"ability_id={ability_id}"
             )
             self._game_state.log(message)
             print(message, flush=True)
@@ -84,6 +88,7 @@ class TriggerHandler:
                     "graph": entry.graph,
                     "context": context.__dict__,
                     "source_object_id": entry.source_id,
+                    "ability_id": ability_id,  # Include ability ID for tracking
                 },
                 "controller_id": entry.controller_id,
             }

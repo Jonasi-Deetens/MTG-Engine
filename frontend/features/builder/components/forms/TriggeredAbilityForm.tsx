@@ -77,6 +77,7 @@ export function TriggeredAbilityForm({ abilityId, onSave, onCancel }: TriggeredA
   const [modalMin, setModalMin] = useState(existingAbility?.modal?.min ?? 1);
   const [modalMax, setModalMax] = useState<number | null | ''>(existingAbility?.modal?.max ?? 1);
   const [modalModes, setModalModes] = useState(existingAbility?.modal?.modes ?? []);
+  const [usesStack, setUsesStack] = useState(existingAbility?.usesStack !== false); // Default to true
 
   const handleAddEffect = () => {
     setEffects([...effects, { type: 'damage', amount: 0 }]);
@@ -166,6 +167,7 @@ export function TriggeredAbilityForm({ abilityId, onSave, onCancel }: TriggeredA
       scope,
       condition: condition || undefined,
       effects: filterValidEffects(cleanedEffects),
+      usesStack,
       ...(modal ? { modal } : {}),
       cardType: cardType || undefined,
       ...(event === 'card_enters' && {
@@ -243,6 +245,22 @@ export function TriggeredAbilityForm({ abilityId, onSave, onCancel }: TriggeredA
         <p className="text-xs text-[color:var(--theme-text-secondary)] mt-1">
           Limits the trigger to a specific permanent type when applicable.
         </p>
+      </div>
+
+      {/* Uses Stack Toggle */}
+      <div className="flex items-center gap-2">
+        <label className="flex items-center gap-2 text-sm font-medium text-[color:var(--theme-text-secondary)]">
+          <input
+            type="checkbox"
+            checked={usesStack}
+            onChange={(e) => setUsesStack(e.target.checked)}
+            className="w-4 h-4 rounded border-[color:var(--theme-input-border)] bg-[color:var(--theme-input-bg)] text-[color:var(--theme-accent-primary)] focus:ring-[color:var(--theme-border-focus)]"
+          />
+          Uses Stack
+        </label>
+        <span className="text-xs text-[color:var(--theme-text-muted)]">
+          (Uncheck for reflexive triggers that resolve immediately)
+        </span>
       </div>
 
       {/* Modal Configuration */}

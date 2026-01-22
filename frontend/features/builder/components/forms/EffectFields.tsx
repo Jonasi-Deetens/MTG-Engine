@@ -3,7 +3,7 @@
 // frontend/components/builder/forms/EffectFields.tsx
 // Reusable effect field components for all ability forms
 
-import { Effect, useBuilderStore, ValidationError } from '@/store/builderStore';
+import { Effect, EffectCondition, useBuilderStore, ValidationError } from '@/store/builderStore';
 import { 
   EFFECT_TYPE_OPTIONS, 
   TARGET_OPTIONS, 
@@ -164,6 +164,68 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
           </select>
         </div>
       )}
+
+      {/* Per-Effect Optional Flag */}
+      <div className="flex items-center gap-2">
+        <label className="flex items-center gap-2 text-xs text-[color:var(--theme-text-secondary)]">
+          <input
+            type="checkbox"
+            checked={!!effect.optional}
+            onChange={(e) => onUpdate('optional', e.target.checked)}
+            className="w-4 h-4 rounded border-[color:var(--theme-input-border)] bg-[color:var(--theme-input-bg)] text-[color:var(--theme-accent-primary)] focus:ring-[color:var(--theme-border-focus)]"
+          />
+          Optional effect ("may")
+        </label>
+      </div>
+
+      {/* Per-Effect Condition */}
+      <div>
+        <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">
+          Effect Condition <span className="text-[color:var(--theme-text-muted)]">(optional)</span>
+        </label>
+        <select
+          value={effect.condition?.type || ''}
+          onChange={(e) => {
+            const conditionType = e.target.value;
+            if (!conditionType) {
+              onUpdate('condition', undefined);
+            } else if (conditionType === 'was_cast') {
+              onUpdate('condition', { type: 'was_cast', target: 'triggering_source' });
+            } else {
+              onUpdate('condition', { type: conditionType });
+            }
+          }}
+          className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+        >
+          <option value="">No condition</option>
+          <option value="was_cast">Was Cast</option>
+          <option value="is_tapped">Is Tapped</option>
+          <option value="is_attacking">Is Attacking</option>
+          <option value="is_blocking">Is Blocking</option>
+          <option value="control_count">Control Count</option>
+          <option value="has_keyword">Has Keyword</option>
+        </select>
+        {effect.condition?.type === 'was_cast' && (
+          <div className="mt-2">
+            <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Condition Target</label>
+            <select
+              value={effect.condition?.target || 'triggering_source'}
+              onChange={(e) => onUpdate('condition', { ...effect.condition, target: e.target.value })}
+              className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+            >
+              <option value="triggering_source">Triggering Source</option>
+              <option value="triggering_aura">Triggering Aura</option>
+              <option value="triggering_spell">Triggering Spell</option>
+              <option value="target_permanent">Target Permanent</option>
+            </select>
+          </div>
+        )}
+        {effect.condition && (
+          <p className="text-xs text-[color:var(--theme-text-muted)] mt-1">
+            Effect will only execute if this condition is met
+          </p>
+        )}
+      </div>
 
       {/* Amount */}
       {selectedEffectType?.requiresAmount && (

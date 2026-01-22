@@ -732,19 +732,27 @@ def execute_engine_action(
             raise HTTPException(status_code=400, detail="player_id and object_id are required for activate_ability")
         turn_manager = TurnManager(game_state)
         try:
-            activate_ability(
+            # Support both ability_type and ability_index for new type+index lookup
+            ability_type = getattr(payload, 'ability_type', None) or "activated"
+            result = activate_ability(
                 game_state,
                 turn_manager,
                 payload.player_id,
                 payload.object_id,
                 payload.ability_index or 0,
+                ability_type,  # New: pass ability_type
                 payload.context.model_dump() if payload.context else None,
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
         response = EngineActionResponse(
             game_state=_serialize_game_state(game_state),
-            result={"status": "ability_activated", "current_priority": turn_manager.priority.current},
+            result={
+                "status": result.get("status", "ability_activated"),
+                "ability_id": result.get("ability_id"),
+                "current_priority": turn_manager.priority.current,
+                **(result.get("result", {}) if result.get("status") == "resolved_immediately" else {})
+            },
             debug_log=game_state.debug_log,
         )
         _maybe_snapshot(db, payload.game_id, pre_turn_number, pre_step, pre_stack_len, game_state, session_version, user.id)

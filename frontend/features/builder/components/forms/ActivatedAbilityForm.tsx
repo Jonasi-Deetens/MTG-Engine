@@ -28,6 +28,7 @@ export function ActivatedAbilityForm({ abilityId, onSave, onCancel }: ActivatedA
   const [modalMin, setModalMin] = useState(existingAbility?.modal?.min ?? 1);
   const [modalMax, setModalMax] = useState(existingAbility?.modal?.max ?? 1);
   const [modalModes, setModalModes] = useState(existingAbility?.modal?.modes ?? []);
+  const [usesStack, setUsesStack] = useState(existingAbility?.usesStack !== false); // Default to true
 
 
   const handleSave = () => {
@@ -37,6 +38,7 @@ export function ActivatedAbilityForm({ abilityId, onSave, onCancel }: ActivatedA
       id: abilityId || `activated-${Date.now()}`,
       costs,
       effects: filterValidEffects(cleanedEffects),
+      usesStack,
       ...(modal ? { modal } : {}),
       timing: timing === 'any' ? undefined : timing,
       limit: limitScope === 'none' ? undefined : { scope: limitScope, max: limitMax },
@@ -93,6 +95,22 @@ export function ActivatedAbilityForm({ abilityId, onSave, onCancel }: ActivatedA
             className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
           />
         </div>
+      </div>
+
+      {/* Uses Stack Toggle */}
+      <div className="flex items-center gap-2">
+        <label className="flex items-center gap-2 text-sm font-medium text-[color:var(--theme-text-secondary)]">
+          <input
+            type="checkbox"
+            checked={usesStack}
+            onChange={(e) => setUsesStack(e.target.checked)}
+            className="w-4 h-4 rounded border-[color:var(--theme-input-border)] bg-[color:var(--theme-input-bg)] text-[color:var(--theme-accent-primary)] focus:ring-[color:var(--theme-border-focus)]"
+          />
+          Uses Stack
+        </label>
+        <span className="text-xs text-[color:var(--theme-text-muted)]">
+          (Uncheck for mana abilities that resolve immediately)
+        </span>
       </div>
 
       <AbilityEffectsSection

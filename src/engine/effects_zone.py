@@ -268,10 +268,23 @@ def _filter_search_pool(
 
 
 def handle_put_onto_battlefield(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
+    from .effects_internal.target_resolver import (
+        should_infer_targets_from_effect,
+        get_inferred_targets_from_previous_result,
+    )
+    
     from_effect = effect.get("fromEffect")
     card_ids = []
+    
+    # When fromEffect is specified, infer targets from previous effect's result
+    # This allows omitting minTargets/maxTargets when using effect chaining
     if from_effect is not None and from_effect < len(context.previous_results):
-        card_ids = context.previous_results[from_effect].get("found", [])
+        card_ids = get_inferred_targets_from_previous_result(
+            context.previous_results, from_effect
+        )
+        if not card_ids:
+            # Fallback to "found" key for backward compatibility
+            card_ids = context.previous_results[from_effect].get("found", [])
     else:
         target_id = resolve_object_id(context, "target", None)
         if target_id:
@@ -334,13 +347,23 @@ def handle_attach(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
         attach_to = resolve_object_id(temp_context, "target", attach_to)
     if not attach_to:
         attach_to = resolve_object_id(temp_context, "target", None)
+    from .effects_internal.target_resolver import get_inferred_targets_from_previous_result
+    
     from_effect = effect.get("fromEffect")
     card_ids = []
+    
+    # When fromEffect is specified, infer targets from previous effect's result
+    # This allows omitting minTargets/maxTargets when using effect chaining
     if from_effect is not None and from_effect < len(context.previous_results):
         prev_result = context.previous_results[from_effect]
         print(f"[graph] attach from_effect={from_effect} prev_result={prev_result}", flush=True)
-        # Check both "found" (from search) and "cards" (from put_onto_battlefield)
-        card_ids = prev_result.get("found", []) or prev_result.get("cards", [])
+        # Use helper function to get targets from common result keys
+        card_ids = get_inferred_targets_from_previous_result(
+            context.previous_results, from_effect
+        )
+        # Fallback for backward compatibility
+        if not card_ids:
+            card_ids = prev_result.get("found", []) or prev_result.get("cards", [])
     elif effect.get("attachSource"):
         if temp_context.source_id:
             card_ids = [temp_context.source_id]

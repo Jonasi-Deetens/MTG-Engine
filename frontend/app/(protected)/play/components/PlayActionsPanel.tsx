@@ -271,6 +271,7 @@ export function PlayActionsPanel() {
             player_id: currentPriority,
             object_id: selectedBattlefieldId ?? undefined,
             ability_index: 0,
+            ability_type: 'activated',  // New: support type+index lookup
             context: buildCastContext(selectedBattlefieldId ?? undefined, {
               wardAutoPay: autoPayWard,
               wardPayments: wardPaymentsPayload,

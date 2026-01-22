@@ -22,6 +22,7 @@ class RegisteredTrigger:
     trigger: str
     graph: Dict[str, Any]
     trigger_data: Optional[Dict[str, Any]]
+    index: int = 0  # Index of this trigger within the source object's triggered abilities
 
 
 class TriggerRegistry:
@@ -56,6 +57,8 @@ class TriggerRegistry:
 
     def register_object(self, obj: "GameObject") -> None:
         """Register triggered abilities from a single object."""
+        trigger_index = 0  # Track index of triggered abilities for this object
+        
         for graph in obj.ability_graphs:
             runtime = self._adapter.build_runtime(graph)
             if not runtime.trigger:
@@ -71,10 +74,13 @@ class TriggerRegistry:
                 trigger=runtime.trigger,
                 graph=graph,
                 trigger_data=runtime.trigger_data,
+                index=trigger_index,  # Include index for ability ID generation
             )
             self._registered.append(trigger)
             self._registered_triggers.add(runtime.trigger)
-            logger.debug(f"Registered trigger: {obj.id} -> {runtime.trigger}")
+            logger.debug(f"Registered trigger: {obj.id} -> {runtime.trigger} (index={trigger_index})")
+            
+            trigger_index += 1
 
     def unregister_object(self, obj_id: str) -> None:
         """Unregister all triggered abilities from an object."""

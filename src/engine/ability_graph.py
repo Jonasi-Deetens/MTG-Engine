@@ -21,6 +21,10 @@ class RuntimeAbility:
     conditions: List[Dict[str, Any]]
     effects: List[Dict[str, Any]]
     modal: Optional[Dict[str, Any]]
+    # New fields for refactored system
+    ability_id: Optional[str] = None  # e.g., "triggered-0"
+    uses_stack: bool = True  # Configurable stack behavior
+    ability_condition: Optional[Dict[str, Any]] = None  # Ability-level gate condition
 
 
 class AbilityGraphRuntimeAdapter:
@@ -46,15 +50,25 @@ class AbilityGraphRuntimeAdapter:
         keyword = None
         timing = None
         activation_limit = None
+        uses_stack = graph.get("usesStack", True)  # New: extract from graph
+        ability_id = graph.get("abilityId")  # New: extract from graph
+        ability_condition: Optional[Dict[str, Any]] = None  # New: ability-level gate
         modal = extract_modal_config(graph)
+        
         if root_node:
             if root_node["type"] == "TRIGGER":
                 trigger = root_node["data"].get("event")
                 trigger_data = dict(root_node.get("data") or {})
+                # Extract usesStack from root node data if present
+                if "usesStack" in root_node.get("data", {}):
+                    uses_stack = root_node["data"]["usesStack"]
             elif root_node["type"] == "ACTIVATED":
                 costs = root_node["data"].get("costs") if isinstance(root_node["data"].get("costs"), list) else []
                 timing = root_node["data"].get("timing")
                 activation_limit = root_node["data"].get("limit")
+                # Extract usesStack from root node data if present
+                if "usesStack" in root_node.get("data", {}):
+                    uses_stack = root_node["data"]["usesStack"]
             elif root_node["type"] == "KEYWORD":
                 keyword = root_node["data"].get("keyword")
             elif root_node["type"] == "SPELL":
@@ -71,7 +85,11 @@ class AbilityGraphRuntimeAdapter:
         effects: List[Dict[str, Any]] = []
         visited: set[str] = set()
 
-        def traverse(node_id: str) -> None:
+        # Track first condition as ability-level condition if it's a direct child of root
+        first_condition_found = False
+
+        def traverse(node_id: str, is_direct_child: bool = False) -> None:
+            nonlocal ability_condition, first_condition_found
             if node_id in visited:
                 return
             visited.add(node_id)
@@ -80,12 +98,17 @@ class AbilityGraphRuntimeAdapter:
                 return
             if node["type"] == "CONDITION":
                 conditions.append(node["data"])
+                # If this is a direct child of root and first condition, it's the ability-level gate
+                if is_direct_child and not first_condition_found:
+                    ability_condition = node["data"]
+                    first_condition_found = True
             if node["type"] == "EFFECT":
                 effect_data = dict(node["data"])
                 effect_data["_node_id"] = node_id
+                # Per-effect optional and condition are already in the data from the frontend
                 effects.append(effect_data)
             for next_id in adjacency.get(node_id, []):
-                traverse(next_id)
+                traverse(next_id, is_direct_child=False)
 
         if root_node:
             # Add root EFFECT node directly (for both static and activated/triggered abilities)
@@ -94,7 +117,12 @@ class AbilityGraphRuntimeAdapter:
                 effect_data["_node_id"] = root_node["id"]
                 effects.append(effect_data)
             for next_id in adjacency.get(root_node["id"], []):
-                traverse(next_id)
+                traverse(next_id, is_direct_child=True)
+
+        # Generate ability_id if not provided
+        if not ability_id:
+            ability_type = graph.get("abilityType", "triggered")
+            ability_id = f"{ability_type}-0"
 
         return RuntimeAbility(
             ability_type=graph.get("abilityType", "triggered"),
@@ -107,6 +135,9 @@ class AbilityGraphRuntimeAdapter:
             conditions=conditions,
             effects=effects,
             modal=modal,
+            ability_id=ability_id,
+            uses_stack=uses_stack,
+            ability_condition=ability_condition,
         )
 
     def resolve(self, graph: Dict[str, Any], context: ResolveContext) -> Dict[str, Any]:

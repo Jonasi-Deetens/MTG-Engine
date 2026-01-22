@@ -160,6 +160,7 @@ class EngineActionRequest(BaseModel):
     player_id: Optional[int] = None
     object_id: Optional[str] = None
     ability_index: Optional[int] = None
+    ability_type: Optional[str] = None  # New: for type+index ability lookup
     attackers: List[str] = Field(default_factory=list)
     blockers: Dict[str, List[str]] = Field(default_factory=dict)
     defending_player_id: Optional[int] = None
