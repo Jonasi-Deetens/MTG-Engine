@@ -15,6 +15,7 @@ interface DeckBuilderGridProps {
   onCardHover: (card: DeckCardResponse | null) => void;
   onCardClick: (card: CardData) => void;
   onRename: (type: CardType, newName: string, listId?: number) => void;
+  middleContent?: React.ReactNode;
 }
 
 export function DeckBuilderGrid({
@@ -26,6 +27,7 @@ export function DeckBuilderGrid({
   onCardHover,
   onCardClick,
   onRename,
+  middleContent,
 }: DeckBuilderGridProps) {
   const renderTypeList = (type: CardType) => {
     const list = findListForType(type, typeLists);
@@ -48,17 +50,13 @@ export function DeckBuilderGrid({
   };
 
   return (
-    <>
-      {/* Left Section - 2 Columns */}
-      <div className="grid grid-cols-2 gap-x-4">
-        {/* Left Column 1 - Creatures */}
+    <div className="grid grid-cols-1 xl:grid-cols-[2fr_1fr_2fr] gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 min-w-0">
         <div className="min-w-0">
           {renderTypeList('Creature')}
         </div>
-
-        {/* Left Column 2 - Instants & Sorceries */}
-        <div className="space-y-2 min-w-0">
-          {(['Instant', 'Sorcery'] as CardType[]).map(type => (
+        <div className="space-y-4 min-w-0">
+          {(['Instant', 'Sorcery'] as CardType[]).map((type) => (
             <div key={type}>
               {renderTypeList(type)}
             </div>
@@ -66,27 +64,27 @@ export function DeckBuilderGrid({
         </div>
       </div>
 
-      {/* Right Section - 2 Columns */}
-      <div className="grid grid-cols-2 gap-x-4">
-        {/* Right Column 1 - Artifacts & Enchantments */}
-        <div className="space-y-2 min-w-0">
-          {(['Artifact', 'Enchantment'] as CardType[]).map(type => (
+      <div className="space-y-4 min-w-0">
+        {middleContent}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 min-w-0">
+        <div className="space-y-4 min-w-0">
+          {(['Artifact', 'Enchantment'] as CardType[]).map((type) => (
             <div key={type}>
               {renderTypeList(type)}
             </div>
           ))}
         </div>
-
-        {/* Right Column 2 - Lands, Planeswalkers & Other */}
-        <div className="space-y-2 min-w-0">
-          {(['Land', 'Planeswalker', 'Other'] as CardType[]).map(type => (
+        <div className="space-y-4 min-w-0">
+          {(['Land', 'Planeswalker', 'Other'] as CardType[]).map((type) => (
             <div key={type}>
               {renderTypeList(type)}
             </div>
           ))}
         </div>
       </div>
-    </>
+    </div>
   );
 }
 

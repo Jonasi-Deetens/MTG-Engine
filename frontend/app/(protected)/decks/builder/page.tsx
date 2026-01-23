@@ -14,6 +14,7 @@ import { CardModal } from '@/components/ui/CardModal';
 import { Button } from '@/components/ui/Button';
 import { DeckBuilderHeader } from '@/features/decks/components/builder/DeckBuilderHeader';
 import { DeckInfoForm } from '@/features/decks/components/builder/DeckInfoForm';
+import { DeckBuilderGrid } from '@/features/decks/components/builder/DeckBuilderGrid';
 import { CommanderSection } from '@/features/decks/components/builder/CommanderSection';
 import { CardPreviewSection } from '@/features/decks/components/builder/CardPreviewSection';
 import { UnifiedCardSearch } from '@/features/decks/components/UnifiedCardSearch';
@@ -21,11 +22,8 @@ import { DeckValidationPanel } from '@/features/decks/components/DeckValidationP
 import { ManaCurveChart } from '@/features/decks/components/ManaCurveChart';
 import { CardTypeBreakdown } from '@/features/decks/components/CardTypeBreakdown';
 import { DeckImport } from '@/features/decks/components/DeckImport';
-import { EditableTypeList } from '@/features/decks/components/EditableTypeList';
 import { extractCardId } from '@/utils/dragAndDrop';
 import { DeckCardResponse, DeckCustomListResponse } from '@/lib/decks';
-import { CardType } from '@/lib/utils/cardTypes';
-import { findListForType, getCardsForType } from '@/utils/deckBuilder/cardGrouping';
 import { CardData } from '@/components/cards/CardPreview';
 import { isEditableTarget } from '@/context/ShortcutContext';
 
@@ -80,6 +78,9 @@ export default function DeckBuilderPage() {
     },
     onCommanderAdd: async (deckId: number, cardId: string, position: number) => {
       await addCommander(deckId, cardId, position);
+    },
+    onCommanderRemove: async (_deckId: number, cardId: string) => {
+      await handleRemoveCommander(cardId);
     },
     onCardRemove: async (deckId: number, cardId: string) => {
       await removeCardFromStore(deckId, cardId);
@@ -158,8 +159,13 @@ export default function DeckBuilderPage() {
     isModalOpen,
   ]);
 
+  const handleDeckCardHover = (card: DeckCardResponse | null) => {
+    handleCardHover(card);
+    setFocusedDeckCard(card);
+  };
+
   return (
-    <div className="w-full space-y-3">
+    <div className="w-full space-y-6">
       <DeckBuilderHeader
         deckName={currentDeck?.name ?? null}
         onImportClick={() => setShowImport(true)}
@@ -172,7 +178,7 @@ export default function DeckBuilderPage() {
         </div>
       )}
 
-      <div className="space-y-3">
+      <div className="space-y-6">
         <DeckInfoForm
           deckName={deckName}
           deckDescription={deckDescription}
@@ -191,8 +197,8 @@ export default function DeckBuilderPage() {
         {currentDeck && (
           <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
             <Card variant="elevated">
-              <div className="p-3 space-y-3">
-                <div className="space-y-2">
+              <div className="p-4 space-y-4">
+                <div className="space-y-3">
                   <h3 className="text-sm font-semibold text-[color:var(--theme-text-primary)]">
                     Deck ({currentDeck.card_count} cards)
                   </h3>
@@ -205,161 +211,54 @@ export default function DeckBuilderPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
-                  {/* Left Section - 2 Columns */}
-                  <div className="grid grid-cols-2 gap-x-4 min-w-0">
-                    {/* Left Column 1 - Creatures */}
-                    <div className="min-w-0">
-                      {(() => {
-                        const type: CardType = 'Creature';
-                        const list = findListForType(type, typeLists);
-                        const typeCards = getCardsForType(type, currentDeck.cards, typeLists);
-                        return (
-                          <EditableTypeList
-                            type={type}
-                            list={list || null}
-                            cards={typeCards}
-                            onQuantityChange={handleQuantityChange}
-                            onRemove={handleRemoveCard}
-                            onCardHover={(card) => {
-                              handleCardHover(card);
-                              setFocusedDeckCard(card);
-                            }}
-                            onCardClick={(deckCard) => {
-                              setModalCard(deckCard.card);
-                              setIsModalOpen(true);
-                            }}
-                            onRename={handleRenameTypeList}
-                            showControls={true}
-                          />
-                        );
-                      })()}
-                    </div>
-
-                    {/* Left Column 2 - Instants & Sorceries */}
-                    <div className="space-y-2 min-w-0">
-                      {(['Instant', 'Sorcery'] as CardType[]).map((type) => {
-                        const list = findListForType(type, typeLists);
-                        const typeCards = getCardsForType(type, currentDeck.cards, typeLists);
-                        return (
-                          <EditableTypeList
-                            key={type}
-                            type={type}
-                            list={list || null}
-                            cards={typeCards}
-                            onQuantityChange={handleQuantityChange}
-                            onRemove={handleRemoveCard}
-                            onCardHover={(card) => {
-                              handleCardHover(card);
-                              setFocusedDeckCard(card);
-                            }}
-                            onCardClick={(deckCard) => {
-                              setModalCard(deckCard.card);
-                              setIsModalOpen(true);
-                            }}
-                            onRename={handleRenameTypeList}
-                            showControls={true}
-                          />
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Middle Section - Commander and Preview */}
-                  <div className="space-y-4">
-                    {deckFormat === 'Commander' && (
-                      <CommanderSection
-                        commanders={currentDeck.commanders}
-                        onCommanderHover={(card) => {
-                          handleCardHover(card);
-                          setFocusedDeckCard(card);
-                        }}
-                        onCommanderClick={(card) => {
-                          setModalCard(card);
-                          setIsModalOpen(true);
-                        }}
-                        onRemoveCommander={handleRemoveCommander}
-                      />
-                    )}
-                    <CardPreviewSection previewCard={previewCard} />
-                  </div>
-
-                  {/* Right Section - 2 Columns */}
-                  <div className="grid grid-cols-2 gap-x-4 min-w-0">
-                    {/* Right Column 1 - Artifacts & Enchantments */}
-                    <div className="space-y-2 min-w-0">
-                      {(['Artifact', 'Enchantment'] as CardType[]).map((type) => {
-                        const list = findListForType(type, typeLists);
-                        const typeCards = getCardsForType(type, currentDeck.cards, typeLists);
-                        return (
-                          <EditableTypeList
-                            key={type}
-                            type={type}
-                            list={list || null}
-                            cards={typeCards}
-                            onQuantityChange={handleQuantityChange}
-                            onRemove={handleRemoveCard}
-                            onCardHover={(card) => {
-                              handleCardHover(card);
-                              setFocusedDeckCard(card);
-                            }}
-                            onCardClick={(deckCard) => {
-                              setModalCard(deckCard.card);
-                              setIsModalOpen(true);
-                            }}
-                            onRename={handleRenameTypeList}
-                            showControls={true}
-                          />
-                        );
-                      })}
-                    </div>
-
-                    {/* Right Column 2 - Lands, Planeswalkers & Other */}
-                    <div className="space-y-2 min-w-0">
-                      {(['Land', 'Planeswalker', 'Other'] as CardType[]).map((type) => {
-                        const list = findListForType(type, typeLists);
-                        const typeCards = getCardsForType(type, currentDeck.cards, typeLists);
-                        return (
-                          <EditableTypeList
-                            key={type}
-                            type={type}
-                            list={list || null}
-                            cards={typeCards}
-                            onQuantityChange={handleQuantityChange}
-                            onRemove={handleRemoveCard}
-                            onCardHover={(card) => {
-                              handleCardHover(card);
-                              setFocusedDeckCard(card);
-                            }}
-                            onCardClick={(deckCard) => {
-                              setModalCard(deckCard.card);
-                              setIsModalOpen(true);
-                            }}
-                            onRename={handleRenameTypeList}
-                            showControls={true}
-                          />
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
+                <DeckBuilderGrid
+                  cards={currentDeck.cards}
+                  typeLists={typeLists}
+                  deckFormat={deckFormat || 'Commander'}
+                  onQuantityChange={handleQuantityChange}
+                  onRemove={handleRemoveCard}
+                  onCardHover={handleDeckCardHover}
+                  onCardClick={(card) => {
+                    setModalCard(card);
+                    setIsModalOpen(true);
+                  }}
+                  onRename={handleRenameTypeList}
+                  middleContent={
+                    <>
+                      {deckFormat === 'Commander' && (
+                        <CommanderSection
+                          commanders={currentDeck.commanders}
+                          onCommanderHover={handleDeckCardHover}
+                          onCommanderClick={(card) => {
+                            setModalCard(card);
+                            setIsModalOpen(true);
+                          }}
+                          onRemoveCommander={handleRemoveCommander}
+                        />
+                      )}
+                      <CardPreviewSection previewCard={previewCard} />
+                    </>
+                  }
+                />
               </div>
             </Card>
 
             <DragOverlay>
               {activeId && extractCardId(activeId) && (() => {
                 const cardId = extractCardId(activeId)!;
-                const draggedCard = currentDeck.cards.find(c => c.card_id === cardId);
-                if (!draggedCard) return null;
+                const draggedDeckCard = currentDeck.cards.find(c => c.card_id === cardId);
+                const draggedCommander = currentDeck.commanders.find(c => c.card_id === cardId);
+                const card = draggedDeckCard?.card ?? draggedCommander?.card;
+                if (!card) return null;
                 
-                const manaCost = draggedCard.card.mana_cost || '';
+                const manaCost = card.mana_cost || '';
                 return (
                   <div className="flex items-center gap-2 px-2 py-1 bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] rounded-lg shadow-xl min-w-[180px]">
                     <span className="flex-shrink-0 w-4 text-right text-xs font-medium text-[color:var(--theme-accent-primary)]">
-                      {draggedCard.quantity}x
+                      {draggedDeckCard?.quantity ?? 1}x
                     </span>
                     <span className="flex-1 min-w-0 text-[color:var(--theme-text-primary)] text-xs truncate">
-                      {draggedCard.card.name}
+                      {card.name}
                     </span>
                     {manaCost && (
                       <span className="flex-shrink-0 text-[color:var(--theme-accent-primary)] font-mono text-xs">
@@ -376,7 +275,7 @@ export default function DeckBuilderPage() {
         {/* Analytics Section */}
         {currentDeck && (
           <Card variant="elevated">
-            <div className="p-3 space-y-3">
+            <div className="p-4 space-y-4">
               <h3 className="text-sm font-semibold text-[color:var(--theme-text-primary)]">Analytics</h3>
               
               <div>
@@ -401,7 +300,7 @@ export default function DeckBuilderPage() {
               })()}
 
               {currentDeck.cards.length > 0 && (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div>
                     <h4 className="text-xs font-semibold text-[color:var(--theme-text-primary)] mb-2">Mana Curve</h4>
                     <ManaCurveChart cards={currentDeck.cards} />

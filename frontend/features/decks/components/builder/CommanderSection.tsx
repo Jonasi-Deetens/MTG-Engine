@@ -2,6 +2,7 @@
 
 import { DeckCommanderResponse, DeckCardResponse } from '@/lib/decks';
 import { DroppableList } from '../DroppableList';
+import { DraggableCard } from '../DraggableCard';
 import { CardData } from '@/components/cards/CardPreview';
 
 interface CommanderSectionProps {
@@ -27,42 +28,48 @@ export function CommanderSection({
           <div>
             {commanders.map((commander) => {
               const manaCost = commander.card.mana_cost || '';
+              const commanderCard: DeckCardResponse = {
+                card_id: commander.card_id,
+                card: commander.card,
+                quantity: 1,
+                list_id: null,
+              };
               return (
-                <div
+                <DraggableCard
                   key={commander.card.card_id}
-                  className="flex items-center gap-2 px-1.5 py-0.5 hover:bg-[color:var(--theme-card-hover)] transition-colors text-sm cursor-pointer"
-                  onMouseEnter={() => onCommanderHover({ 
-                    card: commander.card, 
-                    quantity: 1, 
-                    card_id: commander.card_id,
-                    list_id: null 
-                  })}
-                  onClick={() => onCommanderClick(commander.card)}
+                  card={commanderCard}
+                  dragData={{ isCommander: true }}
                 >
-                  <span className="flex-shrink-0 w-5 text-right text-xs font-medium text-[color:var(--theme-accent-primary)]">
-                    1x
-                  </span>
-                  <span className="flex-1 min-w-0 text-[color:var(--theme-text-primary)] truncate text-xs">
-                    {commander.card.name}
-                  </span>
-                  {manaCost && (
-                    <span className="flex-shrink-0 text-[color:var(--theme-accent-primary)] font-mono text-xs">
-                      {manaCost}
+                  <div
+                    className="flex items-center gap-2 px-1.5 py-0.5 hover:bg-[color:var(--theme-card-hover)] transition-colors text-sm cursor-pointer"
+                    onMouseEnter={() => onCommanderHover(commanderCard)}
+                    onClick={() => onCommanderClick(commander.card)}
+                  >
+                    <span className="flex-shrink-0 w-5 text-right text-xs font-medium text-[color:var(--theme-accent-primary)]">
+                      1x
                     </span>
-                  )}
-                  <div className="flex items-center gap-0.5 flex-shrink-0">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onRemoveCommander(commander.card.card_id);
-                      }}
-                      className="w-5 h-5 flex items-center justify-center text-[color:var(--theme-status-error)] hover:bg-[color:var(--theme-status-error)]/20 rounded transition-colors text-xs"
-                      title="Remove"
-                    >
-                      ×
-                    </button>
+                    <span className="flex-1 min-w-0 text-[color:var(--theme-text-primary)] truncate text-xs">
+                      {commander.card.name}
+                    </span>
+                    {manaCost && (
+                      <span className="flex-shrink-0 text-[color:var(--theme-accent-primary)] font-mono text-xs">
+                        {manaCost}
+                      </span>
+                    )}
+                    <div className="flex items-center gap-0.5 flex-shrink-0">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRemoveCommander(commander.card.card_id);
+                        }}
+                        className="w-5 h-5 flex items-center justify-center text-[color:var(--theme-status-error)] hover:bg-[color:var(--theme-status-error)]/20 rounded transition-colors text-xs"
+                        title="Remove"
+                      >
+                        ×
+                      </button>
+                    </div>
                   </div>
-                </div>
+                </DraggableCard>
               );
             })}
           </div>

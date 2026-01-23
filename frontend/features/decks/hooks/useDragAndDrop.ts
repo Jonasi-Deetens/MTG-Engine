@@ -13,6 +13,7 @@ interface UseDragAndDropOptions {
   deckFormat: string;
   onCardMove: (deckId: number, cardId: string, listId: number | null) => Promise<void>;
   onCommanderAdd: (deckId: number, cardId: string, position: number) => Promise<void>;
+  onCommanderRemove: (deckId: number, cardId: string) => Promise<void>;
   onCardRemove: (deckId: number, cardId: string) => Promise<void>;
   onRefresh: (deckId: number) => Promise<void>;
   onTypeListsUpdate: (lists: DeckCustomListResponse[]) => void;
@@ -24,6 +25,7 @@ export function useDragAndDrop({
   deckFormat,
   onCardMove,
   onCommanderAdd,
+  onCommanderRemove,
   onCardRemove,
   onRefresh,
   onTypeListsUpdate,
@@ -48,8 +50,9 @@ export function useDragAndDrop({
     if (!cardId) return;
 
     // Get card data to check current list
-    const cardData = active.data.current as { card: DeckCardResponse } | undefined;
+    const cardData = active.data.current as { card: DeckCardResponse; isCommander?: boolean } | undefined;
     const currentListId = cardData?.card.list_id ?? null;
+    const isCommanderDrag = cardData?.isCommander === true;
 
     // Check if dropped on the same list
     const listId = extractListId(overId);
@@ -58,7 +61,7 @@ export function useDragAndDrop({
     // Handle different drop targets
     if (isCommanderList(overId)) {
       // Dropped on commander list
-      if (deckFormat === 'Commander') {
+      if (deckFormat === 'Commander' && !isCommanderDrag) {
         try {
           await onCommanderAdd(currentDeck.id, cardId, currentDeck.commanders.length);
           // Remove from deck cards if it was there
@@ -74,7 +77,17 @@ export function useDragAndDrop({
     } else if (listId !== null) {
       // Dropped on a specific list
       try {
-        await onCardMove(currentDeck.id, cardId, listId);
+        if (isCommanderDrag) {
+          const existingCard = currentDeck.cards.find(c => c.card_id === cardId);
+          if (existingCard) {
+            await onCardMove(currentDeck.id, cardId, listId);
+          } else {
+            await decks.addCard(currentDeck.id, { card_id: cardId, list_id: listId });
+          }
+          await onCommanderRemove(currentDeck.id, cardId);
+        } else {
+          await onCardMove(currentDeck.id, cardId, listId);
+        }
         await onRefresh(currentDeck.id);
       } catch (err: any) {
         alert(err?.data?.detail || 'Failed to move card');
@@ -110,7 +123,17 @@ export function useDragAndDrop({
         if (currentListId === typeList.id) return;
         
         try {
-          await onCardMove(currentDeck.id, cardId, typeList.id);
+          if (isCommanderDrag) {
+            const existingCard = currentDeck.cards.find(c => c.card_id === cardId);
+            if (existingCard) {
+              await onCardMove(currentDeck.id, cardId, typeList.id);
+            } else {
+              await decks.addCard(currentDeck.id, { card_id: cardId, list_id: typeList.id });
+            }
+            await onCommanderRemove(currentDeck.id, cardId);
+          } else {
+            await onCardMove(currentDeck.id, cardId, typeList.id);
+          }
           await onRefresh(currentDeck.id);
         } catch (err: any) {
           alert(err?.data?.detail || 'Failed to move card');

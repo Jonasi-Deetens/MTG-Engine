@@ -8,13 +8,15 @@ import { DeckCardResponse } from '@/lib/decks';
 interface DraggableCardProps {
   card: DeckCardResponse;
   children: React.ReactNode;
+  dragData?: Record<string, unknown>;
 }
 
-export function DraggableCard({ card, children }: DraggableCardProps) {
+export function DraggableCard({ card, children, dragData }: DraggableCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `card-${card.card_id}`,
     data: {
       card,
+      ...dragData,
     },
   });
 
@@ -29,6 +31,8 @@ export function DraggableCard({ card, children }: DraggableCardProps) {
       ref={setNodeRef}
       style={style}
       className={isDragging ? 'opacity-50' : ''}
+      {...listeners}
+      {...attributes}
     >
       {children}
     </div>
