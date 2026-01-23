@@ -3,34 +3,8 @@
 // frontend/app/(protected)/layout.tsx
 
 import { useEffect } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-
-function ProtectedLayoutContent({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const pathname = usePathname();
-  const isDeckBuilder = pathname === '/decks/builder';
-  const isPlay = pathname === '/play';
-  
-  return (
-    <main className="min-h-screen relative z-10">
-      <div
-        className={
-          isPlay
-            ? 'w-full px-4 sm:px-6 lg:px-8 py-6'
-            : isDeckBuilder
-              ? 'w-full px-4 sm:px-6 lg:px-8 py-8'
-              : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8'
-        }
-      >
-        {children}
-      </div>
-    </main>
-  );
-}
 
 export default function ProtectedLayout({
   children,
@@ -58,6 +32,6 @@ export default function ProtectedLayout({
     return null;
   }
 
-  return <ProtectedLayoutContent>{children}</ProtectedLayoutContent>;
+  return <>{children}</>;
 }
 

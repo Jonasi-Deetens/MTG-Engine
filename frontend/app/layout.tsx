@@ -3,8 +3,8 @@ import { Inter, Cinzel } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
-import { NavbarWrapper } from "@/components/navigation/NavbarWrapper";
 import { ShortcutProvider } from "@/context/ShortcutContext";
+import { RootChrome } from "@/components/layout/RootChrome";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -54,7 +54,7 @@ export default function RootLayout({
         <ShortcutProvider>
           <ThemeProvider>
             <AuthProvider>
-              <NavbarWrapper>{children}</NavbarWrapper>
+              <RootChrome>{children}</RootChrome>
             </AuthProvider>
           </ThemeProvider>
         </ShortcutProvider>

@@ -24,7 +24,6 @@ export default function CardDetailPage() {
   const params = useParams();
   const router = useRouter();
   const cardId = params.card_id as string;
-  const { loadFromGraph } = useBuilderStore();
   const { isAuthenticated } = useAuth();
   
   const [card, setCard] = useState<CardData | null>(null);
@@ -154,7 +153,7 @@ export default function CardDetailPage() {
   if (error || !card) {
     return (
       <div className="min-h-screen bg-[color:var(--theme-bg-primary)] p-4">
-        <div className="max-w-4xl mx-auto">
+        <div className="mx-auto">
           <div className="bg-[color:var(--theme-status-error)]/20 border border-[color:var(--theme-status-error)]/50 rounded-lg p-6 text-[color:var(--theme-status-error)]">
             <h1 className="text-2xl font-bold mb-2">Error</h1>
             <p>{error || 'Card not found'}</p>

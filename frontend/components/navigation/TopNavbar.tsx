@@ -23,13 +23,6 @@ export function TopNavbar({ variant = 'app', showSpacer = true }: TopNavbarProps
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [openMobileGroup, setOpenMobileGroup] = useState<string | null>(null);
 
-  // Filter nav items based on authentication
-  const visibleTopLevelItems = topLevelNavItems.filter(item => !item.requiresAuth || isAuthenticated);
-  const visibleNavGroups = navGroups.filter(group => 
-    group.items.some(item => !item.requiresAuth || isAuthenticated)
-  );
-  const visibleStandaloneItems = standaloneNavItems.filter(item => !item.requiresAuth || isAuthenticated);
-
   // Variant styles - theme-aware with glassmorphism
   const variantStyles = {
     landing: {
@@ -96,17 +89,17 @@ export function TopNavbar({ variant = 'app', showSpacer = true }: TopNavbarProps
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center gap-2 flex-1 justify-center">
               {/* Top-level items */}
-              {visibleTopLevelItems.map((item) => (
+              {topLevelNavItems.map((item) => (
                 <NavLink key={item.href} item={item} />
               ))}
               
               {/* Grouped items (dropdowns) */}
-              {visibleNavGroups.map((group) => (
+              {navGroups.map((group) => (
                 <NavDropdown key={group.label} group={group} variant={variant} />
               ))}
               
               {/* Standalone items */}
-              {visibleStandaloneItems.map((item) => (
+              {standaloneNavItems.map((item) => (
                 <NavLink key={item.href} item={item} />
               ))}
             </div>
@@ -181,15 +174,12 @@ export function TopNavbar({ variant = 'app', showSpacer = true }: TopNavbarProps
           <div className={`md:hidden border-t ${styles.mobileBorder} py-4`}>
             <div className="w-full px-4 space-y-2">
               {/* Top-level items */}
-              {visibleTopLevelItems.map((item) => (
+              {topLevelNavItems.map((item) => (
                 <NavLink key={item.href} item={item} />
               ))}
               
               {/* Grouped items (expandable sections) */}
-              {visibleNavGroups.map((group) => {
-                const visibleGroupItems = group.items.filter(item => !item.requiresAuth || isAuthenticated);
-                if (visibleGroupItems.length === 0) return null;
-                
+              {navGroups.map((group) => {
                 const isGroupOpen = openMobileGroup === group.label;
                 const GroupIcon = group.icon;
                 
@@ -215,7 +205,7 @@ export function TopNavbar({ variant = 'app', showSpacer = true }: TopNavbarProps
                     </button>
                     {isGroupOpen && (
                       <div className="pl-6 space-y-1">
-                        {visibleGroupItems.map((item) => (
+                        {group.items.map((item) => (
                           <NavLink key={item.href} item={item} />
                         ))}
                       </div>
@@ -225,7 +215,7 @@ export function TopNavbar({ variant = 'app', showSpacer = true }: TopNavbarProps
               })}
               
               {/* Standalone items */}
-              {visibleStandaloneItems.map((item) => (
+              {standaloneNavItems.map((item) => (
                 <NavLink key={item.href} item={item} />
               ))}
               
