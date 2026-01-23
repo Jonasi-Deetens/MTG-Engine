@@ -67,16 +67,15 @@ export function TopNavbar({ variant = 'app', showSpacer = true }: TopNavbarProps
     <>
       <nav
         className={`
-          fixed top-4 left-4 right-4 sm:left-6 sm:right-6 lg:left-8 lg:right-8 z-50
+          fixed top-0 left-0 right-0 z-50
           ${styles.container}
-          rounded-2xl
           transition-all
         `}
         style={{
           boxShadow: `0 2px 8px -4px var(--theme-accent-primary)`,
         }}
       >
-        <div className="w-full px-4 sm:px-6 lg:px-8">
+        <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2 flex-shrink-0">
@@ -236,8 +235,8 @@ export function TopNavbar({ variant = 'app', showSpacer = true }: TopNavbarProps
         )}
       </nav>
 
-      {/* Spacer for fixed navbar (accounting for top margin and height) - not needed on landing page */}
-      {showSpacer && <div className="h-20" />}
+      {/* Spacer for fixed navbar (accounting for height) - not needed on landing page */}
+      {showSpacer && <div className="h-16" />}
     </>
   );
 }
