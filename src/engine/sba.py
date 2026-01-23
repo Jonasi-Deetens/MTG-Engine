@@ -114,13 +114,13 @@ def _apply_attachment_checks(game_state: GameState) -> None:
     for obj in list(game_state.objects.values()):
         if obj.zone != ZONE_BATTLEFIELD:
             continue
-        moved = game_state._enforce_attachment_legality(obj)
+        moved = game_state.attachment_manager.enforce_legality(obj)
         if moved:
             continue
 
 
 def _is_illegal_attachment(game_state: GameState, aura, attached) -> bool:
-    return game_state._is_illegal_attachment(aura, attached)
+    return game_state.attachment_manager._is_illegal_attachment(aura, attached)
 
 
 def _cleanup_tokens_in_zones(game_state: GameState) -> None:
@@ -134,7 +134,7 @@ def _cleanup_tokens_in_zones(game_state: GameState) -> None:
         obj = game_state.objects.get(obj_id)
         if not obj:
             continue
-        game_state._remove_from_zone(obj.zone, obj_id)
+        game_state.zone_manager.remove_from_zone(obj.zone, obj_id)
         del game_state.objects[obj_id]
 
 

@@ -47,7 +47,7 @@ def test_modal_choice_rejects_invalid_modes():
 
 def test_modal_choice_enforces_count():
     graph = _modal_graph()
-    with pytest.raises(ValueError, match="Select at least"):
+    with pytest.raises(ValueError, match="Missing modal choices|Select at least"):
         validate_modal_choices(graph, {"choices": {"chosen_modes": []}})
     validate_modal_choices(graph, {"choices": {"chosen_modes": ["mode-a"]}})
 

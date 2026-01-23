@@ -1,4 +1,4 @@
-from engine import GameObject, GameState, PlayerState, TurnManager
+from engine import GameObject, GameState, PlayerState, TurnManager, Phase, Step
 from tests.engine.cost_helpers import mana_cost_data
 from engine.effects import EffectResolver
 from engine.state import ResolveContext
@@ -11,6 +11,8 @@ def _build_state() -> GameState:
     game_state = GameState(players=players)
     game_state.turn.active_player_index = 0
     game_state.turn.priority_current_index = 0
+    game_state.turn.phase = Phase.PRECOMBAT_MAIN
+    game_state.turn.step = Step.PRECOMBAT_MAIN
     return game_state
 
 
@@ -120,10 +122,14 @@ def test_overload_shuffle_returns_multi_player_results():
 
 
 def test_overload_draw_targets_all_players():
+    from engine.zones import ZONE_LIBRARY
     game_state = _build_state()
     resolver = EffectResolver(game_state)
-    game_state.get_player(0).library = ["p0-a"]
-    game_state.get_player(1).library = ["p1-a"]
+    # Create actual game objects for drawing
+    card_0 = GameObject(id="p0-a", name="Card0", owner_id=0, controller_id=0, types=["Instant"], zone=ZONE_LIBRARY)
+    card_1 = GameObject(id="p1-a", name="Card1", owner_id=1, controller_id=1, types=["Instant"], zone=ZONE_LIBRARY)
+    game_state.add_object(card_0)
+    game_state.add_object(card_1)
     context = ResolveContext(controller_id=0, choices={"alternative_cost_tag": "overload"})
 
     result = resolver.apply({"type": "draw", "amount": 1, "target": "player"}, context)

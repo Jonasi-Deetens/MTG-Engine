@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import List
+from typing import List, Optional
+import os
 
 from .ability_graph import AbilityGraphRuntimeAdapter
 from .continuous import apply_continuous_effects
@@ -8,18 +9,40 @@ from .sba import apply_state_based_actions
 from .events import Event
 from .priority import PriorityManager
 from .replacements import resolve_replacement
+from .stack import StackItem
+from .stack_resolution.stack_resolver import StackResolver
 from .state import GameState, ResolveContext
 from .turn import Phase, Step, PHASE_STEP_ORDER
+from .turn_handling.phase_handler import PhaseHandler
 from .zones import ZONE_BATTLEFIELD, ZONE_GRAVEYARD, ZONE_HAND
 
 
 class TurnManager:
+    """Manages turn structure, priority, and phase/step transitions.
+
+    Delegates:
+    - Stack resolution to StackResolver
+    - Phase/step handling to PhaseHandler
+    """
+
     def __init__(self, game_state: GameState):
         self.gs = game_state
         self.state = self.gs.turn
         player_ids = self._alive_player_ids()
         self.priority = PriorityManager(player_order=player_ids)
+        self._stack_resolver = StackResolver(game_state)
+        self._phase_handler = PhaseHandler(game_state, self.current_active_player_id)
         self._hydrate_priority()
+
+    @property
+    def stack_resolver(self) -> StackResolver:
+        """Get the StackResolver."""
+        return self._stack_resolver
+
+    @property
+    def phase_handler(self) -> PhaseHandler:
+        """Get the PhaseHandler."""
+        return self._phase_handler
 
     def _hydrate_priority(self) -> None:
         self.priority.current_index = self.state.priority_current_index
@@ -87,171 +110,117 @@ class TurnManager:
         self._set_phase_step(Phase.BEGINNING, Step.UNTAP)
         self._begin_step()
 
-    def handle_player_pass(self, player_id: int) -> None:
+    def handle_player_pass(self, player_id: int, provided_context: dict = None) -> dict:
+        """Handle a player passing priority.
+        
+        Args:
+            player_id: The player passing priority
+            provided_context: Optional context with choices like search_results
+        
+        Returns:
+            Dict with status and any pending choices needed
+        """
         self._sync_priority(self.priority.current, preserve_pass_state=True)
         if player_id != self.priority.current:
-            return
+            return {"status": "not_your_priority"}
         if self.state.step == Step.DECLARE_ATTACKERS:
             combat_state = self.state.combat_state
             if not combat_state or not combat_state.attackers_declared:
-                return
+                return {"status": "attackers_not_declared"}
         if self.state.step == Step.DECLARE_BLOCKERS:
             combat_state = self.state.combat_state
             if not combat_state or not combat_state.blockers_declared:
-                return
+                return {"status": "blockers_not_declared"}
+
+        # Store any provided selections BEFORE checking all_passed
+        # This ensures selections are saved even when passing priority early
+        if provided_context and "targets_by_effect" in provided_context:
+            for node_id, targets in provided_context["targets_by_effect"].items():
+                if node_id not in self.gs.pending_search_selections:
+                    self.gs.pending_search_selections[node_id] = {}
+                # Merge in the new selections
+                for key, value in targets.items():
+                    if key == "search_results_by_player" and isinstance(value, dict):
+                        if "search_results_by_player" not in self.gs.pending_search_selections[node_id]:
+                            self.gs.pending_search_selections[node_id]["search_results_by_player"] = {}
+                        self.gs.pending_search_selections[node_id]["search_results_by_player"].update(value)
+                    else:
+                        self.gs.pending_search_selections[node_id][key] = value
+            print(f"[graph] stored pending_search_selections: {self.gs.pending_search_selections}", flush=True)
 
         all_passed = self.priority.pass_priority()
         self._persist_priority()
+        print(f"[graph] handle_player_pass: all_passed={all_passed}", flush=True)
         if not all_passed:
-            return
+            return {"status": "passed"}
+        
+        pending_count = len(self.gs.pending_triggers)
+        print(f"[graph] handle_player_pass: checking pending_triggers count={pending_count}", flush=True)
         if self._place_pending_triggers():
             self._sync_priority(self.current_active_player_id())
-            return
+            print(f"[graph] handle_player_pass: triggers placed, stack_size={len(self.gs.stack.items)}", flush=True)
+            return {"status": "triggers_placed"}
 
         if self.gs.stack.is_empty():
             self._advance_phase_step()
-            return
+            return {"status": "phase_advanced"}
 
-        resolved_item = self.gs.stack.pop()
-        if resolved_item.kind == "spell":
-            payload = resolved_item.payload or {}
-            obj_id = payload.get("object_id")
-            copy_of = payload.get("copy_of")
-            is_copy = bool(payload.get("is_copy"))
-            destination_zone = payload.get("destination_zone")
-            obj = self.gs.objects.get(obj_id or copy_of) if (obj_id or copy_of) else None
-            context_data = payload.get("context") or {}
-            context = ResolveContext(**context_data)
-            from engine.targets import has_legal_targets, has_missing_required_targets, normalize_targets
-            if obj:
-                if context.source_id is None:
-                    context.source_id = obj.id
-                normalize_targets(self.gs, context)
-                missing_required = has_missing_required_targets(context)
-                if not has_legal_targets(self.gs, context, allow_partial=True):
-                    if not is_copy:
-                        self.gs.move_object(obj.id, ZONE_GRAVEYARD)
-                        obj.was_cast = False
-                        self.gs.event_bus.publish(Event(
-                            type="spell_fizzled",
-                            payload={
-                                "object_id": obj.id,
-                                "controller_id": obj.controller_id,
-                                "reason": "missing_targets" if missing_required else "illegal_targets",
-                            },
-                        ))
-                        if missing_required:
-                            self.gs.log(f"Spell fizzles (no targets chosen): {obj_id}")
-                        else:
-                            self.gs.log(f"Spell fizzles (illegal targets): {obj_id}")
-                    else:
-                        if missing_required:
-                            self.gs.log(f"Spell copy fizzles (no targets chosen): {copy_of}")
-                        else:
-                            self.gs.log(f"Spell copy fizzles (illegal targets): {copy_of}")
-                else:
-                    if not is_copy:
-                        if destination_zone:
-                            resolved_destination = destination_zone
-                        elif "Instant" in obj.types or "Sorcery" in obj.types:
-                            resolved_destination = ZONE_GRAVEYARD
-                        else:
-                            resolved_destination = ZONE_BATTLEFIELD
-                        if context.choices.get("buyback_paid") and resolved_destination == ZONE_GRAVEYARD:
-                            resolved_destination = ZONE_HAND
-                        if resolved_destination == ZONE_BATTLEFIELD:
-                            enter_copy_of = context.choices.get("enter_copy_of")
-                            if enter_copy_of:
-                                self.gs._apply_enter_copy(obj, enter_copy_of)
-                            enter_choices = context.choices.get("enter_choices")
-                            if isinstance(enter_choices, dict):
-                                self.gs._apply_enter_choices(obj, enter_choices)
-                        self.gs.move_object(obj.id, resolved_destination)
-                        obj.was_cast = False
-                        self.gs.event_bus.publish(Event(
-                            type="spell_resolved",
-                            payload={"object_id": obj.id, "controller_id": obj.controller_id},
-                        ))
-                        self.gs.log(f"Resolved spell {obj_id}")
-                    else:
-                        self.gs.event_bus.publish(Event(
-                            type="spell_resolved",
-                            payload={"copy_of": copy_of, "controller_id": context.controller_id},
-                        ))
-                        self.gs.log(f"Resolved spell copy of {copy_of}")
-            else:
-                self.gs.log(f"Resolved spell {obj_id or copy_of}")
-        elif resolved_item.kind == "ability_graph":
-            payload = resolved_item.payload or {}
-            is_copy = bool(payload.get("is_copy"))
-            graph = payload.get("graph")
-            context_data = payload.get("context") or {}
-            context = ResolveContext(**context_data)
-            from engine.targets import normalize_targets, validate_targets
-            from engine.choices import validate_enter_choices, validate_modal_choices
-            try:
-                if context.source_id is None and payload.get("copy_of"):
-                    context.source_id = payload.get("copy_of")
-                normalize_targets(self.gs, context)
-                validate_targets(self.gs, context, allow_partial=True)
-                adapter = AbilityGraphRuntimeAdapter(self.gs)
-                if graph:
-                    validate_enter_choices(graph, context.__dict__)
-                    validate_modal_choices(graph, context.__dict__)
-                    adapter.resolve(graph, context)
-                source_id = payload.get("source_object_id")
-                destination_zone = payload.get("destination_zone")
-                if source_id and destination_zone and not is_copy:
-                    obj = self.gs.objects.get(source_id)
-                    if obj:
-                        resolved_destination = destination_zone
-                        if context.choices.get("buyback_paid") and resolved_destination == ZONE_GRAVEYARD:
-                            resolved_destination = ZONE_HAND
-                        if resolved_destination == ZONE_BATTLEFIELD:
-                            enter_copy_of = context.choices.get("enter_copy_of")
-                            if enter_copy_of:
-                                self.gs._apply_enter_copy(obj, enter_copy_of)
-                            enter_choices = context.choices.get("enter_choices")
-                            if isinstance(enter_choices, dict):
-                                self.gs._apply_enter_choices(obj, enter_choices)
-                        self.gs.move_object(obj.id, resolved_destination)
-                        obj.was_cast = False
-                if context.source_id:
-                    self.gs.event_bus.publish(Event(
-                        type="ability_resolved",
-                        payload={"source_id": context.source_id, "controller_id": context.controller_id},
-                    ))
-                self.gs.log("Resolved ability graph")
-            except ValueError as exc:
-                if "missing target" in str(exc).lower():
-                    self.gs.log("Ability fizzles (no targets chosen)")
-                else:
-                    self.gs.log(f"Ability fizzles: {exc}")
-                source_id = payload.get("source_object_id")
-                destination_zone = payload.get("destination_zone")
-                if source_id and destination_zone:
-                    obj = self.gs.objects.get(source_id)
-                    if obj:
-                        self.gs.move_object(obj.id, destination_zone)
-                        obj.was_cast = False
-                        self.gs.event_bus.publish(Event(
-                            type="spell_fizzled",
-                            payload={
-                                "object_id": obj.id,
-                                "controller_id": obj.controller_id,
-                                "reason": "missing_targets" if "missing target" in str(exc).lower() else "illegal_targets",
-                            },
-                        ))
-        else:
-            self.gs.log(f"Resolved stack item {resolved_item.kind}")
+        print(f"[graph] handle_player_pass: calling resolve_top, stack_size={len(self.gs.stack.items)}", flush=True)
+        
+        # Build combined context from stored selections and provided context
+        combined_context = {"targets_by_effect": dict(self.gs.pending_search_selections)}
+        if provided_context and "targets_by_effect" in provided_context:
+            for node_id, targets in provided_context["targets_by_effect"].items():
+                if node_id not in combined_context["targets_by_effect"]:
+                    combined_context["targets_by_effect"][node_id] = {}
+                combined_context["targets_by_effect"][node_id].update(targets)
+        
+        print(f"[graph] combined_context for resolve_top: {combined_context}", flush=True)
+        
+        # Delegate stack resolution to StackResolver
+        result = self._stack_resolver.resolve_top(combined_context if combined_context["targets_by_effect"] else None)
+        
+        # Check if input is needed before resolution can proceed
+        if result and result.needs_input:
+            # Reset pass state and give priority to the player who needs to make the choice
+            self.priority._pass_count = 0
+            # Find the first player who needs to make a choice and give them priority
+            if result.pending_search_choices:
+                choice_player = result.pending_search_choices[0].player_id
+                print(f"[graph] needs_input: giving priority to player {choice_player}", flush=True)
+                self._sync_priority(choice_player)
+            self._persist_priority()
+            print(f"[graph] needs_input: priority_current_index={self.state.priority_current_index}", flush=True)
+            return {
+                "status": "needs_input",
+                "pending_search_choices": [
+                    {
+                        "node_id": choice.node_id,
+                        "player_id": choice.player_id,
+                        "zone": choice.zone,
+                        "options": choice.options,
+                        "min_selections": choice.min_selections,
+                        "max_selections": choice.max_selections,
+                        "source_id": choice.source_id,
+                    }
+                    for choice in result.pending_search_choices
+                ],
+            }
+        
+        # Clear pending search selections after successful resolution
+        self.gs.pending_search_selections.clear()
+        
+        print(f"[graph] handle_player_pass: resolved, stack_size_after={len(self.gs.stack.items)}", flush=True)
+        
         self.gs.clear_prepared_casts()
         apply_continuous_effects(self.gs)
         apply_state_based_actions(self.gs)
         self._ensure_active_player()
         if self._place_pending_triggers():
             self._sync_priority(self.current_active_player_id())
-            return
+            return {"status": "triggers_placed"}
         self._sync_priority(self.current_active_player_id())
+        return {"status": "resolved"}
 
     def after_player_action(self, player_id: int) -> None:
         if player_id != self.priority.current:
@@ -281,6 +250,11 @@ class TurnManager:
         self.state.step = step
 
     def _begin_step(self) -> None:
+        if os.getenv("ENGINE_TRACE") == "1":
+            print(
+                f"[engine] begin_step t{self.state.turn_number} {self.state.phase.value}:{self.state.step.value}",
+                flush=True,
+            )
         self._ensure_active_player()
         self.gs.event_bus.publish(Event(
             type="begin_step",
@@ -302,8 +276,12 @@ class TurnManager:
             self.gs.event_bus.publish(Event(type="draw_step", payload={"player_id": self.current_active_player_id()}))
         if self.state.step == Step.END:
             self.gs.event_bus.publish(Event(type="end_step", payload={"player_id": self.current_active_player_id()}))
+        print("[engine] apply_continuous_effects start", flush=True)
         apply_continuous_effects(self.gs)
+        print("[engine] apply_continuous_effects end", flush=True)
+        print("[engine] apply_state_based_actions start", flush=True)
         apply_state_based_actions(self.gs)
+        print("[engine] apply_state_based_actions end", flush=True)
         self._ensure_active_player()
         self._sync_priority(self.current_active_player_id())
 
@@ -322,11 +300,18 @@ class TurnManager:
             self._sync_priority(self.current_active_player_id())
             return
         if self.state.step == Step.CLEANUP:
+            print("[engine] cleanup_step handler start", flush=True)
             self._handle_cleanup_step()
+            print("[engine] cleanup_step handler end", flush=True)
             self._advance_phase_step()
             return
 
     def _end_step(self) -> None:
+        if os.getenv("ENGINE_TRACE") == "1":
+            print(
+                f"[engine] end_step t{self.state.turn_number} {self.state.phase.value}:{self.state.step.value}",
+                flush=True,
+            )
         self.gs.event_bus.publish(Event(
             type="end_step",
             payload={
@@ -349,16 +334,48 @@ class TurnManager:
         self.gs.replacement_effects = []
 
     def _advance_phase_step(self) -> None:
+        if os.getenv("ENGINE_TRACE") == "1":
+            print(
+                f"[engine] advance_step start t{self.state.turn_number} {self.state.phase.value}:{self.state.step.value}",
+                flush=True,
+            )
+        print(
+            f"[engine] advance_step start t{self.state.turn_number} {self.state.phase.value}:{self.state.step.value}",
+            flush=True,
+        )
         current_pair = (self.state.phase, self.state.step)
         idx = PHASE_STEP_ORDER.index(current_pair)
         self._end_step()
+        print("[engine] advance_step after end_step", flush=True)
 
         if idx == len(PHASE_STEP_ORDER) - 1:
             self._start_next_turn()
+            if os.getenv("ENGINE_TRACE") == "1":
+                print(
+                    f"[engine] advance_step end t{self.state.turn_number} {self.state.phase.value}:{self.state.step.value}",
+                    flush=True,
+                )
+            print(
+                f"[engine] advance_step end t{self.state.turn_number} {self.state.phase.value}:{self.state.step.value}",
+                flush=True,
+            )
             return
         next_phase, next_step = PHASE_STEP_ORDER[idx + 1]
         self._set_phase_step(next_phase, next_step)
+        print(
+            f"[engine] advance_step next t{self.state.turn_number} {self.state.phase.value}:{self.state.step.value}",
+            flush=True,
+        )
         self._begin_step()
+        if os.getenv("ENGINE_TRACE") == "1":
+            print(
+                f"[engine] advance_step end t{self.state.turn_number} {self.state.phase.value}:{self.state.step.value}",
+                flush=True,
+            )
+        print(
+            f"[engine] advance_step end t{self.state.turn_number} {self.state.phase.value}:{self.state.step.value}",
+            flush=True,
+        )
 
     def _start_next_turn(self) -> None:
         self.state.turn_number += 1
@@ -371,123 +388,33 @@ class TurnManager:
         self._begin_step()
 
     def _handle_untap_step(self) -> None:
-        active_player_id = self.current_active_player_id()
-        self.gs.event_bus.publish(Event(
-            type="untap",
-            payload={"active_player": active_player_id}
-        ))
-        for obj_id in self.gs.get_player(active_player_id).battlefield:
-            obj = self.gs.objects.get(obj_id)
-            if obj:
-                if obj.phased_out:
-                    obj.phased_out = False
-                    continue
-                obj.tapped = False
+        """Handle the untap step. Delegates to PhaseHandler."""
+        self._phase_handler.handle_untap()
 
     def _handle_draw_step(self) -> None:
-        active_player_id = self.current_active_player_id()
-        if self.state.turn_number == 1 and self.state.active_player_index == 0:
-            return
-        self._draw_cards(active_player_id, 1)
+        """Handle the draw step. Delegates to PhaseHandler."""
+        self._phase_handler.handle_draw()
 
     def _handle_combat_damage_step(self) -> None:
-        self.gs.event_bus.publish(Event(
-            type="combat_damage",
-            payload={"active_player": self.current_active_player_id()}
-        ))
+        """Handle the combat damage step. Delegates to PhaseHandler."""
+        self._phase_handler.handle_combat_damage()
 
     def _handle_cleanup_step(self) -> None:
-        for obj in self.gs.objects.values():
-            if obj.zone == ZONE_BATTLEFIELD:
-                obj.damage = 0
-                obj.is_attacking = False
-                obj.is_blocking = False
-        active_player = self.gs.get_player(self.current_active_player_id())
-        self._discard_to_hand_size(active_player)
-        self.state.combat_state = None
+        """Handle the cleanup step. Delegates to PhaseHandler."""
+        self._phase_handler.handle_cleanup()
 
     def _discard_to_hand_size(self, player) -> None:
-        max_hand_size = getattr(player, "max_hand_size", 7)
-        if max_hand_size is None or max_hand_size < 0:
-            return
-        attempts = 0
-        while len(player.hand) > max_hand_size and player.hand:
-            card_id = player.hand[-1]
-            replacement = resolve_replacement(
-                self.gs,
-                "replace_discard",
-                player.id,
-                f"discard:event:cleanup:{player.id}",
-            )
-            attempts += 1
-            if replacement:
-                replacement_zone = replacement.get("replacement_zone")
-                if replacement_zone == "skip":
-                    if attempts >= len(player.hand):
-                        break
-                    player.hand.insert(0, player.hand.pop())
-                    continue
-                if replacement_zone:
-                    self.gs.move_object(card_id, replacement_zone)
-                    continue
-            self.gs.move_object(card_id, ZONE_GRAVEYARD)
+        """Discard to hand size. Delegates to PhaseHandler."""
+        self._phase_handler.discard_to_hand_size(player)
 
     def _expire_temporary_effects(self, step: Step) -> None:
-        active_player_id = self.current_active_player_id()
-        for obj in self.gs.objects.values():
-            if not obj.temporary_effects:
-                continue
-            remaining = []
-            for effect in obj.temporary_effects:
-                duration = effect.get("duration")
-                controller_id = effect.get("controller_id")
-                if duration == "until_end_of_combat" and step == Step.END_COMBAT:
-                    if effect.get("type") == "set_controller" and effect.get("original_controller") is not None:
-                        obj.controller_id = effect.get("original_controller")
-                    if effect.get("type") == "add_protection" and effect.get("protection"):
-                        obj.protections.discard(effect.get("protection"))
-                    continue
-                if duration == "until_end_of_turn" and step == Step.CLEANUP:
-                    if effect.get("type") == "set_controller" and effect.get("original_controller") is not None:
-                        obj.controller_id = effect.get("original_controller")
-                    if effect.get("type") == "add_protection" and effect.get("protection"):
-                        obj.protections.discard(effect.get("protection"))
-                    continue
-                if duration == "until_end_of_your_next_turn" and step == Step.CLEANUP:
-                    if controller_id == active_player_id:
-                        if effect.get("type") == "set_controller" and effect.get("original_controller") is not None:
-                            obj.controller_id = effect.get("original_controller")
-                        if effect.get("type") == "add_protection" and effect.get("protection"):
-                            obj.protections.discard(effect.get("protection"))
-                        continue
-                if duration == "until_your_next_upkeep" and step == Step.UPKEEP:
-                    if controller_id == active_player_id:
-                        if effect.get("type") == "set_controller" and effect.get("original_controller") is not None:
-                            obj.controller_id = effect.get("original_controller")
-                        if effect.get("type") == "add_protection" and effect.get("protection"):
-                            obj.protections.discard(effect.get("protection"))
-                        continue
-                if duration is None and "prevent_damage" in effect and step == Step.CLEANUP:
-                    continue
-                remaining.append(effect)
-            obj.temporary_effects = remaining
+        """Expire temporary effects. Delegates to PhaseHandler."""
+        self._phase_handler.expire_temporary_effects(step)
 
     def _draw_cards(self, player_id: int, count: int) -> None:
-        player = self.gs.get_player(player_id)
-        for _ in range(count):
-            if not player.library:
-                player.has_lost = True
-                self.gs.log(f"Player {player.id} loses for drawing from empty library.")
-                if not player.removed_from_game:
-                    self.gs.remove_player_from_game(player.id)
-                return
-            card_id = player.library.pop(0)
-            player.hand.append(card_id)
+        """Draw cards. Delegates to PhaseHandler."""
+        self._phase_handler.draw_cards(player_id, count)
 
     def _reset_activation_limits(self, scope: str) -> None:
-        for obj in self.gs.objects.values():
-            if not obj.activation_limits:
-                continue
-            to_remove = [key for key in obj.activation_limits if key.endswith(f":{scope}")]
-            for key in to_remove:
-                obj.activation_limits.pop(key, None)
+        """Reset activation limits. Delegates to PhaseHandler."""
+        self._phase_handler.reset_activation_limits(scope)

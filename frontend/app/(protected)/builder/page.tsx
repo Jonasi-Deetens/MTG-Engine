@@ -11,9 +11,9 @@ import { abilities } from '@/lib/abilities';
 import { Button } from '@/components/ui/Button';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { CardPreview } from '@/components/cards/CardPreview';
-import { AbilityTabs } from '@/components/builder/AbilityTabs';
-import { ValidationPanel } from '@/components/builder/ValidationPanel';
-import { AbilityTreeView } from '@/components/builder/AbilityTreeView';
+import { AbilityTabs } from '@/features/builder/components/AbilityTabs';
+import { ValidationPanel } from '@/features/builder/components/ValidationPanel';
+import { AbilityTreeView } from '@/features/builder/components/AbilityTreeView';
 import { isEditableTarget } from '@/context/ShortcutContext';
 
 export default function BuilderPage() {

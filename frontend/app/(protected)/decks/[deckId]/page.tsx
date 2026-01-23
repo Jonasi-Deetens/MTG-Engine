@@ -8,10 +8,10 @@ import { useDeckStore } from '@/store/deckStore';
 import { decks } from '@/lib/decks';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { DeckCardList } from '@/components/decks/DeckCardList';
-import { DeckValidationPanel } from '@/components/decks/DeckValidationPanel';
-import { ManaCurveChart } from '@/components/decks/ManaCurveChart';
-import { CardTypeBreakdown } from '@/components/decks/CardTypeBreakdown';
+import { DeckCardList } from '@/features/decks/components/DeckCardList';
+import { DeckValidationPanel } from '@/features/decks/components/DeckValidationPanel';
+import { ManaCurveChart } from '@/features/decks/components/ManaCurveChart';
+import { CardTypeBreakdown } from '@/features/decks/components/CardTypeBreakdown';
 import { CardPreview } from '@/components/cards/CardPreview';
 import { DeckDetailSkeleton } from '@/components/skeletons/DeckDetailSkeleton';
 

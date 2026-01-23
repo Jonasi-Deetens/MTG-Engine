@@ -5,12 +5,10 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { LandingSearchBar } from '@/components/landing/LandingSearchBar';
-import { useThemeImage } from '@/hooks/useThemeImage';
 
 export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const router = useRouter();
-  const backgroundImage = useThemeImage('home');
 
   const handleSearch = (query: string) => {
     if (query.trim()) {
@@ -19,18 +17,7 @@ export default function HomePage() {
   };
 
   return (
-    <div
-      className="h-screen flex flex-col relative overflow-hidden"
-      style={{
-        backgroundImage: `url('${backgroundImage}')`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'top center',
-        backgroundRepeat: 'no-repeat',
-      }}
-    >
-      {/* Light overlay for readability */}
-      <div className="absolute inset-0 bg-[color:var(--theme-bg-primary)]/70" />
-
+    <div className="h-screen flex flex-col relative overflow-hidden">
       {/* Content */}
       <div className="relative z-10 flex flex-col h-full">
         {/* Search Bar - Centered */}

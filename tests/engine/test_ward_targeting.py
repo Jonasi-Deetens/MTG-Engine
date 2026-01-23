@@ -1,6 +1,6 @@
 import pytest
 
-from engine import GameObject, GameState, PlayerState, TurnManager
+from engine import GameObject, GameState, PlayerState, TurnManager, Phase, Step
 from tests.engine.cost_helpers import mana_cost_data
 from engine.rules import cast_spell
 from engine.zones import ZONE_BATTLEFIELD, ZONE_HAND
@@ -11,6 +11,8 @@ def _build_state() -> GameState:
     game_state = GameState(players=players)
     game_state.turn.active_player_index = 0
     game_state.turn.priority_current_index = 0
+    game_state.turn.phase = Phase.PRECOMBAT_MAIN
+    game_state.turn.step = Step.PRECOMBAT_MAIN
     return game_state
 
 
@@ -83,7 +85,9 @@ def test_ward_payment_allows_targeting():
     game_state.add_object(warded)
     game_state.add_object(spell)
     turn_manager = TurnManager(game_state)
-    game_state.get_player(0).mana_pool["G"] = 1
+    # Need {G} for spell + {1} for ward = 2 mana total
+    # Note: pay_cost uses colored mana for generic, so we need 2G
+    game_state.get_player(0).mana_pool["G"] = 2
 
     cast_spell(
         game_state,

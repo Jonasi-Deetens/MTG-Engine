@@ -1,6 +1,6 @@
 import pytest
 
-from engine import AbilityGraphRuntimeAdapter, GameObject, GameState, PlayerState, ResolveContext, TurnManager
+from engine import AbilityGraphRuntimeAdapter, GameObject, GameState, PlayerState, ResolveContext, TurnManager, Phase, Step
 from tests.engine.cost_helpers import mana_cost_data
 from engine.rules import cast_spell
 from engine.zones import ZONE_BATTLEFIELD, ZONE_GRAVEYARD, ZONE_HAND
@@ -11,6 +11,8 @@ def _build_state() -> GameState:
     game_state = GameState(players=players)
     game_state.turn.active_player_index = 0
     game_state.turn.priority_current_index = 0
+    game_state.turn.phase = Phase.PRECOMBAT_MAIN
+    game_state.turn.step = Step.PRECOMBAT_MAIN
     return game_state
 
 
@@ -44,7 +46,9 @@ def test_kicker_optional_cost_sets_kicked_flag():
     game_state.add_object(spell)
     turn_manager = TurnManager(game_state)
     player = game_state.get_player(0)
+    # Base cost {G} + kicker {1}{G} = total {1}{2G} = 3 mana needed
     player.mana_pool["G"] = 2
+    player.mana_pool["C"] = 1
     graph = _spell_graph_with_keywords([
         {
             "id": "kw1",
@@ -63,7 +67,7 @@ def test_kicker_optional_cost_sets_kicked_flag():
             "choices": {
                 "optional_costs": {"kicker:{1}{G}": 1},
                 "optional_cost_payments": [
-                    {"mana_payment": {"G": 2}},
+                    {"mana_payment": {"G": 1, "C": 1}},
                 ],
             }
         },
@@ -81,7 +85,9 @@ def test_buyback_returns_to_hand_on_resolution():
     game_state.add_object(spell)
     turn_manager = TurnManager(game_state)
     player = game_state.get_player(0)
+    # Base cost {G} + buyback {1}{G} = total {1}{2G} = 3 mana needed
     player.mana_pool["G"] = 2
+    player.mana_pool["C"] = 1
     graph = _spell_graph_with_keywords([
         {
             "id": "kw1",
@@ -100,7 +106,7 @@ def test_buyback_returns_to_hand_on_resolution():
             "choices": {
                 "optional_costs": {"buyback:{1}{G}": 1},
                 "optional_cost_payments": [
-                    {"mana_payment": {"G": 2}},
+                    {"mana_payment": {"G": 1, "C": 1}},
                 ],
             }
         },
@@ -143,7 +149,9 @@ def test_entwine_sets_all_modes_on_cast():
     game_state.add_object(spell)
     turn_manager = TurnManager(game_state)
     player = game_state.get_player(0)
+    # Base cost {G} + entwine {1}{G} = total {1}{2G} = 3 mana needed
     player.mana_pool["G"] = 2
+    player.mana_pool["C"] = 1
 
     graph = {
         "rootNodeId": "act-1",
@@ -179,7 +187,7 @@ def test_entwine_sets_all_modes_on_cast():
             "choices": {
                 "optional_costs": {"entwine:{1}{G}": 1},
                 "optional_cost_payments": [
-                    {"mana_payment": {"G": 2}},
+                    {"mana_payment": {"G": 1, "C": 1}},
                 ],
             }
         },

@@ -104,7 +104,11 @@ def create_session(user_id: int, username: str) -> str:
 def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
     """Get current user from session."""
     session_id = request.cookies.get("session_id")
+    print(f"[AUTH DEBUG] session_id from cookie: {session_id[:20] if session_id else None}...", flush=True)
+    print(f"[AUTH DEBUG] active sessions: {len(sessions)}", flush=True)
+    
     if not session_id or session_id not in sessions:
+        print(f"[AUTH DEBUG] Session not found or invalid", flush=True)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated"
@@ -113,6 +117,7 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
     session_data = sessions[session_id]
     if datetime.utcnow() > session_data["expires_at"]:
         del sessions[session_id]
+        print(f"[AUTH DEBUG] Session expired", flush=True)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Session expired"
@@ -120,11 +125,13 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
     
     user = db.query(User).filter(User.id == session_data["user_id"]).first()
     if not user:
+        print(f"[AUTH DEBUG] User not found for session user_id={session_data['user_id']}", flush=True)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found"
         )
     
+    print(f"[AUTH DEBUG] Authenticated as user_id={user.id}", flush=True)
     return user
 
 

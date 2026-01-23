@@ -1,4 +1,4 @@
-from engine import GameObject, GameState, PlayerState, TurnManager
+from engine import GameObject, GameState, PlayerState, TurnManager, Phase, Step
 from tests.engine.cost_helpers import mana_cost_data
 from engine.rules import cast_spell
 from engine.zones import ZONE_BATTLEFIELD, ZONE_HAND
@@ -9,6 +9,8 @@ def _build_state() -> GameState:
     game_state = GameState(players=players)
     game_state.turn.active_player_index = 0
     game_state.turn.priority_current_index = 0
+    game_state.turn.phase = Phase.PRECOMBAT_MAIN
+    game_state.turn.step = Step.PRECOMBAT_MAIN
     return game_state
 
 
@@ -79,6 +81,10 @@ def test_overload_affects_all_creatures():
     turn_manager.handle_player_pass(0)
     turn_manager.handle_player_pass(1)
 
-    assert creature_a.damage == 2
+    # Overload spell dealt 2 damage to all creatures
+    # creature_a (2/2) took lethal damage and died
+    # creature_b (3/3) took 2 damage and survived
+    assert creature_a.zone == "graveyard"  # Died from lethal damage (2 damage >= 2 toughness)
     assert creature_b.damage == 2
+    assert creature_b.zone == ZONE_BATTLEFIELD
 

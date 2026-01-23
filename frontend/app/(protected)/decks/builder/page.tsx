@@ -4,24 +4,24 @@
 
 import { useEffect, useState } from 'react';
 import { DndContext, DragOverlay } from '@dnd-kit/core';
-import { useDeckBuilder } from '@/hooks/decks/useDeckBuilder';
-import { useTypeLists } from '@/hooks/decks/useTypeLists';
-import { useDeckCardHandlers } from '@/hooks/decks/useDeckCardHandlers';
-import { useDragAndDrop } from '@/hooks/decks/useDragAndDrop';
+import { useDeckBuilder } from '@/features/decks/hooks/useDeckBuilder';
+import { useTypeLists } from '@/features/decks/hooks/useTypeLists';
+import { useDeckCardHandlers } from '@/features/decks/hooks/useDeckCardHandlers';
+import { useDragAndDrop } from '@/features/decks/hooks/useDragAndDrop';
 import { useDeckStore } from '@/store/deckStore';
 import { Card } from '@/components/ui/Card';
 import { CardModal } from '@/components/ui/CardModal';
 import { Button } from '@/components/ui/Button';
-import { DeckBuilderHeader } from '@/components/decks/builder/DeckBuilderHeader';
-import { DeckInfoForm } from '@/components/decks/builder/DeckInfoForm';
-import { CommanderSection } from '@/components/decks/builder/CommanderSection';
-import { CardPreviewSection } from '@/components/decks/builder/CardPreviewSection';
-import { UnifiedCardSearch } from '@/components/decks/UnifiedCardSearch';
-import { DeckValidationPanel } from '@/components/decks/DeckValidationPanel';
-import { ManaCurveChart } from '@/components/decks/ManaCurveChart';
-import { CardTypeBreakdown } from '@/components/decks/CardTypeBreakdown';
-import { DeckImport } from '@/components/decks/DeckImport';
-import { EditableTypeList } from '@/components/decks/EditableTypeList';
+import { DeckBuilderHeader } from '@/features/decks/components/builder/DeckBuilderHeader';
+import { DeckInfoForm } from '@/features/decks/components/builder/DeckInfoForm';
+import { CommanderSection } from '@/features/decks/components/builder/CommanderSection';
+import { CardPreviewSection } from '@/features/decks/components/builder/CardPreviewSection';
+import { UnifiedCardSearch } from '@/features/decks/components/UnifiedCardSearch';
+import { DeckValidationPanel } from '@/features/decks/components/DeckValidationPanel';
+import { ManaCurveChart } from '@/features/decks/components/ManaCurveChart';
+import { CardTypeBreakdown } from '@/features/decks/components/CardTypeBreakdown';
+import { DeckImport } from '@/features/decks/components/DeckImport';
+import { EditableTypeList } from '@/features/decks/components/EditableTypeList';
 import { extractCardId } from '@/utils/dragAndDrop';
 import { DeckCardResponse, DeckCustomListResponse } from '@/lib/decks';
 import { CardType } from '@/lib/utils/cardTypes';
@@ -61,10 +61,7 @@ export default function DeckBuilderPage() {
     router,
   } = useDeckBuilder();
 
-  const { typeLists, setTypeLists, initializeTypeLists } = useTypeLists(
-    currentDeck?.id ?? null,
-    currentDeck?.cards.length ?? 0
-  );
+  const { typeLists, setTypeLists } = useTypeLists(currentDeck?.id ?? null);
 
   const { handleAddCard, handleAddCommanderFromSearch, handleRenameTypeList } = useDeckCardHandlers({
     currentDeck,
@@ -161,13 +158,6 @@ export default function DeckBuilderPage() {
     isModalOpen,
   ]);
 
-  // Initialize type lists when deck loads (only for new decks with no lists)
-  useEffect(() => {
-    if (currentDeck && typeLists.length === 0) {
-      initializeTypeLists();
-    }
-  }, [currentDeck?.id, typeLists.length, initializeTypeLists]);
-
   return (
     <div className="w-full space-y-3">
       <DeckBuilderHeader
@@ -222,7 +212,7 @@ export default function DeckBuilderPage() {
                     <div className="min-w-0">
                       {(() => {
                         const type: CardType = 'Creature';
-                        const list = findListForType(type, typeLists, currentDeck.cards);
+                        const list = findListForType(type, typeLists);
                         const typeCards = getCardsForType(type, currentDeck.cards, typeLists);
                         return (
                           <EditableTypeList
@@ -249,7 +239,7 @@ export default function DeckBuilderPage() {
                     {/* Left Column 2 - Instants & Sorceries */}
                     <div className="space-y-2 min-w-0">
                       {(['Instant', 'Sorcery'] as CardType[]).map((type) => {
-                        const list = findListForType(type, typeLists, currentDeck.cards);
+                        const list = findListForType(type, typeLists);
                         const typeCards = getCardsForType(type, currentDeck.cards, typeLists);
                         return (
                           <EditableTypeList
@@ -299,7 +289,7 @@ export default function DeckBuilderPage() {
                     {/* Right Column 1 - Artifacts & Enchantments */}
                     <div className="space-y-2 min-w-0">
                       {(['Artifact', 'Enchantment'] as CardType[]).map((type) => {
-                        const list = findListForType(type, typeLists, currentDeck.cards);
+                        const list = findListForType(type, typeLists);
                         const typeCards = getCardsForType(type, currentDeck.cards, typeLists);
                         return (
                           <EditableTypeList
@@ -327,7 +317,7 @@ export default function DeckBuilderPage() {
                     {/* Right Column 2 - Lands, Planeswalkers & Other */}
                     <div className="space-y-2 min-w-0">
                       {(['Land', 'Planeswalker', 'Other'] as CardType[]).map((type) => {
-                        const list = findListForType(type, typeLists, currentDeck.cards);
+                        const list = findListForType(type, typeLists);
                         const typeCards = getCardsForType(type, currentDeck.cards, typeLists);
                         return (
                           <EditableTypeList

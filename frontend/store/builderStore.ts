@@ -48,9 +48,10 @@ export interface TriggeredAbility {
   id: string;
   event: string; // e.g., "enters_battlefield", "dies", "becomes_target", "card_enters"
   scope?: string; // "self", "any", "you_control", "opponent_control", "you", "opponent"
-  condition?: StructuredCondition | string; // Structured condition or legacy string
+  condition?: StructuredCondition | string; // Structured condition or legacy string (ability-level gate)
   effects: Effect[];
   modal?: ModalChoiceConfig;
+  usesStack?: boolean; // New: configurable stack behavior (default: true)
   // For card_enters event
   entersWhere?: string; // Zone where card enters (battlefield, graveyard, hand, etc.)
   entersFrom?: string; // Optional: zone card came from (hand, library, graveyard, etc.)
@@ -67,6 +68,7 @@ export interface ActivatedAbility {
   modal?: ModalChoiceConfig;
   timing?: string;
   limit?: { scope: string; max: number };
+  usesStack?: boolean; // New: configurable stack behavior (default: true, false for mana abilities)
 }
 
 export interface SpellAbility {
@@ -100,11 +102,27 @@ export interface KeywordAbility {
 // Re-export KeywordInfo from abilities for convenience
 export type { KeywordInfo } from '@/lib/abilities';
 
+// Per-effect condition for new refactored system
+export interface EffectCondition {
+  type: string; // 'was_cast', 'control_count', 'life_total', etc.
+  target?: string; // 'triggering_aura', 'triggering_source', etc.
+  comparison?: string; // '>=', '<=', '==', etc.
+  value?: number | string;
+  permanentType?: string;
+  keyword?: string;
+  counterType?: string;
+  source?: string; // For mana_value_comparison
+}
+
 export interface Effect {
   type: string; // e.g., "damage", "draw", "token", "counters", "life", "search", "put_onto_battlefield", "attach", "shuffle"
+  // New per-effect flags for refactored system
+  optional?: boolean; // Per-effect optional flag ("may")
+  condition?: EffectCondition; // Per-effect condition (was_cast, etc.)
   amount?: number;
   target?: string;
   maxTargets?: number;
+  minTargets?: number;
   modeId?: string;
   manaType?: string;
   untapTarget?: string;
@@ -117,8 +135,10 @@ export interface Effect {
     enabled: boolean;
     compareAgainstType?: string; // e.g., "aura", "creature", "artifact" - if not set, means "any card"
     compareAgainstZone?: string; // e.g., "controlled", "battlefield", "graveyard" - defaults to "controlled"
+    compareAgainstSource?: string; // e.g., "triggering_source", "triggering_aura", "source"
   };
   attachTo?: string; // For attach effect
+  attachSource?: boolean; // For attach effect (attach source to target)
   fromEffect?: number; // Index of previous effect to reference (0-based, e.g., 0 = first effect, 1 = second effect)
   // New fields for additional effect types
   duration?: string; // For temporary effects (until_end_of_turn, permanent, etc.)
@@ -144,7 +164,6 @@ export interface Effect {
   replacementZone?: string;
   uses?: number;
   distinctTargets?: boolean;
-  minTargets?: number;
   chooseNewTargets?: boolean;
   [key: string]: any; // Additional effect-specific data
 }
@@ -167,12 +186,31 @@ export interface AbilityGraph {
   nodes: AbilityNode[];
   edges: AbilityEdge[];
   abilityType: 'triggered' | 'activated' | 'static' | 'keyword' | 'spell';
+  // New fields for refactored system
+  abilityId?: string; // e.g., "triggered-0", "activated-1"
+  usesStack?: boolean; // Configurable stack behavior
 }
 
 export interface ValidationError {
   type: 'error' | 'warning';
   message: string;
   nodeId?: string;
+}
+
+export interface ValidationResponse {
+  valid: boolean;
+  errors: ValidationError[];
+  warnings: ValidationError[];
+}
+
+export interface NormalizedAbility {
+  trigger?: string;
+  cost?: string;
+  costs?: Array<Record<string, any>>;
+  keyword?: string;
+  conditions: Array<Record<string, any>>;
+  effects: Array<Record<string, any>>;
+  abilityType: string;
 }
 
 interface BuilderState {
@@ -376,13 +414,18 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
     const edges: AbilityEdge[] = [];
     let rootNodeId = '';
     let abilityType: 'triggered' | 'activated' | 'static' | 'keyword' | 'spell' = 'triggered';
+    let abilityId = ''; // New: indexed ability ID
+    let usesStack = true; // New: stack behavior flag
     
-    // Process triggered abilities
-    state.triggeredAbilities.forEach((ability) => {
+    // Process triggered abilities (with indexing)
+    state.triggeredAbilities.forEach((ability, index) => {
+      const indexedId = `triggered-${index}`;
       const triggerId = `trigger-${ability.id}`;
       if (!rootNodeId) {
         rootNodeId = triggerId;
         abilityType = 'triggered';
+        abilityId = indexedId;
+        usesStack = ability.usesStack !== false; // Default to true
       }
       
       nodes.push({
@@ -391,6 +434,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
         data: { 
           event: ability.event,
           scope: ability.scope || 'self',
+          usesStack: ability.usesStack !== false, // Include in trigger data
           ...(ability.modal && {
             modal: ability.modal,
           }),
@@ -426,12 +470,15 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
       }
     });
     
-    // Process activated abilities
-    state.activatedAbilities.forEach((ability) => {
+    // Process activated abilities (with indexing)
+    state.activatedAbilities.forEach((ability, index) => {
+      const indexedId = `activated-${index}`;
       const activatedId = `activated-${ability.id}`;
       if (!rootNodeId) {
         rootNodeId = activatedId;
         abilityType = 'activated';
+        abilityId = indexedId;
+        usesStack = ability.usesStack !== false; // Default to true
       }
       
       nodes.push({
@@ -441,18 +488,22 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
           costs: ability.costs,
           timing: ability.timing,
           limit: ability.limit,
+          usesStack: ability.usesStack !== false, // Include in ability data
           ...(ability.modal ? { modal: ability.modal } : {}),
         },
       });
       createEffectChain(ability.effects ?? [], ability.id, activatedId, nodes, edges);
     });
 
-    // Process spell abilities
-    state.spellAbilities.forEach((ability) => {
+    // Process spell abilities (with indexing)
+    state.spellAbilities.forEach((ability, index) => {
+      const indexedId = `spell-${index}`;
       const spellId = `spell-${ability.id}`;
       if (!rootNodeId) {
         rootNodeId = spellId;
         abilityType = 'spell';
+        abilityId = indexedId;
+        usesStack = true; // Spells always use stack
       }
 
       nodes.push({
@@ -534,6 +585,9 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
       nodes,
       edges,
       abilityType,
+      // New fields for refactored system
+      abilityId: abilityId || `${abilityType}-0`,
+      usesStack,
     };
   },
   
@@ -627,12 +681,14 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
         
         // Extract card_enters specific fields from trigger data
         const modal = triggerNode.data.modal || (graph as any).modal;
+        const usesStack = triggerNode.data.usesStack !== false; // Default to true
         const triggeredAbility: TriggeredAbility = {
           id: abilityId,
           event,
           scope: triggerNode.data.scope || 'self',
           condition,
           effects,
+          usesStack,
           ...(modal ? { modal } : {}),
           ...(event === 'card_enters' && {
             entersWhere: triggerNode.data.entersWhere,
@@ -691,10 +747,12 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
           effects.push(activatedNode.data.effect as Effect);
         }
         
+        const usesStack = activatedNode.data.usesStack !== false; // Default to true
         activatedAbilities.push({
           id: abilityId,
           costs,
           effects,
+          usesStack,
           ...(modal ? { modal } : {}),
           timing: activatedNode.data.timing,
           limit: activatedNode.data.limit,

@@ -19,15 +19,31 @@ def resolve_player_id(context: ResolveContext, fallback_controller_id: Optional[
 
 
 def is_overloaded(context: ResolveContext) -> bool:
-    if not isinstance(context.choices, dict):
+    choices = getattr(context, "choices", None)
+    if not isinstance(choices, dict):
         return False
-    tag = context.choices.get("alternative_cost_tag", "")
+    tag = choices.get("alternative_cost_tag", "")
     return isinstance(tag, str) and tag.startswith("overload")
 
 
 def resolve_object_id(context: ResolveContext, key: str, fallback: Optional[str]) -> Optional[str]:
     if key in context.targets:
         return context.targets[key]
+    if key in ("triggering_source", "triggering_aura", "triggering_spell"):
+        return {
+            "triggering_source": getattr(context, "triggering_source_id", None),
+            "triggering_aura": getattr(context, "triggering_aura_id", None) or getattr(context, "triggering_source_id", None),
+            "triggering_spell": getattr(context, "triggering_spell_id", None) or getattr(context, "triggering_source_id", None),
+        }.get(key)
+    if key in ("source", "self"):
+        return getattr(context, "source_id", None)
+    if key == "target":
+        spell_target = context.targets.get("spell_target")
+        if spell_target:
+            return spell_target
+        spell_targets = context.targets.get("spell_targets")
+        if isinstance(spell_targets, list) and spell_targets:
+            return spell_targets[0]
     if "target" in context.targets:
         return context.targets["target"]
     return fallback
@@ -91,40 +107,57 @@ def get_target_issues(game_state: GameState, context: ResolveContext) -> List[st
     issues: List[str] = []
     for missing in _missing_required_global_targets(context):
         issues.append(f"missing target {missing}")
-    if isinstance(context.distinct_targets_by_effect, dict):
-        distinct_keys = context.distinct_targets_by_effect.get("_global", []) or []
+    distinct_targets_by_effect = getattr(context, "distinct_targets_by_effect", None)
+    if isinstance(distinct_targets_by_effect, dict):
+        distinct_keys = distinct_targets_by_effect.get("_global", []) or []
         if _has_distinct_violation(context.targets, distinct_keys):
             issues.append("targets must be distinct")
-    if isinstance(context.min_targets_by_effect, dict):
-        min_targets = context.min_targets_by_effect.get("_global", {}) or {}
+    min_targets_by_effect = getattr(context, "min_targets_by_effect", None)
+    if isinstance(min_targets_by_effect, dict):
+        min_targets = min_targets_by_effect.get("_global", {}) or {}
         if _has_min_targets_violation(context.targets, min_targets):
             issues.append("not enough targets selected")
     issues.extend(_get_target_issues_for_targets(game_state, context, context.targets))
-    if isinstance(context.targets_by_effect, dict):
-        for node_id, override in context.targets_by_effect.items():
+    targets_by_effect = getattr(context, "targets_by_effect", None)
+    required_targets_by_effect = getattr(context, "required_targets_by_effect", None)
+    if isinstance(targets_by_effect, dict):
+        for node_id, override in targets_by_effect.items():
             if not isinstance(override, dict):
                 continue
             merged = dict(context.targets)
             merged.update(override)
             required_keys = []
-            if isinstance(context.required_targets_by_effect, dict):
-                required_keys = context.required_targets_by_effect.get(node_id, []) or []
+            if isinstance(required_targets_by_effect, dict):
+                required_keys = required_targets_by_effect.get(node_id, []) or []
             for missing in _missing_required_targets(merged, required_keys):
                 issues.append(f"{node_id}: missing target {missing}")
-            if isinstance(context.distinct_targets_by_effect, dict):
-                distinct_keys = context.distinct_targets_by_effect.get(node_id, []) or []
+            if isinstance(distinct_targets_by_effect, dict):
+                distinct_keys = distinct_targets_by_effect.get(node_id, []) or []
                 if _has_distinct_violation(merged, distinct_keys):
                     issues.append(f"{node_id}: targets must be distinct")
-            if isinstance(context.min_targets_by_effect, dict):
-                min_targets = context.min_targets_by_effect.get(node_id, {}) or {}
+            if isinstance(min_targets_by_effect, dict):
+                min_targets = min_targets_by_effect.get(node_id, {}) or {}
                 if _has_min_targets_violation(merged, min_targets):
                     issues.append(f"{node_id}: not enough targets selected")
             for issue in _get_target_issues_for_targets(game_state, context, merged):
                 issues.append(f"{node_id}: {issue}")
+    # Check required_targets_by_effect for nodes not in targets_by_effect
+    if isinstance(required_targets_by_effect, dict):
+        checked_nodes = set(targets_by_effect.keys()) if isinstance(targets_by_effect, dict) else set()
+        for node_id, required_keys in required_targets_by_effect.items():
+            if node_id in checked_nodes or node_id == "_global":
+                continue
+            if not isinstance(required_keys, list):
+                continue
+            # For nodes without override, check against base targets
+            for missing in _missing_required_targets(context.targets, required_keys):
+                issues.append(f"{node_id}: missing target {missing}")
     return issues
 
 
 def _normalize_targets_for_targets(game_state: GameState, context: ResolveContext, targets: Dict[str, Any]) -> None:
+    if "attach_to" in targets and "target" not in targets and "targets" not in targets:
+        targets["target"] = targets.get("attach_to")
     if isinstance(targets.get("targets"), list):
         legal = [target_id for target_id in targets["targets"] if _is_legal_object_target(game_state, context, target_id)]
         targets["targets"] = legal
@@ -151,8 +184,9 @@ def normalize_targets(game_state: GameState, context: ResolveContext) -> None:
     if is_overloaded(context):
         return
     _normalize_targets_for_targets(game_state, context, context.targets)
-    if isinstance(context.targets_by_effect, dict):
-        for override in context.targets_by_effect.values():
+    targets_by_effect = getattr(context, "targets_by_effect", None)
+    if isinstance(targets_by_effect, dict):
+        for override in targets_by_effect.values():
             if isinstance(override, dict):
                 _normalize_targets_for_targets(game_state, context, override)
 
@@ -189,12 +223,16 @@ def has_legal_targets(game_state: GameState, context: ResolveContext, allow_part
         return True
     if allow_partial:
         required_present = False
-        if isinstance(context.required_targets_by_effect, dict):
-            required_present = any(keys for keys in context.required_targets_by_effect.values())
+        required_targets_by_effect = getattr(context, "required_targets_by_effect", None)
+        targets_by_effect = getattr(context, "targets_by_effect", None)
+        distinct_targets_by_effect = getattr(context, "distinct_targets_by_effect", None)
+        min_targets_by_effect = getattr(context, "min_targets_by_effect", None)
+        if isinstance(required_targets_by_effect, dict):
+            required_present = any(keys for keys in required_targets_by_effect.values())
         if not required_present and _has_any_target_data(context.targets):
             required_present = True
-        if not required_present and isinstance(context.targets_by_effect, dict):
-            for override in context.targets_by_effect.values():
+        if not required_present and isinstance(targets_by_effect, dict):
+            for override in targets_by_effect.values():
                 if isinstance(override, dict) and _has_any_target_data(override):
                     required_present = True
                     break
@@ -202,8 +240,8 @@ def has_legal_targets(game_state: GameState, context: ResolveContext, allow_part
             return True
         bucket: set[tuple[str, Any]] = set()
         _collect_legal_targets(game_state, context, context.targets, bucket)
-        if isinstance(context.targets_by_effect, dict):
-            for override in context.targets_by_effect.values():
+        if isinstance(targets_by_effect, dict):
+            for override in targets_by_effect.values():
                 if not isinstance(override, dict):
                     continue
                 merged = dict(context.targets)
@@ -212,36 +250,51 @@ def has_legal_targets(game_state: GameState, context: ResolveContext, allow_part
         return len(bucket) > 0
     if _missing_required_global_targets(context):
         return False
-    if isinstance(context.distinct_targets_by_effect, dict):
-        distinct_keys = context.distinct_targets_by_effect.get("_global", []) or []
+    distinct_targets_by_effect = getattr(context, "distinct_targets_by_effect", None)
+    min_targets_by_effect = getattr(context, "min_targets_by_effect", None)
+    targets_by_effect = getattr(context, "targets_by_effect", None)
+    required_targets_by_effect = getattr(context, "required_targets_by_effect", None)
+    if isinstance(distinct_targets_by_effect, dict):
+        distinct_keys = distinct_targets_by_effect.get("_global", []) or []
         if _has_distinct_violation(context.targets, distinct_keys):
             return False
-    if isinstance(context.min_targets_by_effect, dict):
-        min_targets = context.min_targets_by_effect.get("_global", {}) or {}
+    if isinstance(min_targets_by_effect, dict):
+        min_targets = min_targets_by_effect.get("_global", {}) or {}
         if _has_min_targets_violation(context.targets, min_targets):
             return False
     if not _has_legal_targets_for_targets(game_state, context, context.targets):
         return False
-    if isinstance(context.targets_by_effect, dict):
-        for node_id, override in context.targets_by_effect.items():
+    if isinstance(targets_by_effect, dict):
+        for node_id, override in targets_by_effect.items():
             if not isinstance(override, dict):
                 continue
             merged = dict(context.targets)
             merged.update(override)
             required_keys = []
-            if isinstance(context.required_targets_by_effect, dict):
-                required_keys = context.required_targets_by_effect.get(node_id, []) or []
+            if isinstance(required_targets_by_effect, dict):
+                required_keys = required_targets_by_effect.get(node_id, []) or []
             if _missing_required_targets(merged, required_keys):
                 return False
-            if isinstance(context.distinct_targets_by_effect, dict):
-                distinct_keys = context.distinct_targets_by_effect.get(node_id, []) or []
+            if isinstance(distinct_targets_by_effect, dict):
+                distinct_keys = distinct_targets_by_effect.get(node_id, []) or []
                 if _has_distinct_violation(merged, distinct_keys):
                     return False
-            if isinstance(context.min_targets_by_effect, dict):
-                min_targets = context.min_targets_by_effect.get(node_id, {}) or {}
+            if isinstance(min_targets_by_effect, dict):
+                min_targets = min_targets_by_effect.get(node_id, {}) or {}
                 if _has_min_targets_violation(merged, min_targets):
                     return False
             if not _has_legal_targets_for_targets(game_state, context, merged):
+                return False
+    # Check required_targets_by_effect for nodes not in targets_by_effect
+    if isinstance(required_targets_by_effect, dict):
+        checked_nodes = set(targets_by_effect.keys()) if isinstance(targets_by_effect, dict) else set()
+        for node_id, required_keys in required_targets_by_effect.items():
+            if node_id in checked_nodes or node_id == "_global":
+                continue
+            if not isinstance(required_keys, list):
+                continue
+            # For nodes without override, check against base targets
+            if _missing_required_targets(context.targets, required_keys):
                 return False
     return True
 
@@ -271,10 +324,10 @@ def _check_object_target(game_state: GameState, context: ResolveContext, target_
         if obj.controller_id != context.controller_id:
             return False, "Target has hexproof."
     source_id = (
-        context.source_id
-        or context.triggering_source_id
-        or context.triggering_spell_id
-        or context.triggering_aura_id
+        getattr(context, "source_id", None)
+        or getattr(context, "triggering_source_id", None)
+        or getattr(context, "triggering_spell_id", None)
+        or getattr(context, "triggering_aura_id", None)
     )
     if obj.protections and source_id:
         source = game_state.objects.get(source_id)
@@ -359,22 +412,25 @@ def _missing_required_targets(targets: Dict[str, Any], required_keys: List[str])
 
 
 def _missing_required_global_targets(context: ResolveContext) -> List[str]:
-    if not isinstance(context.required_targets_by_effect, dict):
+    required_targets_by_effect = getattr(context, "required_targets_by_effect", None)
+    if not isinstance(required_targets_by_effect, dict):
         return []
-    required = context.required_targets_by_effect.get("_global", []) or []
+    required = required_targets_by_effect.get("_global", []) or []
     return _missing_required_targets(context.targets, required)
 
 
 def has_missing_required_targets(context: ResolveContext) -> bool:
     if _missing_required_global_targets(context):
         return True
-    if isinstance(context.targets_by_effect, dict):
-        for node_id, override in context.targets_by_effect.items():
+    targets_by_effect = getattr(context, "targets_by_effect", None)
+    required_targets_by_effect = getattr(context, "required_targets_by_effect", None)
+    if isinstance(targets_by_effect, dict):
+        for node_id, override in targets_by_effect.items():
             if not isinstance(override, dict):
                 continue
             required_keys: List[str] = []
-            if isinstance(context.required_targets_by_effect, dict):
-                required_keys = context.required_targets_by_effect.get(node_id, []) or []
+            if isinstance(required_targets_by_effect, dict):
+                required_keys = required_targets_by_effect.get(node_id, []) or []
             if not required_keys:
                 continue
             merged = dict(context.targets)

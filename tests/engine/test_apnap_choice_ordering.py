@@ -10,18 +10,33 @@ def _build_state() -> GameState:
 def test_pending_choices_sorted_by_apnap():
     game_state = _build_state()
     game_state.turn.active_player_index = 0
+    # Each player needs TWO matching effects to trigger a choice (otherwise one is auto-selected)
     game_state.replacement_effects.append({
         "type": "replace_draw",
         "replacement_zone": "exile",
-        "effect_id": "p0",
+        "effect_id": "p0_a",
         "timestamp_order": 1,
         "player_id": 0,
     })
     game_state.replacement_effects.append({
         "type": "replace_draw",
         "replacement_zone": "graveyard",
-        "effect_id": "p1",
+        "effect_id": "p0_b",
+        "timestamp_order": 2,
+        "player_id": 0,
+    })
+    game_state.replacement_effects.append({
+        "type": "replace_draw",
+        "replacement_zone": "exile",
+        "effect_id": "p1_a",
         "timestamp_order": 1,
+        "player_id": 1,
+    })
+    game_state.replacement_effects.append({
+        "type": "replace_draw",
+        "replacement_zone": "graveyard",
+        "effect_id": "p1_b",
+        "timestamp_order": 2,
         "player_id": 1,
     })
 
@@ -29,6 +44,8 @@ def test_pending_choices_sorted_by_apnap():
     resolve_replacement(game_state, "replace_draw", 0, "draw:event:player:0")
 
     pending = game_state.choices.get("pending", [])
+    # Choices should be ordered: player 0 first (active player), then player 1
+    assert len(pending) == 2
     assert pending[0]["player_id"] == 0
     assert pending[1]["player_id"] == 1
 

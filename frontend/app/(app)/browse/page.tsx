@@ -9,7 +9,6 @@ export default function BrowsePage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Redirect to search page (which now handles browse mode)
     router.replace('/search');
   }, [router]);
 

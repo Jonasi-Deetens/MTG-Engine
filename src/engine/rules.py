@@ -22,7 +22,7 @@ from .costs import (
 from .stack import StackItem
 from .targets import enforce_ward_payment, normalize_targets, validate_targets
 from .turn import Phase, Step
-from .zones import ZONE_BATTLEFIELD, ZONE_COMMAND, ZONE_GRAVEYARD, ZONE_HAND
+from .zones import ZONE_BATTLEFIELD, ZONE_COMMAND, ZONE_EXILE, ZONE_GRAVEYARD, ZONE_HAND
 from .events import Event
 from .state import ResolveContext
 from .choices import extract_modal_config, validate_enter_choices, validate_modal_choices
@@ -242,6 +242,8 @@ def cast_spell(
         resolve_context = ResolveContext(**context)
         if resolve_context.source_id is None:
             resolve_context.source_id = obj.id
+        if resolve_context.controller_id is None:
+            resolve_context.controller_id = player_id
         normalize_targets(game_state, resolve_context)
         validate_targets(game_state, resolve_context)
         enforce_ward_payment(game_state, resolve_context)
@@ -384,33 +386,44 @@ def cast_spell(
     destination_zone = ZONE_GRAVEYARD if ("Instant" in obj.types or "Sorcery" in obj.types) else ZONE_BATTLEFIELD
     if alt_tag and alt_tag.split(":", 1)[0] in ("flashback", "jump-start", "escape"):
         destination_zone = ZONE_EXILE
+    # Use the processed resolve_context which includes choices like alternative_cost_tag
+    stacked_context = resolve_context.__dict__ if resolve_context else (context or {})
     if ability_graph:
+        # Include ability_id from graph if available
+        ability_id = ability_graph.get("abilityId") or f"{ability_graph.get('abilityType', 'spell')}-0"
         game_state.stack.push(
             StackItem(
                 kind="ability_graph",
                 payload={
                     "graph": ability_graph,
-                    "context": context or {},
+                    "context": stacked_context,
                     "source_object_id": obj.id,
                     "destination_zone": destination_zone,
+                    "ability_id": ability_id,
                 },
                 controller_id=player_id,
             )
         )
+        message = f"[graph] cast_spell pushed ability_graph source={obj.id} ability_id={ability_id}"
+        game_state.log(message)
+        print(message, flush=True)
     else:
         game_state.stack.push(
             StackItem(
                 kind="spell",
-                payload={"object_id": obj.id, "destination_zone": destination_zone, "context": context or {}},
+                payload={"object_id": obj.id, "destination_zone": destination_zone, "context": stacked_context},
                 controller_id=player_id,
             )
         )
+        message = f"[graph] cast_spell pushed spell source={obj.id}"
+        game_state.log(message)
+        print(message, flush=True)
     if copy_count > 0:
         push_spell_copies(
             game_state,
             obj.id,
             ability_graph,
-            context or {},
+            stacked_context,
             player_id,
             copy_count,
             resolve_context.choices.get("copy_targets_list") if resolve_context else None,
@@ -453,12 +466,13 @@ def prepare_cast(
 
     _validate_cast_timing(game_state, turn_manager, player_id, obj)
 
+    resolve_context = None
     if context:
         resolve_context = ResolveContext(**context)
         validate_targets(game_state, resolve_context)
 
     cost_override, free_cast, alt_tag, alt_extra_costs = _resolve_alternative_cost(
-        ability_graph, resolve_context if context else None
+        ability_graph, resolve_context
     )
     cost_text = None if free_cast else (cost_override or obj.mana_cost)
     cost = parse_mana_cost(cost_text, x_value=x_value)
@@ -680,14 +694,56 @@ def activate_mana_ability(game_state, turn_manager, player_id: int, object_id: s
     turn_manager.after_mana_ability(player_id)
 
 
+def _find_ability_by_type_index(
+    ability_graphs: List[Dict[str, Any]],
+    ability_type: str,
+    ability_index: int,
+) -> Optional[Dict[str, Any]]:
+    """Find an ability graph by type and index.
+    
+    Supports both:
+    - New format: lookup by abilityType and index within that type
+    - Legacy format: fallback to array index for backward compatibility
+    """
+    # Count abilities of the specified type
+    type_abilities = [
+        g for g in ability_graphs
+        if g.get("abilityType", "activated") == ability_type
+    ]
+    
+    if ability_index < len(type_abilities):
+        return type_abilities[ability_index]
+    
+    # Legacy fallback: use raw array index
+    if ability_index < len(ability_graphs):
+        return ability_graphs[ability_index]
+    
+    return None
+
+
 def activate_ability(
     game_state,
     turn_manager,
     player_id: int,
     object_id: str,
     ability_index: int = 0,
+    ability_type: str = "activated",  # New: support type+index lookup
     context: Optional[dict] = None,
-) -> None:
+) -> Dict[str, Any]:
+    """Activate an ability on a permanent.
+    
+    Args:
+        game_state: The current game state
+        turn_manager: The turn manager
+        player_id: The player activating the ability
+        object_id: The permanent with the ability
+        ability_index: Index of the ability within the type (default: 0)
+        ability_type: Type of ability ("activated", "triggered", etc.)
+        context: Additional context (targets, choices, etc.)
+    
+    Returns:
+        Dict with result status. If usesStack is false, returns resolved result.
+    """
     require_priority(turn_manager, player_id)
     obj = game_state.objects.get(object_id)
     if not obj:
@@ -696,10 +752,12 @@ def activate_ability(
         raise ValueError("You do not control this permanent.")
     if not obj.ability_graphs:
         raise ValueError("Permanent has no abilities to activate.")
-    if ability_index < 0 or ability_index >= len(obj.ability_graphs):
-        raise ValueError("Invalid ability index.")
+    
+    # Find ability by type+index (with legacy fallback)
+    graph = _find_ability_by_type_index(obj.ability_graphs, ability_type, ability_index)
+    if not graph:
+        raise ValueError(f"Invalid ability: {ability_type}-{ability_index}")
 
-    graph = obj.ability_graphs[ability_index]
     adapter = AbilityGraphRuntimeAdapter(game_state)
     runtime = adapter.build_runtime(graph)
     _validate_ability_timing(game_state, turn_manager, player_id, obj, runtime)
@@ -731,6 +789,27 @@ def activate_ability(
         )
     _record_activation_use(obj, ability_index, runtime)
 
+    # Check usesStack flag - resolve immediately if false (mana abilities)
+    uses_stack = runtime.uses_stack
+    ability_id = runtime.ability_id or f"{ability_type}-{ability_index}"
+    
+    if not uses_stack:
+        # Resolve immediately without using the stack (mana abilities, etc.)
+        game_state.log(f"[rules] resolving ability immediately (usesStack=false): {ability_id}")
+        print(f"[graph] resolving ability immediately (usesStack=false): {ability_id}", flush=True)
+        
+        # Build resolve context if not already done
+        if not resolve_context:
+            resolve_context = ResolveContext(
+                source_id=obj.id,
+                controller_id=player_id,
+            )
+        
+        result = adapter.resolve(graph, resolve_context)
+        turn_manager.after_mana_ability(player_id)
+        return {"status": "resolved_immediately", "ability_id": ability_id, "result": result}
+
+    # Normal case: push to stack
     stacked_context = context or {}
     stacked_context.setdefault("source_id", obj.id)
     stacked_context.setdefault("controller_id", player_id)
@@ -741,10 +820,12 @@ def activate_ability(
                 "graph": graph,
                 "context": stacked_context,
                 "source_object_id": obj.id,
+                "ability_id": ability_id,  # Include ability ID in payload
             },
             controller_id=player_id,
         )
     )
     _publish_becomes_target(game_state, obj.id, resolve_context)
     turn_manager.after_player_action(player_id)
+    return {"status": "pushed_to_stack", "ability_id": ability_id}
 

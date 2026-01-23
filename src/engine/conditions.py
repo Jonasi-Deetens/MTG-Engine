@@ -1,28 +1,25 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from .state import GameState, ResolveContext
 from .targets import resolve_object, resolve_player_id
 
-
-def _compare(value: int, comparison: str, expected: int) -> bool:
-    if comparison == ">":
-        return value > expected
-    if comparison == ">=":
-        return value >= expected
-    if comparison == "<":
-        return value < expected
-    if comparison == "<=":
-        return value <= expected
-    if comparison == "==":
-        return value == expected
-    if comparison == "!=":
-        return value != expected
-    return False
+# Import from new module
+from .effects_internal.condition_evaluator import ConditionEvaluator, _compare
 
 
 def evaluate_condition(game_state: GameState, condition: Dict[str, Any], context: ResolveContext) -> bool:
+    """Evaluate a single condition.
+
+    This function maintains backward compatibility while using ConditionEvaluator internally.
+    """
+    evaluator = ConditionEvaluator(game_state)
+    return evaluator.evaluate(condition, context)
+
+
+def _evaluate_condition_legacy(game_state: GameState, condition: Dict[str, Any], context: ResolveContext) -> bool:
+    """Legacy condition evaluation (kept for reference)."""
     condition_type = condition.get("type")
     comparison = condition.get("comparison", ">=")
     value = condition.get("value", 0)
@@ -131,6 +128,9 @@ def evaluate_condition(game_state: GameState, condition: Dict[str, Any], context
         return _compare(counter_value, ">=", value)
 
     if condition_type == "was_cast":
+        # Check event payload first (stored in context.targets for triggered abilities)
+        if context.targets and context.targets.get("was_cast") is True:
+            return True
         obj = resolve_object(game_state, context, target_key or "target_permanent", context.source_id)
         return bool(obj and obj.was_cast)
 
@@ -163,8 +163,10 @@ def evaluate_condition(game_state: GameState, condition: Dict[str, Any], context
     return True
 
 
-def evaluate_conditions(game_state: GameState, conditions: list[Dict[str, Any]], context: ResolveContext) -> bool:
-    for condition in conditions:
-        if not evaluate_condition(game_state, condition, context):
-            return False
-    return True
+def evaluate_conditions(game_state: GameState, conditions: List[Dict[str, Any]], context: ResolveContext) -> bool:
+    """Evaluate all conditions (AND logic - all must pass).
+
+    This function maintains backward compatibility while using ConditionEvaluator internally.
+    """
+    evaluator = ConditionEvaluator(game_state)
+    return evaluator.evaluate_all(conditions, context)

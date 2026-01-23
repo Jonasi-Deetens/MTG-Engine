@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict, List
 
 from .effects_helpers import resolve_target_objects, resolve_target_object, resolve_effect_players, resolve_target_list_for_player, normalize_card_type
+from .state import ResolveContext
 from .events import Event
 from .targets import resolve_object_id, resolve_player_id
 from .zones import ZONE_BATTLEFIELD, ZONE_EXILE, ZONE_GRAVEYARD, ZONE_HAND, ZONE_LIBRARY
@@ -69,33 +70,93 @@ def handle_sacrifice(resolver, effect: Dict[str, Any], context) -> Dict[str, Any
 
 
 def handle_search(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
+    """Handle search effect - find cards in a zone matching criteria.
+    
+    Search selections should be provided in context.targets_by_effect[node_id].search_results_by_player
+    before resolution. The stack resolver checks for and requests these choices before calling resolve.
+    """
     zone = effect.get("zone", ZONE_LIBRARY)
     player_ids = resolve_effect_players(resolver.game_state, context, effect, context.controller_id)
     if not player_ids:
         return {"type": "search", "status": "no_player"}
+    merged_targets = dict(context.targets or {})
+    targets_by_effect = getattr(context, "targets_by_effect", None)
+    if isinstance(targets_by_effect, dict):
+        node_id = effect.get("_node_id")
+        override = targets_by_effect.get(node_id) if node_id else None
+        if isinstance(override, dict):
+            merged_targets.update(override)
     results = []
     for player_id in player_ids:
         player = resolver.game_state.get_player(player_id)
         pool = getattr(player, zone, [])
         filtered_pool = _filter_search_pool(resolver, effect, context, player_id, pool)
-        found_ids = resolve_target_list_for_player(context, "search_results", player_id)
+        temp_context = ResolveContext(targets=merged_targets)
+        found_ids = resolve_target_list_for_player(temp_context, "search_results", player_id)
+        
+        message = (
+            f"[graph] search player={player_id} pool={len(pool)} "
+            f"filtered={len(filtered_pool)} found={found_ids}"
+        )
+        resolver.game_state.log(message)
+        print(message, flush=True)
+        
+        # Filter found_ids against filtered_pool, but fall back to pool check when
+        # filtered_pool is empty (e.g. no GameObjects exist, only IDs)
+        if filtered_pool:
+            valid_found = [obj_id for obj_id in found_ids if obj_id in filtered_pool]
+        else:
+            valid_found = [obj_id for obj_id in found_ids if obj_id in pool]
         results.append({
             "player_id": player_id,
             "zone": zone,
-            "found": [obj_id for obj_id in found_ids if obj_id in filtered_pool],
+            "found": valid_found,
+            "filtered_pool": filtered_pool,  # Include for frontend reference
         })
     return {"type": "search", "results": results} if len(results) > 1 else {"type": "search", **results[0]}
 
 
+def _matches_card_type_or_subtype(obj, card_type: str) -> bool:
+    """Check if object matches the card type (including subtypes like Aura, Equipment)."""
+    if not card_type:
+        return True
+    # Check types list
+    if card_type in (obj.types or []):
+        return True
+    # Check type_line for subtypes (e.g., "Enchantment — Aura" contains "Aura")
+    if obj.type_line:
+        type_line_lower = obj.type_line.lower()
+        card_type_lower = card_type.lower()
+        # Parse type_line for all words including subtypes
+        for part in type_line_lower.replace("—", "-").replace("–", "-").split("-"):
+            for word in part.strip().split():
+                if word == card_type_lower:
+                    return True
+    return False
+
+
 def _filter_search_pool(
-    resolver,
+    resolver_or_game_state,
     effect: Dict[str, Any],
     context,
     player_id: int,
     pool: List[str],
 ) -> List[str]:
+    """Filter search pool based on effect criteria.
+    
+    Args:
+        resolver_or_game_state: Either an EffectResolver (with .game_state) or GameState directly
+        effect: The search effect configuration
+        context: ResolveContext with triggering info
+        player_id: The searching player's ID
+        pool: List of object IDs to search through
+    """
     if not pool:
         return []
+    
+    # Support both resolver.game_state and game_state directly
+    game_state = getattr(resolver_or_game_state, 'game_state', None) or getattr(resolver_or_game_state, '_gs', None) or resolver_or_game_state
+    
     card_type = effect.get("cardType")
     if isinstance(card_type, str) and card_type.lower() == "any":
         card_type = None
@@ -110,10 +171,10 @@ def _filter_search_pool(
         if compare_source == "triggering_source":
             source_id = context.triggering_source_id
         elif compare_source == "triggering_aura":
-            source_id = context.triggering_aura_id
+            source_id = context.triggering_aura_id or context.triggering_source_id
         elif compare_source == "triggering_spell":
-            source_id = context.triggering_spell_id
-        source_obj = resolver.game_state.objects.get(source_id) if source_id else None
+            source_id = context.triggering_spell_id or context.triggering_source_id
+        source_obj = game_state.objects.get(source_id) if source_id else None
         compare_value = source_obj.mana_value if source_obj else None
     compare_value = compare_value if isinstance(compare_value, int) else None
 
@@ -130,30 +191,46 @@ def _filter_search_pool(
     else:
         compare_against_type = None
     compare_against_zone = different_config.get("compareAgainstZone", "controlled")
+    compare_against_source = different_config.get("compareAgainstSource")
 
     compare_names: set[str] = set()
     if different_config:
         compare_candidates: List[str] = []
-        player = resolver.game_state.get_player(player_id)
-        if compare_against_zone == "controlled":
-            compare_candidates = [
-                obj.id
-                for obj in resolver.game_state.objects.values()
-                if obj.zone == ZONE_BATTLEFIELD and obj.controller_id == player_id
-            ]
-        elif compare_against_zone == "battlefield":
-            compare_candidates = [
-                obj.id
-                for obj in resolver.game_state.objects.values()
-                if obj.zone == ZONE_BATTLEFIELD
-            ]
-        elif compare_against_zone in ("graveyard", "hand", "library", "exile"):
-            compare_candidates = list(getattr(player, compare_against_zone, []))
+        player = game_state.get_player(player_id)
+        if compare_against_source:
+            source_id = None
+            if compare_against_source == "triggering_source":
+                source_id = context.triggering_source_id
+            elif compare_against_source == "triggering_aura":
+                source_id = context.triggering_aura_id or context.triggering_source_id
+            elif compare_against_source == "triggering_spell":
+                source_id = context.triggering_spell_id or context.triggering_source_id
+            elif compare_against_source == "source":
+                source_id = context.source_id
+            elif compare_against_source == "target":
+                source_id = resolve_object_id(context, "target", None)
+            if source_id:
+                compare_candidates = [source_id]
+        if not compare_candidates:
+            if compare_against_zone == "controlled":
+                compare_candidates = [
+                    obj.id
+                    for obj in game_state.objects.values()
+                    if obj.zone == ZONE_BATTLEFIELD and obj.controller_id == player_id
+                ]
+            elif compare_against_zone == "battlefield":
+                compare_candidates = [
+                    obj.id
+                    for obj in game_state.objects.values()
+                    if obj.zone == ZONE_BATTLEFIELD
+                ]
+            elif compare_against_zone in ("graveyard", "hand", "library", "exile"):
+                compare_candidates = list(getattr(player, compare_against_zone, []))
         for obj_id in compare_candidates:
-            obj = resolver.game_state.objects.get(obj_id)
+            obj = game_state.objects.get(obj_id)
             if not obj:
                 continue
-            if compare_against_type and compare_against_type not in (obj.types or []):
+            if compare_against_type and not _matches_card_type_or_subtype(obj, compare_against_type):
                 continue
             if obj.name:
                 compare_names.add(obj.name)
@@ -177,10 +254,10 @@ def _filter_search_pool(
 
     filtered: List[str] = []
     for obj_id in pool:
-        obj = resolver.game_state.objects.get(obj_id)
+        obj = game_state.objects.get(obj_id)
         if not obj:
             continue
-        if card_type and card_type not in (obj.types or []):
+        if card_type and not _matches_card_type_or_subtype(obj, card_type):
             continue
         if not _compare(obj.mana_value):
             continue
@@ -191,10 +268,23 @@ def _filter_search_pool(
 
 
 def handle_put_onto_battlefield(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
+    from .effects_internal.target_resolver import (
+        should_infer_targets_from_effect,
+        get_inferred_targets_from_previous_result,
+    )
+    
     from_effect = effect.get("fromEffect")
     card_ids = []
+    
+    # When fromEffect is specified, infer targets from previous effect's result
+    # This allows omitting minTargets/maxTargets when using effect chaining
     if from_effect is not None and from_effect < len(context.previous_results):
-        card_ids = context.previous_results[from_effect].get("found", [])
+        card_ids = get_inferred_targets_from_previous_result(
+            context.previous_results, from_effect
+        )
+        if not card_ids:
+            # Fallback to "found" key for backward compatibility
+            card_ids = context.previous_results[from_effect].get("found", [])
     else:
         target_id = resolve_object_id(context, "target", None)
         if target_id:
@@ -204,22 +294,81 @@ def handle_put_onto_battlefield(resolver, effect: Dict[str, Any], context) -> Di
         if obj:
             enter_copy_of = context.choices.get("enter_copy_of")
             if enter_copy_of:
-                resolver.game_state._apply_enter_copy(obj, enter_copy_of)
+                source = resolver.game_state.objects.get(enter_copy_of)
+                if source:
+                    resolver.game_state.object_manager.apply_enter_copy(obj, source)
             enter_choices = context.choices.get("enter_choices")
             if isinstance(enter_choices, dict):
-                resolver.game_state._apply_enter_choices(obj, enter_choices)
+                resolver.game_state.object_manager.apply_enter_choices(obj, enter_choices)
         resolver.game_state.move_object(obj_id, ZONE_BATTLEFIELD)
+    message = f"[graph] put_onto_battlefield cards={card_ids}"
+    resolver.game_state.log(message)
+    print(message, flush=True)
     return {"type": "put_onto_battlefield", "cards": card_ids}
 
 
 def handle_attach(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
-    attach_to = resolve_object_id(context, "attach_to", effect.get("attachTo"))
+    merged_targets = dict(context.targets or {})
+    targets_by_effect = getattr(context, "targets_by_effect", None)
+    if isinstance(targets_by_effect, dict):
+        node_id = effect.get("_node_id")
+        override = targets_by_effect.get(node_id) if node_id else None
+        if isinstance(override, dict):
+            merged_targets.update(override)
+    temp_context = ResolveContext(
+        source_id=context.source_id,
+        controller_id=context.controller_id,
+        triggering_source_id=context.triggering_source_id,
+        triggering_aura_id=context.triggering_aura_id,
+        triggering_spell_id=context.triggering_spell_id,
+        targets=merged_targets,
+        targets_by_effect=context.targets_by_effect,
+        required_targets_by_effect=context.required_targets_by_effect,
+        distinct_targets_by_effect=context.distinct_targets_by_effect,
+        min_targets_by_effect=context.min_targets_by_effect,
+        choices=context.choices,
+        previous_results=context.previous_results,
+    )
+    attach_to = resolve_object_id(temp_context, "attach_to", effect.get("attachTo"))
+    if attach_to in ("self", "source"):
+        attach_to = context.source_id
+    elif attach_to == "triggering_source":
+        attach_to = context.triggering_source_id or context.source_id
+    elif attach_to == "triggering_spell":
+        attach_to = context.triggering_spell_id or context.triggering_source_id
+    elif attach_to == "triggering_aura":
+        aura_id = context.triggering_aura_id or context.triggering_source_id
+        aura_obj = resolver.game_state.objects.get(aura_id) if aura_id else None
+        if aura_obj and aura_obj.attached_to:
+            attach_to = aura_obj.attached_to
+        else:
+            attach_to = aura_id
+    elif isinstance(attach_to, str) and attach_to.startswith("target_"):
+        attach_to = resolve_object_id(temp_context, "target", attach_to)
+    if not attach_to:
+        attach_to = resolve_object_id(temp_context, "target", None)
+    from .effects_internal.target_resolver import get_inferred_targets_from_previous_result
+    
     from_effect = effect.get("fromEffect")
     card_ids = []
+    
+    # When fromEffect is specified, infer targets from previous effect's result
+    # This allows omitting minTargets/maxTargets when using effect chaining
     if from_effect is not None and from_effect < len(context.previous_results):
-        card_ids = context.previous_results[from_effect].get("found", [])
+        prev_result = context.previous_results[from_effect]
+        print(f"[graph] attach from_effect={from_effect} prev_result={prev_result}", flush=True)
+        # Use helper function to get targets from common result keys
+        card_ids = get_inferred_targets_from_previous_result(
+            context.previous_results, from_effect
+        )
+        # Fallback for backward compatibility
+        if not card_ids:
+            card_ids = prev_result.get("found", []) or prev_result.get("cards", [])
+    elif effect.get("attachSource"):
+        if temp_context.source_id:
+            card_ids = [temp_context.source_id]
     else:
-        target_id = resolve_object_id(context, "target", None)
+        target_id = resolve_object_id(temp_context, "target", None)
         if target_id:
             card_ids = [target_id]
     attached = resolver.game_state.objects.get(attach_to) if attach_to else None
@@ -236,12 +385,15 @@ def handle_attach(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
             obj.attached_to = None
             results.append({"object_id": obj.id, "status": "invalid_target"})
             continue
-        if resolver.game_state._is_illegal_attachment(obj, attached):
+        if resolver.game_state.attachment_manager._is_illegal_attachment(obj, attached):
             obj.attached_to = None
             results.append({"object_id": obj.id, "status": "illegal_attachment"})
             continue
         obj.attached_to = attach_to
         results.append({"object_id": obj.id, "status": "attached"})
+    message = f"[graph] attach cards={card_ids} attach_to={attach_to} results={results}"
+    resolver.game_state.log(message)
+    print(message, flush=True)
     return {"type": "attach", "cards": card_ids, "attach_to": attach_to, "results": results}
 
 
@@ -304,6 +456,9 @@ def handle_phase_out(resolver, effect: Dict[str, Any], context) -> Dict[str, Any
     obj.tapped = False
     obj.is_attacking = False
     obj.is_blocking = False
+    for attached in resolver.game_state.objects.values():
+        if attached.attached_to == obj.id and attached.zone == ZONE_BATTLEFIELD:
+            attached.phased_out = True
     return {"type": "phase_out", "object_id": obj.id}
 
 
@@ -312,6 +467,9 @@ def handle_transform(resolver, effect: Dict[str, Any], context) -> Dict[str, Any
     if not obj:
         return {"type": "transform", "status": "no_target"}
     obj.transformed = not obj.transformed
+    obj.tapped = False
+    obj.is_attacking = False
+    obj.is_blocking = False
     return {"type": "transform", "object_id": obj.id}
 
 
@@ -325,7 +483,7 @@ def handle_flicker(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
     if obj.id in owner.exile:
         owner.exile.remove(obj.id)
     resolver.game_state.move_object(obj.id, ZONE_BATTLEFIELD)
-    if effect.get("returnUnderOwner"):
+    if effect.get("returnUnderOwner", True):
         obj.controller_id = owner_id
     return {"type": "flicker", "object_id": obj.id}
 
@@ -339,6 +497,8 @@ def handle_change_control(resolver, effect: Dict[str, Any], context) -> Dict[str
         return {"type": "change_control", "status": "no_player"}
     original_controller = obj.controller_id
     obj.controller_id = new_controller
+    obj.is_attacking = False
+    obj.is_blocking = False
     duration = effect.get("duration")
     if duration and duration != "permanent":
         resolver._add_temporary_effect(obj, {

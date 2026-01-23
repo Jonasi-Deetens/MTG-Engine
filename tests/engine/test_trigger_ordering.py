@@ -45,7 +45,8 @@ def test_triggers_follow_apnap_order():
 
     game_state.event_bus.publish(Event(type="dies", payload={"object_id": "victim"}))
 
-    assert [item.controller_id for item in game_state.stack.items] == [0, 1]
+    # Triggers go to pending_triggers first, ordered by APNAP
+    assert [item.get("controller_id") for item in game_state.pending_triggers] == [0, 1]
 
 
 def test_triggers_respect_active_player_order():
@@ -75,15 +76,27 @@ def test_triggers_respect_active_player_order():
 
     game_state.event_bus.publish(Event(type="dies", payload={"object_id": "victim"}))
 
-    assert [item.controller_id for item in game_state.stack.items] == [1, 0]
+    # Triggers go to pending_triggers first, ordered by APNAP (active player 1 first)
+    assert [item.get("controller_id") for item in game_state.pending_triggers] == [1, 0]
 
 
 def test_trigger_order_choices_apnap_sorted():
+    """Test that trigger_order choices are sorted by APNAP when multiple triggers from same player."""
     game_state = _build_state()
     game_state.turn.active_player_index = 0
+    # Give player 0 two triggers to require ordering choice
     obj_a = GameObject(
         id="a",
         name="A",
+        owner_id=0,
+        controller_id=0,
+        types=["Creature"],
+        zone=ZONE_BATTLEFIELD,
+        ability_graphs=[_trigger_graph()],
+    )
+    obj_a2 = GameObject(
+        id="a2",
+        name="A2",
         owner_id=0,
         controller_id=0,
         types=["Creature"],
@@ -100,11 +113,13 @@ def test_trigger_order_choices_apnap_sorted():
         ability_graphs=[_trigger_graph()],
     )
     game_state.add_object(obj_a)
+    game_state.add_object(obj_a2)
     game_state.add_object(obj_b)
     AbilityRegistry(game_state)
 
     game_state.event_bus.publish(Event(type="dies", payload={"object_id": "victim"}))
 
+    # Player 0 has 2 triggers, so a choice is queued for ordering
     pending = game_state.choices.get("pending", [])
     trigger_entries = [entry for entry in pending if entry.get("type") == "trigger_order"]
     assert trigger_entries
@@ -143,4 +158,5 @@ def test_trigger_order_choice_respected_within_player():
 
     game_state.event_bus.publish(Event(type="dies", payload={"object_id": "victim"}))
 
-    assert game_state.stack.items[0].payload.get("source_object_id") == entries[1].source_id
+    # Triggers go to pending_triggers, respecting the chosen order
+    assert game_state.pending_triggers[0].get("payload", {}).get("source_object_id") == entries[1].source_id

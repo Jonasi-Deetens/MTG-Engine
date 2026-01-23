@@ -113,6 +113,7 @@ class GameStateSnapshot(BaseModel):
     choices: Dict[str, Any] = Field(default_factory=dict)
     pending_triggers: List[Dict[str, Any]] = Field(default_factory=list)
     prepared_casts: Dict[int, Dict[str, Any]] = Field(default_factory=dict)
+    pending_search_selections: Dict[str, Dict[str, Any]] = Field(default_factory=dict)
 
 
 class ResolveContextSnapshot(BaseModel):
@@ -152,12 +153,14 @@ class EngineActionRequest(BaseModel):
         "declare_blockers",
         "assign_combat_damage",
     ]
-    game_state: GameStateSnapshot
+    game_id: Optional[str] = None
+    game_state: Optional[GameStateSnapshot] = None
     ability_graph: Optional[AbilityGraph] = None
     context: Optional[ResolveContextSnapshot] = None
     player_id: Optional[int] = None
     object_id: Optional[str] = None
     ability_index: Optional[int] = None
+    ability_type: Optional[str] = None  # New: for type+index ability lookup
     attackers: List[str] = Field(default_factory=list)
     blockers: Dict[str, List[str]] = Field(default_factory=dict)
     defending_player_id: Optional[int] = None
@@ -168,9 +171,22 @@ class EngineActionRequest(BaseModel):
     mana_payment_detail: Optional[ManaPaymentDetail] = None
     contexts: List[ResolveContextSnapshot] = Field(default_factory=list)
     x_value: Optional[int] = None
+    replacement_choices: Dict[str, str] = Field(default_factory=dict)
+    # Search selections for stack item resolution (used with pass_priority)
+    targets_by_effect: Dict[str, Dict[str, Any]] = Field(default_factory=dict)
 
 
 class EngineActionResponse(BaseModel):
     game_state: GameStateSnapshot
     result: Dict[str, Any]
     debug_log: List[str] = Field(default_factory=list)
+
+
+class CreateGameSessionRequest(BaseModel):
+    game_state: GameStateSnapshot
+
+
+class GameSessionResponse(BaseModel):
+    game_id: str
+    game_state: GameStateSnapshot
+    version: int

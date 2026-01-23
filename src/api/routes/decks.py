@@ -23,6 +23,12 @@ from api.utils.deck_validator import validate_deck
 
 router = APIRouter(prefix="/api/decks", tags=["decks"])
 
+# Default list names for new decks - created automatically on deck creation
+DEFAULT_LIST_NAMES = [
+    "Creatures", "Instants", "Sorceries", "Artifacts",
+    "Enchantments", "Planeswalkers", "Lands", "Other"
+]
+
 
 def get_db():
     db = SessionLocal()
@@ -30,6 +36,29 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+# DEBUG endpoint - remove after testing
+@router.get("/debug/{deck_id}/cards/{card_id}")
+def debug_card(deck_id: int, card_id: str, db: Session = Depends(get_db)):
+    """Debug endpoint to check if card exists in deck."""
+    deck = db.query(Deck).filter(Deck.id == deck_id).first()
+    if not deck:
+        return {"error": "Deck not found", "deck_id": deck_id}
+    
+    deck_card = db.query(DeckCard).filter(
+        and_(DeckCard.deck_id == deck_id, DeckCard.card_id == card_id)
+    ).first()
+    
+    all_cards = db.query(DeckCard).filter(DeckCard.deck_id == deck_id).all()
+    
+    return {
+        "deck_exists": True,
+        "deck_owner_id": deck.user_id,
+        "card_found": deck_card is not None,
+        "card_id_searched": card_id,
+        "all_card_ids_in_deck": [c.card_id for c in all_cards],
+    }
 
 
 @router.get("", response_model=List[DeckResponse])
@@ -80,7 +109,7 @@ def create_deck(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-    """Create a new deck."""
+    """Create a new deck with default lists."""
     new_deck = Deck(
         user_id=user.id,
         name=deck.name,
@@ -91,6 +120,16 @@ def create_deck(
     db.add(new_deck)
     db.commit()
     db.refresh(new_deck)
+    
+    # Create default lists for the new deck
+    for position, name in enumerate(DEFAULT_LIST_NAMES):
+        default_list = DeckCustomList(
+            deck_id=new_deck.id,
+            name=name,
+            position=position
+        )
+        db.add(default_list)
+    db.commit()
     
     return DeckResponse(
         id=new_deck.id,
@@ -326,7 +365,15 @@ def update_card_quantity(
     user: User = Depends(get_current_user)
 ):
     """Update card quantity in deck."""
-    print(f"[DEBUG] update_card_quantity deck_id={deck_id} card_id={card_id} quantity={card.quantity} user_id={user.id}")
+    print(f"[DEBUG] update_card_quantity deck_id={deck_id} card_id={card_id} quantity={card.quantity} user_id={user.id}", flush=True)
+    
+    # Check if deck exists at all (without user filter)
+    any_deck = db.query(Deck).filter(Deck.id == deck_id).first()
+    if any_deck:
+        print(f"[DEBUG] deck {deck_id} exists, owner_id={any_deck.user_id}, current_user={user.id}", flush=True)
+    else:
+        print(f"[DEBUG] deck {deck_id} does not exist at all", flush=True)
+    
     # Verify deck belongs to user
     deck = db.query(Deck).filter(
         and_(
@@ -335,7 +382,7 @@ def update_card_quantity(
         )
     ).first()
     if not deck:
-        print(f"[DEBUG] update_card_quantity deck not found deck_id={deck_id} user_id={user.id}")
+        print(f"[DEBUG] update_card_quantity deck not found deck_id={deck_id} user_id={user.id}", flush=True)
         raise HTTPException(status_code=404, detail="Deck not found")
     
     deck_card = db.query(DeckCard).filter(
@@ -384,6 +431,15 @@ def remove_card_from_deck(
     user: User = Depends(get_current_user)
 ):
     """Remove a card from a deck."""
+    print(f"[DEBUG] remove_card deck_id={deck_id} card_id={card_id} user_id={user.id}", flush=True)
+    
+    # Check if deck exists at all
+    any_deck = db.query(Deck).filter(Deck.id == deck_id).first()
+    if any_deck:
+        print(f"[DEBUG] deck {deck_id} exists, owner_id={any_deck.user_id}, current_user={user.id}", flush=True)
+    else:
+        print(f"[DEBUG] deck {deck_id} does not exist at all", flush=True)
+    
     # Verify deck belongs to user
     deck = db.query(Deck).filter(
         and_(
@@ -392,8 +448,10 @@ def remove_card_from_deck(
         )
     ).first()
     if not deck:
+        print(f"[DEBUG] remove_card deck not found for user", flush=True)
         raise HTTPException(status_code=404, detail="Deck not found")
     
+    # Check if card exists in deck
     deck_card = db.query(DeckCard).filter(
         and_(
             DeckCard.deck_id == deck_id,
@@ -402,6 +460,9 @@ def remove_card_from_deck(
     ).first()
     
     if not deck_card:
+        # Debug: show all cards in this deck
+        all_cards = db.query(DeckCard).filter(DeckCard.deck_id == deck_id).all()
+        print(f"[DEBUG] card not found. Cards in deck {deck_id}: {[c.card_id for c in all_cards]}", flush=True)
         raise HTTPException(status_code=404, detail="Card not found in deck")
     
     db.delete(deck_card)

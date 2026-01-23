@@ -53,6 +53,20 @@ class Session(Base):
     # Relationship to user
     user = relationship("User", back_populates="sessions")
 
+
+class GameSession(Base):
+    """Persistent snapshot for a running game session."""
+    __tablename__ = "game_sessions"
+
+    game_id = Column(String, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    snapshot_json = Column(JSON, nullable=False)
+    version = Column(Integer, default=1, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    user = relationship("User", backref="game_sessions")
+
 class Keyword(Base):
     """MTG keyword abilities with their configurable parameters."""
     __tablename__ = "keywords"

@@ -10,7 +10,8 @@ from scryfall.client import ScryfallClient
 from scryfall.mappers.axis1_mapper import Axis1Mapper
 from scryfall.services.deck_import_service import DeckImportService
 from .schemas.request_schemas import DeckImportRequest
-from .routes import auth, cards, abilities, collections, decks, engine
+from .routes import auth, cards, abilities, collections, decks
+from .routes.engine import router as engine_router
 
 # Create database tables on startup
 try:
@@ -105,7 +106,7 @@ app.include_router(cards.router)
 app.include_router(abilities.router)
 app.include_router(collections.router)
 app.include_router(decks.router)
-app.include_router(engine.router)
+app.include_router(engine_router)
 
 
 def get_db():

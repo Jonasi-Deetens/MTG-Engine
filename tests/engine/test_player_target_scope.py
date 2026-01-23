@@ -55,5 +55,7 @@ def test_target_object_scope_opponent_rejects_controller_object():
         validate_targets(game_state, context)
         assert False, "Expected opponent control scope to reject controller object."
     except ValueError as exc:
-        assert "illegal" in str(exc).lower()
+        # Accept either "illegal" or "not controlled by an opponent"
+        err_msg = str(exc).lower()
+        assert "illegal" in err_msg or "not controlled by an opponent" in err_msg
 

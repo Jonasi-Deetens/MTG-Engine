@@ -12,6 +12,8 @@ export type TargetHints = {
 
 const normalizeTarget = (value?: string) => (value || '').toLowerCase();
 
+const ANY_TARGET_OBJECT_TYPES = new Set(['Creature', 'Planeswalker', 'Battle']);
+
 const isGroupSelector = (target: string) =>
   target.startsWith('each_') ||
   (!target.startsWith('target_') && target.endsWith('_you_control')) ||
@@ -71,7 +73,11 @@ export const deriveTargetHintsForTarget = (
   if (!normalized || isGroupSelector(normalized)) {
     return hints;
   }
-  if (normalized === 'any' || normalized === 'target' || normalized.includes('permanent')) {
+  if (normalized === 'any' || normalized === 'target') {
+    hints.allowObjects = true;
+    hints.allowPlayers = true;
+    ANY_TARGET_OBJECT_TYPES.forEach((type) => hints.objectTypes.add(type));
+  } else if (normalized.includes('permanent')) {
     hints.allowObjects = true;
   }
   if (normalized.includes('spell')) {
@@ -173,12 +179,16 @@ export const deriveTargetSpecs = (effect: any): EffectTargetSpec[] => {
   const target = effect.target || effect.untapTarget;
   if (target) {
     const minTargets = typeof effect.minTargets === 'number' ? effect.minTargets : null;
+    const maxTargets =
+      parseLimit(effect.maxTargets) ??
+      parseLimit(effect.max_targets) ??
+      parseLimit(effect.target_count);
     const requiresTarget = minTargets === null || minTargets > 0;
     specs.push({
       key: 'target',
       label: 'Target',
       target,
-      maxTargets: effect.maxTargets ?? null,
+      maxTargets,
       minTargets,
       useStackObjects: target === 'spell',
       required: requiresTarget,
@@ -212,6 +222,8 @@ export const deriveTargetHints = (
       objectTypes: new Set(),
       maxObjectTargets: null,
       maxPlayerTargets: null,
+      playerFilter: 'any',
+      objectFilter: 'any',
     };
   }
 
@@ -237,7 +249,15 @@ export const deriveTargetHints = (
       return;
     }
 
-    if (target === 'any' || target === 'target' || target.includes('permanent')) {
+    if (target === 'any' || target === 'target') {
+      hints.allowObjects = true;
+      hints.allowPlayers = true;
+      ANY_TARGET_OBJECT_TYPES.forEach((type) => hints.objectTypes.add(type));
+      if (limit) {
+        hints.maxObjectTargets = hints.maxObjectTargets ? Math.min(hints.maxObjectTargets, limit) : limit;
+        hints.maxPlayerTargets = hints.maxPlayerTargets ? Math.min(hints.maxPlayerTargets, limit) : limit;
+      }
+    } else if (target.includes('permanent')) {
       hints.allowObjects = true;
       if (limit) {
         hints.maxObjectTargets = hints.maxObjectTargets ? Math.min(hints.maxObjectTargets, limit) : limit;

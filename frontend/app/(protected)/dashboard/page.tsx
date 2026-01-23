@@ -14,7 +14,7 @@ import { CardPreview } from '@/components/cards/CardPreview';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { QuickActions } from '@/components/dashboard/QuickActions';
-import { DeckCard } from '@/components/decks/DeckCard';
+import { DeckCard } from '@/features/decks/components/DeckCard';
 import { DashboardSkeleton } from '@/components/skeletons/DashboardSkeleton';
 import { BookOpen, Heart, Folder } from 'lucide-react';
 

@@ -1,14 +1,22 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from uuid import uuid4
+import time
+import os
 
 from api.routes.auth import get_current_user
 from api.schemas.engine_schemas import (
     EngineActionRequest,
     EngineActionResponse,
     GameStateSnapshot,
+    CreateGameSessionRequest,
+    GameSessionResponse,
 )
 from db.models import User
+from db.models import GameSession
+from db.connection import SessionLocal
 from engine import (
     AbilityGraphRuntimeAdapter,
     AbilityRegistry,
@@ -34,9 +42,90 @@ from engine.rules import (
     prepare_cast,
 )
 from engine.turn import Phase, Step
+from engine.zones import ZONE_BATTLEFIELD, ZONE_COMMAND, ZONE_HAND
 
 
 router = APIRouter(prefix="/api/engine", tags=["engine"])
+
+_GAME_SESSION_CACHE: dict[str, GameState] = {}
+_GAME_SESSION_META: dict[str, dict] = {}
+_SNAPSHOT_EVERY_ACTIONS = int(os.getenv("SNAPSHOT_EVERY_ACTIONS", "5"))
+
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+def _get_cached_session(game_id: str) -> GameState | None:
+    return _GAME_SESSION_CACHE.get(game_id)
+
+
+def _cache_session(game_id: str, game_state: GameState, version: int, user_id: int | None = None) -> None:
+    _GAME_SESSION_CACHE[game_id] = game_state
+    meta = _GAME_SESSION_META.setdefault(game_id, {"version": version, "action_count": 0, "last_snapshot_version": version})
+    if user_id is not None:
+        meta["user_id"] = user_id
+
+
+def _hydrate_session_from_db(db: Session, game_id: str, user_id: int) -> tuple[GameState, int]:
+    session = db.query(GameSession).filter_by(game_id=game_id, user_id=user_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Game session not found.")
+    snapshot = GameStateSnapshot(**session.snapshot_json)
+    game_state = _build_game_state(snapshot)
+    _cache_session(game_id, game_state, session.version, user_id=user_id)
+    return game_state, session.version
+
+
+def _persist_snapshot(db: Session, game_id: str, snapshot: GameStateSnapshot, user_id: int) -> int:
+    session = db.query(GameSession).filter_by(game_id=game_id, user_id=user_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Game session not found.")
+    session.snapshot_json = snapshot.model_dump()
+    session.version = int(session.version or 0) + 1
+    db.add(session)
+    db.commit()
+    db.refresh(session)
+    return session.version
+
+
+def _should_snapshot(meta: dict) -> bool:
+    meta["action_count"] = meta.get("action_count", 0) + 1
+    return meta["action_count"] >= _SNAPSHOT_EVERY_ACTIONS
+
+
+def _maybe_snapshot(
+    db: Session,
+    game_id: str,
+    pre_turn_number: int,
+    pre_step,
+    pre_stack_len: int,
+    game_state: GameState,
+    session_version: int,
+    user_id: int,
+) -> None:
+    meta = _GAME_SESSION_META.setdefault(game_id, {
+        "version": session_version or 1,
+        "action_count": 0,
+        "last_snapshot_version": session_version or 1,
+    })
+    snapshot_needed = (
+        game_state.turn.turn_number != pre_turn_number
+        or game_state.turn.step != pre_step
+        or len(game_state.stack.items) < pre_stack_len
+        or _should_snapshot(meta)
+    )
+    if not snapshot_needed:
+        return
+    snapshot = _serialize_game_state(game_state)
+    new_version = _persist_snapshot(db, game_id, snapshot, user_id=user_id)
+    meta["version"] = new_version
+    meta["last_snapshot_version"] = new_version
+    meta["action_count"] = 0
 
 
 def _build_game_state(snapshot: GameStateSnapshot) -> GameState:
@@ -112,6 +201,16 @@ def _build_game_state(snapshot: GameStateSnapshot) -> GameState:
             base_etb_choices=dict(getattr(obj, "etb_choices", {})),
         )
 
+    # Filter zone lists to only include valid object IDs
+    valid_ids = set(game_state.objects.keys())
+    for player in game_state.players:
+        player.library = [obj_id for obj_id in player.library if obj_id in valid_ids]
+        player.hand = [obj_id for obj_id in player.hand if obj_id in valid_ids]
+        player.graveyard = [obj_id for obj_id in player.graveyard if obj_id in valid_ids]
+        player.exile = [obj_id for obj_id in player.exile if obj_id in valid_ids]
+        player.command = [obj_id for obj_id in player.command if obj_id in valid_ids]
+        player.battlefield = [obj_id for obj_id in player.battlefield if obj_id in valid_ids]
+
     game_state.stack.items = [
         StackItem(kind=item.kind, payload=item.payload, controller_id=item.controller_id)
         for item in snapshot.stack
@@ -152,6 +251,7 @@ def _build_game_state(snapshot: GameStateSnapshot) -> GameState:
     game_state.choices = dict(snapshot.choices or {})
     game_state.pending_triggers = list(snapshot.pending_triggers or [])
     game_state.prepared_casts = dict(snapshot.prepared_casts or {})
+    game_state.pending_search_selections = dict(snapshot.pending_search_selections or {})
     return game_state
 
 
@@ -266,17 +366,82 @@ def _serialize_game_state(game_state: GameState) -> GameStateSnapshot:
         choices=dict(game_state.choices),
         pending_triggers=list(game_state.pending_triggers),
         prepared_casts=dict(game_state.prepared_casts),
+        pending_search_selections=dict(game_state.pending_search_selections),
     )
+
+
+@router.post("/sessions", response_model=GameSessionResponse)
+def create_game_session(
+    payload: CreateGameSessionRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    game_id = str(uuid4())
+    snapshot = payload.game_state
+    session = GameSession(
+        game_id=game_id,
+        user_id=user.id,
+        snapshot_json=snapshot.model_dump(),
+        version=1,
+    )
+    db.add(session)
+    db.commit()
+    _cache_session(game_id, _build_game_state(snapshot), session.version, user_id=user.id)
+    return GameSessionResponse(game_id=game_id, game_state=snapshot, version=session.version)
+
+
+@router.get("/sessions/{game_id}", response_model=GameSessionResponse)
+def get_game_session(
+    game_id: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    cached = _get_cached_session(game_id)
+    meta = _GAME_SESSION_META.get(game_id, {})
+    if cached and meta.get("user_id") == user.id:
+        snapshot = _serialize_game_state(cached)
+        return GameSessionResponse(game_id=game_id, game_state=snapshot, version=int(meta.get("version", 1)))
+    session = db.query(GameSession).filter_by(game_id=game_id, user_id=user.id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Game session not found.")
+    snapshot = GameStateSnapshot(**session.snapshot_json)
+    _cache_session(game_id, _build_game_state(snapshot), session.version, user_id=user.id)
+    return GameSessionResponse(game_id=game_id, game_state=snapshot, version=session.version)
 
 
 @router.post("/execute", response_model=EngineActionResponse)
 def execute_engine_action(
     payload: EngineActionRequest,
     user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
-    game_state = _build_game_state(payload.game_state)
-    AbilityRegistry(game_state)
+    print(f"[engine] execute action={payload.action} game_id={payload.game_id}", flush=True)
     action = payload.action
+    game_state: GameState | None = None
+    session_version = 0
+
+    if action in ("resolve_graph", "check_targets"):
+        if not payload.game_state:
+            raise HTTPException(status_code=400, detail="game_state is required for this action")
+        game_state = _build_game_state(payload.game_state)
+    else:
+        if not payload.game_id:
+            raise HTTPException(status_code=400, detail="game_id is required for this action")
+        cached = _get_cached_session(payload.game_id)
+        meta = _GAME_SESSION_META.get(payload.game_id, {})
+        if cached and meta.get("user_id") == user.id:
+            game_state = cached
+            session_version = int(meta.get("version", 1))
+        else:
+            game_state, session_version = _hydrate_session_from_db(db, payload.game_id, user.id)
+
+    if action in ("resolve_graph", "check_targets"):
+        AbilityRegistry(game_state)
+    else:
+        if not getattr(game_state, "_ability_registry", None):
+            game_state._ability_registry = AbilityRegistry(game_state)
+    if payload.replacement_choices:
+        game_state.replacement_choices = dict(payload.replacement_choices)
 
     if action == "resolve_graph":
         if not payload.ability_graph:
@@ -311,11 +476,13 @@ def execute_engine_action(
             ))
         apply_continuous_effects(game_state)
         apply_state_based_actions(game_state)
-        return EngineActionResponse(
+        response = EngineActionResponse(
             game_state=_serialize_game_state(game_state),
             result=result,
             debug_log=game_state.debug_log,
         )
+        _maybe_snapshot(db, payload.game_id, pre_turn_number, pre_step, pre_stack_len, game_state, session_version, user.id)
+        return response
 
     if action == "check_targets":
         contexts = payload.contexts or []
@@ -353,10 +520,24 @@ def execute_engine_action(
             debug_log=game_state.debug_log,
         )
 
+    pre_turn_number = game_state.turn.turn_number
+    pre_step = game_state.turn.step
+    pre_stack_len = len(game_state.stack.items)
+
     if action == "advance_turn":
+        print(
+            f"[engine] advance_turn start game_id={payload.game_id} "
+            f"turn={game_state.turn.turn_number} {game_state.turn.phase.value}:{game_state.turn.step.value}",
+            flush=True,
+        )
         turn_manager = TurnManager(game_state)
         turn_manager._advance_phase_step()
-        return EngineActionResponse(
+        print(
+            f"[engine] advance_turn end game_id={payload.game_id} "
+            f"turn={game_state.turn.turn_number} {game_state.turn.phase.value}:{game_state.turn.step.value}",
+            flush=True,
+        )
+        response = EngineActionResponse(
             game_state=_serialize_game_state(game_state),
             result={
                 "status": "advanced",
@@ -366,18 +547,53 @@ def execute_engine_action(
             },
             debug_log=game_state.debug_log,
         )
+        _maybe_snapshot(db, payload.game_id, pre_turn_number, pre_step, pre_stack_len, game_state, session_version, user.id)
+        return response
 
     if action == "pass_priority":
         player_id = payload.player_id
         if player_id is None:
             raise HTTPException(status_code=400, detail="player_id is required for pass_priority")
+        
+        # Debug: Check pending_search_selections before handling pass
+        print(f"[engine] pass_priority player={player_id} pending_search_selections_before={game_state.pending_search_selections}", flush=True)
+        
         turn_manager = TurnManager(game_state)
-        turn_manager.handle_player_pass(player_id)
-        return EngineActionResponse(
+        
+        # Build provided context from payload
+        provided_context = None
+        if payload.targets_by_effect:
+            provided_context = {"targets_by_effect": payload.targets_by_effect}
+        
+        print(f"[engine] pass_priority player={player_id} targets_by_effect={payload.targets_by_effect}", flush=True)
+        
+        pass_result = turn_manager.handle_player_pass(player_id, provided_context)
+        
+        # Debug: Check pending_search_selections after handling pass
+        print(f"[engine] pass_priority pending_search_selections_after={game_state.pending_search_selections}", flush=True)
+        print(f"[engine] pass_priority result={pass_result}", flush=True)
+        
+        # Check if input is needed
+        if pass_result.get("status") == "needs_input":
+            response = EngineActionResponse(
+                game_state=_serialize_game_state(game_state),
+                result={
+                    "status": "needs_input",
+                    "current_priority": turn_manager.priority.current,
+                    "pending_search_choices": pass_result.get("pending_search_choices", []),
+                },
+                debug_log=game_state.debug_log,
+            )
+            # Don't snapshot - we're waiting for input
+            return response
+        
+        response = EngineActionResponse(
             game_state=_serialize_game_state(game_state),
             result={"status": "passed", "current_priority": turn_manager.priority.current},
             debug_log=game_state.debug_log,
         )
+        _maybe_snapshot(db, payload.game_id, pre_turn_number, pre_step, pre_stack_len, game_state, session_version, user.id)
+        return response
 
     if action == "play_land":
         if payload.player_id is None or payload.object_id is None:
@@ -387,11 +603,13 @@ def execute_engine_action(
             play_land(game_state, turn_manager, payload.player_id, payload.object_id)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
-        return EngineActionResponse(
+        response = EngineActionResponse(
             game_state=_serialize_game_state(game_state),
             result={"status": "land_played", "current_priority": turn_manager.priority.current},
             debug_log=game_state.debug_log,
         )
+        _maybe_snapshot(db, payload.game_id, pre_turn_number, pre_step, pre_stack_len, game_state, session_version, user.id)
+        return response
 
     if action == "prepare_cast":
         if payload.player_id is None or payload.object_id is None:
@@ -457,11 +675,13 @@ def execute_engine_action(
             game_state.prepared_casts.pop(payload.player_id, None)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
-        return EngineActionResponse(
+        response = EngineActionResponse(
             game_state=_serialize_game_state(game_state),
             result={"status": "spell_cast", "current_priority": turn_manager.priority.current},
             debug_log=game_state.debug_log,
         )
+        _maybe_snapshot(db, payload.game_id, pre_turn_number, pre_step, pre_stack_len, game_state, session_version, user.id)
+        return response
 
     if action == "cast_spell":
         if payload.player_id is None or payload.object_id is None:
@@ -483,11 +703,13 @@ def execute_engine_action(
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
-        return EngineActionResponse(
+        response = EngineActionResponse(
             game_state=_serialize_game_state(game_state),
             result={"status": "spell_cast", "current_priority": turn_manager.priority.current},
             debug_log=game_state.debug_log,
         )
+        _maybe_snapshot(db, payload.game_id, pre_turn_number, pre_step, pre_stack_len, game_state, session_version, user.id)
+        return response
 
     if action == "activate_mana_ability":
         if payload.player_id is None or payload.object_id is None:
@@ -497,32 +719,44 @@ def execute_engine_action(
             activate_mana_ability(game_state, turn_manager, payload.player_id, payload.object_id)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
-        return EngineActionResponse(
+        response = EngineActionResponse(
             game_state=_serialize_game_state(game_state),
             result={"status": "mana_added", "current_priority": turn_manager.priority.current},
             debug_log=game_state.debug_log,
         )
+        _maybe_snapshot(db, payload.game_id, pre_turn_number, pre_step, pre_stack_len, game_state, session_version, user.id)
+        return response
 
     if action == "activate_ability":
         if payload.player_id is None or payload.object_id is None:
             raise HTTPException(status_code=400, detail="player_id and object_id are required for activate_ability")
         turn_manager = TurnManager(game_state)
         try:
-            activate_ability(
+            # Support both ability_type and ability_index for new type+index lookup
+            ability_type = getattr(payload, 'ability_type', None) or "activated"
+            result = activate_ability(
                 game_state,
                 turn_manager,
                 payload.player_id,
                 payload.object_id,
                 payload.ability_index or 0,
+                ability_type,  # New: pass ability_type
                 payload.context.model_dump() if payload.context else None,
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
-        return EngineActionResponse(
+        response = EngineActionResponse(
             game_state=_serialize_game_state(game_state),
-            result={"status": "ability_activated", "current_priority": turn_manager.priority.current},
+            result={
+                "status": result.get("status", "ability_activated"),
+                "ability_id": result.get("ability_id"),
+                "current_priority": turn_manager.priority.current,
+                **(result.get("result", {}) if result.get("status") == "resolved_immediately" else {})
+            },
             debug_log=game_state.debug_log,
         )
+        _maybe_snapshot(db, payload.game_id, pre_turn_number, pre_step, pre_stack_len, game_state, session_version, user.id)
+        return response
 
     if action == "declare_attackers":
         if payload.player_id is None:
@@ -539,11 +773,13 @@ def execute_engine_action(
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
-        return EngineActionResponse(
+        response = EngineActionResponse(
             game_state=_serialize_game_state(game_state),
             result={"status": "attackers_declared", "current_priority": turn_manager.priority.current},
             debug_log=game_state.debug_log,
         )
+        _maybe_snapshot(db, payload.game_id, pre_turn_number, pre_step, pre_stack_len, game_state, session_version, user.id)
+        return response
 
     if action == "declare_blockers":
         if payload.player_id is None:
@@ -553,11 +789,13 @@ def execute_engine_action(
             declare_blockers(game_state, turn_manager, payload.player_id, payload.blockers)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
-        return EngineActionResponse(
+        response = EngineActionResponse(
             game_state=_serialize_game_state(game_state),
             result={"status": "blockers_declared", "current_priority": turn_manager.priority.current},
             debug_log=game_state.debug_log,
         )
+        _maybe_snapshot(db, payload.game_id, pre_turn_number, pre_step, pre_stack_len, game_state, session_version, user.id)
+        return response
 
     if action == "assign_combat_damage":
         if payload.player_id is None:
@@ -573,10 +811,12 @@ def execute_engine_action(
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
-        return EngineActionResponse(
+        response = EngineActionResponse(
             game_state=_serialize_game_state(game_state),
             result={"status": "combat_damage_assigned", "current_priority": turn_manager.priority.current},
             debug_log=game_state.debug_log,
         )
+        _maybe_snapshot(db, payload.game_id, pre_turn_number, pre_step, pre_stack_len, game_state, session_version, user.id)
+        return response
 
     raise HTTPException(status_code=400, detail=f"Unknown action: {action}")

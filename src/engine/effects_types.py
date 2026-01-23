@@ -263,3 +263,50 @@ def handle_cda_power_toughness(resolver, effect: Dict[str, Any], context) -> Dic
         return {"type": "cda_power_toughness", "status": "no_target"}
     return {"type": "cda_power_toughness", "results": results}
 
+
+def handle_modify_cast_cost(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
+    """Handle modify_cast_cost effect - creates a continuous effect that modifies spell costs.
+    
+    This effect modifies the casting cost of spells matching the specified types.
+    Positive amounts increase cost, negative amounts reduce cost.
+    
+    Effect data:
+        amount: int - The amount to modify the cost by (can be negative)
+        typeList: list[str] - Card types affected (e.g., ["creature", "artifact"])
+        duration: str - Duration of the effect
+    """
+    amount = effect.get("amount", 0)
+    type_list = effect.get("typeList", [])
+    duration = effect.get("duration", "permanent")
+    
+    if not isinstance(type_list, list):
+        type_list = [type_list] if type_list else []
+    
+    # Normalize type names to lowercase
+    normalized_types = [str(t).lower() for t in type_list if t]
+    
+    # Get the source object for the effect
+    source_obj = resolver.game_state.objects.get(context.source_id)
+    if not source_obj:
+        return {"type": "modify_cast_cost", "status": "no_source"}
+    
+    # Add the cost modification as a temporary effect on the source
+    resolver._add_temporary_effect(source_obj, {
+        "type": "modify_cast_cost",
+        "amount": int(amount),
+        "affected_types": normalized_types,
+        "controller_id": context.controller_id,
+        "duration": duration,
+    })
+    
+    resolver.game_state.log(
+        f"[effect] modify_cast_cost: {'+' if amount >= 0 else ''}{amount} for {normalized_types or 'all'} spells"
+    )
+    
+    return {
+        "type": "modify_cast_cost",
+        "status": "applied",
+        "amount": amount,
+        "affected_types": normalized_types,
+    }
+

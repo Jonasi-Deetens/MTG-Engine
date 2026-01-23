@@ -6,7 +6,8 @@ from engine.events import Event
 from engine.continuous import apply_continuous_effects
 from engine.effects import EffectResolver
 from engine.sba import apply_state_based_actions
-from engine.targets import validate_targets
+from engine.targets import resolve_object_id, validate_targets
+from engine.effects_helpers import resolve_target_objects
 from engine.turn import Phase, Step
 from engine.zones import ZONE_BATTLEFIELD, ZONE_GRAVEYARD
 
@@ -45,8 +46,9 @@ def test_triggered_ability_pushes_stack_item():
     AbilityRegistry(game_state)
 
     game_state.event_bus.publish(Event(type="enters_battlefield", payload={"object_id": creature.id}))
-    assert len(game_state.stack.items) == 1
-    assert game_state.stack.items[0].kind == "ability_graph"
+    # Triggers go to pending_triggers first, then to stack when priority is synced
+    assert len(game_state.pending_triggers) == 1
+    assert game_state.pending_triggers[0]["kind"] == "ability_graph"
 
 
 def test_validate_targets_rejects_hexproof():
@@ -89,6 +91,39 @@ def test_validate_targets_rejects_shroud():
 
     with pytest.raises(ValueError):
         validate_targets(game_state, context)
+
+
+def test_resolve_object_id_uses_spell_target_fallback():
+    context = ResolveContext(targets={"spell_target": "spell_1"})
+    assert resolve_object_id(context, "target", None) == "spell_1"
+
+
+def test_any_target_filters_out_lands():
+    game_state = _build_game_state()
+    land = GameObject(
+        id="land_1",
+        name="Test Land",
+        owner_id=0,
+        controller_id=0,
+        types=["Land"],
+        zone=ZONE_BATTLEFIELD,
+    )
+    creature = GameObject(
+        id="creature_1",
+        name="Test Creature",
+        owner_id=0,
+        controller_id=0,
+        types=["Creature"],
+        zone=ZONE_BATTLEFIELD,
+    )
+    game_state.add_object(land)
+    game_state.add_object(creature)
+    context = ResolveContext(targets={"target": land.id, "targets": [land.id, creature.id]})
+
+    resolved = resolve_target_objects(game_state, context, "any")
+    resolved_ids = {obj.id for obj in resolved}
+    assert creature.id in resolved_ids
+    assert land.id not in resolved_ids
 
 
 def test_scry_reorders_library():

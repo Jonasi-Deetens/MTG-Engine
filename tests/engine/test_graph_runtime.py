@@ -1,10 +1,21 @@
-from engine import AbilityGraphRuntimeAdapter, GameState, PlayerState, ResolveContext
+from engine import AbilityGraphRuntimeAdapter, GameObject, GameState, PlayerState, ResolveContext
 from engine.effects import EffectResolver
+from engine.zones import ZONE_BATTLEFIELD, ZONE_LIBRARY
 
 
 def test_resolve_damage_effect():
     players = [PlayerState(id=0, life=20)]
     game_state = GameState(players=players)
+    # Damage effects require a source object
+    source = GameObject(
+        id="source",
+        name="Source",
+        owner_id=0,
+        controller_id=0,
+        types=["Creature"],
+        zone=ZONE_BATTLEFIELD,
+    )
+    game_state.add_object(source)
     adapter = AbilityGraphRuntimeAdapter(game_state)
 
     graph = {
@@ -17,7 +28,7 @@ def test_resolve_damage_effect():
         "edges": [{"from_": "trigger-1", "to": "effect-1"}],
     }
 
-    context = ResolveContext(controller_id=0, targets={"player_id": 0})
+    context = ResolveContext(controller_id=0, source_id=source.id, targets={"player_id": 0})
     result = adapter.resolve(graph, context)
 
     assert result["status"] == "resolved"
@@ -66,8 +77,20 @@ def test_runtime_draw_each_uses_apnap():
     players = [PlayerState(id=0), PlayerState(id=1)]
     game_state = GameState(players=players)
     game_state.turn.active_player_index = 1
+    # Create actual game objects for library cards
     for player in game_state.players:
-        player.library = [f"card_{player.id}_1", f"card_{player.id}_2"]
+        for i in range(1, 3):
+            card_id = f"card_{player.id}_{i}"
+            card = GameObject(
+                id=card_id,
+                name=f"Card {player.id}-{i}",
+                owner_id=player.id,
+                controller_id=player.id,
+                types=["Instant"],
+                zone=ZONE_LIBRARY,
+            )
+            game_state.add_object(card)
+            player.library.append(card_id)
     graph = {
         "rootNodeId": "trigger-1",
         "abilityType": "triggered",

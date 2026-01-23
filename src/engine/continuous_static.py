@@ -134,14 +134,22 @@ def gather_static_layer_effects(game_state: GameState, effect_types: Optional[se
         if not source.ability_graphs:
             continue
         for graph in source.ability_graphs:
-            if graph.get("abilityType") != "static":
-                continue
-            runtime = adapter.build_runtime(graph)
-            if runtime.trigger or runtime.costs:
-                continue
-            for effect_node in runtime.effects:
-                if not isinstance(effect_node, dict):
+            runtime = None
+            effect_nodes: List[Dict] = []
+            if graph.get("abilityType") == "static":
+                runtime = adapter.build_runtime(graph)
+                if runtime.trigger or runtime.costs:
                     continue
+                effect_nodes = [node for node in runtime.effects if isinstance(node, dict)]
+            else:
+                for node in graph.get("nodes", []) or []:
+                    if node.get("type") != "EFFECT":
+                        continue
+                    data = node.get("data") or {}
+                    if data.get("abilityType") == "static":
+                        effect_nodes.append(dict(data))
+
+            for effect_node in effect_nodes:
                 applies_to = effect_node.get("appliesTo", "self")
                 payload = effect_node.get("effect")
                 if not isinstance(payload, dict):
@@ -157,11 +165,17 @@ def gather_static_layer_effects(game_state: GameState, effect_types: Optional[se
                         controller_id=source.controller_id,
                         targets={"target": target.id},
                     )
-                    if not evaluate_conditions(game_state, runtime.conditions, context):
+                    if runtime and not evaluate_conditions(game_state, runtime.conditions, context):
                         continue
                     effect = build_static_effect(payload, source, game_state)
                     if not effect:
                         continue
+                    message = (
+                        f"[graph] static_effect source={source.id} "
+                        f"target={target.id} effect={payload.get('type')}"
+                    )
+                    game_state.log(message)
+                    print(message, flush=True)
                     by_object.setdefault(target.id, []).append(effect)
     for effects in by_object.values():
         effects.sort(key=effect_sort_key)

@@ -105,3 +105,62 @@ def test_search_different_name_excludes_controlled_names():
 
     assert result["found"] == [different_name.id]
 
+
+def test_search_different_name_compares_triggering_source():
+    player = PlayerState(id=0)
+    game_state = GameState(players=[player])
+    resolver = EffectResolver(game_state)
+    triggering = GameObject(
+        id="triggering",
+        name="Same Name",
+        owner_id=0,
+        controller_id=0,
+        types=["Enchantment", "Aura"],
+        zone=ZONE_BATTLEFIELD,
+        mana_value=2,
+    )
+    same_name = GameObject(
+        id="same",
+        name="Same Name",
+        owner_id=0,
+        controller_id=0,
+        types=["Enchantment", "Aura"],
+        zone=ZONE_LIBRARY,
+        mana_value=2,
+    )
+    different_name = GameObject(
+        id="different",
+        name="Different Name",
+        owner_id=0,
+        controller_id=0,
+        types=["Enchantment", "Aura"],
+        zone=ZONE_LIBRARY,
+        mana_value=2,
+    )
+    game_state.add_object(triggering)
+    game_state.add_object(same_name)
+    game_state.add_object(different_name)
+    player.library = [same_name.id, different_name.id]
+
+    context = ResolveContext(
+        controller_id=0,
+        targets={"search_results": [same_name.id, different_name.id]},
+        triggering_source_id=triggering.id,
+    )
+    result = resolver.apply(
+        {
+            "type": "search",
+            "zone": "library",
+            "cardType": "enchantment",
+            "differentName": {
+                "enabled": True,
+                "compareAgainstType": "aura",
+                "compareAgainstSource": "triggering_source",
+            },
+            "target": "player",
+        },
+        context,
+    )
+
+    assert result["found"] == [different_name.id]
+
