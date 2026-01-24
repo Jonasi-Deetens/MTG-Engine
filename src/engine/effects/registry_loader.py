@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from api.schemas.unified_effect_schemas import Initiation
 from .active_effects import ActiveEffect
 from .normalize import normalize_graph
-from ..state import GameObject, GameState
+if TYPE_CHECKING:
+    from ..state import GameObject, GameState
 
 
 def register_active_effects_from_object(game_state: GameState, obj: GameObject) -> None:

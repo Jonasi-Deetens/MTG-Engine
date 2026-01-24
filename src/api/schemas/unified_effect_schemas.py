@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Any, Dict, List, Literal, Optional, Union
 
-from pydantic import BaseModel, Field, root_validator
+from pydantic import BaseModel, Field, model_validator
 
 
 class Initiation(str, Enum):
@@ -168,30 +168,25 @@ class UnifiedEffect(BaseModel):
     class Config:
         extra = "allow"
 
-    @root_validator
-    def _validate_initiation_fields(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        initiation = values.get("initiation")
-        if initiation == Initiation.TRIGGERED and values.get("trigger") is None:
+    @model_validator(mode="after")
+    def _validate_initiation_fields(self) -> "UnifiedEffect":
+        if self.initiation == Initiation.TRIGGERED and self.trigger is None:
             raise ValueError("trigger is required when initiation is 'triggered'")
-        if initiation == Initiation.ACTIVATED and values.get("cost") is None:
+        if self.initiation == Initiation.ACTIVATED and self.cost is None:
             raise ValueError("cost is required when initiation is 'activated'")
-        return values
+        return self
 
-    @root_validator
-    def _validate_resolution_tags(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        tags = values.get("tags") or []
-        resolution = values.get("resolution")
-        if EffectTag.MANA in tags and resolution != Resolution.IMMEDIATE:
+    @model_validator(mode="after")
+    def _validate_resolution_tags(self) -> "UnifiedEffect":
+        if EffectTag.MANA in (self.tags or []) and self.resolution != Resolution.IMMEDIATE:
             raise ValueError("mana-tagged effects must resolve immediately")
-        return values
+        return self
 
-    @root_validator
-    def _validate_persistence_effect_kind(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        effect = values.get("effect")
-        persistence = values.get("persistence")
-        if isinstance(effect, ContinuousEffect) and persistence != Persistence.CONTINUOUS:
+    @model_validator(mode="after")
+    def _validate_persistence_effect_kind(self) -> "UnifiedEffect":
+        if isinstance(self.effect, ContinuousEffect) and self.persistence != Persistence.CONTINUOUS:
             raise ValueError("continuous effect bodies require persistence='continuous'")
-        return values
+        return self
 
 
 class EffectStep(BaseModel):
