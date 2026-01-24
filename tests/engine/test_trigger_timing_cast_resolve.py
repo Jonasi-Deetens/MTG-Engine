@@ -5,13 +5,25 @@ from engine.zones import ZONE_BATTLEFIELD, ZONE_HAND
 
 def _trigger_graph(event: str) -> dict:
     return {
-        "rootNodeId": "t1",
-        "abilityType": "triggered",
-        "nodes": [
-            {"id": "t1", "type": "TRIGGER", "data": {"event": event, "scope": "any"}},
-            {"id": "e1", "type": "EFFECT", "data": {"type": "life", "amount": 0}},
+        "id": "graph-1",
+        "sourceKind": "permanent",
+        "steps": [
+            {
+                "id": "step-1",
+                "effect": {
+                    "id": "eff-1",
+                    "initiation": "triggered",
+                    "resolution": "stack",
+                    "persistence": "instant",
+                    "tags": [],
+                    "trigger": {"event": event, "scope": "any"},
+                    "effect": {
+                        "kind": "one_shot",
+                        "action": {"type": "life", "amount": 0},
+                    },
+                },
+            },
         ],
-        "edges": [{"from_": "t1", "to": "e1"}],
     }
 
 
@@ -34,7 +46,7 @@ def test_trigger_on_cast_goes_on_stack_before_priority():
         controller_id=0,
         types=["Creature"],
         zone=ZONE_BATTLEFIELD,
-        ability_graphs=[_trigger_graph("spell_cast")],
+        effect_graphs=[_trigger_graph("spell_cast")],
     )
     spell = GameObject(
         id="spell",
@@ -54,7 +66,7 @@ def test_trigger_on_cast_goes_on_stack_before_priority():
     cast_spell(game_state, turn_manager, player_id=0, object_id=spell.id)
 
     assert game_state.stack.items
-    assert game_state.stack.items[-1].kind == "ability_graph"
+    assert game_state.stack.items[-1].kind == "effect_graph"
 
 
 def test_trigger_from_resolution_put_on_stack_before_priority():
@@ -66,7 +78,7 @@ def test_trigger_from_resolution_put_on_stack_before_priority():
         controller_id=0,
         types=["Creature"],
         zone=ZONE_BATTLEFIELD,
-        ability_graphs=[_trigger_graph("enters_battlefield")],
+        effect_graphs=[_trigger_graph("enters_battlefield")],
     )
     creature_spell = GameObject(
         id="creature",
@@ -91,5 +103,5 @@ def test_trigger_from_resolution_put_on_stack_before_priority():
     turn_manager.handle_player_pass(turn_manager.priority.current)
 
     assert game_state.stack.items
-    assert game_state.stack.items[-1].kind == "ability_graph"
+    assert game_state.stack.items[-1].kind == "effect_graph"
 

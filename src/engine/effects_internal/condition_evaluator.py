@@ -130,14 +130,28 @@ class ConditionEvaluator:
             player_id = resolve_player_id(context, context.controller_id)
             if player_id is None:
                 return False
-            count = len(self._game_state.get_player(player_id).graveyard)
+            count = 0
+            for obj_id in self._game_state.get_player(player_id).graveyard:
+                obj = self._game_state.objects.get(obj_id)
+                if not obj:
+                    continue
+                if permanent_type and permanent_type != "any" and permanent_type not in obj.types:
+                    continue
+                count += 1
             return _compare(count, ">=", value)
 
         if condition_type == "hand_count":
             player_id = resolve_player_id(context, context.controller_id)
             if player_id is None:
                 return False
-            count = len(self._game_state.get_player(player_id).hand)
+            count = 0
+            for obj_id in self._game_state.get_player(player_id).hand:
+                obj = self._game_state.objects.get(obj_id)
+                if not obj:
+                    continue
+                if permanent_type and permanent_type != "any" and permanent_type not in obj.types:
+                    continue
+                count += 1
             return _compare(count, ">=", value)
 
         if condition_type == "power_comparison":
@@ -192,6 +206,12 @@ class ConditionEvaluator:
             obj = resolve_object(self._game_state, context, target_key or "target_permanent", context.source_id)
             return bool(obj and obj.was_cast)
 
+        if condition_type == "is_cast":
+            if context.targets and context.targets.get("was_cast") is True:
+                return True
+            obj = resolve_object(self._game_state, context, target_key or "target_permanent", context.source_id)
+            return bool(obj and obj.was_cast)
+
         if condition_type == "mana_value_comparison":
             source = condition.get("source")
             if source in ("triggering_source", "triggering_aura", "triggering_spell"):
@@ -216,6 +236,20 @@ class ConditionEvaluator:
         if condition_type == "kicker_count":
             choices = context.choices if isinstance(context.choices, dict) else {}
             count = int(choices.get("kicker_count") or 0)
+            return _compare(count, comparison, value)
+
+        if condition_type == "creatures_in_graveyard":
+            player_id = resolve_player_id(context, context.controller_id)
+            if player_id is None:
+                return False
+            count = 0
+            for obj_id in self._game_state.get_player(player_id).graveyard:
+                obj = self._game_state.objects.get(obj_id)
+                if not obj:
+                    continue
+                if "creature" not in obj.types:
+                    continue
+                count += 1
             return _compare(count, comparison, value)
 
         # Unknown condition type - default to True

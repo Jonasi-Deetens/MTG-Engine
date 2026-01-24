@@ -35,8 +35,31 @@ class SourceKind(str, Enum):
     PERMANENT = "permanent"
 
 
+class ConditionType(str, Enum):
+    CONTROL_COUNT = "control_count"
+    LIFE_TOTAL = "life_total"
+    MANA_AVAILABLE = "mana_available"
+    BATTLEFIELD_COUNT = "battlefield_count"
+    GRAVEYARD_COUNT = "graveyard_count"
+    HAND_COUNT = "hand_count"
+    POWER_COMPARISON = "power_comparison"
+    TOUGHNESS_COMPARISON = "toughness_comparison"
+    IS_TYPE = "is_type"
+    IS_TAPPED = "is_tapped"
+    IS_ATTACKING = "is_attacking"
+    IS_BLOCKING = "is_blocking"
+    HAS_KEYWORD = "has_keyword"
+    HAS_COUNTER = "has_counter"
+    IS_CAST = "is_cast"
+    WAS_CAST = "was_cast"
+    MANA_VALUE_COMPARISON = "mana_value_comparison"
+    KICKED = "kicked"
+    KICKER_COUNT = "kicker_count"
+    CREATURES_IN_GRAVEYARD = "creatures_in_graveyard"
+
+
 class ConditionSpec(BaseModel):
-    type: str
+    type: ConditionType
 
     class Config:
         extra = "allow"
@@ -45,7 +68,7 @@ class ConditionSpec(BaseModel):
 class TriggerSpec(BaseModel):
     event: str
     scope: Optional[str] = "self"
-    cardType: Optional[str] = None
+    cardType: Optional[Union[str, List[str]]] = None
     entersWhere: Optional[str] = None
     entersFrom: Optional[str] = None
 

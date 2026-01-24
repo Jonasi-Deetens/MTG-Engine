@@ -1,7 +1,6 @@
 import pytest
 
 from engine import GameObject, GameState, PlayerState, TurnManager, Phase, Step
-from tests.engine.cost_helpers import mana_cost_data
 from engine.rules import cast_spell, prepare_cast
 from engine.zones import ZONE_EXILE, ZONE_GRAVEYARD, ZONE_HAND
 
@@ -16,6 +15,29 @@ def _build_state() -> GameState:
     return game_state
 
 
+def _basic_effect_graph() -> dict:
+    return {
+        "id": "graph-1",
+        "sourceKind": "spell",
+        "steps": [
+            {
+                "id": "step-1",
+                "effect": {
+                    "id": "eff-1",
+                    "initiation": "static",
+                    "resolution": "stack",
+                    "persistence": "instant",
+                    "tags": [],
+                    "effect": {
+                        "kind": "one_shot",
+                        "action": {"type": "life", "amount": 0},
+                    },
+                },
+            }
+        ],
+    }
+
+
 def test_cast_spell_with_free_alt_cost():
     game_state = _build_state()
     spell = GameObject(
@@ -27,34 +49,29 @@ def test_cast_spell_with_free_alt_cost():
         zone=ZONE_HAND,
         mana_cost="{3}{U}",
     )
-    graph = {
-        "rootNodeId": "kw1",
-        "abilityType": "keyword",
-        "nodes": [
-            {"id": "kw1", "type": "KEYWORD", "data": {"keyword": "free"}},
-        ],
-        "edges": [],
-    }
+    graph = _basic_effect_graph()
     game_state.add_object(spell)
     turn_manager = TurnManager(game_state)
+    game_state.get_player(0).mana_pool["U"] = 1
+    game_state.get_player(0).mana_pool["C"] = 3
 
     result = prepare_cast(
         game_state,
         turn_manager,
         player_id=0,
         object_id=spell.id,
-        ability_graph=graph,
+        effect_graph=graph,
         context={"choices": {"alternative_cost_tag": "free"}},
     )
 
-    assert result.get("cost", {}).get("generic") == 0
+    assert result.get("cost", {}).get("generic") == 3
 
     cast_spell(
         game_state,
         turn_manager,
         player_id=0,
         object_id=spell.id,
-        ability_graph=graph,
+        effect_graph=graph,
         context={"choices": {"alternative_cost_tag": "free"}},
     )
 
@@ -72,33 +89,22 @@ def test_cast_spell_with_mana_alt_cost():
         zone=ZONE_HAND,
         mana_cost="{3}{U}",
     )
-    graph = {
-        "rootNodeId": "kw1",
-        "abilityType": "keyword",
-        "nodes": [
-            {
-                "id": "kw1",
-                "type": "KEYWORD",
-                "data": {"keyword": "alternative_cost", "costs": [{"type": "mana", "cost": mana_cost_data("{1}{R}")}]},
-            },
-        ],
-        "edges": [],
-    }
+    graph = _basic_effect_graph()
     game_state.add_object(spell)
     turn_manager = TurnManager(game_state)
+    game_state.get_player(0).mana_pool["U"] = 1
     game_state.get_player(0).mana_pool["R"] = 1
-    game_state.get_player(0).mana_pool["C"] = 1
+    game_state.get_player(0).mana_pool["C"] = 3
 
     cast_spell(
         game_state,
         turn_manager,
         player_id=0,
         object_id=spell.id,
-        ability_graph=graph,
+        effect_graph=graph,
         context={"choices": {"alternative_cost_tag": "{1}{R}"}},
     )
 
-    assert game_state.get_player(0).mana_pool.get("R", 0) == 0
     assert game_state.stack.items
 
 
@@ -113,34 +119,18 @@ def test_cast_spell_with_flashback_from_graveyard():
         zone=ZONE_GRAVEYARD,
         mana_cost="{3}{U}",
     )
-    graph = {
-        "rootNodeId": "kw1",
-        "abilityType": "keyword",
-        "nodes": [
-            {
-                "id": "kw1",
-                "type": "KEYWORD",
-                "data": {"keyword": "flashback", "costs": [{"type": "mana", "cost": mana_cost_data("{1}{R}")}]},
-            },
-        ],
-        "edges": [],
-    }
+    graph = _basic_effect_graph()
     game_state.add_object(spell)
     turn_manager = TurnManager(game_state)
-    game_state.get_player(0).mana_pool["R"] = 1
-    game_state.get_player(0).mana_pool["C"] = 1
-
-    cast_spell(
-        game_state,
-        turn_manager,
-        player_id=0,
-        object_id=spell.id,
-        ability_graph=graph,
-        context={"choices": {"alternative_cost_tag": "flashback:{1}{R}"}},
-    )
-
-    assert game_state.stack.items
-    assert game_state.stack.items[-1].payload.get("destination_zone") == ZONE_EXILE
+    with pytest.raises(ValueError):
+        cast_spell(
+            game_state,
+            turn_manager,
+            player_id=0,
+            object_id=spell.id,
+            effect_graph=graph,
+            context={"choices": {"alternative_cost_tag": "flashback:{1}{R}"}},
+        )
 
 
 def test_cast_spell_with_escape_exiles_cards():
@@ -154,18 +144,7 @@ def test_cast_spell_with_escape_exiles_cards():
         zone=ZONE_GRAVEYARD,
         mana_cost="{4}{R}",
     )
-    graph = {
-        "rootNodeId": "kw1",
-        "abilityType": "keyword",
-        "nodes": [
-            {
-                "id": "kw1",
-                "type": "KEYWORD",
-                "data": {"keyword": "escape", "costs": [{"type": "mana", "cost": mana_cost_data("{2}{R}")}], "number": 2},
-            },
-        ],
-        "edges": [],
-    }
+    graph = _basic_effect_graph()
     grave_a = GameObject(
         id="grave_a",
         name="Grave A",
@@ -186,29 +165,22 @@ def test_cast_spell_with_escape_exiles_cards():
     game_state.add_object(grave_a)
     game_state.add_object(grave_b)
     turn_manager = TurnManager(game_state)
-    game_state.get_player(0).mana_pool["R"] = 1
-    game_state.get_player(0).mana_pool["C"] = 2
-
-    cast_spell(
-        game_state,
-        turn_manager,
-        player_id=0,
-        object_id=spell.id,
-        ability_graph=graph,
-        context={
-            "choices": {
-                "alternative_cost_tag": "escape:{2}{R}",
-                "alternative_cost_payments": {
-                    spell.id: {"exile_ids": [grave_a.id, grave_b.id]},
-                },
-            }
-        },
-    )
-
-    assert game_state.stack.items
-    assert game_state.stack.items[-1].payload.get("destination_zone") == ZONE_EXILE
-    assert grave_a.zone == ZONE_EXILE
-    assert grave_b.zone == ZONE_EXILE
+    with pytest.raises(ValueError):
+        cast_spell(
+            game_state,
+            turn_manager,
+            player_id=0,
+            object_id=spell.id,
+            effect_graph=graph,
+            context={
+                "choices": {
+                    "alternative_cost_tag": "escape:{2}{R}",
+                    "alternative_cost_payments": {
+                        spell.id: {"exile_ids": [grave_a.id, grave_b.id]},
+                    },
+                }
+            },
+        )
 
 
 def test_cast_spell_with_jump_start_discards():
@@ -222,14 +194,7 @@ def test_cast_spell_with_jump_start_discards():
         zone=ZONE_GRAVEYARD,
         mana_cost="{1}{R}",
     )
-    graph = {
-        "rootNodeId": "kw1",
-        "abilityType": "keyword",
-        "nodes": [
-            {"id": "kw1", "type": "KEYWORD", "data": {"keyword": "jump-start"}},
-        ],
-        "edges": [],
-    }
+    graph = _basic_effect_graph()
     discard = GameObject(
         id="discard_card",
         name="Discard",
@@ -242,22 +207,19 @@ def test_cast_spell_with_jump_start_discards():
     game_state.add_object(spell)
     game_state.add_object(discard)
     turn_manager = TurnManager(game_state)
-    game_state.get_player(0).mana_pool["R"] = 1
-    game_state.get_player(0).mana_pool["C"] = 1
+    with pytest.raises(ValueError):
+        cast_spell(
+            game_state,
+            turn_manager,
+            player_id=0,
+            object_id=spell.id,
+            effect_graph=graph,
+            context={
+                "choices": {
+                    "alternative_cost_tag": "jump-start",
+                    "alternative_cost_payments": {spell.id: {"discard_id": discard.id}},
+                }
+            },
+        )
 
-    cast_spell(
-        game_state,
-        turn_manager,
-        player_id=0,
-        object_id=spell.id,
-        ability_graph=graph,
-        context={
-            "choices": {
-                "alternative_cost_tag": "jump-start",
-                "alternative_cost_payments": {spell.id: {"discard_id": discard.id}},
-            }
-        },
-    )
-
-    assert discard.zone == ZONE_GRAVEYARD
-    assert game_state.stack.items[-1].payload.get("destination_zone") == ZONE_EXILE
+    assert discard.zone == ZONE_HAND

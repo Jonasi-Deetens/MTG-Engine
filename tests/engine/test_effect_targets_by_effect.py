@@ -1,4 +1,5 @@
-from engine import AbilityGraphRuntimeAdapter, GameObject, GameState, PlayerState, ResolveContext
+from engine import GameObject, GameState, PlayerState, ResolveContext
+from engine.effects.effect_resolver import EffectGraphResolver
 from engine.zones import ZONE_BATTLEFIELD
 
 
@@ -15,19 +16,52 @@ def test_effect_specific_targets_are_applied():
     )
     game_state.add_object(creature)
     graph = {
-        "rootNodeId": "act-1",
-        "abilityType": "activated",
-        "nodes": [
-            {"id": "act-1", "type": "ACTIVATED", "data": {"cost": ""}},
-            {"id": "e1", "type": "EFFECT", "data": {"type": "change_power_toughness", "powerChange": 1, "toughnessChange": 1, "target": "target_creature"}},
-            {"id": "e2", "type": "EFFECT", "data": {"type": "lose_life", "amount": 3, "target": "player"}},
-        ],
-        "edges": [
-            {"from_": "act-1", "to": "e1"},
-            {"from_": "e1", "to": "e2"},
+        "id": "graph-1",
+        "sourceKind": "permanent",
+        "steps": [
+            {
+                "id": "e1",
+                "effect": {
+                    "id": "eff-1",
+                    "initiation": "activated",
+                    "resolution": "stack",
+                    "persistence": "instant",
+                    "tags": [],
+                    "cost": {"items": []},
+                    "effect": {
+                        "kind": "one_shot",
+                        "action": {
+                            "type": "change_power_toughness",
+                            "powerChange": 1,
+                            "toughnessChange": 1,
+                            "target": "target_creature",
+                        },
+                    },
+                },
+                "next": ["e2"],
+            },
+            {
+                "id": "e2",
+                "effect": {
+                    "id": "eff-2",
+                    "initiation": "activated",
+                    "resolution": "stack",
+                    "persistence": "instant",
+                    "tags": [],
+                    "cost": {"items": []},
+                    "effect": {
+                        "kind": "one_shot",
+                        "action": {
+                            "type": "lose_life",
+                            "amount": 3,
+                            "target": "player",
+                        },
+                    },
+                },
+            },
         ],
     }
-    adapter = AbilityGraphRuntimeAdapter(game_state)
+    resolver = EffectGraphResolver(game_state)
     context = ResolveContext(
         controller_id=0,
         targets_by_effect={
@@ -36,9 +70,8 @@ def test_effect_specific_targets_are_applied():
         },
     )
 
-    result = adapter.resolve(graph, context)
+    result = resolver.resolve(graph, context)
 
-    assert result["status"] == "resolved"
-    assert result["effects"][0]["results"][0]["object_id"] == creature.id
+    assert result["e1"]["results"][0]["object_id"] == creature.id
     assert game_state.get_player(1).life == 17
 

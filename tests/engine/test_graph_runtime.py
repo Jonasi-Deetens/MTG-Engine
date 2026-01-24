@@ -1,6 +1,36 @@
-from engine import AbilityGraphRuntimeAdapter, GameObject, GameState, PlayerState, ResolveContext
+from engine import GameObject, GameState, PlayerState, ResolveContext
 from engine.effects import EffectResolver
+from engine.effects.effect_resolver import EffectGraphResolver
 from engine.zones import ZONE_BATTLEFIELD, ZONE_LIBRARY
+
+
+def _one_shot_graph(step_id: str, action: dict, *, initiation: str = "triggered", trigger_event: str = "enters_battlefield") -> dict:
+    effect = {
+        "id": f"{step_id}-effect",
+        "initiation": initiation,
+        "resolution": "stack",
+        "persistence": "instant",
+        "tags": [],
+        "conditions": [],
+        "effect": {
+            "kind": "one_shot",
+            "action": action,
+        },
+    }
+    if initiation == "triggered":
+        effect["trigger"] = {"event": trigger_event}
+    if initiation == "activated":
+        effect["cost"] = {"items": []}
+    return {
+        "id": "graph-1",
+        "sourceKind": "permanent",
+        "steps": [
+            {
+                "id": step_id,
+                "effect": effect,
+            }
+        ],
+    }
 
 
 def test_resolve_damage_effect():
@@ -16,48 +46,39 @@ def test_resolve_damage_effect():
         zone=ZONE_BATTLEFIELD,
     )
     game_state.add_object(source)
-    adapter = AbilityGraphRuntimeAdapter(game_state)
-
-    graph = {
-        "rootNodeId": "trigger-1",
-        "abilityType": "triggered",
-        "nodes": [
-            {"id": "trigger-1", "type": "TRIGGER", "data": {"event": "deals_damage"}},
-            {"id": "effect-1", "type": "EFFECT", "data": {"type": "damage", "amount": 3, "target": "player"}},
-        ],
-        "edges": [{"from_": "trigger-1", "to": "effect-1"}],
-    }
+    resolver = EffectGraphResolver(game_state)
+    graph = _one_shot_graph(
+        "step-1",
+        {"type": "damage", "amount": 3, "target": "player"},
+        initiation="triggered",
+        trigger_event="deals_damage",
+    )
 
     context = ResolveContext(controller_id=0, source_id=source.id, targets={"player_id": 0})
-    result = adapter.resolve(graph, context)
+    result = resolver.resolve(graph, context)
 
-    assert result["status"] == "resolved"
+    assert result["step-1"]["type"] == "damage"
     assert players[0].life == 17
 
 
 def test_condition_blocks_resolution():
     players = [PlayerState(id=0, life=20)]
     game_state = GameState(players=players)
-    adapter = AbilityGraphRuntimeAdapter(game_state)
-
-    graph = {
-        "rootNodeId": "trigger-1",
-        "abilityType": "triggered",
-        "nodes": [
-            {"id": "trigger-1", "type": "TRIGGER", "data": {"event": "enters_battlefield"}},
-            {"id": "condition-1", "type": "CONDITION", "data": {"type": "life_total", "comparison": "<", "value": 10}},
-            {"id": "effect-1", "type": "EFFECT", "data": {"type": "draw", "amount": 1}},
-        ],
-        "edges": [
-            {"from_": "trigger-1", "to": "condition-1"},
-            {"from_": "condition-1", "to": "effect-1"},
-        ],
-    }
+    resolver = EffectGraphResolver(game_state)
+    graph = _one_shot_graph(
+        "step-1",
+        {
+            "type": "draw",
+            "amount": 1,
+            "condition": {"type": "life_total", "comparison": "<", "value": 10},
+        },
+        initiation="triggered",
+    )
 
     context = ResolveContext(controller_id=0)
-    result = adapter.resolve(graph, context)
+    result = resolver.resolve(graph, context)
 
-    assert result["status"] == "condition_failed"
+    assert result["step-1"]["status"] == "condition_failed"
 
 
 def test_draw_from_empty_library_causes_loss():
@@ -91,20 +112,16 @@ def test_runtime_draw_each_uses_apnap():
             )
             game_state.add_object(card)
             player.library.append(card_id)
-    graph = {
-        "rootNodeId": "trigger-1",
-        "abilityType": "triggered",
-        "nodes": [
-            {"id": "trigger-1", "type": "TRIGGER", "data": {"event": "enters_battlefield"}},
-            {"id": "effect-1", "type": "EFFECT", "data": {"type": "draw_each", "amount": 1}},
-        ],
-        "edges": [{"from_": "trigger-1", "to": "effect-1"}],
-    }
-    adapter = AbilityGraphRuntimeAdapter(game_state)
+    graph = _one_shot_graph(
+        "step-1",
+        {"type": "draw_each", "amount": 1},
+        initiation="triggered",
+    )
+    resolver = EffectGraphResolver(game_state)
     context = ResolveContext(controller_id=0)
 
-    result = adapter.resolve(graph, context)
+    result = resolver.resolve(graph, context)
 
-    assert result["effects"][0]["type"] == "draw_each"
+    assert result["step-1"]["type"] == "draw_each"
     assert len(game_state.get_player(0).hand) == 1
     assert len(game_state.get_player(1).hand) == 1

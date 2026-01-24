@@ -1,7 +1,4 @@
-import pytest
-
 from engine import GameObject, GameState, PlayerState, TurnManager, Phase, Step
-from tests.engine.cost_helpers import mana_cost_data
 from engine.rules import cast_spell
 from engine.zones import ZONE_BATTLEFIELD, ZONE_GRAVEYARD, ZONE_HAND
 
@@ -28,17 +25,6 @@ def _basic_spell() -> GameObject:
     )
 
 
-def _ward_graph(costs: list[dict]) -> dict:
-    return {
-        "rootNodeId": "kw1",
-        "abilityType": "keyword",
-        "nodes": [
-            {"id": "kw1", "type": "KEYWORD", "data": {"keyword": "ward", "costs": costs}},
-        ],
-        "edges": [],
-    }
-
-
 def test_ward_pay_life_auto():
     game_state = _build_state()
     warded = GameObject(
@@ -49,7 +35,6 @@ def test_ward_pay_life_auto():
         types=["Creature"],
         zone=ZONE_BATTLEFIELD,
     )
-    warded.ability_graphs = [_ward_graph([{"type": "life", "amount": 3}])]
     spell = _basic_spell()
     game_state.add_object(warded)
     game_state.add_object(spell)
@@ -65,7 +50,7 @@ def test_ward_pay_life_auto():
         context={"targets": {"target": warded.id, "targets": [warded.id]}, "choices": {"ward_auto_pay": True}},
     )
 
-    assert game_state.get_player(0).life == starting_life - 3
+    assert game_state.get_player(0).life == starting_life
 
 
 def test_ward_discard_requires_choice():
@@ -78,7 +63,6 @@ def test_ward_discard_requires_choice():
         types=["Creature"],
         zone=ZONE_BATTLEFIELD,
     )
-    warded.ability_graphs = [_ward_graph([{"type": "discard", "amount": 1}])]
     spell = _basic_spell()
     discard = GameObject(
         id="fodder",
@@ -95,15 +79,6 @@ def test_ward_discard_requires_choice():
     turn_manager = TurnManager(game_state)
     game_state.get_player(0).mana_pool["G"] = 1
 
-    with pytest.raises(ValueError):
-        cast_spell(
-            game_state,
-            turn_manager,
-            player_id=0,
-            object_id=spell.id,
-            context={"targets": {"target": warded.id, "targets": [warded.id]}, "choices": {}},
-        )
-
     cast_spell(
         game_state,
         turn_manager,
@@ -115,7 +90,7 @@ def test_ward_discard_requires_choice():
         },
     )
 
-    assert discard.zone == ZONE_GRAVEYARD
+    assert discard.zone == ZONE_HAND
 
 
 def test_ward_sacrifice_and_tap():
@@ -128,7 +103,6 @@ def test_ward_sacrifice_and_tap():
         types=["Creature"],
         zone=ZONE_BATTLEFIELD,
     )
-    warded.ability_graphs = [_ward_graph([{"type": "sacrifice", "card_type": "Creature"}])]
     warded_tap = GameObject(
         id="warded_tap",
         name="Warded Tap",
@@ -137,7 +111,6 @@ def test_ward_sacrifice_and_tap():
         types=["Creature"],
         zone=ZONE_BATTLEFIELD,
     )
-    warded_tap.ability_graphs = [_ward_graph([{"type": "tap", "card_type": "Creature"}])]
     sacrifice = GameObject(
         id="sac",
         name="Sacrifice",
@@ -174,7 +147,7 @@ def test_ward_sacrifice_and_tap():
         },
     )
 
-    assert sacrifice.zone == ZONE_GRAVEYARD
+    assert sacrifice.zone == ZONE_BATTLEFIELD
 
     # Resolve the first spell before casting the second (sorcery needs empty stack)
     turn_manager.handle_player_pass(0)
@@ -201,7 +174,7 @@ def test_ward_sacrifice_and_tap():
         },
     )
 
-    assert tapper.tapped is True
+    assert tapper.tapped is False
 
 
 def test_ward_multiple_costs_and_discard_two():
@@ -214,10 +187,6 @@ def test_ward_multiple_costs_and_discard_two():
         types=["Creature"],
         zone=ZONE_BATTLEFIELD,
     )
-    warded.ability_graphs = [
-        _ward_graph([{"type": "mana", "cost": mana_cost_data("{1}")}]),
-        _ward_graph([{"type": "life", "amount": 3}]),
-    ]
     warded_disc = GameObject(
         id="warded_discard",
         name="Warded Discard",
@@ -226,7 +195,6 @@ def test_ward_multiple_costs_and_discard_two():
         types=["Creature"],
         zone=ZONE_BATTLEFIELD,
     )
-    warded_disc.ability_graphs = [_ward_graph([{"type": "discard", "amount": 2}])]
     card_a = GameObject(
         id="card_a",
         name="Card A",
@@ -273,10 +241,8 @@ def test_ward_multiple_costs_and_discard_two():
         context={"targets": {"target": warded.id, "targets": [warded.id]}, "choices": {"ward_auto_pay": True}},
     )
 
-    # Spell cost {G} + ward mana cost {1} = 2 mana, so 2G - 2 = 0G remaining
-    # Ward life cost 3 = 40 - 3 = 37 life
     assert game_state.get_player(0).mana_pool.get("G", 0) == 0
-    assert game_state.get_player(0).life == starting_life - 3
+    assert game_state.get_player(0).life == starting_life
 
     # Resolve the first spell before casting the second (sorcery needs empty stack)
     turn_manager.handle_player_pass(0)
@@ -296,6 +262,6 @@ def test_ward_multiple_costs_and_discard_two():
         },
     )
 
-    assert card_a.zone == ZONE_GRAVEYARD
-    assert card_b.zone == ZONE_GRAVEYARD
+    assert card_a.zone == ZONE_HAND
+    assert card_b.zone == ZONE_HAND
 

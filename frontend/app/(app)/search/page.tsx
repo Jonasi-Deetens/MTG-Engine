@@ -25,7 +25,7 @@ export default function SearchPage() {
 
   const {
     selectedColors,
-    typeFilter,
+    typeFilters,
     setFilter,
     rarityFilter,
     languageFilter,
@@ -35,7 +35,7 @@ export default function SearchPage() {
     hasActiveFilters,
     toggleColor,
     clearFilters,
-    setTypeFilter,
+    setTypeFilters,
     setSetFilter,
     setRarityFilter,
     setLanguageFilter,
@@ -55,7 +55,7 @@ export default function SearchPage() {
     isBrowseMode,
   } = useCardSearch({
     selectedColors,
-    typeFilter,
+    typeFilters,
     setFilter,
     rarityFilter,
     languageFilter,
@@ -71,13 +71,13 @@ export default function SearchPage() {
     return applyFilters(
       allCards,
       selectedColors,
-      typeFilter,
+    typeFilters,
       setFilter,
       rarityFilter,
       languageFilter,
       keywordFilter
     );
-  }, [allCards, selectedColors, typeFilter, setFilter, rarityFilter, languageFilter, keywordFilter, isBrowseMode]);
+  }, [allCards, selectedColors, typeFilters, setFilter, rarityFilter, languageFilter, keywordFilter, isBrowseMode]);
 
   // Paginate filtered cards
   const pagination = useMemo(() => {
@@ -117,10 +117,12 @@ export default function SearchPage() {
     }
   }, [router]);
 
-  const handleTypeFilterChange = useCallback((value: string) => {
-    setTypeFilter(value);
+  const handleToggleTypeFilter = useCallback((value: string) => {
+    setTypeFilters((prev) =>
+      prev.includes(value) ? prev.filter((entry) => entry !== value) : [...prev, value]
+    );
     setPage(1);
-  }, [setTypeFilter, setPage]);
+  }, [setTypeFilters, setPage]);
 
   const handleSetFilterChange = useCallback((value: string) => {
     setSetFilter(value);
@@ -179,7 +181,7 @@ export default function SearchPage() {
 
         <SearchFilters
           selectedColors={selectedColors}
-          typeFilter={typeFilter}
+          typeFilters={typeFilters}
           setFilter={setFilter}
           rarityFilter={rarityFilter}
           languageFilter={languageFilter}
@@ -188,7 +190,7 @@ export default function SearchPage() {
           hasActiveFilters={Boolean(hasActiveFilters)}
           onToggleFilters={() => setShowFilters(!showFilters)}
           onToggleColor={handleToggleColor}
-          onTypeFilterChange={handleTypeFilterChange}
+          onToggleType={handleToggleTypeFilter}
           onSetFilterChange={handleSetFilterChange}
           onRarityFilterChange={handleRarityFilterChange}
           onLanguageFilterChange={handleLanguageFilterChange}

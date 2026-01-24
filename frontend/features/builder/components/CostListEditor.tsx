@@ -369,13 +369,18 @@ export function CostListEditor({ label = 'Costs', value, onChange }: CostListEdi
           )}
           {(cost.type === 'sacrifice' || cost.type === 'tap') && (
             <div className="flex items-center gap-2">
-              <input
-                type="text"
+              <select
                 value={cost.card_type ?? ''}
                 onChange={(e) => updateCost(index, { ...cost, card_type: e.target.value || undefined })}
-                placeholder="Creature, Artifact, etc."
                 className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
-              />
+              >
+                <option value="">Any Permanent</option>
+                <option value="creature">Creature</option>
+                <option value="artifact">Artifact</option>
+                <option value="enchantment">Enchantment</option>
+                <option value="land">Land</option>
+                <option value="planeswalker">Planeswalker</option>
+              </select>
               <label className="flex items-center gap-2 text-xs text-[color:var(--theme-text-secondary)]">
                 <input
                   type="checkbox"

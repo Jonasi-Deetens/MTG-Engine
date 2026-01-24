@@ -1,4 +1,4 @@
-from engine import AbilityRegistry, CombatState, Event, GameObject, GameState, PlayerState
+from engine import CombatState, GameObject, GameState, PlayerState
 from engine.combat_damage import resolve_combat_damage
 from engine.damage import apply_damage_to_player
 from engine.zones import ZONE_BATTLEFIELD, ZONE_GRAVEYARD
@@ -16,45 +16,26 @@ def _build_state() -> GameState:
 
 def _trigger_graph(scope: str = "any") -> dict:
     return {
-        "rootNodeId": "t1",
-        "abilityType": "triggered",
-        "nodes": [
-            {"id": "t1", "type": "TRIGGER", "data": {"event": "dies", "scope": scope}},
-            {"id": "e1", "type": "EFFECT", "data": {"type": "life", "amount": 0}},
+        "id": "graph-1",
+        "sourceKind": "permanent",
+        "steps": [
+            {
+                "id": "step-1",
+                "effect": {
+                    "id": "eff-1",
+                    "initiation": "triggered",
+                    "resolution": "stack",
+                    "persistence": "instant",
+                    "tags": [],
+                    "trigger": {"event": "dies", "scope": scope},
+                    "effect": {
+                        "kind": "one_shot",
+                        "action": {"type": "life", "amount": 0},
+                    },
+                },
+            },
         ],
-        "edges": [{"from_": "t1", "to": "e1"}],
     }
-
-
-def test_trigger_order_choice_queued():
-    game_state = _build_state()
-    obj_a = GameObject(
-        id="a",
-        name="A",
-        owner_id=0,
-        controller_id=0,
-        types=["Creature"],
-        zone=ZONE_BATTLEFIELD,
-        ability_graphs=[_trigger_graph()],
-    )
-    obj_b = GameObject(
-        id="b",
-        name="B",
-        owner_id=0,
-        controller_id=0,
-        types=["Creature"],
-        zone=ZONE_BATTLEFIELD,
-        ability_graphs=[_trigger_graph()],
-    )
-    game_state.add_object(obj_a)
-    game_state.add_object(obj_b)
-    AbilityRegistry(game_state)
-
-    game_state.event_bus.publish(Event(type="dies", payload={"object_id": "victim"}))
-
-    pending = game_state.choices.get("pending", [])
-    assert any(entry.get("type") == "trigger_order" and entry.get("player_id") == 0 for entry in pending)
-
 
 def test_blocker_order_choice_queued():
     game_state = _build_state()

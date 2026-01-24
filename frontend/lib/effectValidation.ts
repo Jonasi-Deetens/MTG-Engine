@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import type { EffectGraph } from './unifiedEffect';
+import { CONDITION_TYPE_VALUES } from './conditionTypes';
 
 const InitiationSchema = z.enum(['static', 'triggered', 'activated']);
 const ResolutionSchema = z.enum(['stack', 'immediate']);
@@ -9,13 +10,13 @@ const EffectTagSchema = z.enum(['mana', 'land', 'replacement', 'prevention', 'cd
 const SourceKindSchema = z.enum(['spell', 'permanent']);
 
 const ConditionSchema = z.object({
-  type: z.string(),
+  type: z.enum(CONDITION_TYPE_VALUES),
 }).passthrough();
 
 const TriggerSchema = z.object({
   event: z.string(),
   scope: z.string().optional(),
-  cardType: z.string().optional(),
+  cardType: z.union([z.string(), z.array(z.string())]).optional(),
   entersWhere: z.string().optional(),
   entersFrom: z.string().optional(),
 }).passthrough();

@@ -3,7 +3,7 @@
 // frontend/components/builder/ConditionBuilder.tsx
 
 import { useState, useEffect, useRef } from 'react';
-import { StructuredCondition, CONDITION_TYPE_OPTIONS, COMPARISON_OPERATORS, PERMANENT_TYPES, CONDITION_TARGET_OPTIONS } from '@/lib/conditionTypes';
+import { StructuredCondition, CONDITION_TYPE_OPTIONS, COMPARISON_OPERATORS, PERMANENT_TYPES, CONDITION_TARGET_OPTIONS, KEYWORD_OPTIONS, COUNTER_TYPE_OPTIONS } from '@/lib/conditionTypes';
 import { Button } from '@/components/ui/Button';
 
 interface ConditionBuilderProps {
@@ -224,26 +224,35 @@ export function ConditionBuilder({ condition, onChange, onRemove }: ConditionBui
       {conditionType === 'has_keyword' && (
         <div>
           <label className="block text-xs text-[color:var(--theme-text-muted)] mb-1">Keyword</label>
-          <input
-            type="text"
+          <select
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
-            placeholder="e.g., flying, haste"
             className="w-full px-3 py-2 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
-          />
+          >
+            <option value="">Select keyword</option>
+            {KEYWORD_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
         </div>
       )}
 
       {conditionType === 'has_counter' && (
         <div>
           <label className="block text-xs text-[color:var(--theme-text-muted)] mb-1">Counter Type</label>
-          <input
-            type="text"
+          <select
             value={counterType}
             onChange={(e) => setCounterType(e.target.value)}
-            placeholder="e.g., +1/+1, -1/-1, loyalty"
             className="w-full px-3 py-2 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
-          />
+          >
+            {COUNTER_TYPE_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
         </div>
       )}
 

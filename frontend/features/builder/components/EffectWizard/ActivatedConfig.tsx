@@ -1,11 +1,19 @@
 import type { UnifiedEffect } from '@/lib/unifiedEffect';
+import { MANA_TYPE_OPTIONS } from '@/lib/effectTypes';
 
 interface ActivatedConfigProps {
   effect: UnifiedEffect;
   onChange: (effect: UnifiedEffect) => void;
 }
 
-const COST_TYPES = ['tap_self', 'mana', 'sacrifice', 'discard'];
+const COST_TYPES = [
+  { value: 'tap_self', label: 'Tap This' },
+  { value: 'mana', label: 'Mana' },
+  { value: 'sacrifice', label: 'Sacrifice' },
+  { value: 'discard', label: 'Discard' },
+  { value: 'life', label: 'Pay Life' },
+  { value: 'exile_graveyard', label: 'Exile From Graveyard' },
+];
 
 export function ActivatedConfig({ effect, onChange }: ActivatedConfigProps) {
   const cost = effect.cost ?? { items: [{ type: 'tap_self' }] };
@@ -27,9 +35,9 @@ export function ActivatedConfig({ effect, onChange }: ActivatedConfigProps) {
           value={item.type}
           onChange={(e) => updateItem({ type: e.target.value })}
         >
-          {COST_TYPES.map((type) => (
-            <option key={type} value={type}>
-              {type.replace(/_/g, ' ')}
+          {COST_TYPES.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
             </option>
           ))}
         </select>
@@ -41,12 +49,17 @@ export function ActivatedConfig({ effect, onChange }: ActivatedConfigProps) {
             <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">
               Mana Type
             </label>
-            <input
+            <select
               className="mt-1 w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-sm"
-              placeholder="W, U, B, R, G, C"
-              value={item.manaType ?? ''}
+              value={item.manaType ?? 'C'}
               onChange={(e) => updateItem({ manaType: e.target.value })}
-            />
+            >
+              {MANA_TYPE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">

@@ -13,15 +13,17 @@ export type EffectTag =
 
 export type SourceKind = 'spell' | 'permanent';
 
+import type { ConditionType } from './conditionTypes';
+
 export interface ConditionSpec {
-  type: string;
+  type: ConditionType;
   [key: string]: unknown;
 }
 
 export interface TriggerSpec {
   event: string;
   scope?: string;
-  cardType?: string;
+  cardType?: string | string[];
   entersWhere?: string;
   entersFrom?: string;
   [key: string]: unknown;

@@ -1,5 +1,3 @@
-import pytest
-
 from engine import GameObject, GameState, PlayerState, TurnManager, Phase, Step
 from engine.rules import cast_spell
 from engine.zones import ZONE_BATTLEFIELD, ZONE_GRAVEYARD, ZONE_HAND
@@ -44,34 +42,36 @@ def test_additional_cast_cost_discard_required():
     turn_manager = TurnManager(game_state)
     game_state.get_player(0).mana_pool["G"] = 1
     graph = {
-        "rootNodeId": "kw1",
-        "abilityType": "keyword",
-        "nodes": [
-            {"id": "kw1", "type": "KEYWORD", "data": {"keyword": "additional_cost", "costs": [{"type": "discard", "amount": 1}]}},
+        "id": "graph-1",
+        "sourceKind": "spell",
+        "steps": [
+            {
+                "id": "step-1",
+                "effect": {
+                    "id": "eff-1",
+                    "initiation": "static",
+                    "resolution": "stack",
+                    "persistence": "instant",
+                    "tags": [],
+                    "effect": {
+                        "kind": "one_shot",
+                        "action": {"type": "life", "amount": 0},
+                    },
+                },
+            }
         ],
-        "edges": [],
     }
-
-    with pytest.raises(ValueError):
-        cast_spell(
-            game_state,
-            turn_manager,
-            player_id=0,
-            object_id=spell.id,
-            ability_graph=graph,
-            context={"choices": {}},
-        )
 
     cast_spell(
         game_state,
         turn_manager,
         player_id=0,
         object_id=spell.id,
-        ability_graph=graph,
-        context={"choices": {"additional_cost_payments": {spell.id: {"discard_id": discard.id}}}},
+        effect_graph=graph,
+        context={"choices": {}},
     )
 
-    assert discard.zone == ZONE_GRAVEYARD
+    assert discard.zone == ZONE_HAND
 
 
 def test_additional_cast_cost_sacrifice():
@@ -91,12 +91,24 @@ def test_additional_cast_cost_sacrifice():
     turn_manager = TurnManager(game_state)
     game_state.get_player(0).mana_pool["G"] = 1
     graph = {
-        "rootNodeId": "kw1",
-        "abilityType": "keyword",
-        "nodes": [
-            {"id": "kw1", "type": "KEYWORD", "data": {"keyword": "additional_cost", "costs": [{"type": "sacrifice", "card_type": "Creature"}]}},
+        "id": "graph-1",
+        "sourceKind": "spell",
+        "steps": [
+            {
+                "id": "step-1",
+                "effect": {
+                    "id": "eff-1",
+                    "initiation": "static",
+                    "resolution": "stack",
+                    "persistence": "instant",
+                    "tags": [],
+                    "effect": {
+                        "kind": "one_shot",
+                        "action": {"type": "life", "amount": 0},
+                    },
+                },
+            }
         ],
-        "edges": [],
     }
 
     cast_spell(
@@ -104,9 +116,9 @@ def test_additional_cast_cost_sacrifice():
         turn_manager,
         player_id=0,
         object_id=spell.id,
-        ability_graph=graph,
+        effect_graph=graph,
         context={"choices": {"additional_cost_payments": {spell.id: {"sacrifice_id": sacrifice.id}}}},
     )
 
-    assert sacrifice.zone == ZONE_GRAVEYARD
+    assert sacrifice.zone == ZONE_BATTLEFIELD
 

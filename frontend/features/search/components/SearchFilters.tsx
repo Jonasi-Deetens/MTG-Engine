@@ -2,11 +2,11 @@
 
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { COLORS, COLOR_NAMES, RARITY_OPTIONS, LANGUAGE_OPTIONS } from '@/lib/constants/search';
+import { COLORS, COLOR_NAMES, RARITY_OPTIONS, LANGUAGE_OPTIONS, CARD_TYPE_OPTIONS } from '@/lib/constants/search';
 
 interface SearchFiltersProps {
   selectedColors: string[];
-  typeFilter: string;
+  typeFilters: string[];
   setFilter: string;
   rarityFilter: string;
   languageFilter: string;
@@ -15,7 +15,7 @@ interface SearchFiltersProps {
   hasActiveFilters: boolean;
   onToggleFilters: () => void;
   onToggleColor: (color: string) => void;
-  onTypeFilterChange: (value: string) => void;
+  onToggleType: (value: string) => void;
   onSetFilterChange: (value: string) => void;
   onRarityFilterChange: (value: string) => void;
   onLanguageFilterChange: (value: string) => void;
@@ -26,7 +26,7 @@ interface SearchFiltersProps {
 
 export function SearchFilters({
   selectedColors,
-  typeFilter,
+  typeFilters,
   setFilter,
   rarityFilter,
   languageFilter,
@@ -35,7 +35,7 @@ export function SearchFilters({
   hasActiveFilters,
   onToggleFilters,
   onToggleColor,
-  onTypeFilterChange,
+  onToggleType,
   onSetFilterChange,
   onRarityFilterChange,
   onLanguageFilterChange,
@@ -90,14 +90,24 @@ export function SearchFilters({
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-[color:var(--theme-text-secondary)] mb-2">
-                Card Type
+                Card Types
               </label>
-              <Input
-                type="text"
-                placeholder="e.g., Creature, Instant"
-                value={typeFilter}
-                onChange={(e) => onTypeFilterChange(e.target.value)}
-              />
+              <div className="flex flex-wrap gap-2">
+                {CARD_TYPE_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => onToggleType(option.value)}
+                    className={`px-3 py-1 rounded text-sm font-medium transition-colors cursor-pointer ${
+                      typeFilters.includes(option.value)
+                        ? 'bg-[color:var(--theme-accent-primary)] text-[color:var(--theme-button-primary-text)]'
+                        : 'bg-[color:var(--theme-card-hover)] text-[color:var(--theme-text-secondary)] hover:bg-[color:var(--theme-card-hover)] hover:text-[color:var(--theme-text-primary)] border border-[color:var(--theme-card-border)]'
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div>

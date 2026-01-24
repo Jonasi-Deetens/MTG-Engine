@@ -331,15 +331,27 @@ def test_activate_tap_ability_respects_summoning_sickness():
         power=2,
         toughness=2,
         entered_turn=game_state.turn.turn_number,
-        ability_graphs=[
+        effect_graphs=[
             {
-                "rootNodeId": "act-1",
-                "abilityType": "activated",
-                "nodes": [
-                    {"id": "act-1", "type": "ACTIVATED", "data": {"costs": [{"type": "tap_self"}]}},
-                    {"id": "effect-1", "type": "EFFECT", "data": {"type": "life", "amount": 1}},
+                "id": "graph-1",
+                "sourceKind": "permanent",
+                "steps": [
+                    {
+                        "id": "step-1",
+                        "effect": {
+                            "id": "eff-1",
+                            "initiation": "activated",
+                            "resolution": "stack",
+                            "persistence": "instant",
+                            "tags": [],
+                            "cost": {"items": [{"type": "tap_self"}]},
+                            "effect": {
+                                "kind": "one_shot",
+                                "action": {"type": "life", "amount": 1},
+                            },
+                        },
+                    },
                 ],
-                "edges": [{"from_": "act-1", "to": "effect-1"}],
             }
         ],
     )

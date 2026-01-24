@@ -1,11 +1,11 @@
 // frontend/hooks/search/useSearchFilters.ts
 
 import { useState, useMemo } from 'react';
-import { COLORS, COLOR_NAMES, RARITY_OPTIONS, LANGUAGE_OPTIONS } from '@/lib/constants/search';
+import { COLORS, COLOR_NAMES, RARITY_OPTIONS, LANGUAGE_OPTIONS, CARD_TYPE_OPTIONS } from '@/lib/constants/search';
 
 export function useSearchFilters() {
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
-  const [typeFilter, setTypeFilter] = useState('');
+  const [typeFilters, setTypeFilters] = useState<string[]>([]);
   const [setFilter, setSetFilter] = useState('');
   const [rarityFilter, setRarityFilter] = useState('');
   const [languageFilter, setLanguageFilter] = useState('');
@@ -13,8 +13,8 @@ export function useSearchFilters() {
   const [showFilters, setShowFilters] = useState(false);
 
   const hasActiveFilters = useMemo(() => 
-    selectedColors.length > 0 || typeFilter || setFilter || rarityFilter || languageFilter || keywordFilter,
-    [selectedColors, typeFilter, setFilter, rarityFilter, languageFilter, keywordFilter]
+    selectedColors.length > 0 || typeFilters.length > 0 || setFilter || rarityFilter || languageFilter || keywordFilter,
+    [selectedColors, typeFilters, setFilter, rarityFilter, languageFilter, keywordFilter]
   );
 
   const toggleColor = (color: string) => {
@@ -25,9 +25,15 @@ export function useSearchFilters() {
     );
   };
 
+  const toggleType = (type: string) => {
+    setTypeFilters((prev) =>
+      prev.includes(type) ? prev.filter((entry) => entry !== type) : [...prev, type]
+    );
+  };
+
   const clearFilters = () => {
     setSelectedColors([]);
-    setTypeFilter('');
+    setTypeFilters([]);
     setSetFilter('');
     setRarityFilter('');
     setLanguageFilter('');
@@ -37,8 +43,8 @@ export function useSearchFilters() {
   return {
     selectedColors,
     setSelectedColors,
-    typeFilter,
-    setTypeFilter,
+    typeFilters,
+    setTypeFilters,
     setFilter,
     setSetFilter,
     rarityFilter,
@@ -51,9 +57,11 @@ export function useSearchFilters() {
     setShowFilters,
     hasActiveFilters,
     toggleColor,
+    toggleType,
     clearFilters,
     COLORS,
     COLOR_NAMES,
+    CARD_TYPE_OPTIONS,
     RARITY_OPTIONS,
     LANGUAGE_OPTIONS,
   };

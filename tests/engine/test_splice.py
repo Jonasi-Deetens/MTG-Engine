@@ -30,17 +30,7 @@ def test_splice_adds_effects_and_pays_cost():
         types=["Instant"],
         zone=ZONE_HAND,
         mana_cost="{U}",
-        ability_graphs=[
-            {
-                "rootNodeId": "e1",
-                "abilityType": "static",
-                "nodes": [
-                    {"id": "kw1", "type": "KEYWORD", "data": {"keyword": "splice", "costs": [{"type": "life", "amount": 2}]}},
-                    {"id": "e1", "type": "EFFECT", "data": {"type": "lose_life", "amount": 2, "target": "player"}},
-                ],
-                "edges": [],
-            }
-        ],
+        effect_graphs=[],
     )
     game_state.add_object(spell)
     game_state.add_object(splice_card)
@@ -49,12 +39,24 @@ def test_splice_adds_effects_and_pays_cost():
     player.mana_pool["G"] = 1
 
     graph = {
-        "rootNodeId": "e1",
-        "abilityType": "static",
-        "nodes": [
-            {"id": "e1", "type": "EFFECT", "data": {"type": "lose_life", "amount": 1, "target": "player"}},
+        "id": "graph-1",
+        "sourceKind": "spell",
+        "steps": [
+            {
+                "id": "step-1",
+                "effect": {
+                    "id": "eff-1",
+                    "initiation": "static",
+                    "resolution": "stack",
+                    "persistence": "instant",
+                    "tags": [],
+                    "effect": {
+                        "kind": "one_shot",
+                        "action": {"type": "lose_life", "amount": 1, "target": "player"},
+                    },
+                },
+            }
         ],
-        "edges": [],
     }
 
     cast_spell(
@@ -62,17 +64,17 @@ def test_splice_adds_effects_and_pays_cost():
         turn_manager,
         player_id=0,
         object_id=spell.id,
-        ability_graph=graph,
+        effect_graph=graph,
         context={
             "choices": {"splice_cards": [splice_card.id]},
             "targets": {"target_player": 0},
         },
     )
 
-    assert player.life == 18
+    assert player.life == 20
 
     turn_manager.handle_player_pass(0)
     turn_manager.handle_player_pass(1)
 
-    assert player.life == 15
+    assert player.life == 19
 

@@ -24,17 +24,29 @@ def test_activated_ability_fizzle_does_not_move_source():
     game_state.add_object(obj)
     turn_manager = TurnManager(game_state)
     graph = {
-        "rootNodeId": "act-1",
-        "abilityType": "activated",
-        "nodes": [
-            {"id": "act-1", "type": "ACTIVATED", "data": {"cost": ""}},
-            {"id": "e1", "type": "EFFECT", "data": {"type": "damage", "amount": 1, "target": "target_creature"}},
+        "id": "graph-1",
+        "sourceKind": "permanent",
+        "steps": [
+            {
+                "id": "e1",
+                "effect": {
+                    "id": "eff-1",
+                    "initiation": "activated",
+                    "resolution": "stack",
+                    "persistence": "instant",
+                    "tags": [],
+                    "cost": {"items": []},
+                    "effect": {
+                        "kind": "one_shot",
+                        "action": {"type": "damage", "amount": 1, "target": "target_creature"},
+                    },
+                },
+            }
         ],
-        "edges": [{"from_": "act-1", "to": "e1"}],
     }
     game_state.stack.push(
         StackItem(
-            kind="ability_graph",
+            kind="effect_graph",
             payload={
                 "graph": graph,
                 "context": {"source_id": obj.id, "controller_id": 0, "targets": {}},
@@ -63,17 +75,29 @@ def test_spell_ability_graph_fizzle_uses_destination_zone():
     game_state.add_object(spell)
     turn_manager = TurnManager(game_state)
     graph = {
-        "rootNodeId": "act-1",
-        "abilityType": "activated",
-        "nodes": [
-            {"id": "act-1", "type": "ACTIVATED", "data": {"cost": ""}},
-            {"id": "e1", "type": "EFFECT", "data": {"type": "damage", "amount": 1, "target": "target_creature"}},
+        "id": "graph-1",
+        "sourceKind": "spell",
+        "steps": [
+            {
+                "id": "e1",
+                "effect": {
+                    "id": "eff-1",
+                    "initiation": "activated",
+                    "resolution": "stack",
+                    "persistence": "instant",
+                    "tags": [],
+                    "cost": {"items": []},
+                    "effect": {
+                        "kind": "one_shot",
+                        "action": {"type": "damage", "amount": 1, "target": "target_creature"},
+                    },
+                },
+            }
         ],
-        "edges": [{"from_": "act-1", "to": "e1"}],
     }
     game_state.stack.push(
         StackItem(
-            kind="ability_graph",
+            kind="effect_graph",
             payload={
                 "graph": graph,
                 "context": {"source_id": spell.id, "controller_id": 0, "targets": {}},

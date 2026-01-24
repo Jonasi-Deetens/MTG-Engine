@@ -30,13 +30,19 @@ function describeStep(step: EffectStep): string {
 }
 
 export function EffectGraphPreview({ graph }: EffectGraphPreviewProps) {
-  const storeGraph = useEffectStore((state) => ({
-    id: state.toEffectGraph()?.id,
-    sourceKind: state.sourceKind,
-    steps: state.steps,
-  }));
+  const sourceKind = useEffectStore((state) => state.sourceKind);
+  const steps = useEffectStore((state) => state.steps);
+  const currentCardId = useEffectStore((state) => state.currentCard?.card_id ?? null);
 
-  const activeGraph = graph ?? (storeGraph.id ? storeGraph : null);
+  const activeGraph =
+    graph ??
+    (steps.length
+      ? {
+          id: currentCardId ? `graph-${currentCardId}` : 'preview',
+          sourceKind,
+          steps,
+        }
+      : null);
 
   if (!activeGraph || !activeGraph.steps.length) {
     return (

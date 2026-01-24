@@ -41,17 +41,29 @@ def test_partial_legal_targets_resolve_for_legal_only():
     game_state.add_object(legal)
     game_state.add_object(illegal)
     graph = {
-        "rootNodeId": "act-1",
-        "abilityType": "activated",
-        "nodes": [
-            {"id": "act-1", "type": "ACTIVATED", "data": {"cost": ""}},
-            {"id": "e1", "type": "EFFECT", "data": {"type": "damage", "amount": 2, "target": "target_creature"}},
+        "id": "graph-1",
+        "sourceKind": "permanent",
+        "steps": [
+            {
+                "id": "e1",
+                "effect": {
+                    "id": "eff-1",
+                    "initiation": "activated",
+                    "resolution": "stack",
+                    "persistence": "instant",
+                    "tags": [],
+                    "cost": {"items": []},
+                    "effect": {
+                        "kind": "one_shot",
+                        "action": {"type": "damage", "amount": 2, "target": "target_creature"},
+                    },
+                },
+            }
         ],
-        "edges": [{"from_": "act-1", "to": "e1"}],
     }
     game_state.stack.push(
         StackItem(
-            kind="ability_graph",
+            kind="effect_graph",
             payload={
                 "graph": graph,
                 "context": {
@@ -95,21 +107,45 @@ def test_partial_legal_targets_per_effect_allows_resolution():
     game_state.add_object(source)
     game_state.add_object(illegal)
     graph = {
-        "rootNodeId": "act-1",
-        "abilityType": "activated",
-        "nodes": [
-            {"id": "act-1", "type": "ACTIVATED", "data": {"cost": ""}},
-            {"id": "e1", "type": "EFFECT", "data": {"type": "damage", "amount": 2, "target": "target_creature"}},
-            {"id": "e2", "type": "EFFECT", "data": {"type": "lose_life", "amount": 1, "target": "player"}},
-        ],
-        "edges": [
-            {"from_": "act-1", "to": "e1"},
-            {"from_": "e1", "to": "e2"},
+        "id": "graph-1",
+        "sourceKind": "permanent",
+        "steps": [
+            {
+                "id": "e1",
+                "effect": {
+                    "id": "eff-1",
+                    "initiation": "activated",
+                    "resolution": "stack",
+                    "persistence": "instant",
+                    "tags": [],
+                    "cost": {"items": []},
+                    "effect": {
+                        "kind": "one_shot",
+                        "action": {"type": "damage", "amount": 2, "target": "target_creature"},
+                    },
+                },
+                "next": ["e2"],
+            },
+            {
+                "id": "e2",
+                "effect": {
+                    "id": "eff-2",
+                    "initiation": "activated",
+                    "resolution": "stack",
+                    "persistence": "instant",
+                    "tags": [],
+                    "cost": {"items": []},
+                    "effect": {
+                        "kind": "one_shot",
+                        "action": {"type": "lose_life", "amount": 1, "target": "player"},
+                    },
+                },
+            },
         ],
     }
     game_state.stack.push(
         StackItem(
-            kind="ability_graph",
+            kind="effect_graph",
             payload={
                 "graph": graph,
                 "context": {

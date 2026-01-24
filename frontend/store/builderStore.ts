@@ -49,7 +49,7 @@ export interface TriggeredAbility {
   id: string;
   event: string; // e.g., "enters_battlefield", "dies", "becomes_target", "card_enters"
   scope?: string; // "self", "any", "you_control", "opponent_control", "you", "opponent"
-  condition?: StructuredCondition | string; // Structured condition or legacy string (ability-level gate)
+  condition?: StructuredCondition; // Structured condition (ability-level gate)
   effects: Effect[];
   modal?: ModalChoiceConfig;
   usesStack?: boolean; // New: configurable stack behavior (default: true)
@@ -103,7 +103,7 @@ export interface KeywordAbility {
 
 // Per-effect condition for new refactored system
 export interface EffectCondition {
-  type: string; // 'was_cast', 'control_count', 'life_total', etc.
+  type: StructuredCondition['type']; // 'was_cast', 'control_count', 'life_total', etc.
   target?: string; // 'triggering_aura', 'triggering_source', etc.
   comparison?: string; // '>=', '<=', '==', etc.
   value?: number | string;

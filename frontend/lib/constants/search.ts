@@ -19,6 +19,20 @@ export const RARITY_OPTIONS = [
   { value: 'mythic', label: 'Mythic' },
 ];
 
+export const CARD_TYPE_OPTIONS = [
+  { value: 'creature', label: 'Creature' },
+  { value: 'instant', label: 'Instant' },
+  { value: 'sorcery', label: 'Sorcery' },
+  { value: 'artifact', label: 'Artifact' },
+  { value: 'enchantment', label: 'Enchantment' },
+  { value: 'planeswalker', label: 'Planeswalker' },
+  { value: 'land', label: 'Land' },
+  { value: 'battle', label: 'Battle' },
+  { value: 'aura', label: 'Aura' },
+  { value: 'equipment', label: 'Equipment' },
+  { value: 'legendary', label: 'Legendary' },
+];
+
 export const LANGUAGE_OPTIONS = [
   { value: '', label: 'Any Language' },
   { value: 'en', label: 'English' },

@@ -22,13 +22,14 @@ export function filterByColors(cards: CardData[], selectedColors: string[]): Car
 /**
  * Filter cards by type
  */
-export function filterByType(cards: CardData[], typeFilter: string): CardData[] {
-  if (!typeFilter) return cards;
-  
-  const typeLower = typeFilter.toLowerCase();
+export function filterByType(cards: CardData[], typeFilters: string[]): CardData[] {
+  if (!typeFilters.length) return cards;
+
+  const normalized = typeFilters.map((value) => value.toLowerCase());
   return cards.filter(card => {
     const typeLine = card.type_line?.toLowerCase() || '';
-    return typeLine.includes(typeLower);
+    const cardTypes = (card.card_types || []).map((entry) => entry.toLowerCase());
+    return normalized.some((value) => cardTypes.includes(value) || typeLine.includes(value));
   });
 }
 
@@ -88,7 +89,7 @@ export function filterByKeywords(cards: CardData[], keywordFilter: string): Card
 export function applyFilters(
   cards: CardData[],
   selectedColors: string[],
-  typeFilter: string,
+  typeFilters: string[],
   setFilter: string,
   rarityFilter: string,
   languageFilter: string,
@@ -96,7 +97,7 @@ export function applyFilters(
 ): CardData[] {
   let filtered = cards;
   filtered = filterByColors(filtered, selectedColors);
-  filtered = filterByType(filtered, typeFilter);
+  filtered = filterByType(filtered, typeFilters);
   filtered = filterBySet(filtered, setFilter);
   filtered = filterByRarity(filtered, rarityFilter);
   filtered = filterByLanguage(filtered, languageFilter);

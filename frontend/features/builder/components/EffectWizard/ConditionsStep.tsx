@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-
-import type { UnifiedEffect } from '@/lib/unifiedEffect';
+import type { UnifiedEffect, ConditionSpec } from '@/lib/unifiedEffect';
+import { ConditionBuilder } from '@/features/builder/components/ConditionBuilder';
+import { Button } from '@/components/ui/Button';
+import type { StructuredCondition } from '@/lib/conditionTypes';
 
 interface ConditionsStepProps {
   effect: UnifiedEffect;
@@ -10,43 +11,52 @@ interface ConditionsStepProps {
 }
 
 export function ConditionsStep({ effect, onChange }: ConditionsStepProps) {
-  const [draft, setDraft] = useState(
-    JSON.stringify(effect.conditions ?? [], null, 2)
-  );
-  const [error, setError] = useState('');
+  const conditions = (effect.conditions ?? []) as StructuredCondition[];
 
-  const handleApply = () => {
-    try {
-      const parsed = JSON.parse(draft);
-      if (!Array.isArray(parsed)) {
-        setError('Conditions must be an array');
-        return;
-      }
-      onChange({ ...effect, conditions: parsed });
-      setError('');
-    } catch {
-      setError('Invalid JSON');
+  const handleAdd = () => {
+    const newCondition: StructuredCondition = { type: 'control_count', value: 1, permanentType: 'creature' };
+    onChange({ ...effect, conditions: [...conditions, newCondition] });
+  };
+
+  const handleUpdate = (index: number, updated: StructuredCondition | undefined) => {
+    if (!updated) {
+      const next = conditions.filter((_, i) => i !== index);
+      onChange({ ...effect, conditions: next.length ? next : undefined });
+    } else {
+      const next = [...conditions];
+      next[index] = updated;
+      onChange({ ...effect, conditions: next });
     }
   };
 
+  const handleRemove = (index: number) => {
+    const next = conditions.filter((_, i) => i !== index);
+    onChange({ ...effect, conditions: next.length ? next : undefined });
+  };
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <p className="text-sm text-[color:var(--theme-text-secondary)]">
-        Optional conditions for this effect (advanced).
+        Add conditions that must be met for this effect to trigger/apply.
       </p>
-      <textarea
-        className="w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-xs"
-        rows={6}
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-      />
-      {error && <div className="text-xs text-[color:var(--theme-status-error)]">{error}</div>}
-      <button
-        className="text-xs text-[color:var(--theme-accent-primary)]"
-        onClick={handleApply}
-      >
-        Apply conditions
-      </button>
+      {conditions.length === 0 ? (
+        <p className="text-xs text-[color:var(--theme-text-muted)]">No conditions added yet.</p>
+      ) : (
+        <div className="space-y-3">
+          {conditions.map((condition, index) => (
+            <div key={`condition-${index}`} className="relative">
+              <ConditionBuilder
+                condition={condition}
+                onChange={(updated) => handleUpdate(index, updated)}
+                onRemove={() => handleRemove(index)}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+      <Button variant="outline" onClick={handleAdd} className="text-xs">
+        Add Condition
+      </Button>
     </div>
   );
 }

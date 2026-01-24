@@ -1,5 +1,4 @@
 from engine import GameObject, GameState, PlayerState, TurnManager, Phase, Step
-from tests.engine.cost_helpers import mana_cost_data
 from engine.effects import EffectResolver
 from engine.state import ResolveContext
 from engine.rules import cast_spell
@@ -18,17 +17,24 @@ def _build_state() -> GameState:
 
 def _discard_graph() -> dict:
     return {
-        "rootNodeId": "e1",
-        "abilityType": "activated",
-        "nodes": [
-            {"id": "e1", "type": "EFFECT", "data": {"type": "discard", "amount": 1, "target": "player"}},
+        "id": "graph-1",
+        "sourceKind": "spell",
+        "steps": [
             {
-                "id": "kw1",
-                "type": "KEYWORD",
-                "data": {"keyword": "overload", "costs": [{"type": "mana", "cost": mana_cost_data("{1}{B}")}]},
-            },
+                "id": "step-1",
+                "effect": {
+                    "id": "eff-1",
+                    "initiation": "static",
+                    "resolution": "stack",
+                    "persistence": "instant",
+                    "tags": [],
+                    "effect": {
+                        "kind": "one_shot",
+                        "action": {"type": "discard", "amount": 1, "target": "player"},
+                    },
+                },
+            }
         ],
-        "edges": [],
     }
 
 
@@ -73,7 +79,7 @@ def test_overload_discard_per_player_choices():
         turn_manager,
         player_id=0,
         object_id=spell.id,
-        ability_graph=_discard_graph(),
+        effect_graph=_discard_graph(),
         context={
             "choices": {
                 "alternative_cost_tag": "overload:{1}{B}",

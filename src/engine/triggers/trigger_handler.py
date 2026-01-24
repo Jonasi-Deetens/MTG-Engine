@@ -26,6 +26,17 @@ class TriggerHandler:
     def __init__(self, game_state: "GameState") -> None:
         self._game_state = game_state
 
+    @staticmethod
+    def _normalize_trigger_card_types(card_type: Any) -> List[str]:
+        if not card_type:
+            return []
+        if isinstance(card_type, (list, tuple, set)):
+            values = [str(entry).strip().lower() for entry in card_type if entry]
+            return [value for value in values if value]
+        if isinstance(card_type, str):
+            return [part.strip().lower() for part in card_type.split(",") if part.strip()]
+        return [str(card_type).strip().lower()]
+
     def handle_event(self, event: "Event") -> List["StackItem"]:
         """Handle an event by matching triggers and adding to pending_triggers.
 
@@ -258,7 +269,8 @@ class TriggerHandler:
         if enters_from and payload_from and enters_from != payload_from:
             return False
 
-        if not card_type:
+        card_types = self._normalize_trigger_card_types(card_type)
+        if not card_types:
             return True
 
         normalized_types = {str(t).lower() for t in payload_types if isinstance(t, str)}
@@ -274,22 +286,21 @@ class TriggerHandler:
                         for word in part.strip().split():
                             normalized_types.add(word.lower())
 
-        card_type = str(card_type).lower()
-
-        if card_type == "permanent":
+        if "permanent" in card_types:
             return any(
                 t in {"creature", "artifact", "enchantment", "planeswalker", "land", "battle"}
                 for t in normalized_types
             )
 
-        return card_type in normalized_types
+        return any(card_type in normalized_types for card_type in card_types)
 
     def _matches_unified_type(self, active, event: "Event") -> bool:
         trigger = active.effect_data.trigger
         if not trigger:
             return False
         card_type = getattr(trigger, "cardType", None)
-        if not card_type:
+        card_types = self._normalize_trigger_card_types(card_type)
+        if not card_types:
             return True
 
         obj = self._resolve_event_object(event)
@@ -302,14 +313,13 @@ class TriggerHandler:
                 for word in part.strip().split():
                     normalized_types.add(word.lower())
 
-        card_type = str(card_type).lower()
-        if card_type == "permanent":
+        if "permanent" in card_types:
             return any(
                 t in {"creature", "artifact", "enchantment", "planeswalker", "land", "battle"}
                 for t in normalized_types
             )
 
-        return card_type in normalized_types
+        return any(card_type in normalized_types for card_type in card_types)
 
     def _order_triggers(
         self,
@@ -481,7 +491,8 @@ class TriggerHandler:
         if enters_from and payload_from and enters_from != payload_from:
             return False
 
-        if not card_type:
+        card_types = self._normalize_trigger_card_types(card_type)
+        if not card_types:
             return True
 
         normalized_types = {str(t).lower() for t in payload_types if isinstance(t, str)}
@@ -501,27 +512,27 @@ class TriggerHandler:
                         for word in part.strip().split():
                             normalized_types.add(word.lower())
         
-        card_type = str(card_type).lower()
+        card_types = [card_type.lower() for card_type in card_types]
         
         # Debug logging for trigger matching
         print(f"[graph] _matches_card_enters trigger_source={entry.source_id} event_obj={obj_id} "
               f"card_type={card_type} normalized_types={normalized_types} "
               f"type_line={getattr(obj, 'type_line', None) if obj else None}", flush=True)
 
-        if card_type == "permanent":
+        if "permanent" in card_types:
             return any(
                 t in {"creature", "artifact", "enchantment", "planeswalker", "land", "battle"}
                 for t in normalized_types
             )
 
-        return card_type in normalized_types
+        return any(card_type in normalized_types for card_type in card_types)
 
     def _matches_type(self, entry: RegisteredTrigger, event: "Event") -> bool:
         """Check if a trigger matches the event object's type."""
         trigger_data = entry.trigger_data or {}
         card_type = trigger_data.get("cardType")
-
-        if not card_type:
+        card_types = self._normalize_trigger_card_types(card_type)
+        if not card_types:
             return True
 
         obj = self._resolve_event_object(event)
@@ -536,15 +547,13 @@ class TriggerHandler:
                 for word in part.strip().split():
                     normalized_types.add(word.lower())
         
-        card_type = str(card_type).lower()
-
-        if card_type == "permanent":
+        if "permanent" in card_types:
             return any(
                 t in {"creature", "artifact", "enchantment", "planeswalker", "land", "battle"}
                 for t in normalized_types
             )
 
-        return card_type in normalized_types
+        return any(card_type in normalized_types for card_type in card_types)
 
     def _resolve_event_object(self, event: "Event"):
         """Resolve the game object from an event payload."""

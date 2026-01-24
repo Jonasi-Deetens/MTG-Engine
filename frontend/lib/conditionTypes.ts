@@ -2,8 +2,33 @@
 
 // Structured condition types for engine compatibility
 
+export const CONDITION_TYPE_VALUES = [
+  'control_count',
+  'life_total',
+  'mana_available',
+  'battlefield_count',
+  'graveyard_count',
+  'hand_count',
+  'power_comparison',
+  'toughness_comparison',
+  'is_type',
+  'is_tapped',
+  'is_attacking',
+  'is_blocking',
+  'has_keyword',
+  'has_counter',
+  'is_cast',
+  'was_cast',
+  'mana_value_comparison',
+  'kicked',
+  'kicker_count',
+  'creatures_in_graveyard',
+] as const;
+
+export type ConditionType = typeof CONDITION_TYPE_VALUES[number];
+
 export interface ConditionTypeOption {
-  value: string;
+  value: ConditionType;
   label: string;
   requiresValue?: boolean;
   requiresComparison?: boolean;
@@ -26,10 +51,12 @@ export const CONDITION_TYPE_OPTIONS: ConditionTypeOption[] = [
   { value: 'is_blocking', label: 'Is Blocking', requiresTarget: true },
   { value: 'has_keyword', label: 'Has Keyword', requiresTarget: true },
   { value: 'has_counter', label: 'Has Counter', requiresValue: true, requiresTarget: true },
+  { value: 'is_cast', label: 'Is Cast', requiresTarget: true },
   { value: 'was_cast', label: 'Was Cast', requiresTarget: true },
   { value: 'mana_value_comparison', label: 'Mana Value Comparison', requiresComparison: true, requiresValue: true, requiresTarget: true },
   { value: 'kicked', label: 'Was Kicked' },
   { value: 'kicker_count', label: 'Kicker Count', requiresComparison: true, requiresValue: true },
+  { value: 'creatures_in_graveyard', label: 'Creatures in Graveyard', requiresComparison: true, requiresValue: true },
 ];
 
 export const COMPARISON_OPERATORS = [
@@ -39,6 +66,47 @@ export const COMPARISON_OPERATORS = [
   { value: '<', label: 'Less than (<)' },
   { value: '==', label: 'Equal (==)' },
   { value: '!=', label: 'Not equal (!=)' },
+];
+
+export const KEYWORD_OPTIONS = [
+  { value: 'flying', label: 'Flying' },
+  { value: 'first_strike', label: 'First Strike' },
+  { value: 'double_strike', label: 'Double Strike' },
+  { value: 'deathtouch', label: 'Deathtouch' },
+  { value: 'haste', label: 'Haste' },
+  { value: 'hexproof', label: 'Hexproof' },
+  { value: 'indestructible', label: 'Indestructible' },
+  { value: 'lifelink', label: 'Lifelink' },
+  { value: 'menace', label: 'Menace' },
+  { value: 'reach', label: 'Reach' },
+  { value: 'trample', label: 'Trample' },
+  { value: 'vigilance', label: 'Vigilance' },
+  { value: 'ward', label: 'Ward' },
+  { value: 'defender', label: 'Defender' },
+  { value: 'flash', label: 'Flash' },
+  { value: 'shroud', label: 'Shroud' },
+  { value: 'protection', label: 'Protection' },
+  { value: 'regenerate', label: 'Regenerate' },
+  { value: 'undying', label: 'Undying' },
+  { value: 'persist', label: 'Persist' },
+];
+
+export const COUNTER_TYPE_OPTIONS = [
+  { value: '+1/+1', label: '+1/+1' },
+  { value: '-1/-1', label: '-1/-1' },
+  { value: 'loyalty', label: 'Loyalty' },
+  { value: 'charge', label: 'Charge' },
+  { value: 'time', label: 'Time' },
+  { value: 'fate', label: 'Fate' },
+  { value: 'quest', label: 'Quest' },
+  { value: 'study', label: 'Study' },
+  { value: 'spore', label: 'Spore' },
+  { value: 'storage', label: 'Storage' },
+  { value: 'verse', label: 'Verse' },
+  { value: 'age', label: 'Age' },
+  { value: 'level', label: 'Level' },
+  { value: 'luck', label: 'Luck' },
+  { value: 'lore', label: 'Lore' },
 ];
 
 export const PERMANENT_TYPES = [
@@ -65,7 +133,7 @@ export const CONDITION_TARGET_OPTIONS = [
 ];
 
 export interface StructuredCondition {
-  type: string;
+  type: ConditionType;
   value?: number;
   comparison?: string;
   target?: string;
@@ -151,6 +219,10 @@ export function formatCondition(condition: StructuredCondition | string): string
     case 'was_cast':
       const castTarget = cond.target ? CONDITION_TARGET_OPTIONS.find(t => t.value === cond.target)?.label || cond.target : 'target';
       return `${castTarget} was cast`;
+
+    case 'is_cast':
+      const isCastTarget = cond.target ? CONDITION_TARGET_OPTIONS.find(t => t.value === cond.target)?.label || cond.target : 'target';
+      return `${isCastTarget} is cast`;
     
     case 'mana_value_comparison':
       const mvOp = cond.comparison || '<=';
@@ -169,6 +241,11 @@ export function formatCondition(condition: StructuredCondition | string): string
       const kcOp = cond.comparison || '>=';
       const kcOpLabel = COMPARISON_OPERATORS.find(o => o.value === kcOp)?.label.split('(')[0].trim() || kcOp;
       return `Kicker count ${kcOpLabel} ${cond.value || 0}`;
+
+    case 'creatures_in_graveyard':
+      const gyOp = cond.comparison || '>=';
+      const gyOpLabel = COMPARISON_OPERATORS.find(o => o.value === gyOp)?.label.split('(')[0].trim() || gyOp;
+      return `Creatures in graveyard ${gyOpLabel} ${cond.value || 0}`;
     
     default:
       return 'Unknown condition';

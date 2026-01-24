@@ -5,6 +5,27 @@ from engine.state import ResolveContext
 from engine.zones import ZONE_BATTLEFIELD, ZONE_HAND
 
 
+def _effect_graph_with_action(action: dict) -> dict:
+    return {
+        "id": "graph-1",
+        "sourceKind": "spell",
+        "steps": [
+            {
+                "id": "e1",
+                "effect": {
+                    "id": "eff-1",
+                    "initiation": "activated",
+                    "resolution": "stack",
+                    "persistence": "instant",
+                    "tags": [],
+                    "cost": {"items": []},
+                    "effect": {"kind": "one_shot", "action": action},
+                },
+            }
+        ],
+    }
+
+
 def test_copy_spell_uses_new_targets_when_provided():
     players = [PlayerState(id=0), PlayerState(id=1)]
     game_state = GameState(players=players)
@@ -60,7 +81,7 @@ def test_copy_spell_uses_new_targets_when_provided():
     assert copied.get("context", {}).get("targets", {}).get("target") == creature_b.id
 
 
-def test_copy_ability_graph_uses_new_targets_by_effect():
+def test_copy_effect_graph_uses_new_targets_by_effect():
     players = [PlayerState(id=0), PlayerState(id=1)]
     game_state = GameState(players=players)
     resolver = EffectResolver(game_state)
@@ -82,15 +103,7 @@ def test_copy_ability_graph_uses_new_targets_by_effect():
     )
     game_state.add_object(creature_a)
     game_state.add_object(creature_b)
-    graph = {
-        "rootNodeId": "act-1",
-        "abilityType": "activated",
-        "nodes": [
-            {"id": "act-1", "type": "ACTIVATED", "data": {"cost": ""}},
-            {"id": "e1", "type": "EFFECT", "data": {"type": "damage", "amount": 1, "target": "target_creature"}},
-        ],
-        "edges": [{"from_": "act-1", "to": "e1"}],
-    }
+    graph = _effect_graph_with_action({"type": "damage", "amount": 1, "target": "target_creature"})
     spell = GameObject(
         id="spell",
         name="Spell Source",
@@ -102,7 +115,7 @@ def test_copy_ability_graph_uses_new_targets_by_effect():
     game_state.add_object(spell)
     game_state.stack.push(
         StackItem(
-            kind="ability_graph",
+            kind="effect_graph",
             payload={
                 "graph": graph,
                 "context": {"targets_by_effect": {"e1": {"target": creature_a.id}}},
@@ -281,18 +294,10 @@ def test_copy_spell_multiple_copies_use_per_copy_targets_by_effect():
     game_state.add_object(creature_b)
     game_state.add_object(creature_c)
     game_state.add_object(spell)
-    graph = {
-        "rootNodeId": "act-1",
-        "abilityType": "activated",
-        "nodes": [
-            {"id": "act-1", "type": "ACTIVATED", "data": {"cost": ""}},
-            {"id": "e1", "type": "EFFECT", "data": {"type": "damage", "amount": 1, "target": "target_creature"}},
-        ],
-        "edges": [{"from_": "act-1", "to": "e1"}],
-    }
+    graph = _effect_graph_with_action({"type": "damage", "amount": 1, "target": "target_creature"})
     game_state.stack.push(
         StackItem(
-            kind="ability_graph",
+            kind="effect_graph",
             payload={
                 "graph": graph,
                 "context": {"targets_by_effect": {"e1": {"target": creature_a.id}}},
@@ -345,18 +350,10 @@ def test_copy_spell_requires_targets_by_effect_per_copy():
     )
     game_state.add_object(creature_a)
     game_state.add_object(spell)
-    graph = {
-        "rootNodeId": "act-1",
-        "abilityType": "activated",
-        "nodes": [
-            {"id": "act-1", "type": "ACTIVATED", "data": {"cost": ""}},
-            {"id": "e1", "type": "EFFECT", "data": {"type": "damage", "amount": 1, "target": "target_creature"}},
-        ],
-        "edges": [{"from_": "act-1", "to": "e1"}],
-    }
+    graph = _effect_graph_with_action({"type": "damage", "amount": 1, "target": "target_creature"})
     game_state.stack.push(
         StackItem(
-            kind="ability_graph",
+            kind="effect_graph",
             payload={
                 "graph": graph,
                 "context": {"targets_by_effect": {"e1": {"target": creature_a.id}}},
@@ -413,22 +410,12 @@ def test_copy_spell_distinct_targets_by_effect_enforced():
     game_state.add_object(creature_a)
     game_state.add_object(creature_b)
     game_state.add_object(spell)
-    graph = {
-        "rootNodeId": "act-1",
-        "abilityType": "activated",
-        "nodes": [
-            {"id": "act-1", "type": "ACTIVATED", "data": {"cost": ""}},
-            {
-                "id": "e1",
-                "type": "EFFECT",
-                "data": {"type": "fight", "yourCreature": "target_creature", "opponentCreature": "target_creature"},
-            },
-        ],
-        "edges": [{"from_": "act-1", "to": "e1"}],
-    }
+    graph = _effect_graph_with_action(
+        {"type": "fight", "yourCreature": "target_creature", "opponentCreature": "target_creature"}
+    )
     game_state.stack.push(
         StackItem(
-            kind="ability_graph",
+            kind="effect_graph",
             payload={
                 "graph": graph,
                 "context": {"targets_by_effect": {"e1": {"yourCreature": creature_a.id, "opponentCreature": creature_b.id}}},

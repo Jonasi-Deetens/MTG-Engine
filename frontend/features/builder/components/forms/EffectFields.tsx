@@ -4,6 +4,7 @@
 // Reusable effect field components for all ability forms
 
 import { Effect, EffectCondition, useBuilderStore, ValidationError } from '@/store/builderStore';
+import { ConditionBuilder } from '@/features/builder/components/ConditionBuilder';
 import { 
   EFFECT_TYPE_OPTIONS, 
   TARGET_OPTIONS, 
@@ -26,7 +27,8 @@ import {
   CDA_SET_OPTIONS,
   CDA_TEMPLATE_OPTIONS,
   ZONE_OPTIONS,
-  REPLACEMENT_ZONE_OPTIONS
+  REPLACEMENT_ZONE_OPTIONS,
+  CREATURE_TYPE_OPTIONS
 } from '@/lib/effectTypes';
 import { useEffect, useState } from 'react';
 import { abilities } from '@/lib/abilities';
@@ -183,46 +185,14 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
         <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">
           Effect Condition <span className="text-[color:var(--theme-text-muted)]">(optional)</span>
         </label>
-        <select
-          value={effect.condition?.type || ''}
-          onChange={(e) => {
-            const conditionType = e.target.value;
-            if (!conditionType) {
-              onUpdate('condition', undefined);
-            } else if (conditionType === 'was_cast') {
-              onUpdate('condition', { type: 'was_cast', target: 'triggering_source' });
-            } else {
-              onUpdate('condition', { type: conditionType });
-            }
-          }}
-          className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
-        >
-          <option value="">No condition</option>
-          <option value="was_cast">Was Cast</option>
-          <option value="is_tapped">Is Tapped</option>
-          <option value="is_attacking">Is Attacking</option>
-          <option value="is_blocking">Is Blocking</option>
-          <option value="control_count">Control Count</option>
-          <option value="has_keyword">Has Keyword</option>
-        </select>
-        {effect.condition?.type === 'was_cast' && (
-          <div className="mt-2">
-            <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Condition Target</label>
-            <select
-              value={effect.condition?.target || 'triggering_source'}
-              onChange={(e) => onUpdate('condition', { ...effect.condition, target: e.target.value })}
-              className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
-            >
-              <option value="triggering_source">Triggering Source</option>
-              <option value="triggering_aura">Triggering Aura</option>
-              <option value="triggering_spell">Triggering Spell</option>
-              <option value="target_permanent">Target Permanent</option>
-            </select>
-          </div>
-        )}
-        {effect.condition && (
+        <ConditionBuilder
+          condition={effect.condition}
+          onChange={(condition) => onUpdate('condition', condition)}
+          onRemove={effect.condition ? () => onUpdate('condition', undefined) : undefined}
+        />
+        {!effect.condition && (
           <p className="text-xs text-[color:var(--theme-text-muted)] mt-1">
-            Effect will only execute if this condition is met
+            Add a condition to gate this effect
           </p>
         )}
       </div>
@@ -305,14 +275,32 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
 
       {selectedEffectType?.requiresTypeList && (
         <div>
-          <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Types (comma-separated)</label>
-          <input
-            type="text"
-            value={Array.isArray(effect.types) ? effect.types.join(', ') : ''}
-            onChange={(e) => onUpdate('types', normalizeTypeList(e.target.value))}
-            placeholder="Creature, Artifact"
-            className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
-          />
+          <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Types</label>
+          <div className="flex flex-wrap gap-2">
+            {typeOptionsWithChosen.map((opt) => {
+              const selected = Array.isArray(effect.types) && effect.types.includes(opt.value);
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => {
+                    const current = Array.isArray(effect.types) ? effect.types : [];
+                    const next = selected
+                      ? current.filter((v) => v !== opt.value)
+                      : [...current, opt.value];
+                    onUpdate('types', next.length ? next : undefined);
+                  }}
+                  className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                    selected
+                      ? 'bg-[color:var(--theme-accent-primary)] text-[color:var(--theme-button-primary-text)]'
+                      : 'bg-[color:var(--theme-card-hover)] text-[color:var(--theme-text-secondary)] hover:text-[color:var(--theme-text-primary)] border border-[color:var(--theme-card-border)]'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
           {getFieldErrors('type').map((error, idx) => (
             <div key={`type-error-${idx}`} className="text-xs text-[color:var(--theme-status-error)]">
               {error.message}
@@ -345,14 +333,32 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
 
       {selectedEffectType?.requiresColorList && (
         <div>
-          <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Colors (comma-separated)</label>
-          <input
-            type="text"
-            value={Array.isArray(effect.colors) ? effect.colors.join(', ') : ''}
-            onChange={(e) => onUpdate('colors', normalizeColorList(e.target.value))}
-            placeholder="W, U"
-            className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
-          />
+          <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Colors</label>
+          <div className="flex flex-wrap gap-2">
+            {colorOptionsWithChosen.map((opt) => {
+              const selected = Array.isArray(effect.colors) && effect.colors.includes(opt.value);
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => {
+                    const current = Array.isArray(effect.colors) ? effect.colors : [];
+                    const next = selected
+                      ? current.filter((v) => v !== opt.value)
+                      : [...current, opt.value];
+                    onUpdate('colors', next.length ? next : undefined);
+                  }}
+                  className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                    selected
+                      ? 'bg-[color:var(--theme-accent-primary)] text-[color:var(--theme-button-primary-text)]'
+                      : 'bg-[color:var(--theme-card-hover)] text-[color:var(--theme-text-secondary)] hover:text-[color:var(--theme-text-primary)] border border-[color:var(--theme-card-border)]'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
           {getFieldErrors('color').map((error, idx) => (
             <div key={`color-error-${idx}`} className="text-xs text-[color:var(--theme-status-error)]">
               {error.message}
@@ -957,12 +963,25 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
                 </option>
               ))}
             </select>
+          ) : effect.choice === 'creature_type' ? (
+            <select
+              value={effect.choiceValue || ''}
+              onChange={(e) => onUpdate('choiceValue', e.target.value)}
+              className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+            >
+              <option value="">Select creature type</option>
+              {CREATURE_TYPE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
           ) : (
             <input
               type="text"
               value={effect.choiceValue || ''}
               onChange={(e) => onUpdate('choiceValue', e.target.value)}
-              placeholder={effect.choice === 'creature_type' ? 'Elf' : 'Choice value'}
+              placeholder="Choice value"
               className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
             />
           )}

@@ -1,4 +1,4 @@
-from engine import GameObject, GameState, PlayerState, TurnManager, Phase, Step
+from engine import AbilityRegistry, GameObject, GameState, PlayerState, TurnManager, Phase, Step
 from engine.rules import cast_spell, prepare_cast
 from engine.zones import ZONE_BATTLEFIELD, ZONE_HAND
 
@@ -15,19 +15,30 @@ def _build_state() -> GameState:
 
 def _modifier_graph(amount: int) -> dict:
     return {
-        "rootNodeId": "s1",
-        "abilityType": "static",
-        "nodes": [
+        "id": "graph-1",
+        "sourceKind": "permanent",
+        "steps": [
             {
-                "id": "s1",
-                "type": "EFFECT",
-                "data": {
-                    "appliesTo": "spells_you_cast",
-                    "effect": {"type": "modify_cast_cost", "amount": amount},
+                "id": "step-1",
+                "effect": {
+                    "id": "eff-1",
+                    "initiation": "static",
+                    "resolution": "stack",
+                    "persistence": "continuous",
+                    "tags": [],
+                    "effect": {
+                        "kind": "continuous",
+                        "layer": 6,
+                        "modifier": {
+                            "type": "modify_cast_cost",
+                            "amount": amount,
+                            "appliesTo": "spells_you_cast",
+                        },
+                        "duration": {"type": "while_in_zone", "zone": "battlefield"},
+                    },
                 },
             },
         ],
-        "edges": [],
     }
 
 
@@ -40,7 +51,7 @@ def test_prepare_cast_applies_cost_reduction():
         controller_id=0,
         types=["Creature"],
         zone=ZONE_BATTLEFIELD,
-        ability_graphs=[_modifier_graph(-1)],
+        effect_graphs=[_modifier_graph(-1)],
     )
     spell = GameObject(
         id="spell",
@@ -53,6 +64,7 @@ def test_prepare_cast_applies_cost_reduction():
     )
     game_state.add_object(reducer)
     game_state.add_object(spell)
+    AbilityRegistry(game_state)
     turn_manager = TurnManager(game_state)
 
     result = prepare_cast(game_state, turn_manager, player_id=0, object_id=spell.id)
@@ -69,7 +81,7 @@ def test_cast_spell_applies_cost_increase():
         controller_id=0,
         types=["Creature"],
         zone=ZONE_BATTLEFIELD,
-        ability_graphs=[_modifier_graph(1)],
+        effect_graphs=[_modifier_graph(1)],
     )
     spell = GameObject(
         id="spell",
@@ -82,6 +94,7 @@ def test_cast_spell_applies_cost_increase():
     )
     game_state.add_object(increaser)
     game_state.add_object(spell)
+    AbilityRegistry(game_state)
     turn_manager = TurnManager(game_state)
     game_state.get_player(0).mana_pool["G"] = 1
     game_state.get_player(0).mana_pool["C"] = 2

@@ -102,26 +102,6 @@ def parse_ward_keywords(keywords: Iterable[str]) -> List[Dict[str, Any]]:
     return costs
 
 
-def parse_additional_cast_costs(oracle_text: Optional[str]) -> List[Dict[str, Any]]:
-    # Text parsing is deprecated; use structured effect graphs for costs.
-    return []
-
-
-def parse_alternative_cast_costs(oracle_text: Optional[str]) -> List[Dict[str, Any]]:
-    # Text parsing is deprecated; use structured effect graphs for costs.
-    return []
-
-
-def parse_alternative_extra_costs(oracle_text: Optional[str], alt_tag: Optional[str]) -> List[Dict[str, Any]]:
-    # Text parsing is deprecated; use structured effect graphs for costs.
-    return []
-
-
-def parse_optional_cast_costs(oracle_text: Optional[str]) -> List[Dict[str, Any]]:
-    # Text parsing is deprecated; use structured effect graphs for costs.
-    return []
-
-
 def pay_activation_costs(
     game_state: GameState,
     player_id: int,

@@ -30,15 +30,27 @@ def test_triggered_ability_pushes_stack_item():
         controller_id=0,
         types=["Creature"],
         zone=ZONE_BATTLEFIELD,
-        ability_graphs=[
+        effect_graphs=[
             {
-                "rootNodeId": "trigger-1",
-                "abilityType": "triggered",
-                "nodes": [
-                    {"id": "trigger-1", "type": "TRIGGER", "data": {"event": "enters_battlefield"}},
-                    {"id": "effect-1", "type": "EFFECT", "data": {"type": "life", "amount": 1}},
+                "id": "graph-1",
+                "sourceKind": "permanent",
+                "steps": [
+                    {
+                        "id": "step-1",
+                        "effect": {
+                            "id": "eff-1",
+                            "initiation": "triggered",
+                            "resolution": "stack",
+                            "persistence": "instant",
+                            "tags": [],
+                            "trigger": {"event": "enters_battlefield"},
+                            "effect": {
+                                "kind": "one_shot",
+                                "action": {"type": "life", "amount": 1},
+                            },
+                        },
+                    },
                 ],
-                "edges": [{"from": "trigger-1", "to": "effect-1"}],
             }
         ],
     )
@@ -48,7 +60,7 @@ def test_triggered_ability_pushes_stack_item():
     game_state.event_bus.publish(Event(type="enters_battlefield", payload={"object_id": creature.id}))
     # Triggers go to pending_triggers first, then to stack when priority is synced
     assert len(game_state.pending_triggers) == 1
-    assert game_state.pending_triggers[0]["kind"] == "ability_graph"
+    assert game_state.pending_triggers[0]["kind"] == "effect_graph"
 
 
 def test_validate_targets_rejects_hexproof():

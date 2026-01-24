@@ -1,5 +1,4 @@
 from engine import GameObject, GameState, PlayerState, TurnManager, Phase, Step
-from tests.engine.cost_helpers import mana_cost_data
 from engine.rules import cast_spell
 from engine.zones import ZONE_BATTLEFIELD, ZONE_HAND
 
@@ -16,18 +15,24 @@ def _build_state() -> GameState:
 
 def _damage_graph() -> dict:
     return {
-        "rootNodeId": "a1",
-        "abilityType": "activated",
-        "nodes": [
-            {"id": "a1", "type": "ACTIVATED", "data": {"cost": ""}},
+        "id": "graph-1",
+        "sourceKind": "spell",
+        "steps": [
             {
-                "id": "kw1",
-                "type": "KEYWORD",
-                "data": {"keyword": "overload", "costs": [{"type": "mana", "cost": mana_cost_data("{1}{R}")}]},
-            },
-            {"id": "e1", "type": "EFFECT", "data": {"type": "damage", "amount": 2, "target": "target_creature"}},
+                "id": "step-1",
+                "effect": {
+                    "id": "eff-1",
+                    "initiation": "static",
+                    "resolution": "stack",
+                    "persistence": "instant",
+                    "tags": [],
+                    "effect": {
+                        "kind": "one_shot",
+                        "action": {"type": "damage", "amount": 2, "target": "target_creature"},
+                    },
+                },
+            }
         ],
-        "edges": [{"from_": "a1", "to": "e1"}],
     }
 
 
@@ -74,7 +79,7 @@ def test_overload_affects_all_creatures():
         turn_manager,
         player_id=0,
         object_id=spell.id,
-        ability_graph=_damage_graph(),
+        effect_graph=_damage_graph(),
         context={"choices": {"alternative_cost_tag": "overload:{1}{R}"}},
     )
 
