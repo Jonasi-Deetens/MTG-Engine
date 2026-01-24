@@ -37,7 +37,7 @@ export function PlayMat() {
     setSelectedHandId,
     setSelectedCommandId,
     setSelectedBattlefieldId,
-    loadAbilityGraphForObject,
+    loadEffectGraphForObject,
   } = usePlaySelection();
 
   const [viewMode, setViewMode] = useState<ViewMode>('single');
@@ -121,7 +121,7 @@ export function PlayMat() {
                       setSelectedHandId(objectId);
                       setSelectedCommandId(null);
                       setSelectedBattlefieldId(null);
-                      loadAbilityGraphForObject(objectId);
+                      loadEffectGraphForObject(objectId);
                     }
                   : undefined
               }
@@ -131,7 +131,7 @@ export function PlayMat() {
                       setSelectedCommandId(objectId);
                       setSelectedHandId(null);
                       setSelectedBattlefieldId(null);
-                      loadAbilityGraphForObject(objectId);
+                      loadEffectGraphForObject(objectId);
                     }
                   : undefined
               }
@@ -160,7 +160,7 @@ export function PlayMat() {
                       setSelectedBattlefieldId(objectId);
                       setSelectedHandId(null);
                       setSelectedCommandId(null);
-                      loadAbilityGraphForObject(objectId);
+                      loadEffectGraphForObject(objectId);
                     }
                   : undefined
               }

@@ -103,120 +103,23 @@ def parse_ward_keywords(keywords: Iterable[str]) -> List[Dict[str, Any]]:
 
 
 def parse_additional_cast_costs(oracle_text: Optional[str]) -> List[Dict[str, Any]]:
-    if not oracle_text:
-        return []
-    costs: List[Dict[str, Any]] = []
-    for line in oracle_text.split("\n"):
-        lower = line.lower()
-        marker = "additional cost to cast"
-        marker_index = lower.find(marker)
-        if marker_index == -1:
-            continue
-        comma_index = line.find(",", marker_index)
-        if comma_index == -1:
-            continue
-        raw = line[comma_index + 1 :]
-        if "." in raw:
-            raw = raw.split(".", 1)[0]
-        costs.extend(parse_cost_string(raw.strip()))
-    return costs
+    # Text parsing is deprecated; use structured effect graphs for costs.
+    return []
 
 
 def parse_alternative_cast_costs(oracle_text: Optional[str]) -> List[Dict[str, Any]]:
-    if not oracle_text:
-        return []
-    costs: List[Dict[str, Any]] = []
-    for line in oracle_text.split("\n"):
-        lower = line.lower()
-        if "flashback" in lower:
-            cost_text = _extract_mana_sequence_from(line, lower.find("flashback"))
-            if cost_text:
-                costs.append({"tag": f"flashback:{cost_text}", "type": "mana", "cost": cost_text, "zone": "graveyard"})
-        if "escape" in lower:
-            cost_text = _extract_mana_sequence_from(line, lower.find("escape"))
-            if cost_text:
-                costs.append({"tag": f"escape:{cost_text}", "type": "mana", "cost": cost_text, "zone": "graveyard"})
-        if "jump-start" in lower:
-            costs.append({"tag": "jump-start", "type": "normal", "zone": "graveyard"})
-        if "overload" in lower:
-            cost_text = _extract_mana_sequence_from(line, lower.find("overload"))
-            if cost_text:
-                costs.append({"tag": f"overload:{cost_text}", "type": "mana", "cost": cost_text})
-        if "without paying its mana cost" in lower:
-            costs.append({"tag": "free", "type": "free"})
-        phrase = "you may cast this spell for"
-        phrase_index = lower.find(phrase)
-        if phrase_index != -1:
-            cost_text = _extract_mana_sequence_from(line, phrase_index)
-            if cost_text:
-                costs.append({"tag": cost_text, "type": "mana", "cost": cost_text})
-    return costs
+    # Text parsing is deprecated; use structured effect graphs for costs.
+    return []
 
 
 def parse_alternative_extra_costs(oracle_text: Optional[str], alt_tag: Optional[str]) -> List[Dict[str, Any]]:
-    if not oracle_text or not alt_tag:
-        return []
-    if alt_tag == "jump-start":
-        return [{"type": "discard", "amount": 1}]
-    if alt_tag.startswith("escape"):
-        for line in oracle_text.split("\n"):
-            if "escape" not in line.lower():
-                continue
-            if "—" in line:
-                tail = line.split("—", 1)[1]
-            elif "-" in line:
-                tail = line.split("-", 1)[1]
-            else:
-                tail = ""
-            tail = tail.strip()
-            if tail:
-                return parse_cost_string(tail)
+    # Text parsing is deprecated; use structured effect graphs for costs.
     return []
 
 
 def parse_optional_cast_costs(oracle_text: Optional[str]) -> List[Dict[str, Any]]:
-    if not oracle_text:
-        return []
-    costs: List[Dict[str, Any]] = []
-    for line in oracle_text.split("\n"):
-        text = line.split("(", 1)[0].strip().rstrip(".")
-        multikicker = _extract_keyword_tail(text, "multikicker")
-        if multikicker:
-            cost_text = multikicker.strip()
-            costs.append({
-                "tag": f"multikicker:{cost_text}",
-                "kind": "multikicker",
-                "costs": parse_cost_string(cost_text),
-                "repeatable": True,
-            })
-        kicker = _extract_keyword_tail(text, "kicker")
-        if kicker and not multikicker:
-            cost_text = kicker.strip()
-            costs.append({
-                "tag": f"kicker:{cost_text}",
-                "kind": "kicker",
-                "costs": parse_cost_string(cost_text),
-                "repeatable": False,
-            })
-        buyback = _extract_keyword_tail(text, "buyback")
-        if buyback:
-            cost_text = buyback.strip()
-            costs.append({
-                "tag": f"buyback:{cost_text}",
-                "kind": "buyback",
-                "costs": parse_cost_string(cost_text),
-                "repeatable": False,
-            })
-        entwine = _extract_keyword_tail(text, "entwine")
-        if entwine:
-            cost_text = entwine.strip()
-            costs.append({
-                "tag": f"entwine:{cost_text}",
-                "kind": "entwine",
-                "costs": parse_cost_string(cost_text),
-                "repeatable": False,
-            })
-    return costs
+    # Text parsing is deprecated; use structured effect graphs for costs.
+    return []
 
 
 def pay_activation_costs(

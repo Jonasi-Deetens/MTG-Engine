@@ -165,6 +165,7 @@ class PhaseHandler:
         from ..turn import Step
 
         active_player_id = self._get_active_player_id()
+        self._gs.active_effect_registry.expire_by_step(step, active_player_id)
 
         for obj in self._gs.objects.values():
             if not obj.temporary_effects:

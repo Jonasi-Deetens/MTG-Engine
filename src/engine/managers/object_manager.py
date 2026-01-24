@@ -109,7 +109,7 @@ class ObjectManager:
         obj.base_power = source.power
         obj.base_toughness = source.toughness
         obj.base_keywords = set(source.keywords)
-        obj.base_ability_graphs = list(source.ability_graphs)
+        obj.base_effect_graphs = list(source.effect_graphs)
         obj.base_etb_choices = dict(getattr(source, "etb_choices", {}) or {})
         obj.etb_choices = dict(obj.base_etb_choices)
 
@@ -124,7 +124,7 @@ class ObjectManager:
         obj.power = obj.base_power
         obj.toughness = obj.base_toughness
         obj.keywords = set(obj.base_keywords)
-        obj.ability_graphs = list(obj.base_ability_graphs)
+        obj.effect_graphs = list(obj.base_effect_graphs)
 
     def apply_enter_choices(self, obj: "GameObject", choices: Dict[str, Any]) -> None:
         """Apply ETB choices to an object."""
@@ -147,7 +147,7 @@ class ObjectManager:
             obj.base_type_line = obj.type_line
         if obj.base_oracle_text is None:
             obj.base_oracle_text = obj.oracle_text
-        if not obj.base_ability_graphs and obj.ability_graphs:
-            obj.base_ability_graphs = list(obj.ability_graphs)
+        if not obj.base_effect_graphs and obj.effect_graphs:
+            obj.base_effect_graphs = list(obj.effect_graphs)
         if not obj.base_etb_choices and obj.etb_choices:
             obj.base_etb_choices = dict(obj.etb_choices)

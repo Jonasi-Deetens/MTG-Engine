@@ -1,20 +1,22 @@
 import { EngineCardMap, EngineGameStateSnapshot } from '@/lib/engine';
 import { CHOICE_TYPE_OPTIONS } from '@/lib/effectTypes';
+import type { EffectGraph, EffectStep } from '@/lib/unifiedEffect';
 
 export type EnterChoiceConfig = { choiceType: string; choiceValue?: string };
 
-const getNodePayload = (node: any) => {
-  if (node?.type === 'ACTIVATED' && node?.data?.effect) return node.data.effect;
-  return node?.data;
+const getStepAction = (step: EffectStep | undefined) => {
+  if (!step?.effect?.effect) return null;
+  if (step.effect.effect.kind !== 'one_shot') return null;
+  return step.effect.effect.action;
 };
 
-export const buildEnterChoiceConfig = (graph: any): EnterChoiceConfig[] => {
-  if (!graph?.nodes) return [];
+export const buildEnterChoiceConfig = (graph: EffectGraph | null): EnterChoiceConfig[] => {
+  if (!graph?.steps?.length) return [];
   const configs: EnterChoiceConfig[] = [];
-  graph.nodes.forEach((node: any) => {
-    const payload = getNodePayload(node);
-    if (payload?.type === 'enter_choice' && payload?.choice) {
-      configs.push({ choiceType: payload.choice, choiceValue: payload.choiceValue });
+  graph.steps.forEach((step) => {
+    const action = getStepAction(step);
+    if (action?.type === 'enter_choice' && action?.choice) {
+      configs.push({ choiceType: action.choice as string, choiceValue: action.choiceValue as string | undefined });
     }
   });
   const byType = new Map<string, EnterChoiceConfig>();

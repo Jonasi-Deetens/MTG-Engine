@@ -127,7 +127,7 @@ interface CastingProviderProps {
   selectedCommandId: string | null;
   selectedBattlefieldId: string | null;
   selectedGraph: any;
-  abilityGraphs: Record<string, any>;
+  effectGraphs: Record<string, any>;
   buildCastContext: (
     sourceIdOverride?: string | null,
     wardOptions?: {
@@ -141,7 +141,7 @@ interface CastingProviderProps {
   wardPaymentsPayload: Record<string, any>;
   autoPayWard: boolean;
   runEngineAction: (action: string, payload?: Record<string, any>) => Promise<any>;
-  loadAbilityGraphForObject: (objectId: string) => void;
+  loadEffectGraphForObject: (objectId: string) => void;
 }
 
 const CastingContext = createContext<CastingContextValue | null>(null);
@@ -155,12 +155,12 @@ export function CastingProvider({
   selectedCommandId,
   selectedBattlefieldId,
   selectedGraph,
-  abilityGraphs,
+  effectGraphs,
   buildCastContext,
   wardPaymentsPayload,
   autoPayWard,
   runEngineAction,
-  loadAbilityGraphForObject,
+  loadEffectGraphForObject,
 }: CastingProviderProps) {
   const value = useCastingInternal({
     gameState,
@@ -170,12 +170,12 @@ export function CastingProvider({
     selectedCommandId,
     selectedBattlefieldId,
     selectedGraph,
-    abilityGraphs,
+    effectGraphs,
     buildCastContext,
     wardPaymentsPayload,
     autoPayWard,
     runEngineAction,
-    loadAbilityGraphForObject,
+    loadEffectGraphForObject,
   });
   return <CastingContext.Provider value={value}>{children}</CastingContext.Provider>;
 }
@@ -196,7 +196,7 @@ interface UseCastingInternalArgs {
   selectedCommandId: string | null;
   selectedBattlefieldId: string | null;
   selectedGraph: any;
-  abilityGraphs: Record<string, any>;
+  effectGraphs: Record<string, any>;
   buildCastContext: (
     sourceIdOverride?: string | null,
     wardOptions?: any
@@ -204,7 +204,7 @@ interface UseCastingInternalArgs {
   wardPaymentsPayload: Record<string, any>;
   autoPayWard: boolean;
   runEngineAction: (action: string, payload?: Record<string, any>) => Promise<any>;
-  loadAbilityGraphForObject: (objectId: string) => void;
+  loadEffectGraphForObject: (objectId: string) => void;
 }
 
 function useCastingInternal({
@@ -215,12 +215,12 @@ function useCastingInternal({
   selectedCommandId,
   selectedBattlefieldId,
   selectedGraph,
-  abilityGraphs,
+  effectGraphs,
   buildCastContext,
   wardPaymentsPayload,
   autoPayWard,
   runEngineAction,
-  loadAbilityGraphForObject,
+  loadEffectGraphForObject,
 }: UseCastingInternalArgs): CastingContextValue {
   const selectedCastId = selectedCommandId ?? selectedHandId;
   const manaPool = gameState?.players.find((p) => p.id === priorityPlayer)?.mana_pool ?? {};
@@ -405,9 +405,9 @@ function useCastingInternal({
     if (!gameState || !isArcaneSpell) return;
     const player = gameState.players.find((entry) => entry.id === priorityPlayer);
     (player?.hand ?? []).forEach((objectId) => {
-      loadAbilityGraphForObject(objectId);
+      loadEffectGraphForObject(objectId);
     });
-  }, [priorityPlayer, gameState, isArcaneSpell, loadAbilityGraphForObject]);
+  }, [priorityPlayer, gameState, isArcaneSpell, loadEffectGraphForObject]);
 
   const spliceOptions = useMemo(() => {
     if (!isArcaneSpell || !gameState) return [];
@@ -417,7 +417,7 @@ function useCastingInternal({
     handIds.forEach((objectId) => {
       const cardId = cardMap[objectId]?.card_id;
       if (!cardId) return;
-      const graph = abilityGraphs[cardId];
+      const graph = effectGraphs[cardId];
       if (graph) {
         graphMap[objectId] = graph;
       }
@@ -427,7 +427,7 @@ function useCastingInternal({
       costs: entry.costs,
       label: cardMap[entry.cardId]?.name || objectMap.get(entry.cardId)?.name || entry.cardId,
     }));
-  }, [abilityGraphs, cardMap, priorityPlayer, gameState, isArcaneSpell, objectMap]);
+  }, [cardMap, effectGraphs, priorityPlayer, gameState, isArcaneSpell, objectMap]);
 
   useEffect(() => {
     if (!isArcaneSpell) {
@@ -453,11 +453,12 @@ function useCastingInternal({
   // Activation costs hooks
   const selectedBattlefieldObject = gameState?.objects.find((obj) => obj.id === selectedBattlefieldId);
   const activatedCosts = useMemo(() => {
-    if (!selectedBattlefieldObject?.ability_graphs?.length) return [];
-    const graph = selectedBattlefieldObject.ability_graphs[0];
-    const nodes = graph?.nodes ?? [];
-    const activatedNode = nodes.find((node: any) => node?.type === 'ACTIVATED');
-    return Array.isArray(activatedNode?.data?.costs) ? activatedNode?.data?.costs : [];
+    if (!selectedBattlefieldObject?.effect_graphs?.length) return [];
+    const graph = selectedBattlefieldObject.effect_graphs[0];
+    const steps = graph?.steps ?? [];
+    const activatedStep = steps.find((step: any) => step?.effect?.initiation === 'activated');
+    const items = activatedStep?.effect?.cost?.items ?? [];
+    return Array.isArray(items) ? items : [];
   }, [selectedBattlefieldObject]);
 
   const {
@@ -646,7 +647,7 @@ function useCastingInternal({
     const response = await runEngineAction('prepare_cast', {
       player_id: priorityPlayer,
       object_id: selectedCastId,
-      ability_graph: abilityGraphs[cardMap[selectedCastId]?.card_id ?? ''],
+      effect_graph: effectGraphs[cardMap[selectedCastId]?.card_id ?? ''],
       context: buildCastContext(selectedCastId, {
         wardAutoPay: autoPayWard,
         wardPayments: wardPaymentsPayload,
@@ -671,7 +672,7 @@ function useCastingInternal({
   }, [
     selectedCastId,
     priorityPlayer,
-    abilityGraphs,
+    effectGraphs,
     cardMap,
     manaPool,
     buildCastContext,
@@ -690,7 +691,7 @@ function useCastingInternal({
     const response = await runEngineAction('finalize_cast', {
       player_id: priorityPlayer,
       object_id: selectedCastId,
-      ability_graph: abilityGraphs[cardMap[selectedCastId]?.card_id ?? ''],
+      effect_graph: effectGraphs[cardMap[selectedCastId]?.card_id ?? ''],
       context: buildCastContext(selectedCastId, {
         wardAutoPay: autoPayWard,
         wardPayments: wardPaymentsPayload,
@@ -710,7 +711,7 @@ function useCastingInternal({
     selectedCastId,
     preparedCast,
     priorityPlayer,
-    abilityGraphs,
+    effectGraphs,
     cardMap,
     manaPayment,
     isComplexCost,

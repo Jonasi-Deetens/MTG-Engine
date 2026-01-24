@@ -3,26 +3,19 @@
 // frontend/components/builder/ValidationPanel.tsx
 
 import { useEffect, useState } from 'react';
-import { useBuilderStore } from '@/store/builderStore';
-import { abilities } from '@/lib/abilities';
+import { useEffectStore } from '@/store/effectStore';
+import { effects } from '@/lib/effects';
 import { getErrorMessage } from '@/lib/utils/errors';
 import { Button } from '@/components/ui/Button';
 
 export function ValidationPanel() {
   const {
     currentCard,
-    convertToGraph,
+    toEffectGraph,
     setValidation,
-    validationErrors,
-    validationWarnings,
-    isValid,
-    triggeredAbilities,
-    activatedAbilities,
-    spellAbilities,
-    staticAbilities,
-    continuousAbilities,
-    keywords,
-  } = useBuilderStore();
+    validation,
+    steps,
+  } = useEffectStore();
 
   const [validating, setValidating] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -30,7 +23,7 @@ export function ValidationPanel() {
 
   useEffect(() => {
     const validateGraph = async () => {
-      const graph = convertToGraph();
+      const graph = toEffectGraph();
       
       if (!graph) {
         setValidation([], [], false);
@@ -39,12 +32,12 @@ export function ValidationPanel() {
 
       setValidating(true);
       try {
-        const result = await abilities.validate(graph, currentCard?.colors);
-        setValidation(result.errors, result.warnings, result.valid);
+        const result = await effects.validate(graph);
+        setValidation(result.errors, [], result.valid);
       } catch (error) {
         console.error('Validation error:', error);
         setValidation(
-          [{ type: 'error', message: getErrorMessage(error) || 'Failed to validate abilities' }],
+          [getErrorMessage(error) || 'Failed to validate effects'],
           [],
           false
         );
@@ -57,26 +50,16 @@ export function ValidationPanel() {
     const timeoutId = setTimeout(validateGraph, 500);
     return () => clearTimeout(timeoutId);
   }, [
-    triggeredAbilities,
-    activatedAbilities,
-    staticAbilities,
-    continuousAbilities,
-    keywords,
+    steps,
     currentCard,
-    convertToGraph,
+    toEffectGraph,
     setValidation,
   ]);
 
-  const totalAbilities =
-    triggeredAbilities.length +
-    activatedAbilities.length +
-    spellAbilities.length +
-    staticAbilities.length +
-    continuousAbilities.length +
-    keywords.length;
+  const totalAbilities = steps.length;
 
   const handleExport = () => {
-    const graph = convertToGraph();
+    const graph = toEffectGraph();
     if (!graph) {
       alert('No abilities to export');
       return;
@@ -126,7 +109,7 @@ export function ValidationPanel() {
       return;
     }
 
-    const graph = convertToGraph();
+    const graph = toEffectGraph();
     if (!graph) {
       setSaveMessage({ type: 'error', text: 'No abilities to save' });
       return;
@@ -136,10 +119,10 @@ export function ValidationPanel() {
     setSaveMessage(null);
     try {
       console.log('Saving graph for card_id:', cardId);
-      await abilities.saveCardGraph(cardId, graph);
+      await effects.saveCardEffectGraph(cardId, graph);
       setSaveMessage({ 
         type: 'success', 
-        text: 'Ability graph saved successfully to all versions!' 
+        text: 'Effect graph saved successfully to all versions!' 
       });
       // Clear message after 3 seconds
       setTimeout(() => setSaveMessage(null), 3000);
@@ -147,7 +130,7 @@ export function ValidationPanel() {
       console.error('Save error:', error);
       setSaveMessage({ 
         type: 'error', 
-        text: getErrorMessage(error) || 'Failed to save ability graph' 
+        text: getErrorMessage(error) || 'Failed to save effect graph' 
       });
     } finally {
       setSaving(false);
@@ -160,7 +143,7 @@ export function ValidationPanel() {
         <h3 className="text-lg font-semibold text-[color:var(--theme-text-primary)]">Validation</h3>
         <div className="flex items-center gap-2">
           <div className="text-sm text-[color:var(--theme-text-secondary)]">
-            {totalAbilities} ability{totalAbilities !== 1 ? 'ies' : ''} added
+            {totalAbilities} effect{totalAbilities !== 1 ? 's' : ''} added
           </div>
           {totalAbilities > 0 && (
             <Button
@@ -213,39 +196,39 @@ export function ValidationPanel() {
         <div className="space-y-3">
           {totalAbilities === 0 && (
             <div className="p-3 bg-[color:var(--theme-card-hover)] border border-[color:var(--theme-card-border)] rounded text-sm text-[color:var(--theme-text-secondary)]">
-              No abilities added yet. Add abilities using the tabs above.
+              No effects added yet. Add an effect to start building.
             </div>
           )}
           
-          {totalAbilities > 0 && isValid && (
+          {totalAbilities > 0 && validation.isValid && (
             <div className="p-3 bg-[color:var(--theme-status-success)]/20 border border-[color:var(--theme-status-success)]/50 rounded text-sm text-[color:var(--theme-status-success)]">
-              ✓ All abilities are valid
+              ✓ All effects are valid
             </div>
           )}
           
-          {validationErrors.length > 0 && (
+          {validation.errors.length > 0 && (
             <div className="space-y-2">
               <h4 className="text-sm font-medium text-[color:var(--theme-status-error)]">Errors</h4>
-              {validationErrors.map((error, index) => (
+              {validation.errors.map((error, index) => (
                 <div
                   key={index}
                   className="p-3 bg-[color:var(--theme-status-error)]/20 border border-[color:var(--theme-status-error)]/50 rounded text-sm text-[color:var(--theme-status-error)]"
                 >
-                  ✗ {error.message}
+                  ✗ {error}
                 </div>
               ))}
             </div>
           )}
           
-          {validationWarnings.length > 0 && (
+          {validation.warnings.length > 0 && (
             <div className="space-y-2">
               <h4 className="text-sm font-medium text-[color:var(--theme-status-warning)]">Warnings</h4>
-              {validationWarnings.map((warning, index) => (
+              {validation.warnings.map((warning, index) => (
                 <div
                   key={index}
                   className="p-3 bg-[color:var(--theme-status-warning)]/20 border border-[color:var(--theme-status-warning)]/50 rounded text-sm text-[color:var(--theme-status-warning)]"
                 >
-                  ⚠ {warning.message}
+                  ⚠ {warning}
                 </div>
               ))}
             </div>

@@ -5,13 +5,10 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-from .trigger_registry import RegisteredTrigger
-
 if TYPE_CHECKING:
     from ..events import Event
     from ..state import GameState, ResolveContext
     from ..stack import StackItem
-    from .trigger_registry import TriggerRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -26,12 +23,7 @@ class TriggerHandler:
     - Pushing triggered abilities onto the stack
     """
 
-    def __init__(
-        self,
-        registry: "TriggerRegistry",
-        game_state: "GameState",
-    ) -> None:
-        self._registry = registry
+    def __init__(self, game_state: "GameState") -> None:
         self._game_state = game_state
 
     def handle_event(self, event: "Event") -> List["StackItem"]:
@@ -49,63 +41,63 @@ class TriggerHandler:
         self._game_state.log(message)
         print(message, flush=True)
 
-        # Find matching triggers
-        matching = self.match_triggers(event)
+        self._game_state.active_effect_registry.prune_until_condition(event, self._game_state)
 
-        # Order by APNAP
-        ordered = self._order_triggers(matching, event)
+        # Handle unified effect triggers (canonical effect graphs)
+        return self._handle_unified_triggers(event)
+
+    def _handle_unified_triggers(self, event: "Event") -> List["StackItem"]:
+        from ..effects.effect_resolver import EffectGraphResolver
+        from ..stack import StackItem
+        from ..state import ResolveContext
+        from ..conditions import evaluate_conditions
 
         created_items: List[StackItem] = []
-        for entry in ordered:
-            # Build context first (needed for condition check)
-            context = self.build_context(entry, event)
-            
-            # Check if trigger conditions would pass - if not, skip this trigger
-            if not self._check_trigger_conditions(entry, context):
-                message = (
-                    f"[graph] trigger skipped (condition failed) source={entry.source_id} "
-                    f"controller={entry.controller_id} trigger={entry.trigger}"
-                )
-                self._game_state.log(message)
-                print(message, flush=True)
+        registry = self._game_state.active_effect_registry
+        active_effects = registry.get_triggered_for_event(event.type)
+
+        for active in active_effects:
+            effect_data = active.effect_data
+            trigger = effect_data.trigger
+            if not trigger:
                 continue
-            
-            # Extract ability_id from the graph (new refactored system)
-            ability_id = entry.graph.get("abilityId") or f"triggered-{entry.index}"
-            
-            message = (
-                f"[graph] trigger match source={entry.source_id} "
-                f"controller={entry.controller_id} trigger={entry.trigger} "
-                f"ability_id={ability_id}"
-            )
-            self._game_state.log(message)
-            print(message, flush=True)
 
-            # Create pending trigger entry (dict format expected by turn_manager)
+            if not self._matches_unified_trigger(active, event):
+                continue
+
+            context = self._build_unified_context(active, event)
+            if effect_data.conditions:
+                conditions = [_to_dict(c) for c in effect_data.conditions]
+                if not evaluate_conditions(self._game_state, conditions, context):
+                    continue
+
+            graph = active.effect_graph
+            if not graph:
+                continue
+
+            if effect_data.resolution.value == "immediate":
+                resolver = EffectGraphResolver(self._game_state)
+                resolver.resolve(graph, context, start_step_id=active.step_id)
+                continue
+
             pending_entry = {
-                "kind": "ability_graph",
+                "kind": "effect_graph",
                 "payload": {
-                    "graph": entry.graph,
+                    "graph": graph.model_dump(by_alias=True),
+                    "start_step_id": active.step_id,
                     "context": context.__dict__,
-                    "source_object_id": entry.source_id,
-                    "ability_id": ability_id,  # Include ability ID for tracking
+                    "source_object_id": active.source_id,
+                    "effect_id": active.effect_id,
                 },
-                "controller_id": entry.controller_id,
+                "controller_id": active.controller_id,
             }
-            # Add to pending_triggers instead of directly pushing to stack
             self._game_state.pending_triggers.append(pending_entry)
-            
-            # Also create StackItem for return value
-            item = StackItem(
-                kind="ability_graph",
-                payload=pending_entry["payload"],
-                controller_id=entry.controller_id,
-            )
-            created_items.append(item)
 
-            message = f"[graph] queued trigger source={entry.source_id} trigger={entry.trigger}"
-            self._game_state.log(message)
-            print(message, flush=True)
+            created_items.append(StackItem(
+                kind="effect_graph",
+                payload=pending_entry["payload"],
+                controller_id=active.controller_id,
+            ))
 
         return created_items
 
@@ -166,6 +158,158 @@ class TriggerHandler:
         )
 
         return context
+
+    def _build_unified_context(self, active, event: "Event") -> "ResolveContext":
+        from ..state import ResolveContext
+
+        event_obj = None
+        obj_id = event.payload.get("object_id")
+        if obj_id:
+            event_obj = self._game_state.objects.get(obj_id)
+
+        triggering_aura_id = None
+        card_types = event.payload.get("cardTypes") or []
+        is_aura = "Aura" in card_types
+        if not is_aura and event_obj:
+            is_aura = "Aura" in (event_obj.types or [])
+            if not is_aura and event_obj.type_line:
+                is_aura = "aura" in event_obj.type_line.lower()
+
+        if is_aura:
+            triggering_aura_id = event.payload.get("object_id")
+
+        return ResolveContext(
+            source_id=active.source_id,
+            controller_id=active.controller_id,
+            triggering_source_id=event.payload.get("object_id"),
+            triggering_aura_id=triggering_aura_id,
+            targets=dict(event.payload),
+        )
+
+    def _matches_unified_trigger(self, active, event: "Event") -> bool:
+        trigger = active.effect_data.trigger
+        if not trigger:
+            return False
+
+        if trigger.event != event.type:
+            return False
+
+        if trigger.event in ("card_enters", "enters_battlefield"):
+            return self._matches_unified_card_enters(active, event)
+
+        if not self._matches_unified_scope(active, event):
+            return False
+
+        if not self._matches_unified_type(active, event):
+            return False
+
+        return True
+
+    def _matches_unified_scope(self, active, event: "Event") -> bool:
+        scope = getattr(active.effect_data.trigger, "scope", None) or "self"
+        if scope == "any":
+            return True
+        if scope == "self":
+            if "object_id" in event.payload and event.payload["object_id"] != active.source_id:
+                return False
+            if "source_id" in event.payload and event.payload["source_id"] != active.source_id:
+                return False
+            return True
+
+        controller_id = self._resolve_event_controller_id(event)
+        if controller_id is None:
+            return False
+        if scope in ("you", "you_control"):
+            return controller_id == active.controller_id
+        if scope in ("opponent", "opponent_control"):
+            return controller_id != active.controller_id
+        return False
+
+    def _matches_unified_card_enters(self, active, event: "Event") -> bool:
+        trigger = active.effect_data.trigger
+        if not trigger:
+            return False
+        scope = getattr(trigger, "scope", None) or "self"
+
+        if scope == "self" and event.payload.get("object_id") != active.source_id:
+            return False
+
+        if scope in ("you", "you_control", "opponent", "opponent_control"):
+            controller_id = event.payload.get("controller_id")
+            if controller_id is None:
+                controller_id = self._resolve_event_controller_id(event)
+            if controller_id is None:
+                return False
+            if scope in ("you", "you_control") and controller_id != active.controller_id:
+                return False
+            if scope in ("opponent", "opponent_control") and controller_id == active.controller_id:
+                return False
+
+        enters_where = getattr(trigger, "entersWhere", None)
+        enters_from = getattr(trigger, "entersFrom", None)
+        card_type = getattr(trigger, "cardType", None)
+
+        payload_where = event.payload.get("entersWhere")
+        payload_from = event.payload.get("entersFrom")
+        payload_types = event.payload.get("cardTypes", [])
+
+        if enters_where and payload_where and enters_where != payload_where:
+            return False
+        if enters_from and payload_from and enters_from != payload_from:
+            return False
+
+        if not card_type:
+            return True
+
+        normalized_types = {str(t).lower() for t in payload_types if isinstance(t, str)}
+        obj_id = event.payload.get("object_id")
+        obj = None
+        if obj_id:
+            obj = self._game_state.objects.get(obj_id)
+            if obj:
+                for t in (obj.types or []):
+                    normalized_types.add(str(t).lower())
+                if obj.type_line:
+                    for part in obj.type_line.replace("—", "-").split("-"):
+                        for word in part.strip().split():
+                            normalized_types.add(word.lower())
+
+        card_type = str(card_type).lower()
+
+        if card_type == "permanent":
+            return any(
+                t in {"creature", "artifact", "enchantment", "planeswalker", "land", "battle"}
+                for t in normalized_types
+            )
+
+        return card_type in normalized_types
+
+    def _matches_unified_type(self, active, event: "Event") -> bool:
+        trigger = active.effect_data.trigger
+        if not trigger:
+            return False
+        card_type = getattr(trigger, "cardType", None)
+        if not card_type:
+            return True
+
+        obj = self._resolve_event_object(event)
+        if not obj:
+            return False
+
+        normalized_types = {str(t).lower() for t in obj.types or []}
+        if obj.type_line:
+            for part in obj.type_line.replace("—", "-").split("-"):
+                for word in part.strip().split():
+                    normalized_types.add(word.lower())
+
+        card_type = str(card_type).lower()
+        if card_type == "permanent":
+            return any(
+                t in {"creature", "artifact", "enchantment", "planeswalker", "land", "battle"}
+                for t in normalized_types
+            )
+
+        return card_type in normalized_types
 
     def _order_triggers(
         self,
@@ -478,3 +622,11 @@ class TriggerHandler:
                         return False
         
         return True
+
+
+def _to_dict(value: Any) -> Dict[str, Any]:
+    if hasattr(value, "model_dump"):
+        return value.model_dump(by_alias=True)
+    if isinstance(value, dict):
+        return dict(value)
+    return {}

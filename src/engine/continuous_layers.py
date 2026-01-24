@@ -34,8 +34,8 @@ def reset_characteristics(obj: GameObject) -> None:
         obj.types = list(obj.base_types)
     if getattr(obj, "base_colors", None):
         obj.colors = list(obj.base_colors)
-    if getattr(obj, "base_ability_graphs", None):
-        obj.ability_graphs = list(obj.base_ability_graphs)
+    if getattr(obj, "base_effect_graphs", None):
+        obj.effect_graphs = list(obj.base_effect_graphs)
     if getattr(obj, "base_etb_choices", None) is not None:
         obj.etb_choices = dict(obj.base_etb_choices)
 
@@ -89,12 +89,12 @@ def apply_layer_1_copy(game_state: GameState, obj: GameObject) -> None:
     obj.power = source.power
     obj.toughness = source.toughness
     obj.keywords = set(source.keywords)
-    obj.ability_graphs = list(source.ability_graphs)
+    obj.effect_graphs = list(source.effect_graphs)
     obj.etb_choices = dict(getattr(source, "etb_choices", {}) or {})
 
 
 def copy_signature(obj: GameObject) -> Tuple:
-    graphs = tuple(str(graph) for graph in (obj.ability_graphs or []))
+    graphs = tuple(str(graph) for graph in (obj.effect_graphs or []))
     choices = tuple(str(item) for item in sorted((obj.etb_choices or {}).items()))
     return (
         obj.name,

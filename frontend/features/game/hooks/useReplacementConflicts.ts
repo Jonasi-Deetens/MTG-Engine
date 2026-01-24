@@ -33,14 +33,12 @@ const lethalDamageRequired = (defender: any, deathtouch: boolean) => {
   return Math.max(0, toughness - damage);
 };
 
-const getNodePayload = (node: any) => {
-  if (node?.type === 'ACTIVATED' && node?.data?.effect) return node.data.effect;
-  return node?.data;
-};
-
 const graphHasDamageEffect = (graph: any) => {
-  if (!graph?.nodes) return false;
-  return graph.nodes.some((node: any) => getNodePayload(node)?.type === 'damage');
+  if (!graph?.steps) return false;
+  return graph.steps.some((step: any) => {
+    const effect = step?.effect?.effect;
+    return effect?.kind === 'one_shot' && effect?.action?.type === 'damage';
+  });
 };
 
 export const useReplacementConflicts = (gameState: EngineGameStateSnapshot | null) => {
@@ -256,7 +254,7 @@ export const useReplacementConflicts = (gameState: EngineGameStateSnapshot | nul
 
     const stackDamageConflicts: ReplacementConflictEntry[] = [];
     (gameState.stack ?? []).forEach((item: any) => {
-      if (item.kind !== 'ability_graph') return;
+      if (item.kind !== 'effect_graph') return;
       const graph = item.payload?.graph;
       if (!graphHasDamageEffect(graph)) return;
       const context = item.payload?.context || {};

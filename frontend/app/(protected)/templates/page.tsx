@@ -4,9 +4,6 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { abilities } from '@/lib/abilities';
-import { Template } from '@/lib/abilities';
-import { useBuilderStore } from '@/store/builderStore';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -14,44 +11,20 @@ import { Layers } from 'lucide-react';
 
 export default function TemplatesPage() {
   const router = useRouter();
-  const { loadFromGraph, clearAll, setCurrentCard } = useBuilderStore();
-  const [templates, setTemplates] = useState<Template[]>([]);
+  const [templates, setTemplates] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [usingTemplate, setUsingTemplate] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadTemplates = async () => {
-      setLoading(true);
-      setError('');
-      try {
-        const response = await abilities.getTemplates();
-        setTemplates(response.templates || []);
-      } catch (err: any) {
-        setError(err?.data?.detail || err?.message || 'Failed to load templates');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadTemplates();
+    setLoading(false);
+    setTemplates([]);
   }, []);
 
-  const handleUseTemplate = async (template: Template) => {
+  const handleUseTemplate = async (_template: any) => {
     setUsingTemplate(template.id);
-    try {
-      // Clear current builder state
-      clearAll();
-      // Load the template graph
-      loadFromGraph(template.graph);
-      // Navigate to builder
-      router.push('/builder');
-    } catch (err) {
-      console.error('Failed to load template:', err);
-      setError('Failed to load template');
-    } finally {
-      setUsingTemplate(null);
-    }
+    setError('Legacy templates are not supported in the unified effect builder yet.');
+    setUsingTemplate(null);
   };
 
   if (loading) {
@@ -103,11 +76,11 @@ export default function TemplatesPage() {
                 <div className="pt-4 border-t border-[color:var(--theme-border-default)]/50">
                   <Button
                     onClick={() => handleUseTemplate(template)}
-                    disabled={usingTemplate === template.id}
+                    disabled
                     variant="primary"
                     className="w-full"
                   >
-                    {usingTemplate === template.id ? 'Loading...' : 'Use Template'}
+                    Legacy Template (disabled)
                   </Button>
                 </div>
               </div>

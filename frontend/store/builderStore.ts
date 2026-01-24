@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import type { CostEntry } from '@/lib/activationCosts';
 import { parseManaCostSymbols } from '@/lib/wardCosts';
 
+// Legacy builder store kept for non-builder legacy flows.
 export interface CardData {
   card_id: string;
   oracle_id?: string;
@@ -99,8 +100,6 @@ export interface KeywordAbility {
   extraCosts?: CostEntry[];
 }
 
-// Re-export KeywordInfo from abilities for convenience
-export type { KeywordInfo } from '@/lib/abilities';
 
 // Per-effect condition for new refactored system
 export interface EffectCondition {

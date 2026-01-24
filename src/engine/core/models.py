@@ -50,8 +50,8 @@ class GameObject:
     transformed: bool = False
     regenerate_shield: bool = False
     temporary_effects: List[Dict[str, Any]] = field(default_factory=list)
-    ability_graphs: List[Dict[str, Any]] = field(default_factory=list)
-    base_ability_graphs: List[Dict[str, Any]] = field(default_factory=list)
+    effect_graphs: List[Dict[str, Any]] = field(default_factory=list)
+    base_effect_graphs: List[Dict[str, Any]] = field(default_factory=list)
     activation_limits: Dict[str, int] = field(default_factory=dict)
     etb_choices: Dict[str, Any] = field(default_factory=dict)
     base_etb_choices: Dict[str, Any] = field(default_factory=dict)

@@ -10,7 +10,8 @@ from scryfall.client import ScryfallClient
 from scryfall.mappers.axis1_mapper import Axis1Mapper
 from scryfall.services.deck_import_service import DeckImportService
 from .schemas.request_schemas import DeckImportRequest
-from .routes import auth, cards, abilities, collections, decks
+from .routes import auth, cards, collections, decks
+from .routes.effects import router as effects_router
 from .routes.engine import router as engine_router
 
 # Create database tables on startup
@@ -46,6 +47,20 @@ try:
                     END IF;
                 END $$;
             """))
+            # Create card_effect_graphs table if it doesn't exist
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS card_effect_graphs (
+                    id SERIAL PRIMARY KEY,
+                    card_id VARCHAR NOT NULL,
+                    user_id INTEGER NOT NULL,
+                    effect_graph_json JSON NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                );
+            """))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_card_effect_graphs_card_id ON card_effect_graphs(card_id);"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_card_effect_graphs_user_id ON card_effect_graphs(user_id);"))
             # Create deck_custom_lists table if it doesn't exist
             conn.execute(text("""
                 CREATE TABLE IF NOT EXISTS deck_custom_lists (
@@ -103,9 +118,9 @@ app.add_middleware(
 # Include routers
 app.include_router(auth.router)
 app.include_router(cards.router)
-app.include_router(abilities.router)
 app.include_router(collections.router)
 app.include_router(decks.router)
+app.include_router(effects_router)
 app.include_router(engine_router)
 
 

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { EngineGameStateSnapshot, EngineCardMap } from '@/lib/engine';
 
 // Feature hooks
-import { useAbilityGraphs } from '@/features/game/hooks/useAbilityGraphs';
+import { useEffectGraphs } from '@/features/game/hooks/useEffectGraphs';
 import { useTargeting } from '@/features/game/hooks/useTargeting';
 import { useEffectTargeting } from '@/features/game/hooks/useEffectTargeting';
 import { useCopyEffectTargeting } from '@/features/game/hooks/useCopyEffectTargeting';
@@ -84,7 +84,7 @@ export function usePlayState() {
   });
 
   // Ability graphs
-  const { abilityGraphs, loadAbilityGraphForObject } = useAbilityGraphs({
+  const { effectGraphs, loadEffectGraphForObject } = useEffectGraphs({
     gameState,
     cardMap,
     setGameState,
@@ -185,10 +185,10 @@ export function usePlayState() {
   // Selected objects
   const selectedBattlefieldObject = gameState?.objects.find((obj) => obj.id === selectedBattlefieldId);
   const selectedHandObject = gameState?.objects.find((obj) => obj.id === selectedHandId);
-  const hasActivatedAbility = selectedBattlefieldObject?.ability_graphs && selectedBattlefieldObject.ability_graphs.length > 0;
+  const hasActivatedAbility = selectedBattlefieldObject?.effect_graphs && selectedBattlefieldObject.effect_graphs.length > 0;
 
   // Graphs
-  const selectedGraph = selectedHandId ? abilityGraphs[cardMap[selectedHandId]?.card_id ?? ''] : undefined;
+  const selectedGraph = selectedHandId ? effectGraphs[cardMap[selectedHandId]?.card_id ?? ''] : undefined;
   const selectedStackGraph = selectedStackIndex !== null 
     ? (gameState?.stack?.[selectedStackIndex]?.payload as any)?.graph 
     : undefined;
@@ -228,8 +228,8 @@ export function usePlayState() {
     optionalCostOptions,
     objectMap,
     cardMap,
-    abilityGraphs,
-    loadAbilityGraphForObject,
+    effectGraphs,
+    loadEffectGraphForObject,
   });
 
   // Modal choices
@@ -529,11 +529,12 @@ export function usePlayState() {
 
   // Activation costs
   const activatedCosts = useMemo(() => {
-    if (!selectedBattlefieldObject?.ability_graphs?.length) return [];
-    const graph = selectedBattlefieldObject.ability_graphs[0];
-    const nodes = graph?.nodes ?? [];
-    const activatedNode = nodes.find((node: any) => node?.type === 'ACTIVATED');
-    return Array.isArray(activatedNode?.data?.costs) ? activatedNode?.data?.costs : [];
+    if (!selectedBattlefieldObject?.effect_graphs?.length) return [];
+    const graph = selectedBattlefieldObject.effect_graphs[0];
+    const steps = graph?.steps ?? [];
+    const activatedStep = steps.find((step: any) => step?.effect?.initiation === 'activated');
+    const items = activatedStep?.effect?.cost?.items ?? [];
+    return Array.isArray(items) ? items : [];
   }, [selectedBattlefieldObject]);
 
   const {
@@ -736,7 +737,7 @@ export function usePlayState() {
     selectedHandId,
     selectedCommandId,
     currentPriority,
-    abilityGraphs,
+    effectGraphs,
     cardMap,
     manaPool,
     buildCastContext,
@@ -775,9 +776,9 @@ export function usePlayState() {
     canStart,
     handleSelectDeck,
     startGame,
-    // Ability graphs
-    abilityGraphs,
-    loadAbilityGraphForObject,
+    // Effect graphs
+    effectGraphs,
+    loadEffectGraphForObject,
     selectedGraph,
     // Combat
     selectedAttackers,

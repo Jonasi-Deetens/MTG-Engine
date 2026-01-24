@@ -1,3 +1,5 @@
+import type { EffectGraph } from '@/lib/unifiedEffect';
+
 export type ModalChoiceOption = {
   id: string;
   label: string;
@@ -7,15 +9,6 @@ export type ModalChoiceConfig = {
   min: number;
   max: number | null;
   modes: ModalChoiceOption[];
-};
-
-const extractRootModal = (graph: any): ModalChoiceConfig | null => {
-  if (!graph || !Array.isArray(graph.nodes)) return null;
-  const rootId = graph.rootNodeId;
-  const rootNode = graph.nodes.find((node: any) => node?.id === rootId);
-  const modal = rootNode?.data?.modal;
-  if (!modal || typeof modal !== 'object') return null;
-  return normalizeModalConfig(modal);
 };
 
 const normalizeModalConfig = (modal: any): ModalChoiceConfig | null => {
@@ -36,36 +29,30 @@ const normalizeModalConfig = (modal: any): ModalChoiceConfig | null => {
   return { min, max, modes: normalizedModes };
 };
 
-const inferModalFromEffects = (graph: any): ModalChoiceConfig | null => {
-  if (!graph || !Array.isArray(graph.nodes)) return null;
+const inferModalFromSteps = (graph: EffectGraph | null): ModalChoiceConfig | null => {
+  if (!graph?.steps?.length) return null;
   const seen = new Set<string>();
   const modes: ModalChoiceOption[] = [];
-  graph.nodes.forEach((node: any) => {
-    if (node?.type !== 'EFFECT') return;
-    const modeId = node?.data?.modeId;
-    if (typeof modeId !== 'string' || !modeId.trim()) return;
-    const id = modeId.trim();
-    if (seen.has(id)) return;
-    seen.add(id);
-    const label =
-      typeof node?.data?.modeLabel === 'string' && node.data.modeLabel.trim()
-        ? node.data.modeLabel.trim()
-        : id;
-    modes.push({ id, label });
+  graph.steps.forEach((step) => {
+    const entries = step.nextByMode ? Object.keys(step.nextByMode) : [];
+    entries.forEach((modeId) => {
+      const id = modeId.trim();
+      if (!id || seen.has(id)) return;
+      seen.add(id);
+      modes.push({ id, label: id });
+    });
   });
   if (modes.length === 0) return null;
   return { min: 1, max: 1, modes };
 };
 
-export const deriveModalConfig = (graph: any): ModalChoiceConfig | null => {
+export const deriveModalConfig = (graph: EffectGraph | null): ModalChoiceConfig | null => {
   if (!graph) return null;
   if (graph.modal && typeof graph.modal === 'object') {
     const normalized = normalizeModalConfig(graph.modal);
     if (normalized) return normalized;
   }
-  const root = extractRootModal(graph);
-  if (root) return root;
-  return inferModalFromEffects(graph);
+  return inferModalFromSteps(graph);
 };
 
 export const isEffectActiveForModes = (

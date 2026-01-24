@@ -24,6 +24,16 @@ export function StackView({ stack, objects, cardMap, targetChecks, selectedIndex
         return card?.name || obj?.name || objectId;
       }
     }
+    if (item.kind === 'effect_graph') {
+      const objectId =
+        (item.payload?.source_object_id as string | undefined) ||
+        (item.payload?.copy_of as string | undefined);
+      if (objectId) {
+        const card = cardMap[objectId];
+        const obj = objectMap.get(objectId);
+        return card?.name || obj?.name || objectId;
+      }
+    }
     return item.kind;
   };
 

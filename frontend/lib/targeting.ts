@@ -1,4 +1,5 @@
 import { isEffectActiveForModes, ModalChoiceConfig } from '@/lib/modalChoices';
+import type { EffectGraph } from '@/lib/unifiedEffect';
 
 export type TargetHints = {
   allowPlayers: boolean;
@@ -198,24 +199,24 @@ export const deriveTargetSpecs = (effect: any): EffectTargetSpec[] => {
   return specs;
 };
 
-const filterEffectNodes = (
-  graph: any,
+const filterEffectSteps = (
+  graph: EffectGraph | null,
   modalConfig?: ModalChoiceConfig | null,
   selectedModes: string[] = []
 ) => {
-  if (!graph || !Array.isArray(graph.nodes)) return [];
-  return graph.nodes.filter((node: any) => {
-    if (node?.type !== 'EFFECT') return false;
-    return isEffectActiveForModes(node?.data ?? {}, modalConfig ?? null, selectedModes);
+  if (!graph?.steps?.length) return [];
+  return graph.steps.filter((step) => {
+    if (!step?.effect) return false;
+    return isEffectActiveForModes(step.effect, modalConfig ?? null, selectedModes);
   });
 };
 
 export const deriveTargetHints = (
-  graph?: any,
+  graph?: EffectGraph | null,
   modalConfig?: ModalChoiceConfig | null,
   selectedModes: string[] = []
 ): TargetHints => {
-  if (!graph || !Array.isArray(graph.nodes)) {
+  if (!graph?.steps?.length) {
     return {
       allowPlayers: true,
       allowObjects: true,
@@ -236,14 +237,17 @@ export const deriveTargetHints = (
     playerFilter: 'any',
     objectFilter: 'any',
   };
-  const effectNodes = filterEffectNodes(graph, modalConfig, selectedModes);
+  const effectSteps = filterEffectSteps(graph, modalConfig, selectedModes);
 
-  effectNodes.forEach((node: any) => {
-    const target = normalizeTarget(node?.data?.target || node?.data?.targetType || '');
+  effectSteps.forEach((step: any) => {
+    const effectBody = step?.effect?.effect;
+    if (effectBody?.kind !== 'one_shot') return;
+    const action = effectBody?.action ?? {};
+    const target = normalizeTarget(action?.target || action?.targetType || '');
     const limit =
-      parseLimit(node?.data?.maxTargets) ??
-      parseLimit(node?.data?.max_targets) ??
-      parseLimit(node?.data?.target_count);
+      parseLimit(action?.maxTargets) ??
+      parseLimit(action?.max_targets) ??
+      parseLimit(action?.target_count);
     if (!target) return;
     if (isGroupSelector(target)) {
       return;

@@ -18,8 +18,8 @@ interface UseOptionalCostsStateProps {
   optionalCostOptions: OptionalCostOption[];
   objectMap: Map<string, any>;
   cardMap: EngineCardMap;
-  abilityGraphs: Record<string, any>;
-  loadAbilityGraphForObject: (objectId: string) => void;
+  effectGraphs: Record<string, any>;
+  loadEffectGraphForObject: (objectId: string) => void;
 }
 
 interface UseOptionalCostsStateResult {
@@ -58,8 +58,8 @@ export function useOptionalCostsState({
   optionalCostOptions,
   objectMap,
   cardMap,
-  abilityGraphs,
-  loadAbilityGraphForObject,
+  effectGraphs,
+  loadEffectGraphForObject,
 }: UseOptionalCostsStateProps): UseOptionalCostsStateResult {
   const [optionalCostSelections, setOptionalCostSelections] = useState<Record<string, number>>({});
   const [conspireTaps, setConspireTaps] = useState<string[]>([]);
@@ -192,9 +192,9 @@ export function useOptionalCostsState({
     if (!gameState || !isArcaneSpell) return;
     const player = gameState.players.find((entry) => entry.id === currentPriority);
     (player?.hand ?? []).forEach((objectId) => {
-      loadAbilityGraphForObject(objectId);
+      loadEffectGraphForObject(objectId);
     });
-  }, [currentPriority, gameState, isArcaneSpell, loadAbilityGraphForObject]);
+  }, [currentPriority, gameState, isArcaneSpell, loadEffectGraphForObject]);
 
   const spliceOptions = useMemo(() => {
     if (!isArcaneSpell || !gameState) return [];
@@ -205,7 +205,7 @@ export function useOptionalCostsState({
     handIds.forEach((objectId) => {
       const cardId = cardMap[objectId]?.card_id;
       if (!cardId) return;
-      const graph = abilityGraphs[cardId];
+      const graph = effectGraphs[cardId];
       if (graph) {
         graphMap[objectId] = graph;
       }
@@ -216,7 +216,7 @@ export function useOptionalCostsState({
       costs: entry.costs,
       label: cardMap[entry.cardId]?.name || objectMap.get(entry.cardId)?.name || entry.cardId,
     }));
-  }, [abilityGraphs, cardMap, currentPriority, gameState, isArcaneSpell, objectMap]);
+  }, [cardMap, currentPriority, effectGraphs, gameState, isArcaneSpell, objectMap]);
 
   useEffect(() => {
     if (!isArcaneSpell) {

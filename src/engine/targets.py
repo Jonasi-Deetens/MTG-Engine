@@ -556,7 +556,7 @@ def _collect_legal_targets(
 
 
 def _ward_cost_entries(obj: GameObject) -> List[Dict[str, Any]]:
-    return extract_ward_costs_from_graphs(obj.ability_graphs or [])
+    return extract_ward_costs_from_graphs(obj.effect_graphs or [])
 
 
 def enforce_ward_payment(game_state: GameState, context: ResolveContext) -> None:

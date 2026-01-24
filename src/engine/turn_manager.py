@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import List, Optional
 import os
 
-from .ability_graph import AbilityGraphRuntimeAdapter
 from .continuous import apply_continuous_effects
 from .sba import apply_state_based_actions
 from .events import Event
@@ -94,7 +93,7 @@ class TurnManager:
             return False
         for entry in list(self.gs.pending_triggers):
             self.gs.stack.push(StackItem(
-                kind=entry.get("kind", "ability_graph"),
+                kind=entry.get("kind", "effect_graph"),
                 payload=entry.get("payload", {}),
                 controller_id=entry.get("controller_id"),
             ))

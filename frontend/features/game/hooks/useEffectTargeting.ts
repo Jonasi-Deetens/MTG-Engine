@@ -65,22 +65,25 @@ export const useEffectTargeting = ({
   const [targetStatus, setTargetStatus] = useState<
     Record<string, { objects: Record<string, boolean | null>; players: Record<number, boolean | null> }>
   >({});
-  const effectNodes = useMemo(() => {
-    const nodes = selectedGraph?.nodes ?? [];
-    return nodes.filter((node: any) => {
-      if (node?.type !== 'EFFECT') return false;
-      return isEffectActiveForModes(node?.data ?? {}, modalConfig ?? null, selectedModes);
+  const effectSteps = useMemo(() => {
+    const steps = selectedGraph?.steps ?? [];
+    return steps.filter((step: any) => {
+      if (!step?.effect) return false;
+      return isEffectActiveForModes(step.effect, modalConfig ?? null, selectedModes);
     });
   }, [modalConfig, selectedGraph, selectedModes]);
   const targetSpecs = useMemo(() => {
     const specs: Array<{ nodeId: string; effect: any; spec: EffectTargetSpec }> = [];
-    effectNodes.forEach((node: any) => {
-      deriveTargetSpecs(node?.data ?? {}).forEach((spec) => {
-        specs.push({ nodeId: node.id, effect: node.data, spec });
+    effectSteps.forEach((step: any) => {
+      const effectBody = step?.effect?.effect;
+      if (effectBody?.kind !== 'one_shot') return;
+      const action = effectBody?.action ?? {};
+      deriveTargetSpecs(action).forEach((spec) => {
+        specs.push({ nodeId: step.id, effect: action, spec });
       });
     });
     return specs;
-  }, [effectNodes]);
+  }, [effectSteps]);
 
   const stackSpellObjects = useMemo(() => {
     if (!gameState) return [];

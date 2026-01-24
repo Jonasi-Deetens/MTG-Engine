@@ -26,12 +26,17 @@ interface TargetingSectionProps {
   selectedTargetPlayerIds: number[];
   objectTargetStatus: Record<string, boolean | null>;
   playerTargetStatus: Record<number, boolean | null>;
+  maxObjectTargets?: number | null;
+  maxPlayerTargets?: number | null;
+  objectLabel?: string;
+  playerLabel?: string;
   
   // Copy targets
   copyTargetsEnabled: boolean;
   copyTargetsCount: number;
   copyTargetSelections: Array<{ objectIds: string[]; playerIds: number[] }>;
   copyTargetErrors: string[];
+  copyEffectTargetGroups?: Array<EffectTargetGroup & { copyIndex: number }>;
   
   // Target errors
   targetSelectionErrors: string[];
@@ -55,10 +60,15 @@ export function TargetingSection({
   selectedTargetPlayerIds,
   objectTargetStatus,
   playerTargetStatus,
+  maxObjectTargets,
+  maxPlayerTargets,
+  objectLabel = 'Objects',
+  playerLabel = 'Players',
   copyTargetsEnabled,
   copyTargetsCount,
   copyTargetSelections,
   copyTargetErrors,
+  copyEffectTargetGroups,
   targetSelectionErrors,
   globalTargetErrors,
   cardMap,
@@ -78,35 +88,27 @@ export function TargetingSection({
       {hasEffectTargets && effectTargetGroups.map((group) => (
         <div key={group.id} className="space-y-2">
           <label className="text-sm font-medium">{group.label}</label>
-          
-          {group.objects.length > 0 && (
-            <TargetSelector
-              label={group.objectLabel ?? 'Objects'}
-              options={group.objects.map((obj) => ({
-                value: obj.id,
-                label: cardMap[obj.id]?.name || obj.name || obj.id,
-                status: group.objectTargetStatus?.[obj.id] ?? null,
-              }))}
-              selectedIds={group.selectedObjectIds}
-              onChange={(ids) => group.onChangeObjects(ids)}
-              maxSelections={group.maxObjectTargets ?? undefined}
-            />
+          <TargetSelector
+            objects={group.objects}
+            players={group.players}
+            cardMap={cardMap}
+            selectedObjectIds={group.selectedObjectIds}
+            selectedPlayerIds={group.selectedPlayerIds}
+            objectLabel={group.objectLabel ?? objectLabel}
+            playerLabel={group.playerLabel ?? playerLabel}
+            maxObjectTargets={group.maxObjectTargets ?? undefined}
+            maxPlayerTargets={group.maxPlayerTargets ?? undefined}
+            objectTargetStatus={group.objectTargetStatus}
+            playerTargetStatus={group.playerTargetStatus}
+            onChangeObjects={group.onChangeObjects}
+            onChangePlayers={group.onChangePlayers}
+            onClear={group.onClear}
+          />
+          {typeof group.minTargets === 'number' && group.minTargets > 0 && (
+            <div className="text-xs text-[color:var(--theme-text-secondary)]">
+              Minimum targets: {group.minTargets}
+            </div>
           )}
-          
-          {group.players.length > 0 && (
-            <TargetSelector
-              label={group.playerLabel ?? 'Players'}
-              options={group.players.map((player) => ({
-                value: player.id.toString(),
-                label: `Player ${player.id + 1}`,
-                status: group.playerTargetStatus?.[player.id] ?? null,
-              }))}
-              selectedIds={group.selectedPlayerIds.map(String)}
-              onChange={(ids) => group.onChangePlayers(ids.map(Number))}
-              maxSelections={group.maxPlayerTargets ?? undefined}
-            />
-          )}
-
           {group.errors && group.errors.length > 0 && (
             <ul className="text-sm text-destructive">
               {group.errors.map((error, index) => (
@@ -119,37 +121,74 @@ export function TargetingSection({
 
       {/* Global targeting (for simple spells) */}
       {!hasEffectTargets && (
-        <>
-          {filteredTargetableObjects.length > 0 && (
-            <TargetSelector
-              label="Target Objects"
-              options={filteredTargetableObjects.map((obj) => ({
-                value: obj.id,
-                label: cardMap[obj.id]?.name || obj.name || obj.id,
-                status: objectTargetStatus[obj.id] ?? null,
-              }))}
-              selectedIds={selectedTargetObjectIds}
-              onChange={onChangeTargetObjects}
-            />
-          )}
-          
-          {filteredTargetPlayers.length > 0 && (
-            <TargetSelector
-              label="Target Players"
-              options={filteredTargetPlayers.map((player) => ({
-                value: player.id.toString(),
-                label: `Player ${player.id + 1}`,
-                status: playerTargetStatus[player.id] ?? null,
-              }))}
-              selectedIds={selectedTargetPlayerIds.map(String)}
-              onChange={(ids) => onChangeTargetPlayers(ids.map(Number))}
-            />
-          )}
-        </>
+        <TargetSelector
+          objects={filteredTargetableObjects}
+          players={filteredTargetPlayers}
+          cardMap={cardMap}
+          selectedObjectIds={selectedTargetObjectIds}
+          selectedPlayerIds={selectedTargetPlayerIds}
+          objectLabel={objectLabel}
+          playerLabel={playerLabel}
+          maxObjectTargets={maxObjectTargets ?? undefined}
+          maxPlayerTargets={maxPlayerTargets ?? undefined}
+          objectTargetStatus={objectTargetStatus}
+          playerTargetStatus={playerTargetStatus}
+          onChangeObjects={onChangeTargetObjects}
+          onChangePlayers={onChangeTargetPlayers}
+          onClear={() => {
+            onChangeTargetObjects([]);
+            onChangeTargetPlayers([]);
+          }}
+        />
       )}
 
       {/* Copy spell targets */}
-      {copyTargetsEnabled && copyTargetsCount > 0 && (
+      {copyEffectTargetGroups && copyEffectTargetGroups.length > 0 && (
+        <div className="space-y-3">
+          <h4 className="text-sm font-medium">Copy Targets</h4>
+          {Array.from(new Set(copyEffectTargetGroups.map((entry) => entry.copyIndex))).map((copyIndex) => {
+            const groups = copyEffectTargetGroups.filter((entry) => entry.copyIndex === copyIndex);
+            return (
+              <div key={`copy-effect-${copyIndex}`} className="space-y-2">
+                <div className="text-xs text-[color:var(--theme-text-secondary)]">Copy {copyIndex + 1}</div>
+                {groups.map((group) => (
+                  <div key={group.id} className="space-y-2">
+                    <label className="text-xs uppercase text-[color:var(--theme-text-secondary)]">
+                      {group.label}
+                    </label>
+                    <TargetSelector
+                      objects={group.objects}
+                      players={group.players}
+                      cardMap={cardMap}
+                      selectedObjectIds={group.selectedObjectIds}
+                      selectedPlayerIds={group.selectedPlayerIds}
+                      objectLabel={group.objectLabel ?? objectLabel}
+                      playerLabel={group.playerLabel ?? playerLabel}
+                      maxObjectTargets={group.maxObjectTargets ?? undefined}
+                      maxPlayerTargets={group.maxPlayerTargets ?? undefined}
+                      onChangeObjects={group.onChangeObjects}
+                      onChangePlayers={group.onChangePlayers}
+                      onClear={group.onClear}
+                    />
+                    {typeof group.minTargets === 'number' && group.minTargets > 0 && (
+                      <div className="text-xs text-[color:var(--theme-text-secondary)]">
+                        Minimum targets: {group.minTargets}
+                      </div>
+                    )}
+                    {group.errors && group.errors.length > 0 && (
+                      <div className="text-xs text-[color:var(--theme-status-error)]">
+                        {group.errors.join(' ')}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {!copyEffectTargetGroups && copyTargetsEnabled && copyTargetsCount > 0 && (
         <div className="space-y-3">
           <h4 className="text-sm font-medium">Copy Targets</h4>
           {Array.from({ length: copyTargetsCount }).map((_, index) => {
@@ -158,31 +197,22 @@ export function TargetingSection({
               <div key={index} className="rounded border p-2 space-y-2">
                 <label className="text-xs text-muted-foreground">Copy {index + 1}</label>
                 
-                {filteredTargetableObjects.length > 0 && (
-                  <TargetSelector
-                    label="Objects"
-                    options={filteredTargetableObjects.map((obj) => ({
-                      value: obj.id,
-                      label: cardMap[obj.id]?.name || obj.name || obj.id,
-                      status: null,
-                    }))}
-                    selectedIds={selection.objectIds}
-                    onChange={(ids) => onChangeCopyTargetSelection(index, { ...selection, objectIds: ids })}
-                  />
-                )}
-                
-                {filteredTargetPlayers.length > 0 && (
-                  <TargetSelector
-                    label="Players"
-                    options={filteredTargetPlayers.map((player) => ({
-                      value: player.id.toString(),
-                      label: `Player ${player.id + 1}`,
-                      status: null,
-                    }))}
-                    selectedIds={selection.playerIds.map(String)}
-                    onChange={(ids) => onChangeCopyTargetSelection(index, { ...selection, playerIds: ids.map(Number) })}
-                  />
-                )}
+                <TargetSelector
+                  objects={filteredTargetableObjects}
+                  players={filteredTargetPlayers}
+                  cardMap={cardMap}
+                  selectedObjectIds={selection.objectIds}
+                  selectedPlayerIds={selection.playerIds}
+                  objectLabel={objectLabel}
+                  playerLabel={playerLabel}
+                  maxObjectTargets={maxObjectTargets ?? undefined}
+                  maxPlayerTargets={maxPlayerTargets ?? undefined}
+                  onChangeObjects={(ids) => onChangeCopyTargetSelection(index, { ...selection, objectIds: ids })}
+                  onChangePlayers={(ids) =>
+                    onChangeCopyTargetSelection(index, { ...selection, playerIds: ids })
+                  }
+                  onClear={() => onChangeCopyTargetSelection(index, { objectIds: [], playerIds: [] })}
+                />
               </div>
             );
           })}

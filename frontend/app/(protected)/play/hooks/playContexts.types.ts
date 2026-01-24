@@ -28,8 +28,8 @@ export interface SelectionContextValue {
   setSelectedCommandId: Dispatch<SetStateAction<string | null>>;
   setSelectedBattlefieldId: Dispatch<SetStateAction<string | null>>;
   setSelectedStackIndex: Dispatch<SetStateAction<number | null>>;
-  loadAbilityGraphForObject: (objectId: string) => void;
-  abilityGraphs: Record<string, any>;
+  loadEffectGraphForObject: (objectId: string) => void;
+  effectGraphs: Record<string, any>;
   selectedGraph: any;
 }
 

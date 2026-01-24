@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from .ability_graph import AbilityGraphRuntimeAdapter
 from .combat import CombatState
 from .combat_damage import resolve_combat_damage
 from .commander import apply_commander_tax
@@ -12,7 +11,6 @@ from .mana import (
     parse_mana_cost,
     pay_cost,
     pay_cost_with_payment,
-    produce_mana_for_object,
 )
 from .cost_modifiers import apply_cast_cost_modifiers
 from .costs import (
@@ -25,7 +23,8 @@ from .turn import Phase, Step
 from .zones import ZONE_BATTLEFIELD, ZONE_COMMAND, ZONE_EXILE, ZONE_GRAVEYARD, ZONE_HAND
 from .events import Event
 from .state import ResolveContext
-from .choices import extract_modal_config, validate_enter_choices, validate_modal_choices
+from .choices import validate_enter_choices_effect_graph, validate_modal_choices_effect_graph
+from .effects.effect_resolver import EffectGraphResolver
 from .optional_costs import (
     extract_additional_costs_from_graph,
     extract_optional_costs_from_graph,
@@ -81,7 +80,7 @@ def play_land(game_state, turn_manager, player_id: int, object_id: str) -> None:
 
 def _validate_cast_timing(game_state, turn_manager, player_id: int, obj) -> None:
     is_instant = "Instant" in obj.types
-    has_flash = "Flash" in obj.keywords or ("flash" in (obj.oracle_text or "").lower())
+    has_flash = "Flash" in obj.keywords
     if not is_instant and not has_flash:
         require_active_player(turn_manager, player_id)
         require_main_phase(game_state)
@@ -89,10 +88,9 @@ def _validate_cast_timing(game_state, turn_manager, player_id: int, obj) -> None
     _require_combat_declarations_done(game_state)
 
 
-def _validate_ability_timing(game_state, turn_manager, player_id: int, obj, runtime) -> None:
-    timing = (runtime.timing or "").lower()
-    oracle_text = (obj.oracle_text or "").lower()
-    if timing == "sorcery" or "activate only as a sorcery" in oracle_text:
+def _validate_ability_timing(game_state, turn_manager, player_id: int, obj, timing: Optional[str]) -> None:
+    timing = (timing or "").lower()
+    if timing == "sorcery":
         require_active_player(turn_manager, player_id)
         require_main_phase(game_state)
         require_empty_stack(game_state)
@@ -130,8 +128,8 @@ def _publish_becomes_target(game_state, source_id: Optional[str], resolve_contex
 
 
 
-def _check_activation_limit(obj, ability_index: int, runtime) -> None:
-    limit = runtime.activation_limit or {}
+def _check_activation_limit(obj, ability_index: int, limit: Optional[Dict[str, Any]]) -> None:
+    limit = limit or {}
     scope = limit.get("scope")
     max_uses = limit.get("max")
     if not scope or max_uses is None:
@@ -142,8 +140,8 @@ def _check_activation_limit(obj, ability_index: int, runtime) -> None:
         raise ValueError("Ability activation limit reached.")
 
 
-def _record_activation_use(obj, ability_index: int, runtime) -> None:
-    limit = runtime.activation_limit or {}
+def _record_activation_use(obj, ability_index: int, limit: Optional[Dict[str, Any]]) -> None:
+    limit = limit or {}
     scope = limit.get("scope")
     max_uses = limit.get("max")
     if not scope or max_uses is None:
@@ -199,10 +197,10 @@ def _pay_spell_cost(
 
 
 def _resolve_alternative_cost(
-    ability_graph: Optional[dict],
+    effect_graph: Optional[dict],
     context: Optional[ResolveContext],
 ) -> tuple[Optional[str], bool, Optional[str], List[Dict[str, Any]]]:
-    return resolve_alternative_cost_from_graph(ability_graph, context)
+    return resolve_alternative_cost_from_graph(effect_graph, context)
 
 
 def cast_spell(
@@ -211,7 +209,7 @@ def cast_spell(
     player_id: int,
     object_id: str,
     x_value: int = 0,
-    ability_graph: Optional[dict] = None,
+    effect_graph: Optional[dict] = None,
     context: Optional[dict] = None,
     mana_payment: Optional[Dict[str, int]] = None,
     mana_payment_detail: Optional[Dict[str, Any]] = None,
@@ -223,7 +221,7 @@ def cast_spell(
         raise ValueError("Card not found.")
     if obj.zone not in (ZONE_HAND, ZONE_COMMAND):
         resolve_context = ResolveContext(**context) if context else None
-        _, _, alt_tag, _ = _resolve_alternative_cost(ability_graph, resolve_context)
+        _, _, alt_tag, _ = _resolve_alternative_cost(effect_graph, resolve_context)
         if obj.zone == ZONE_GRAVEYARD and alt_tag and alt_tag.split(":", 1)[0] in ("flashback", "jump-start", "escape"):
             pass
         else:
@@ -247,9 +245,9 @@ def cast_spell(
         normalize_targets(game_state, resolve_context)
         validate_targets(game_state, resolve_context)
         enforce_ward_payment(game_state, resolve_context)
-    validate_enter_choices(ability_graph, context)
-    if ability_graph and resolve_context and isinstance(resolve_context.choices, dict):
-        optional_costs = extract_optional_costs_from_graph(ability_graph)
+    validate_enter_choices_effect_graph(effect_graph, context)
+    if effect_graph and resolve_context and isinstance(resolve_context.choices, dict):
+        optional_costs = extract_optional_costs_from_graph(effect_graph)
         optional_tags = {entry.get("tag"): entry for entry in optional_costs if entry.get("tag")}
         selected_optional = resolve_context.choices.get("optional_costs")
         if isinstance(selected_optional, dict):
@@ -258,7 +256,7 @@ def cast_spell(
                     continue
                 entry = optional_tags.get(tag)
                 if entry and entry.get("kind") == "entwine":
-                    modal = extract_modal_config(ability_graph)
+                    modal = effect_graph.get("modal") if isinstance(effect_graph, dict) else None
                     if modal and isinstance(modal.get("modes"), list):
                         resolve_context.choices.setdefault(
                             "chosen_modes",
@@ -266,10 +264,10 @@ def cast_spell(
                         )
                         resolve_context.choices["entwine"] = True
                     break
-    validate_modal_choices(ability_graph, resolve_context.__dict__ if resolve_context else context)
-    cost_override, free_cast, alt_tag, alt_extra_costs = _resolve_alternative_cost(ability_graph, resolve_context)
-    additional_costs = extract_additional_costs_from_graph(ability_graph) if ability_graph else []
-    optional_costs = extract_optional_costs_from_graph(ability_graph) if ability_graph else []
+    validate_modal_choices_effect_graph(effect_graph, resolve_context.__dict__ if resolve_context else context)
+    cost_override, free_cast, alt_tag, alt_extra_costs = _resolve_alternative_cost(effect_graph, resolve_context)
+    additional_costs = extract_additional_costs_from_graph(effect_graph) if effect_graph else []
+    optional_costs = extract_optional_costs_from_graph(effect_graph) if effect_graph else []
     copy_count = 0
     if optional_costs and resolve_context:
         choices = resolve_context.choices or {}
@@ -353,7 +351,7 @@ def cast_spell(
         apply_splice_choices(
             game_state,
             player_id,
-            ability_graph,
+            effect_graph,
             resolve_context,
         )
         if resolve_context.choices.get("conspired"):
@@ -388,23 +386,22 @@ def cast_spell(
         destination_zone = ZONE_EXILE
     # Use the processed resolve_context which includes choices like alternative_cost_tag
     stacked_context = resolve_context.__dict__ if resolve_context else (context or {})
-    if ability_graph:
-        # Include ability_id from graph if available
-        ability_id = ability_graph.get("abilityId") or f"{ability_graph.get('abilityType', 'spell')}-0"
+    if effect_graph:
+        effect_id = effect_graph.get("id") or "spell-0"
         game_state.stack.push(
             StackItem(
-                kind="ability_graph",
+                kind="effect_graph",
                 payload={
-                    "graph": ability_graph,
+                    "graph": effect_graph,
                     "context": stacked_context,
                     "source_object_id": obj.id,
                     "destination_zone": destination_zone,
-                    "ability_id": ability_id,
+                    "effect_id": effect_id,
                 },
                 controller_id=player_id,
             )
         )
-        message = f"[graph] cast_spell pushed ability_graph source={obj.id} ability_id={ability_id}"
+        message = f"[graph] cast_spell pushed effect_graph source={obj.id} effect_id={effect_id}"
         game_state.log(message)
         print(message, flush=True)
     else:
@@ -422,7 +419,7 @@ def cast_spell(
         push_spell_copies(
             game_state,
             obj.id,
-            ability_graph,
+            effect_graph,
             stacked_context,
             player_id,
             copy_count,
@@ -442,7 +439,7 @@ def prepare_cast(
     player_id: int,
     object_id: str,
     x_value: int = 0,
-    ability_graph: Optional[dict] = None,
+    effect_graph: Optional[dict] = None,
     context: Optional[dict] = None,
 ) -> Dict[str, Any]:
     require_priority(turn_manager, player_id)
@@ -452,7 +449,7 @@ def prepare_cast(
         raise ValueError("Card not found.")
     if obj.zone not in (ZONE_HAND, ZONE_COMMAND):
         resolve_context = ResolveContext(**context) if context else None
-        _, _, alt_tag, _ = _resolve_alternative_cost(ability_graph, resolve_context)
+        _, _, alt_tag, _ = _resolve_alternative_cost(effect_graph, resolve_context)
         if obj.zone == ZONE_GRAVEYARD and alt_tag and alt_tag.split(":", 1)[0] in ("flashback", "jump-start", "escape"):
             pass
         else:
@@ -472,7 +469,7 @@ def prepare_cast(
         validate_targets(game_state, resolve_context)
 
     cost_override, free_cast, alt_tag, alt_extra_costs = _resolve_alternative_cost(
-        ability_graph, resolve_context
+        effect_graph, resolve_context
     )
     cost_text = None if free_cast else (cost_override or obj.mana_cost)
     cost = parse_mana_cost(cost_text, x_value=x_value)
@@ -686,38 +683,54 @@ def activate_mana_ability(game_state, turn_manager, player_id: int, object_id: s
         raise ValueError("Permanent is already tapped.")
     _require_tap_summoning_sickness_ok(game_state, obj)
 
-    mana = produce_mana_for_object(game_state, obj)
-    obj.tapped = True
-    player = game_state.get_player(player_id)
-    for color, amount in mana.items():
-        player.mana_pool[color] = player.mana_pool.get(color, 0) + amount
-    turn_manager.after_mana_ability(player_id)
+    graph = obj.effect_graphs[0] if obj.effect_graphs else None
+    if not graph:
+        raise ValueError("No effect graph available for mana ability.")
 
-
-def _find_ability_by_type_index(
-    ability_graphs: List[Dict[str, Any]],
-    ability_type: str,
-    ability_index: int,
-) -> Optional[Dict[str, Any]]:
-    """Find an ability graph by type and index.
-    
-    Supports both:
-    - New format: lookup by abilityType and index within that type
-    - Legacy format: fallback to array index for backward compatibility
-    """
-    # Count abilities of the specified type
-    type_abilities = [
-        g for g in ability_graphs
-        if g.get("abilityType", "activated") == ability_type
+    steps = graph.get("steps") or []
+    activated_steps = [
+        step for step in steps
+        if isinstance(step, dict)
+        and isinstance(step.get("effect"), dict)
+        and step.get("effect", {}).get("initiation") == "activated"
     ]
-    
-    if ability_index < len(type_abilities):
-        return type_abilities[ability_index]
-    
-    # Legacy fallback: use raw array index
-    if ability_index < len(ability_graphs):
-        return ability_graphs[ability_index]
-    
+    mana_index = None
+    for index, step in enumerate(activated_steps):
+        tags = step.get("effect", {}).get("tags") or []
+        resolution = step.get("effect", {}).get("resolution")
+        if "mana" in tags and resolution == "immediate":
+            mana_index = index
+            break
+    if mana_index is None:
+        raise ValueError("No mana ability found in effect graph.")
+
+    result = activate_ability(
+        game_state,
+        turn_manager,
+        player_id,
+        object_id,
+        ability_index=mana_index,
+        ability_type="activated",
+        context=None,
+    )
+    if result.get("usesStack"):
+        raise ValueError("Mana abilities must resolve immediately.")
+
+
+def _find_effect_step_by_initiation(
+    effect_graph: Dict[str, Any],
+    initiation: str,
+    effect_index: int,
+) -> Optional[Dict[str, Any]]:
+    steps = effect_graph.get("steps") or []
+    matches = [
+        step for step in steps
+        if isinstance(step, dict)
+        and isinstance(step.get("effect"), dict)
+        and step.get("effect", {}).get("initiation") == initiation
+    ]
+    if effect_index < len(matches):
+        return matches[effect_index]
     return None
 
 
@@ -727,7 +740,7 @@ def activate_ability(
     player_id: int,
     object_id: str,
     ability_index: int = 0,
-    ability_type: str = "activated",  # New: support type+index lookup
+    ability_type: str = "activated",
     context: Optional[dict] = None,
 ) -> Dict[str, Any]:
     """Activate an ability on a permanent.
@@ -750,18 +763,18 @@ def activate_ability(
         raise ValueError("Permanent not found.")
     if obj.controller_id != player_id:
         raise ValueError("You do not control this permanent.")
-    if not obj.ability_graphs:
+    if not obj.effect_graphs:
         raise ValueError("Permanent has no abilities to activate.")
-    
-    # Find ability by type+index (with legacy fallback)
-    graph = _find_ability_by_type_index(obj.ability_graphs, ability_type, ability_index)
-    if not graph:
+
+    graph = obj.effect_graphs[0]
+    step = _find_effect_step_by_initiation(graph, ability_type, ability_index)
+    if not step:
         raise ValueError(f"Invalid ability: {ability_type}-{ability_index}")
 
-    adapter = AbilityGraphRuntimeAdapter(game_state)
-    runtime = adapter.build_runtime(graph)
-    _validate_ability_timing(game_state, turn_manager, player_id, obj, runtime)
-    _check_activation_limit(obj, ability_index, runtime)
+    effect = step.get("effect") or {}
+    cost_spec = effect.get("cost") or {}
+    _validate_ability_timing(game_state, turn_manager, player_id, obj, cost_spec.get("timing"))
+    _check_activation_limit(obj, ability_index, cost_spec.get("limit"))
     resolve_context = None
     if context:
         resolve_context = ResolveContext(**context)
@@ -772,9 +785,9 @@ def activate_ability(
         normalize_targets(game_state, resolve_context)
         validate_targets(game_state, resolve_context)
         enforce_ward_payment(game_state, resolve_context)
-    validate_enter_choices(graph, context)
-    validate_modal_choices(graph, context)
-    costs = runtime.costs or []
+    validate_enter_choices_effect_graph(graph, context)
+    validate_modal_choices_effect_graph(graph, context)
+    costs = cost_spec.get("items") or []
     if costs:
         if any(cost.get("type") == "tap_self" for cost in costs):
             _require_tap_summoning_sickness_ok(game_state, obj)
@@ -787,11 +800,11 @@ def activate_ability(
             costs,
             resolve_context.choices if resolve_context else {},
         )
-    _record_activation_use(obj, ability_index, runtime)
+    _record_activation_use(obj, ability_index, cost_spec.get("limit"))
 
-    # Check usesStack flag - resolve immediately if false (mana abilities)
-    uses_stack = runtime.uses_stack
-    ability_id = runtime.ability_id or f"{ability_type}-{ability_index}"
+    # Resolve immediately if marked as immediate (mana abilities)
+    uses_stack = effect.get("resolution") != "immediate"
+    ability_id = effect.get("id") or f"{ability_type}-{ability_index}"
     
     if not uses_stack:
         # Resolve immediately without using the stack (mana abilities, etc.)
@@ -805,7 +818,8 @@ def activate_ability(
                 controller_id=player_id,
             )
         
-        result = adapter.resolve(graph, resolve_context)
+        resolver = EffectGraphResolver(game_state)
+        result = resolver.resolve(graph, resolve_context, start_step_id=step.get("id"))
         turn_manager.after_mana_ability(player_id)
         return {"status": "resolved_immediately", "ability_id": ability_id, "result": result}
 
@@ -815,9 +829,10 @@ def activate_ability(
     stacked_context.setdefault("controller_id", player_id)
     game_state.stack.push(
         StackItem(
-            kind="ability_graph",
+            kind="effect_graph",
             payload={
                 "graph": graph,
+                "start_step_id": step.get("id"),
                 "context": stacked_context,
                 "source_object_id": obj.id,
                 "ability_id": ability_id,  # Include ability ID in payload

@@ -2,7 +2,7 @@
  * Game feature hooks
  */
 
-export { useAbilityGraphs } from './useAbilityGraphs';
+export { useEffectGraphs } from './useEffectGraphs';
 export { useActivationCosts, type ActivationCostEntry } from './useActivationCosts';
 export { useCastContext } from './useCastContext';
 export { useCasting } from './useCasting';

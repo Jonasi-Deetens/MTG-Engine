@@ -16,7 +16,7 @@ def handle_copy_spell(resolver, effect: Dict[str, Any], context) -> Dict[str, An
         return {"type": "copy_spell", "status": "no_target"}
     target_item = None
     for item in resolver.game_state.stack.items:
-        if item.kind not in ("spell", "ability_graph"):
+        if item.kind not in ("spell", "effect_graph"):
             continue
         if (
             item.payload.get("object_id") == target_spell
@@ -89,7 +89,7 @@ def handle_copy_spell(resolver, effect: Dict[str, Any], context) -> Dict[str, An
         validate_targets(resolver.game_state, ctx)
     for index in range(copies):
         overrides = _copy_target_overrides(index)
-        if target_item.kind == "ability_graph":
+        if target_item.kind == "effect_graph":
             payload = copy.deepcopy(target_item.payload or {})
             context_data = copy.deepcopy(payload.get("context") or {})
             if context_data.get("source_id") is None:
@@ -105,7 +105,7 @@ def handle_copy_spell(resolver, effect: Dict[str, Any], context) -> Dict[str, An
             payload["source_object_id"] = None
             payload["destination_zone"] = None
             resolver.game_state.stack.push(
-                StackItem(kind="ability_graph", payload=payload, controller_id=context.controller_id)
+                StackItem(kind="effect_graph", payload=payload, controller_id=context.controller_id)
             )
         else:
             payload = copy.deepcopy(target_item.payload or {})

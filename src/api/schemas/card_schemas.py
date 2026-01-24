@@ -15,8 +15,18 @@ class CardResponse(BaseModel):
     power: Optional[str]
     toughness: Optional[str]
     colors: List[str]
+    color_identity: List[str] = []
+    card_types: List[str] = []
+    supertypes: List[str] = []
+    subtypes: List[str] = []
+    keywords: List[str] = []
+    produced_mana: List[str] = []
     image_uris: Optional[dict]
     set_code: Optional[str]
+    set_name: Optional[str] = None
+    set_type: Optional[str] = None
+    layout: Optional[str] = None
+    released_at: Optional[str] = None
     collector_number: Optional[str]
     rarity: Optional[str] = None
     legalities: Optional[dict] = None

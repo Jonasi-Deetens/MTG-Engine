@@ -15,6 +15,7 @@ from .managers.zone_manager import ZoneManager
 from .managers.object_manager import ObjectManager, next_object_id
 from .managers.attachment_manager import AttachmentManager
 from .managers.replacement_manager import ReplacementManager
+from .effects.active_effects import ActiveEffectRegistry
 
 # Re-export for backward compatibility
 __all__ = [
@@ -68,8 +69,8 @@ class GameObject:
     transformed: bool = False
     regenerate_shield: bool = False
     temporary_effects: List[Dict[str, Any]] = field(default_factory=list)
-    ability_graphs: List[Dict[str, Any]] = field(default_factory=list)
-    base_ability_graphs: List[Dict[str, Any]] = field(default_factory=list)
+    effect_graphs: List[Dict[str, Any]] = field(default_factory=list)
+    base_effect_graphs: List[Dict[str, Any]] = field(default_factory=list)
     activation_limits: Dict[str, int] = field(default_factory=dict)
     etb_choices: Dict[str, Any] = field(default_factory=dict)
     base_etb_choices: Dict[str, Any] = field(default_factory=dict)
@@ -123,6 +124,7 @@ class GameState:
     event_bus: EventBus = field(default_factory=EventBus)
     turn: TurnState = field(default_factory=TurnState)
     debug_log: List[str] = field(default_factory=list)
+    active_effect_registry: ActiveEffectRegistry = field(default_factory=ActiveEffectRegistry)
     replacement_effects: List[Dict[str, Any]] = field(default_factory=list)
     replacement_choices: Dict[str, str] = field(default_factory=dict)
     choices: Dict[str, Any] = field(default_factory=dict)

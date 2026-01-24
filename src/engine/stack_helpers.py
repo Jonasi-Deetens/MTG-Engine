@@ -10,7 +10,7 @@ from .state import GameState
 def push_spell_copies(
     game_state: GameState,
     source_id: str,
-    ability_graph: Optional[dict],
+    effect_graph: Optional[dict],
     base_context: Dict[str, Any],
     controller_id: int,
     count: int,
@@ -21,16 +21,16 @@ def push_spell_copies(
         context = copy.deepcopy(base_context or {})
         if index < len(overrides) and isinstance(overrides[index], dict):
             context.update(overrides[index])
-        if ability_graph:
+        if effect_graph:
             payload = {
-                "graph": ability_graph,
+                "graph": effect_graph,
                 "context": context,
                 "copy_of": source_id,
                 "is_copy": True,
                 "source_object_id": None,
                 "destination_zone": None,
             }
-            game_state.stack.push(StackItem(kind="ability_graph", payload=payload, controller_id=controller_id))
+            game_state.stack.push(StackItem(kind="effect_graph", payload=payload, controller_id=controller_id))
         else:
             payload = {
                 "context": context,

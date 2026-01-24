@@ -39,6 +39,7 @@ def card_model_to_response(card_model: Axis1CardModel) -> CardResponse:
     first_face = faces[0] if faces else {}
     characteristics = card_data.get("characteristics", {})
     metadata = card_data.get("metadata", {})
+    search_index = card_data.get("search_index", {})
     
     # For multi-face cards, Scryfall provides image_uris per face
     # For single-face cards, image_uris are at the card level
@@ -68,8 +69,20 @@ def card_model_to_response(card_model: Axis1CardModel) -> CardResponse:
         power=first_face.get("power") or card_data.get("power"),
         toughness=first_face.get("toughness") or card_data.get("toughness"),
         colors=first_face.get("colors", []) or card_data.get("colors", []),
+        color_identity=card_data.get("color_identity")
+        or characteristics.get("color_identity")
+        or search_index.get("color_identity", []),
+        card_types=characteristics.get("card_types") or search_index.get("card_types", []),
+        supertypes=characteristics.get("supertypes") or search_index.get("supertypes", []),
+        subtypes=characteristics.get("subtypes") or search_index.get("subtypes", []),
+        keywords=search_index.get("keywords", []) or first_face.get("keywords", []),
+        produced_mana=search_index.get("produced_mana", []) or first_face.get("produced_mana", []),
         image_uris=image_uris,
         set_code=card_model.set_code,
+        set_name=metadata.get("set_name") or card_data.get("set_name"),
+        set_type=metadata.get("set_type") or card_data.get("set_type"),
+        layout=card_data.get("layout"),
+        released_at=metadata.get("released_at") or card_data.get("released_at"),
         collector_number=card_model.collector_number,
         rarity=metadata.get("rarity"),
         legalities=metadata.get("legalities"),

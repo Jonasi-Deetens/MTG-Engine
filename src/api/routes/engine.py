@@ -18,7 +18,6 @@ from db.models import User
 from db.models import GameSession
 from db.connection import SessionLocal
 from engine import (
-    AbilityGraphRuntimeAdapter,
     AbilityRegistry,
     CombatState,
     GameObject,
@@ -193,8 +192,8 @@ def _build_game_state(snapshot: GameStateSnapshot) -> GameState:
             phased_out=obj.phased_out,
             transformed=obj.transformed,
             regenerate_shield=obj.regenerate_shield,
-            ability_graphs=list(obj.ability_graphs),
-            base_ability_graphs=list(getattr(obj, "base_ability_graphs", [])),
+            effect_graphs=list(obj.effect_graphs),
+            base_effect_graphs=list(getattr(obj, "base_effect_graphs", [])),
             temporary_effects=list(getattr(obj, "temporary_effects", [])),
             activation_limits=dict(getattr(obj, "activation_limits", {})),
             etb_choices=dict(getattr(obj, "etb_choices", {})),
@@ -333,8 +332,8 @@ def _serialize_game_state(game_state: GameState) -> GameStateSnapshot:
                 "phased_out": obj.phased_out,
                 "transformed": obj.transformed,
                 "regenerate_shield": obj.regenerate_shield,
-                "ability_graphs": list(obj.ability_graphs),
-                "base_ability_graphs": list(getattr(obj, "base_ability_graphs", [])),
+                "effect_graphs": list(obj.effect_graphs),
+                "base_effect_graphs": list(getattr(obj, "base_effect_graphs", [])),
                 "temporary_effects": list(getattr(obj, "temporary_effects", [])),
                 "activation_limits": dict(getattr(obj, "activation_limits", {})),
                 "etb_choices": dict(getattr(obj, "etb_choices", {})),
@@ -444,8 +443,8 @@ def execute_engine_action(
         game_state.replacement_choices = dict(payload.replacement_choices)
 
     if action == "resolve_graph":
-        if not payload.ability_graph:
-            raise HTTPException(status_code=400, detail="ability_graph is required for resolve_graph")
+        if not payload.effect_graph:
+            raise HTTPException(status_code=400, detail="effect_graph is required for resolve_graph")
         context = ResolveContext()
         if payload.context:
             context = ResolveContext(
@@ -459,16 +458,23 @@ def execute_engine_action(
                 previous_results=payload.context.previous_results,
             )
         from engine.targets import normalize_targets, validate_targets
-        from engine.choices import validate_enter_choices, validate_modal_choices
+        from engine.choices import validate_enter_choices_effect_graph, validate_modal_choices_effect_graph
+        from engine.effects.effect_resolver import EffectGraphResolver
         try:
             normalize_targets(game_state, context)
             validate_targets(game_state, context)
-            validate_enter_choices(payload.ability_graph.model_dump() if payload.ability_graph else None, context.__dict__)
-            validate_modal_choices(payload.ability_graph.model_dump() if payload.ability_graph else None, context.__dict__)
+            validate_enter_choices_effect_graph(
+                payload.effect_graph.model_dump() if payload.effect_graph else None,
+                context.__dict__,
+            )
+            validate_modal_choices_effect_graph(
+                payload.effect_graph.model_dump() if payload.effect_graph else None,
+                context.__dict__,
+            )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
-        adapter = AbilityGraphRuntimeAdapter(game_state)
-        result = adapter.resolve(payload.ability_graph.model_dump(), context)
+        resolver = EffectGraphResolver(game_state)
+        result = resolver.resolve(payload.effect_graph.model_dump(), context)
         if context.source_id:
             game_state.event_bus.publish(Event(
                 type="ability_resolved",
@@ -623,7 +629,7 @@ def execute_engine_action(
                 payload.player_id,
                 payload.object_id,
                 payload.x_value or 0,
-                ability_graph=payload.ability_graph.model_dump() if payload.ability_graph else None,
+            effect_graph=payload.effect_graph.model_dump() if payload.effect_graph else None,
                 context=context,
             )
         except ValueError as exc:
@@ -639,7 +645,7 @@ def execute_engine_action(
             raise HTTPException(status_code=400, detail="player_id and object_id are required for finalize_cast")
         turn_manager = TurnManager(game_state)
         try:
-            ability_graph = payload.ability_graph.model_dump() if payload.ability_graph else None
+            effect_graph = payload.effect_graph.model_dump() if payload.effect_graph else None
             prepared_cast = game_state.prepared_casts.get(payload.player_id)
             if not prepared_cast:
                 raise ValueError("No prepared cast found for player.")
@@ -667,7 +673,7 @@ def execute_engine_action(
                 payload.player_id,
                 payload.object_id,
                 x_value,
-                ability_graph=ability_graph,
+                effect_graph=effect_graph,
                 context=context,
                 mana_payment=payload.mana_payment or None,
                 mana_payment_detail=payload.mana_payment_detail.model_dump() if payload.mana_payment_detail else None,
@@ -688,7 +694,7 @@ def execute_engine_action(
             raise HTTPException(status_code=400, detail="player_id and object_id are required for cast_spell")
         turn_manager = TurnManager(game_state)
         try:
-            ability_graph = payload.ability_graph.model_dump() if payload.ability_graph else None
+            effect_graph = payload.effect_graph.model_dump() if payload.effect_graph else None
             context = payload.context.model_dump() if payload.context else None
             cast_spell(
                 game_state,
@@ -696,7 +702,7 @@ def execute_engine_action(
                 payload.player_id,
                 payload.object_id,
                 payload.x_value or 0,
-                ability_graph=ability_graph,
+                effect_graph=effect_graph,
                 context=context,
                 mana_payment=payload.mana_payment or None,
                 mana_payment_detail=payload.mana_payment_detail.model_dump() if payload.mana_payment_detail else None,

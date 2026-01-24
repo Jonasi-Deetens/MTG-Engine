@@ -2,11 +2,8 @@
  * Game feature components
  */
 
-// ActionsPanel (refactored)
+// ActionsPanel
 export * from './ActionsPanel';
-
-// Legacy ActionsPanel (for backward compatibility)
-export { ActionsPanel as LegacyActionsPanel } from './LegacyActionsPanel';
 
 // Core game components
 export { ActivationCostPanel } from './ActivationCostPanel';

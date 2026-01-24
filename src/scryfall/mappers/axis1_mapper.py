@@ -1,359 +1,4 @@
-import re
-import unicodedata
-from axis1.schema import Axis1Card, Axis1Face, Axis1Characteristics, Axis1Metadata, Axis1ActivatedAbility, Axis1TriggeredAbility
-
-# ------------------------------------------------------------
-# Activated ability parsing from oracle text
-# ------------------------------------------------------------
-    
-REMINDER_TEXT_RE = re.compile(r"\([^)]*\)")
-
-def strip_reminder_text(line: str) -> str:
-    """
-    Removes all parenthetical reminder text from a line.
-    Example:
-        'Ninjutsu {1}{U} ({1}{U}, Return ...)' → 'Ninjutsu {1}{U}'
-    """
-    return REMINDER_TEXT_RE.sub("", line).strip()
-
-
-# Matches "COST: EFFECT"
-# Example:
-#   "{T}: Add {U}."
-#   "{2}{W}{U}, {T}, Sacrifice this land: Draw a card."
-
-ACTIVATED_ABILITY_LINE_RE = re.compile(
-    r"^\s*(?P<costs>[^:]+?)\s*:\s*(?P<effect>.+)$"
-)
-
-PLANESWALKER_ABILITY_RE = re.compile(
-    r"^\s*(?P<loyalty>[+\-]?\d+)\s*:\s*(?P<effect>.+)$"
-)
-
-MANA_SYMBOL_RE = re.compile(r"\{[^}]+\}")
-
-def _extract_static_type_changers(oracle_text: str):
-    """
-    Detect static abilities that change types in all zones or on the battlefield.
-    Produces Axis1-style static effect dicts that map cleanly into the Axis2 StaticEffect schema.
-    """
-    if not oracle_text:
-        return []
-
-    t = oracle_text.lower()
-    effects = []
-
-    # ------------------------------------------------------------
-    # Mistform Ultimus / Changeling / "is every creature type"
-    # Applies in ALL ZONES
-    # ------------------------------------------------------------
-    if (
-        "every creature type" in t
-        or "all creature types" in t
-        or "each creature type" in t
-        or "changeling" in t
-    ):
-        effects.append({
-            "kind": "type_changer",
-            "subject": "this",
-            "value": {
-                "types": ["all_creature_types"],
-                "add": True,
-                "remove": False,
-            },
-            "layering": "layer_4",
-            "zones": ["all"],
-        })
-
-    # ------------------------------------------------------------
-    # Maskwood Nexus / Arcane Adaptation / Conspiracy
-    # "is all types" / "are all types"
-    # Applies on the battlefield only
-    # ------------------------------------------------------------
-    if (
-        "is every type" in t
-        or "is all types" in t
-        or "are all types" in t
-    ):
-        effects.append({
-            "kind": "type_changer",
-            "subject": "this",
-            "value": {
-                "types": ["all_types"],
-                "add": True,
-                "remove": False,
-            },
-            "layering": "layer_4",
-            "zones": ["battlefield"],
-        })
-
-    return effects
-
-
-def _extract_activation_conditions(effect_text: str) -> list:
-    """
-    Pull out common activation condition clauses from the effect text.
-    This is *optional metadata* Axis2/Axis3 can use later.
-    """
-    t = effect_text.lower()
-    conditions = []
-
-    if "activate only as a sorcery" in t:
-        conditions.append({"type": "timing", "value": "sorcery_only"})
-    if "activate only once each turn" in t:
-        conditions.append({"type": "limit_per_turn", "value": 1})
-    if "activate only during your turn" in t:
-        conditions.append({"type": "timing", "value": "your_turn_only"})
-    if "activate only during combat" in t:
-        conditions.append({"type": "timing", "value": "combat_only"})
-    if "activate only before blockers are declared" in t:
-        conditions.append({"type": "timing", "value": "before_blockers"})
-    if "activate only if you control" in t:
-        conditions.append({"type": "board_condition", "value": "requires_controlled_perm"})
-    if "activate only if an opponent controls" in t:
-        conditions.append({"type": "board_condition", "value": "requires_opponent_control"})
-
-    return conditions
-
-
-def _parse_cost_metadata(cost_text: str) -> dict:
-    """
-    Derive some helpful boolean flags from the cost string.
-    This is purely descriptive, Axis2 can choose to use or ignore it.
-    """
-    lower = cost_text.lower()
-
-    tap = "{t}" in lower or "{T}" in cost_text
-    sacrifice_self = "sacrifice" in lower and ("this" in lower or "land" in lower or "creature" in lower)
-    discard_this = "discard" in lower and "this card" in lower
-
-    # Extract mana symbols in the cost portion
-    mana_symbols = MANA_SYMBOL_RE.findall(cost_text)
-    # Filter out tap symbol
-    mana_symbols = [m for m in mana_symbols if m.upper() != "{T}"]
-
-    return {
-        "tap": tap,
-        "sacrifice_self": sacrifice_self,
-        "discard_self": discard_this,
-        "mana_cost_symbols": mana_symbols,
-    }
-
-
-def _extract_activated_abilities_from_oracle(oracle_text: str) -> list:
-    if not oracle_text:
-        return []
-
-    abilities = []
-
-    for raw_line in oracle_text.split("\n"):
-        line = strip_reminder_text(raw_line.strip())
-        # Normalize Unicode punctuation and whitespace
-        line = (
-            line.replace("：", ":")      # fullwidth colon → ASCII colon
-                .replace("\u2028", " ") # line separator → space
-                .replace("\u00A0", " ") # non-breaking space → space
-                .replace("\u200B", "")  # zero-width space → remove
-        )
-
-        if not line:
-            continue
-
-        # ------------------------------------------------------------
-        # 1. Planeswalker loyalty abilities
-        # ------------------------------------------------------------
-        m = PLANESWALKER_ABILITY_RE.match(line)
-        if m:
-            loyalty_raw = m.group("loyalty").strip()
-            effect_text = m.group("effect").strip()
-
-            # Normalize unicode minus
-            loyalty_cost = int(loyalty_raw.replace("−", "-"))
-
-            ability = Axis1ActivatedAbility(
-                raw=line,
-                cost=loyalty_raw,
-                effect=effect_text,
-                cost_metadata={"loyalty": loyalty_cost},
-                activation_conditions=[],
-            )
-            abilities.append(ability)
-            continue
-
-        m = re.match(r"equip\s+(?P<cost>\{[^}]+\})", line, re.IGNORECASE)
-        if m:
-            cost_text = m.group("cost")
-            abilities.append(
-                Axis1ActivatedAbility(
-                    raw=line,
-                    cost=cost_text,
-                    effect="Attach this to target creature you control.",
-                    cost_metadata=_parse_cost_metadata(cost_text),
-                    activation_conditions=[{"type": "timing", "value": "sorcery_only"}],
-                )
-            )
-            continue
-
-        # ------------------------------------------------------------
-        # 2. Normal activated abilities
-        # ------------------------------------------------------------
-        m = ACTIVATED_ABILITY_LINE_RE.match(line)
-        if not m:
-            continue
-
-        cost_text = m.group("costs").strip()
-        effect_text = m.group("effect").strip()
-
-        # Split multiple costs: "{T}, Sacrifice this land"
-        cost_parts = [c.strip() for c in cost_text.split(",")]
-
-        parsed_costs = []
-        for part in cost_parts:
-            parsed_costs.append({
-                "raw": part,
-                "metadata": _parse_cost_metadata(part)
-            })
-
-        ability = Axis1ActivatedAbility(
-            raw=line,
-            cost=cost_text,
-            cost_parts=parsed_costs,
-            effect=effect_text,
-            cost_metadata={},
-            activation_conditions=_extract_activation_conditions(effect_text),
-        )
-        abilities.append(ability)
-
-    return abilities
-
-
-# ------------------------------------------------------------
-# Triggered ability parsing from oracle text
-# ------------------------------------------------------------
-
-TRIGGER_STARTERS = (
-    "whenever ",
-    "when ",
-    "at the beginning of ",
-    "at the end of ",
-    "at the beginning of your ",
-    "at the beginning of each ",
-    "at the beginning of combat ",
-)
-
-def _extract_event_hint(trigger_condition: str) -> str:
-    """
-    Convert a trigger condition into a normalized event hint.
-    This helps Axis2/Axis3 match game events.
-    """
-
-    t = trigger_condition.lower()
-
-    # Combat damage triggers
-    if "deals combat damage to a player" in t:
-        return "deals_combat_damage_to_player"
-    if "deals combat damage to a creature" in t:
-        return "deals_combat_damage_to_creature"
-
-    # ETB
-    if "enters the battlefield" in t:
-        return "enters_battlefield"
-
-    # Dies
-    if "dies" in t:
-        return "dies"
-
-    # Cast triggers
-    if "cast" in t:
-        return "spell_cast"
-
-    # Attack triggers
-    if "attacks" in t:
-        return "attacks"
-
-    # Upkeep
-    if "at the beginning of your upkeep" in t:
-        return "upkeep"
-
-    # Draw step
-    if "at the beginning of your draw step" in t:
-        return "draw_step"
-
-    # End step
-    if "at the beginning of your end step" in t:
-        return "end_step"# Transform triggers
-
-    if "transforms into" in t:
-        return "transform"
-
-    # ETB triggers with "enters" but not "enters the battlefield"
-    if "enters" in t:
-        return "enters_battlefield"
-
-    # Upkeep triggers (each upkeep)
-    if "at the beginning of each upkeep" in t:
-        return "upkeep"
-
-    # Fallback
-    return "generic_trigger"
-
-
-def _extract_triggered_abilities_from_oracle(oracle_text: str) -> list:
-    """
-    Parse triggered abilities from oracle text.
-    Trigger lines start with:
-        - "Whenever ..."
-        - "When ..."
-        - "At the beginning of ..."
-    """
-
-    if not oracle_text:
-        return []
-
-    abilities = []
-    lines = oracle_text.split("\n")
-
-    for raw_line in lines:
-        line = strip_reminder_text(raw_line.strip())
-        # Normalize Unicode punctuation and whitespace
-        line = (
-            line.replace("：", ":")      # fullwidth colon → ASCII colon
-                .replace("\u2028", " ") # line separator → space
-                .replace("\u00A0", " ") # non-breaking space → space
-                .replace("\u200B", "")  # zero-width space → remove
-        )
-
-        if not line:
-            continue
-
-        lower = line.lower()
-
-        # Check if this line starts a triggered ability
-        if not any(lower.startswith(prefix) for prefix in TRIGGER_STARTERS): 
-            continue
-
-        # Split into condition + effect
-        # Example:
-        #   "Whenever this creature deals combat damage to a player, that player reveals their hand."
-        if "," in line:
-            condition, effect = line.split(",", 1)
-            condition = condition.strip()
-            effect = effect.strip()
-        else:
-            # Rare case: no comma
-            condition = line
-            effect = ""
-
-        event_hint = _extract_event_hint(condition)
-        ability = Axis1TriggeredAbility(
-            raw=line,
-            condition=condition,
-            effect=effect,
-            event_hint=event_hint,
-        )
-        abilities.append(ability)
-
-    return abilities
+from axis1.schema import Axis1Card, Axis1Face, Axis1Characteristics, Axis1Metadata, Axis1SearchIndex
 
 class Axis1Mapper:
     def map(self, scry: dict) -> Axis1Card:
@@ -379,6 +24,7 @@ class Axis1Mapper:
                 face = Axis1Face(
                     face_id=f"face_{idx}",
                     name=f.get("name"),
+                    type_line=type_line or None,
                     mana_cost=f.get("mana_cost"),
                     mana_value=f.get("cmc", scry.get("cmc")),
                     colors=f.get("colors", []),
@@ -391,11 +37,11 @@ class Axis1Mapper:
                     loyalty=f.get("loyalty"),
                     defense=f.get("defense"),
                     oracle_text=oracle_text,
+                    printed_text=f.get("printed_text"),
                     flavor_text=flavor_text,
+                    image_uris=f.get("image_uris") or {},
                     keywords=f.get("keywords", []),
-                    activated_abilities=_extract_activated_abilities_from_oracle(oracle_text or ""),
-                    triggered_abilities=_extract_triggered_abilities_from_oracle(oracle_text or ""),
-                    static_effects=_extract_static_type_changers(oracle_text or ""),
+                    produced_mana=f.get("produced_mana") or scry.get("produced_mana") or [],
                 )
                 faces.append(face)
 
@@ -423,6 +69,7 @@ class Axis1Mapper:
             face = Axis1Face(
                 face_id="front",
                 name=scry["name"],
+                type_line=type_line or None,
                 mana_cost=scry.get("mana_cost"),
                 mana_value=scry.get("cmc"),
                 colors=scry.get("colors", []),
@@ -435,11 +82,11 @@ class Axis1Mapper:
                 loyalty=scry.get("loyalty"),
                 defense=scry.get("defense"),
                 oracle_text=oracle_text,
+                printed_text=scry.get("printed_text"),
                 flavor_text=flavor_text,
+                image_uris=scry.get("image_uris") or {},
                 keywords=scry.get("keywords", []),
-                activated_abilities=_extract_activated_abilities_from_oracle(oracle_text or ""),
-                triggered_abilities=_extract_triggered_abilities_from_oracle(oracle_text or ""),
-                static_effects=_extract_static_type_changers(oracle_text or ""),
+                produced_mana=scry.get("produced_mana") or [],
             )
             faces = [face]
 
@@ -449,6 +96,7 @@ class Axis1Mapper:
         characteristics = Axis1Characteristics(
             mana_cost=faces[0].mana_cost,
             mana_value=faces[0].mana_value,
+            type_line=faces[0].type_line or scry.get("type_line"),
             colors=faces[0].colors,
             color_identity=scry.get("color_identity", []),
             color_indicator=faces[0].color_indicator,
@@ -479,9 +127,49 @@ class Axis1Mapper:
             frame=scry.get("frame"),
             border_color=scry.get("border_color"),
             watermark=scry.get("watermark"),
+            set_name=scry.get("set_name"),
+            set_type=scry.get("set_type"),
+            released_at=scry.get("released_at"),
+            reserved=scry.get("reserved"),
+            digital=scry.get("digital"),
+            promo=scry.get("promo"),
+            reprint=scry.get("reprint"),
+            variation=scry.get("variation"),
+            full_art=scry.get("full_art"),
+            oversized=scry.get("oversized"),
+            foil=scry.get("foil"),
+            nonfoil=scry.get("nonfoil"),
+            finishes=scry.get("finishes") or [],
+            games=scry.get("games") or [],
+            security_stamp=scry.get("security_stamp"),
             legalities=scry.get("legalities") or {},
             image_uris=scry.get("image_uris") or {},
             prices=prices_dict,
+        )
+
+        search_index = Axis1SearchIndex(
+            name=scry.get("name"),
+            names=[f.name for f in faces],
+            type_line=scry.get("type_line") or faces[0].type_line,
+            colors=scry.get("colors") or faces[0].colors,
+            color_identity=scry.get("color_identity", []),
+            card_types=faces[0].card_types,
+            supertypes=faces[0].supertypes,
+            subtypes=faces[0].subtypes,
+            keywords=scry.get("keywords", []),
+            produced_mana=scry.get("produced_mana") or [],
+            mana_value=scry.get("cmc"),
+            power=faces[0].power,
+            toughness=faces[0].toughness,
+            loyalty=faces[0].loyalty,
+            defense=faces[0].defense,
+            rarity=scry.get("rarity"),
+            set_code=scry.get("set"),
+            set_name=scry.get("set_name"),
+            set_type=scry.get("set_type"),
+            layout=scry.get("layout", "normal"),
+            released_at=scry.get("released_at"),
+            oracle_text=scry.get("oracle_text") or faces[0].oracle_text,
         )
 
         # ------------------------------------------------------------
@@ -492,12 +180,28 @@ class Axis1Mapper:
             oracle_id=scry.get("oracle_id"),
             scryfall_id=scry.get("id"),
             set=scry.get("set"),
+            set_name=scry.get("set_name"),
+            set_type=scry.get("set_type"),
             collector_number=scry.get("collector_number"),
             lang=scry.get("lang"),
             layout=scry.get("layout", "normal"),
             object_kind="card",
+            name=scry.get("name"),
             names=[f.name for f in faces],
             printed_name=scry.get("printed_name", faces[0].name),
+            type_line=scry.get("type_line") or faces[0].type_line,
+            oracle_text=scry.get("oracle_text") or faces[0].oracle_text,
+            mana_cost=scry.get("mana_cost"),
+            mana_value=scry.get("cmc"),
+            colors=scry.get("colors") or faces[0].colors,
+            color_identity=scry.get("color_identity", []),
+            keywords=scry.get("keywords", []),
+            produced_mana=scry.get("produced_mana") or [],
+            power=faces[0].power,
+            toughness=faces[0].toughness,
+            loyalty=faces[0].loyalty,
+            defense=faces[0].defense,
+            released_at=scry.get("released_at"),
             faces=faces,
             characteristics=characteristics,
             intrinsic_rules=[],
@@ -506,6 +210,7 @@ class Axis1Mapper:
             characteristic_sources={},
             rules_tags=[],
             metadata=metadata,
+            search_index=search_index,
         )
 
         return axis1

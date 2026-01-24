@@ -83,6 +83,10 @@ interface ActionsPanelProps {
   selectedTargetPlayerIds: number[];
   objectTargetStatus: Record<string, boolean | null>;
   playerTargetStatus: Record<number, boolean | null>;
+  maxObjectTargets?: number | null;
+  maxPlayerTargets?: number | null;
+  objectLabel?: string;
+  playerLabel?: string;
   targetSelectionErrors: string[];
   globalTargetErrors: string[];
   
@@ -91,6 +95,7 @@ interface ActionsPanelProps {
   copyTargetsCount: number;
   copyTargetSelections: Array<{ objectIds: string[]; playerIds: number[] }>;
   copyTargetErrors: string[];
+  copyEffectTargetGroups?: Array<EffectTargetGroup & { copyIndex: number }>;
   
   // Modal choices
   modalChoiceConfig: ModalChoiceConfig | null;
@@ -283,10 +288,15 @@ export function ActionsPanel(props: ActionsPanelProps) {
         selectedTargetPlayerIds={rest.selectedTargetPlayerIds}
         objectTargetStatus={rest.objectTargetStatus}
         playerTargetStatus={rest.playerTargetStatus}
+        maxObjectTargets={rest.maxObjectTargets}
+        maxPlayerTargets={rest.maxPlayerTargets}
+        objectLabel={rest.objectLabel}
+        playerLabel={rest.playerLabel}
         copyTargetsEnabled={rest.copyTargetsEnabled}
         copyTargetsCount={rest.copyTargetsCount}
         copyTargetSelections={rest.copyTargetSelections}
         copyTargetErrors={rest.copyTargetErrors}
+        copyEffectTargetGroups={rest.copyEffectTargetGroups}
         targetSelectionErrors={rest.targetSelectionErrors}
         globalTargetErrors={rest.globalTargetErrors}
         cardMap={cardMap}

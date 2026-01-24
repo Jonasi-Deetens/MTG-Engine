@@ -1,5 +1,6 @@
 import { CostEntry, buildActivationCosts, formatActivationCostLabel } from '@/lib/activationCosts';
 import { parseManaCostSymbols, serializeManaCostSymbols } from '@/lib/wardCosts';
+import type { EffectGraph } from '@/lib/unifiedEffect';
 
 export type OptionalCastCostOption = {
   tag: string;
@@ -26,131 +27,43 @@ const OPTIONAL_KEYWORDS: Record<
   conspire: { repeatable: false, label: () => 'Conspire' },
 };
 
-export const deriveOptionalCastCostsFromGraph = (graph?: any): OptionalCastCostOption[] => {
-  if (!graph || !Array.isArray(graph.nodes)) return [];
-  const options: OptionalCastCostOption[] = [];
-  graph.nodes.forEach((node: any) => {
-    if (node?.type !== 'KEYWORD') return;
-    const keyword = typeof node?.data?.keyword === 'string' ? node.data.keyword.trim().toLowerCase() : '';
-    if (!keyword || !(keyword in OPTIONAL_KEYWORDS)) return;
-    const kind = keyword as OptionalCastCostOption['kind'];
-    const costs = normalizeCostEntries(node?.data);
-    const costLabel = formatCostsLabel(costs);
-    const costTag = buildCostTag(costs);
-    const tag = costTag ? `${kind}:${costTag}` : kind;
-    options.push({
-      tag,
-      label: OPTIONAL_KEYWORDS[kind].label(costLabel),
-      costs,
-      kind,
-      repeatable: OPTIONAL_KEYWORDS[kind].repeatable,
-    });
-  });
-  return options;
+export const deriveOptionalCastCostsFromGraph = (graph?: EffectGraph | null): OptionalCastCostOption[] => {
+  if (!graph?.steps?.length) return [];
+  // Optional cast costs are not represented in unified EffectGraph yet.
+  return [];
 };
 
-export const deriveAdditionalCostsFromGraph = (graph?: any): CostEntry[] => {
-  if (!graph || !Array.isArray(graph.nodes)) return [];
-  const costs: CostEntry[] = [];
-  graph.nodes.forEach((node: any) => {
-    if (node?.type !== 'KEYWORD') return;
-    const keyword = typeof node?.data?.keyword === 'string' ? node.data.keyword.trim().toLowerCase() : '';
-    if (!['additional cost', 'additional_cost', 'additional'].includes(keyword)) return;
-    costs.push(...normalizeCostEntries(node?.data));
-  });
-  return costs;
+export const deriveAdditionalCostsFromGraph = (graph?: EffectGraph | null): CostEntry[] => {
+  if (!graph?.steps?.length) return [];
+  // Spell additional costs are not represented in unified EffectGraph yet.
+  return [];
 };
 
-export const deriveAlternativeCastCostsFromGraph = (graph?: any): AlternativeCostOption[] => {
-  if (!graph || !Array.isArray(graph.nodes)) return [];
-  const options: AlternativeCostOption[] = [];
-  graph.nodes.forEach((node: any) => {
-    if (node?.type !== 'KEYWORD') return;
-    const keyword = typeof node?.data?.keyword === 'string' ? node.data.keyword.trim().toLowerCase() : '';
-  const costText = typeof node?.data?.cost === 'string' ? node.data.cost.trim() : findManaCost(node?.data);
-    if (keyword === 'flashback' && costText) {
-      options.push({ tag: `flashback:${costText}`, label: `Flashback ${costText}` });
-    }
-    if (keyword === 'overload' && costText) {
-      options.push({ tag: `overload:${costText}`, label: `Overload ${costText}` });
-    }
-    if (keyword === 'escape' && costText) {
-      options.push({ tag: `escape:${costText}`, label: `Escape ${costText}` });
-    }
-    if (
-      ['alternative cost', 'alternative_cost', 'alternate cost', 'alternate_cost', 'alternate'].includes(keyword) &&
-      costText
-    ) {
-      options.push({ tag: costText, label: `Cast for ${costText}` });
-    }
-    if (keyword === 'jump-start') {
-      options.push({ tag: 'jump-start', label: 'Jump-start' });
-    }
-    if (keyword === 'free' || keyword === 'free-cast' || keyword === 'free_cast') {
-      options.push({ tag: 'free', label: 'Cast without paying its mana cost' });
-    }
-  });
-  return options;
+export const deriveAlternativeCastCostsFromGraph = (graph?: EffectGraph | null): AlternativeCostOption[] => {
+  if (!graph?.steps?.length) return [];
+  // Alternative casting costs are not represented in unified EffectGraph yet.
+  return [];
 };
 
-export const deriveAlternativeExtraCostsFromGraph = (graph: any, tag: string | null): CostEntry[] => {
-  if (!graph || !tag || !Array.isArray(graph.nodes)) return [];
-  const [keywordBase] = tag.split(':');
-  if (keywordBase === 'jump-start') {
-    return [{ type: 'discard', amount: 1 }];
-  }
-  if (keywordBase === 'escape') {
-    const node = findKeywordNode(graph, 'escape');
-    if (!node) return [];
-    const amount = typeof node?.data?.number === 'number' ? node.data.number : null;
-    if (amount && amount > 0) {
-      return [{ type: 'exile_graveyard', amount, other: true }];
-    }
-  }
-  const node = findKeywordNode(graph, keywordBase);
-  if (!node) return [];
-  const extra = node?.data?.extraCosts ?? node?.data?.extra_costs ?? [];
-  if (Array.isArray(extra)) {
-    return extra.filter((entry) => entry && typeof entry === 'object');
-  }
+export const deriveAlternativeExtraCostsFromGraph = (graph: EffectGraph | null, tag: string | null): CostEntry[] => {
+  if (!graph?.steps?.length || !tag) return [];
+  // Extra costs for alternative casting are not represented in unified EffectGraph yet.
   return [];
 };
 
 export const deriveSpliceCardsFromHand = (
   hand: string[],
-  cardGraphs: Record<string, any> | undefined
+  cardGraphs: Record<string, EffectGraph> | undefined
 ): Array<{ cardId: string; costs: CostEntry[] }> => {
   if (!hand.length || !cardGraphs) return [];
-  const results: Array<{ cardId: string; costs: CostEntry[] }> = [];
-  hand.forEach((cardId) => {
-    const graph = cardGraphs[cardId];
-    if (!graph || !Array.isArray(graph.nodes)) return;
-    const spliceNode = graph.nodes.find((node: any) => {
-      if (node?.type !== 'KEYWORD') return false;
-      const keyword = typeof node?.data?.keyword === 'string' ? node.data.keyword.trim().toLowerCase() : '';
-      return keyword === 'splice';
-    });
-    if (!spliceNode) return;
-    const costs = normalizeCostEntries(spliceNode?.data);
-    if (!costs.length) return;
-    results.push({ cardId, costs });
-  });
-  return results;
+  // Splice data is not represented in unified EffectGraph yet.
+  return [];
 };
 
-export const deriveWardCostsFromGraphs = (graphs?: any[]): CostEntry[] => {
+export const deriveWardCostsFromGraphs = (graphs?: EffectGraph[]): CostEntry[] => {
   if (!graphs || graphs.length === 0) return [];
-  const costs: CostEntry[] = [];
-  graphs.forEach((graph) => {
-    if (!graph || !Array.isArray(graph.nodes)) return;
-    graph.nodes.forEach((node: any) => {
-      if (node?.type !== 'KEYWORD') return;
-      const keyword = typeof node?.data?.keyword === 'string' ? node.data.keyword.trim().toLowerCase() : '';
-      if (keyword !== 'ward') return;
-      costs.push(...normalizeCostEntries(node?.data));
-    });
-  });
-  return costs;
+  // Ward costs are not represented in unified EffectGraph yet.
+  return [];
 };
 
 const findKeywordNode = (graph: any, keyword: string) =>

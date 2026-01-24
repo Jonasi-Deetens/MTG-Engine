@@ -84,9 +84,10 @@ export const useTargeting = ({
         return true;
       })
     : [];
-  const shouldUseStackTargets = selectedGraph?.nodes?.some(
-    (node: any) => node?.type === 'EFFECT' && node?.data?.target === 'spell'
-  );
+  const shouldUseStackTargets = selectedGraph?.steps?.some((step: any) => {
+    const effectBody = step?.effect?.effect;
+    return effectBody?.kind === 'one_shot' && effectBody?.action?.target === 'spell';
+  });
 
   const buildTargetContext = useCallback(
     (targets: Record<string, any>) => ({

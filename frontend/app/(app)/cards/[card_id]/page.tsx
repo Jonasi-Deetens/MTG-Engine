@@ -7,14 +7,13 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { cards } from '@/lib/api';
-import { abilities } from '@/lib/abilities';
+import { effects } from '@/lib/effects';
 import { CardData } from '@/components/cards/CardPreview';
 import { Button } from '@/components/ui/Button';
 import { CardVersionSelector } from '@/components/cards/CardVersionSelector';
 import { FavoriteButton } from '@/features/collections/components/FavoriteButton';
 import { AddToCollectionButton } from '@/features/collections/components/AddToCollectionButton';
-import { useBuilderStore } from '@/store/builderStore';
-import { AbilityTreeView } from '@/features/builder/components/AbilityTreeView';
+import { EffectGraphPreview } from '@/features/builder/components/EffectGraphPreview';
 import { RarityBadge } from '@/components/ui/RarityBadge';
 import { LegalityDisplay } from '@/components/cards/LegalityDisplay';
 import { useAuth } from '@/context/AuthContext';
@@ -28,7 +27,7 @@ export default function CardDetailPage() {
   
   const [card, setCard] = useState<CardData | null>(null);
   const [allVersions, setAllVersions] = useState<CardData[]>([]);
-  const [abilityGraph, setAbilityGraph] = useState<any>(null);
+  const [effectGraph, setEffectGraph] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [loadingGraph, setLoadingGraph] = useState(false);
@@ -58,9 +57,9 @@ export default function CardDetailPage() {
         if (isAuthenticated) {
           setLoadingGraph(true);
           try {
-            const graph = await abilities.getCardGraph(cardId);
-            if (graph && graph.ability_graph) {
-              setAbilityGraph(graph.ability_graph);
+            const graph = await effects.getCardEffectGraph(cardId);
+            if (graph && graph.effect_graph) {
+              setEffectGraph(graph.effect_graph);
             }
           } catch (err: any) {
             // 404 is fine - no graph saved yet
@@ -128,8 +127,8 @@ export default function CardDetailPage() {
   };
 
   const handleExportGraph = () => {
-    if (abilityGraph) {
-      const json = JSON.stringify(abilityGraph, null, 2);
+    if (effectGraph) {
+      const json = JSON.stringify(effectGraph, null, 2);
       const blob = new Blob([json], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -364,29 +363,29 @@ export default function CardDetailPage() {
               <div className="bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] rounded-lg p-6">
                 <div className="text-center text-[color:var(--theme-text-secondary)]">Loading ability graph...</div>
               </div>
-            ) : abilityGraph ? (
+            ) : effectGraph ? (
               <div className="bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] rounded-lg p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-2xl font-bold text-[color:var(--theme-text-primary)]">Saved Ability Graph</h2>
+                  <h2 className="text-2xl font-bold text-[color:var(--theme-text-primary)]">Saved Effect Graph</h2>
                   <div className="flex items-center gap-2">
                     <Button onClick={handleExportGraph} variant="outline" size="sm">
                       Export JSON
                     </Button>
                     <Button onClick={handleEditInBuilder} variant="secondary" size="sm">
-                      Edit Graph
+                      Edit Effects
                     </Button>
                   </div>
                 </div>
                 <div className="bg-[color:var(--theme-card-hover)] border border-[color:var(--theme-card-border)] rounded-lg p-4">
-                  <AbilityTreeView />
+                  <EffectGraphPreview graph={effectGraph} />
                 </div>
               </div>
             ) : (
               <div className="bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] rounded-lg p-6">
                 <div className="text-center space-y-4">
-                  <p className="text-[color:var(--theme-text-secondary)]">No ability graph saved for this card yet.</p>
+                  <p className="text-[color:var(--theme-text-secondary)]">No effect graph saved for this card yet.</p>
                   <Button onClick={handleEditInBuilder} variant="primary">
-                    Create Ability Graph
+                    Create Effect Graph
                   </Button>
                 </div>
               </div>

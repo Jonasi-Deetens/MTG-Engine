@@ -5,15 +5,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { useBuilderStore, CardData } from '@/store/builderStore';
+import { useEffectStore } from '@/store/effectStore';
+import type { CardData } from '@/store/builderStore';
 import { cards } from '@/lib/api';
-import { abilities } from '@/lib/abilities';
+import { effects } from '@/lib/effects';
 import { Button } from '@/components/ui/Button';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { CardPreview } from '@/components/cards/CardPreview';
-import { AbilityTabs } from '@/features/builder/components/AbilityTabs';
 import { ValidationPanel } from '@/features/builder/components/ValidationPanel';
-import { AbilityTreeView } from '@/features/builder/components/AbilityTreeView';
+import { EffectGraphPreview } from '@/features/builder/components/EffectGraphPreview';
+import { EffectList } from '@/features/builder/components/EffectList';
+import { EffectWizard } from '@/features/builder/components/EffectWizard';
 import { isEditableTarget } from '@/context/ShortcutContext';
 
 export default function BuilderPage() {
@@ -21,16 +23,22 @@ export default function BuilderPage() {
   const {
     currentCard,
     setCurrentCard,
-    loadFromGraph,
+    fromEffectGraph,
     clearAll,
-    convertToGraph,
+    toEffectGraph,
     setValidation,
-  } = useBuilderStore();
+    addStep,
+    updateStep,
+    steps,
+    setSourceKind,
+  } = useEffectStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [searching, setSearching] = useState(false);
   const [debugOpen, setDebugOpen] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [editingStepId, setEditingStepId] = useState<string | null>(null);
 
   const handleGetRandomCard = async () => {
     setLoading(true);
@@ -99,33 +107,32 @@ export default function BuilderPage() {
   };
 
   const runValidation = useCallback(async () => {
-    const graph = convertToGraph();
+    const graph = toEffectGraph();
     if (!graph) {
       setValidation([], [], false);
       return;
     }
     try {
-      const result = await abilities.validate(graph, currentCard?.colors);
-      setValidation(result.errors, result.warnings, result.valid);
+      const result = await effects.validate(graph);
+      setValidation(result.errors, [], result.valid);
     } catch (err: any) {
       console.error('Validation error:', err);
       setValidation(
-        [{ type: 'error', message: 'Failed to validate abilities' }],
+        ['Failed to validate effects'],
         [],
         false
       );
     }
-  }, [convertToGraph, currentCard?.colors, setValidation]);
+  }, [toEffectGraph, setValidation]);
 
   const loadSavedGraph = async (cardId: string) => {
     try {
       console.log('Loading graph for card_id:', cardId);
-      const saved = await abilities.getCardGraph(cardId);
+      const saved = await effects.getCardEffectGraph(cardId);
       console.log('Loaded graph response:', saved);
-      if (saved && saved.ability_graph) {
-        // Load the saved graph into the store (abilities already cleared before this)
-        loadFromGraph(saved.ability_graph);
-        console.log('Graph loaded into store');
+      if (saved && saved.effect_graph) {
+        fromEffectGraph(saved.effect_graph);
+        console.log('Effect graph loaded into store');
       }
     } catch (err: any) {
       // Graph doesn't exist yet, that's fine - abilities already cleared
@@ -196,6 +203,18 @@ export default function BuilderPage() {
     window.addEventListener('keydown', onKeyDown, { passive: false });
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [runValidation]);
+
+  const handleAddEffect = () => {
+    setEditingStepId(null);
+    setWizardOpen(true);
+  };
+
+  const handleEditEffect = (id: string) => {
+    setEditingStepId(id);
+    setWizardOpen(true);
+  };
+
+  const editingStep = steps.find((step) => step.id === editingStepId) ?? null;
 
   return (
     <div className="p-4">
@@ -327,17 +346,23 @@ export default function BuilderPage() {
           )}
         </div>
 
-        {/* Main Section: Split between Tabs and Preview */}
+        {/* Main Section: Split between Builder and Preview */}
         <div className="grid grid-cols-2 gap-4">
-          {/* Left: Ability Builder Tabs */}
+          {/* Left: Effect Builder */}
           <div className="bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] rounded-lg p-6 min-h-[500px]">
-            <AbilityTabs />
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-[color:var(--theme-text-primary)]">Effects</h2>
+              <Button variant="primary" size="sm" onClick={handleAddEffect}>
+                Add Effect
+              </Button>
+            </div>
+            <EffectList onEdit={handleEditEffect} />
           </div>
 
           {/* Right: Tree View Preview */}
           <div className="bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] rounded-lg p-6 min-h-[500px] overflow-y-auto">
-            <h2 className="text-xl font-bold text-[color:var(--theme-text-primary)] mb-4">Ability Preview</h2>
-            <AbilityTreeView />
+            <h2 className="text-xl font-bold text-[color:var(--theme-text-primary)] mb-4">Effect Preview</h2>
+            <EffectGraphPreview />
           </div>
         </div>
 
@@ -360,11 +385,24 @@ export default function BuilderPage() {
               Current graph snapshot
             </div>
             <pre className="text-xs text-[color:var(--theme-text-secondary)] whitespace-pre-wrap max-h-64 overflow-auto bg-[color:var(--theme-bg-secondary)]/60 border border-[color:var(--theme-card-border)] rounded p-3">
-              {JSON.stringify(convertToGraph(), null, 2) || 'No graph'}
+              {JSON.stringify(toEffectGraph(), null, 2) || 'No graph'}
             </pre>
           </div>
         )}
       </div>
+      <EffectWizard
+        isOpen={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+        onSave={(effect) => {
+          if (editingStepId) {
+            updateStep(editingStepId, effect);
+          } else {
+            addStep(effect);
+          }
+        }}
+        editingEffect={editingStep?.effect ?? null}
+        onSourceKindChange={setSourceKind}
+      />
     </div>
   );
 }

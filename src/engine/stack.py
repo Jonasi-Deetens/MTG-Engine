@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, Literal, Optional
 
 
-StackItemKind = Literal["spell", "activated_ability", "triggered_ability", "ability_graph"]
+StackItemKind = Literal["spell", "activated_ability", "triggered_ability", "effect_graph"]
 
 
 @dataclass

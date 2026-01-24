@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Literal, Optional
 from pydantic import BaseModel, Field
 
-from api.schemas.ability_schemas import AbilityGraph
+from api.schemas.unified_effect_schemas import EffectGraph
 
 
 class GameObjectSnapshot(BaseModel):
@@ -46,8 +46,8 @@ class GameObjectSnapshot(BaseModel):
     phased_out: bool = False
     transformed: bool = False
     regenerate_shield: bool = False
-    ability_graphs: List[Dict[str, Any]] = Field(default_factory=list)
-    base_ability_graphs: List[Dict[str, Any]] = Field(default_factory=list)
+    effect_graphs: List[Dict[str, Any]] = Field(default_factory=list)
+    base_effect_graphs: List[Dict[str, Any]] = Field(default_factory=list)
     temporary_effects: List[Dict[str, Any]] = Field(default_factory=list)
     activation_limits: Dict[str, int] = Field(default_factory=dict)
     etb_choices: Dict[str, Any] = Field(default_factory=dict)
@@ -97,7 +97,7 @@ class TurnStateSnapshot(BaseModel):
 
 
 class StackItemSnapshot(BaseModel):
-    kind: Literal["spell", "activated_ability", "triggered_ability", "ability_graph"]
+    kind: Literal["spell", "activated_ability", "triggered_ability", "effect_graph"]
     payload: Dict[str, Any] = {}
     controller_id: Optional[int] = None
 
@@ -155,7 +155,7 @@ class EngineActionRequest(BaseModel):
     ]
     game_id: Optional[str] = None
     game_state: Optional[GameStateSnapshot] = None
-    ability_graph: Optional[AbilityGraph] = None
+    effect_graph: Optional[EffectGraph] = None
     context: Optional[ResolveContextSnapshot] = None
     player_id: Optional[int] = None
     object_id: Optional[str] = None

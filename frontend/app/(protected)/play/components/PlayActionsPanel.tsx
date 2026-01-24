@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { ActionsPanel } from '@/features/game/components/LegacyActionsPanel';
+import { ActionsPanel } from '@/features/game/components/ActionsPanel';
 import { CombatDamagePanel } from '@/features/game/components/CombatDamagePanel';
 import { ReplacementChoicePanel } from '@/features/game/components/ReplacementChoicePanel';
 import { StackView } from '@/features/game/components/StackView';
@@ -111,7 +111,9 @@ export function PlayActionsPanel() {
     hasEffectTargets,
     copyTargetsByEffectCount,
     copyEffectTargetGroups,
+    copyTargetErrors,
     targetSelectionErrors,
+    globalTargetErrors,
     copyTargetSelections,
     searchEntries,
     searchErrors,
@@ -198,7 +200,7 @@ export function PlayActionsPanel() {
 
   // Derive hasActivatedAbility
   const selectedBattlefieldObject = gameState?.objects.find((obj) => obj.id === selectedBattlefieldId);
-  const hasActivatedAbility = selectedBattlefieldObject?.ability_graphs && selectedBattlefieldObject.ability_graphs.length > 0;
+  const hasActivatedAbility = selectedBattlefieldObject?.effect_graphs && selectedBattlefieldObject.effect_graphs.length > 0;
 
   if (!gameState) return null;
 
@@ -271,7 +273,7 @@ export function PlayActionsPanel() {
             player_id: currentPriority,
             object_id: selectedBattlefieldId ?? undefined,
             ability_index: 0,
-            ability_type: 'activated',  // New: support type+index lookup
+            ability_type: 'activated',
             context: buildCastContext(selectedBattlefieldId ?? undefined, {
               wardAutoPay: autoPayWard,
               wardPayments: wardPaymentsPayload,
@@ -483,31 +485,33 @@ export function PlayActionsPanel() {
             ),
           }))
         }
-        targetObjects={shouldUseStackTargets ? stackSpellObjects : filteredTargetableObjects}
-        targetPlayers={shouldUseStackTargets ? [] : filteredTargetPlayers}
+        effectTargetGroups={hasEffectTargets ? effectTargetGroups : []}
+        hasEffectTargets={hasEffectTargets}
+        filteredTargetableObjects={shouldUseStackTargets ? stackSpellObjects : filteredTargetableObjects}
+        filteredTargetPlayers={shouldUseStackTargets ? [] : filteredTargetPlayers}
         selectedTargetObjectIds={resolvedTargetObjectIds}
         selectedTargetPlayerIds={resolvedTargetPlayerIds}
-        objectLabel={shouldUseStackTargets ? 'Spells on Stack' : 'Objects'}
-        maxObjectTargets={targetHints.maxObjectTargets ?? undefined}
-        maxPlayerTargets={targetHints.maxPlayerTargets ?? undefined}
         objectTargetStatus={objectTargetStatus}
         playerTargetStatus={playerTargetStatus}
-        onChangeTargetObjects={setSelectedTargetObjectIds}
-        onChangeTargetPlayers={setSelectedTargetPlayerIds}
-        onClearTargets={() => {
-          setSelectedTargetObjectIds([]);
-          setSelectedTargetPlayerIds([]);
-        }}
-        effectTargetGroups={hasEffectTargets ? effectTargetGroups : undefined}
+        maxObjectTargets={targetHints.maxObjectTargets ?? undefined}
+        maxPlayerTargets={targetHints.maxPlayerTargets ?? undefined}
+        objectLabel={shouldUseStackTargets ? 'Spells on Stack' : 'Objects'}
+        playerLabel="Players"
+        copyTargetsEnabled={copyTargetsEnabled}
+        copyTargetsCount={copyTargetsByEffectCount > 0 ? copyTargetsByEffectCount : copyTargetsCount}
+        copyTargetSelections={copyTargetSelections}
+        copyTargetErrors={copyTargetErrors}
         copyEffectTargetGroups={copyTargetsByEffectCount > 0 ? copyEffectTargetGroups : undefined}
         targetSelectionErrors={targetSelectionErrors}
-        copyTargetSelections={copyTargetsEnabled ? copyTargetSelections : undefined}
-        searchChoiceEntries={searchEntries}
-        searchChoiceErrors={searchErrors}
-        onChangeCopyTarget={(index, objectIds, playerIds) =>
+        globalTargetErrors={globalTargetErrors}
+        searchEntries={searchEntries}
+        searchErrors={searchErrors}
+        onChangeTargetObjects={setSelectedTargetObjectIds}
+        onChangeTargetPlayers={setSelectedTargetPlayerIds}
+        onChangeCopyTargetSelection={(index, selection) =>
           setCopyTargetSelections((prev: Array<{ objectIds: string[]; playerIds: number[] }>) => {
             const next = [...prev];
-            next[index] = { objectIds, playerIds };
+            next[index] = selection;
             return next;
           })
         }

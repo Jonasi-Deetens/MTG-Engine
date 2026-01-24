@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Any, Dict, List, Optional
 
-from .ability_graph import AbilityGraphRuntimeAdapter
 from .conditions import evaluate_conditions
 from .effects_helpers import normalize_card_type
 from .mana import ManaCost
@@ -35,53 +34,50 @@ def gather_cast_cost_modifiers(
     spell_obj: GameObject,
     context: Optional[ResolveContext] = None,
 ) -> List[Dict[str, Any]]:
-    adapter = AbilityGraphRuntimeAdapter(game_state)
     modifiers: List[Dict[str, Any]] = []
     
     for source in game_state.objects.values():
         if source.zone != ZONE_BATTLEFIELD or source.phased_out:
             continue
         
-        # Check static ability graphs
-        if source.ability_graphs:
-            for graph in source.ability_graphs:
-                if graph.get("abilityType") != "static":
-                    continue
-                runtime = adapter.build_runtime(graph)
-                if runtime.trigger or runtime.costs:
-                    continue
-                effect_context = ResolveContext(
-                    source_id=source.id,
-                    controller_id=source.controller_id,
-                    targets={"target": spell_obj.id},
-                )
-                if context and context.targets:
-                    effect_context.targets.update(context.targets)
-                if not evaluate_conditions(game_state, runtime.conditions, effect_context):
-                    continue
-                for effect_node in runtime.effects:
-                    if not isinstance(effect_node, dict):
-                        continue
-                    payload = effect_node.get("effect") if "effect" in effect_node else effect_node
-                    if not isinstance(payload, dict):
-                        continue
-                    if payload.get("type") != "modify_cast_cost":
-                        continue
-                    applies_to = effect_node.get("appliesTo") or payload.get("appliesTo") or "spells_you_cast"
-                    if not _applies_to_player(applies_to, source.controller_id, player_id):
-                        continue
-                    if not _matches_card_type(payload, spell_obj):
-                        continue
-                    amount = int(payload.get("amount", 0))
-                    if not amount:
-                        amount = int(payload.get("increase", 0)) - int(payload.get("reduction", 0))
-                    if amount:
-                        modifiers.append({
-                            "amount": amount,
-                            "source_id": source.id,
-                            "timestamp": source.entered_turn or game_state.turn.turn_number,
-                            "timestamp_order": object_order(source),
-                        })
+        # Check continuous effects from unified effect graphs
+        for active in list(game_state.active_effect_registry.effects):
+            if active.source_id != source.id:
+                continue
+            body = active.effect_data.effect
+            if getattr(body, "kind", None) != "continuous":
+                continue
+            modifier = getattr(body, "modifier", None)
+            if not modifier:
+                continue
+            payload = modifier.model_dump(by_alias=True) if hasattr(modifier, "model_dump") else dict(modifier)
+            if payload.get("type") != "modify_cast_cost":
+                continue
+            applies_to = payload.get("appliesTo") or "spells_you_cast"
+            if not _applies_to_player(applies_to, source.controller_id, player_id):
+                continue
+            if not _matches_card_type(payload, spell_obj):
+                continue
+            effect_context = ResolveContext(
+                source_id=source.id,
+                controller_id=source.controller_id,
+                targets={"target": spell_obj.id},
+            )
+            if context and context.targets:
+                effect_context.targets.update(context.targets)
+            conditions = [c.model_dump(by_alias=True) if hasattr(c, "model_dump") else dict(c) for c in active.effect_data.conditions]
+            if conditions and not evaluate_conditions(game_state, conditions, effect_context):
+                continue
+            amount = int(payload.get("amount", 0))
+            if not amount:
+                amount = int(payload.get("increase", 0)) - int(payload.get("reduction", 0))
+            if amount:
+                modifiers.append({
+                    "amount": amount,
+                    "source_id": source.id,
+                    "timestamp": source.entered_turn or game_state.turn.turn_number,
+                    "timestamp_order": object_order(source),
+                })
         
         # Check temporary effects from triggered/activated abilities
         for temp_effect in source.temporary_effects:

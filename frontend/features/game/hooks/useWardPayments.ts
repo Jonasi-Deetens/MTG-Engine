@@ -180,7 +180,7 @@ export const useWardPayments = ({
       .map((objectId) => objectMap.get(objectId))
       .filter((obj): obj is EngineGameObjectSnapshot => Boolean(obj))
       .map((obj) => {
-        const costs = buildActivationCosts(deriveWardCostsFromGraphs(obj.ability_graphs ?? []));
+        const costs = buildActivationCosts(deriveWardCostsFromGraphs(obj.effect_graphs ?? []));
         if (!costs.length) {
           return null;
         }

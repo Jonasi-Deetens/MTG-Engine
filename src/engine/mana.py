@@ -397,16 +397,6 @@ def produce_mana_for_object(game_state: GameState, obj: GameObject) -> Dict[str,
         if land_type in (obj.type_line or "") or land_type in obj.name:
             return {mana: 1}
 
-    if obj.oracle_text:
-        symbols = extract_mana_symbols(obj.oracle_text)
-        mana: Dict[str, int] = {}
-        for symbol in symbols:
-            symbol = symbol.upper()
-            if symbol in MANA_COLORS or symbol == "C":
-                mana[symbol] = mana.get(symbol, 0) + 1
-        if mana:
-            return mana
-
     raise ValueError("No mana ability available for this permanent.")
 
 

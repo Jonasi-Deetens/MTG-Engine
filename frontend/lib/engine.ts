@@ -42,8 +42,7 @@ export interface EngineGameObjectSnapshot {
   phased_out: boolean;
   transformed: boolean;
   regenerate_shield: boolean;
-  ability_graphs?: Array<Record<string, any>>;
-  base_ability_graphs?: Array<Record<string, any>>;
+  effect_graphs?: Array<Record<string, any>>;
   temporary_effects?: Array<Record<string, any>>;
   activation_limits?: Record<string, number>;
   etb_choices?: Record<string, any>;
@@ -93,7 +92,7 @@ export interface EngineCombatStateSnapshot {
 }
 
 export interface EngineStackItemSnapshot {
-  kind: 'spell' | 'activated_ability' | 'triggered_ability' | 'ability_graph';
+  kind: 'spell' | 'activated_ability' | 'triggered_ability' | 'effect_graph';
   payload: Record<string, any>;
   controller_id?: number | null;
 }
@@ -143,7 +142,7 @@ export interface EngineActionRequest {
     | 'assign_combat_damage';
   game_id?: string | null;
   game_state?: EngineGameStateSnapshot;
-  ability_graph?: Record<string, any>;
+  effect_graph?: Record<string, any>;
   context?: EngineResolveContextSnapshot;
   player_id?: number;
   object_id?: string;
@@ -361,8 +360,7 @@ const expandDeckCards = (deck: DeckDetailResponse, playerId: number) => {
         phased_out: false,
         transformed: false,
         regenerate_shield: false,
-        ability_graphs: [],
-        base_ability_graphs: [],
+        effect_graphs: [],
         temporary_effects: [],
         etb_choices: {},
       });
@@ -411,8 +409,7 @@ const expandDeckCards = (deck: DeckDetailResponse, playerId: number) => {
       phased_out: false,
       transformed: false,
       regenerate_shield: false,
-      ability_graphs: [],
-      base_ability_graphs: [],
+      effect_graphs: [],
       temporary_effects: [],
       etb_choices: {},
     });

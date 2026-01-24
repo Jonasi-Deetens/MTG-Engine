@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { abilities } from '@/lib/abilities';
+import { effects } from '@/lib/effects';
 import { EngineCardMap, EngineGameStateSnapshot } from '@/lib/engine';
 
-interface UseAbilityGraphsArgs {
+interface UseEffectGraphsArgs {
   gameState: EngineGameStateSnapshot | null;
   cardMap: EngineCardMap;
   setGameState: React.Dispatch<React.SetStateAction<EngineGameStateSnapshot | null>>;
 }
 
-export const useAbilityGraphs = ({ gameState, cardMap, setGameState }: UseAbilityGraphsArgs) => {
-  const [abilityGraphs, setAbilityGraphs] = useState<Record<string, any>>({});
+export const useEffectGraphs = ({ gameState, cardMap, setGameState }: UseEffectGraphsArgs) => {
+  const [effectGraphs, setEffectGraphs] = useState<Record<string, any>>({});
   const missingCardIdsRef = useRef(new Set<string>());
   const inFlightCardIdsRef = useRef(new Set<string>());
 
@@ -17,11 +17,11 @@ export const useAbilityGraphs = ({ gameState, cardMap, setGameState }: UseAbilit
     (cardIds: string[]) =>
       cardIds.filter(
         (cardId) =>
-          !abilityGraphs[cardId] &&
+          !effectGraphs[cardId] &&
           !missingCardIdsRef.current.has(cardId) &&
           !inFlightCardIdsRef.current.has(cardId)
       ),
-    [abilityGraphs]
+    [effectGraphs]
   );
 
   const markInFlight = useCallback((cardIds: string[]) => {
@@ -36,20 +36,20 @@ export const useAbilityGraphs = ({ gameState, cardMap, setGameState }: UseAbilit
     cardIds.forEach((cardId) => missingCardIdsRef.current.add(cardId));
   }, []);
 
-  const applyAbilityGraphsToState = useCallback(
+  const applyEffectGraphsToState = useCallback(
     (graphsByCardId: Record<string, any>) => {
       if (Object.keys(graphsByCardId).length === 0) return;
-      setAbilityGraphs((prev) => ({ ...prev, ...graphsByCardId }));
+      setEffectGraphs((prev) => ({ ...prev, ...graphsByCardId }));
       setGameState((prevState) => {
         if (!prevState) return prevState;
         const updatedObjects = prevState.objects.map((obj) => {
           const objCardId = cardMap[obj.id]?.card_id;
           const graph = objCardId ? graphsByCardId[objCardId] : undefined;
           if (!graph) return obj;
-          if (obj.ability_graphs && obj.ability_graphs.length > 0) return obj;
+          if (obj.effect_graphs && obj.effect_graphs.length > 0) return obj;
           return {
             ...obj,
-            ability_graphs: [graph],
+            effect_graphs: [graph],
           };
         });
         return { ...prevState, objects: updatedObjects };
@@ -58,33 +58,33 @@ export const useAbilityGraphs = ({ gameState, cardMap, setGameState }: UseAbilit
     [cardMap, setGameState]
   );
 
-  const loadAbilityGraphForObject = useCallback(
+  const loadEffectGraphForObject = useCallback(
     async (objectId: string) => {
       const card = cardMap[objectId];
       const cardId = card?.card_id;
-      if (!cardId || abilityGraphs[cardId]) return;
+      if (!cardId || effectGraphs[cardId]) return;
       if (missingCardIdsRef.current.has(cardId) || inFlightCardIdsRef.current.has(cardId)) return;
       markInFlight([cardId]);
       try {
-        const response = await abilities.getCardGraph(cardId);
-        if (response?.ability_graph) {
-          applyAbilityGraphsToState({ [cardId]: response.ability_graph });
+        const response = await effects.getCardEffectGraph(cardId);
+        if (response?.effect_graph) {
+          applyEffectGraphsToState({ [cardId]: response.effect_graph });
         }
       } catch (err: any) {
         if (err?.status === 404) {
           markMissing([cardId]);
         } else {
-          console.error('Failed to load ability graph:', err);
+          console.error('Failed to load effect graph:', err);
         }
       } finally {
         clearInFlight([cardId]);
       }
     },
     [
-      abilityGraphs,
-      applyAbilityGraphsToState,
+      applyEffectGraphsToState,
       cardMap,
       clearInFlight,
+      effectGraphs,
       markInFlight,
       markMissing,
     ]
@@ -94,36 +94,37 @@ export const useAbilityGraphs = ({ gameState, cardMap, setGameState }: UseAbilit
     if (!gameState) return;
     const cardIdsToFetch = filterFetchableCardIds(
       Array.from(
-      new Set(
-        gameState.objects
-          .filter((obj) => obj.zone === 'battlefield' || obj.zone === 'command')
-          .map((obj) => cardMap[obj.id]?.card_id)
-          .filter((cardId): cardId is string => Boolean(cardId))
-      )
+        new Set(
+          gameState.objects
+            .filter((obj) => obj.zone === 'battlefield' || obj.zone === 'command')
+            .map((obj) => cardMap[obj.id]?.card_id)
+            .filter((cardId): cardId is string => Boolean(cardId))
+        )
       )
     );
 
     if (cardIdsToFetch.length === 0) return;
 
     const loadGraphs = async () => {
-      const chunkSize = 25;
+      const chunkSize = 10;
       for (let i = 0; i < cardIdsToFetch.length; i += chunkSize) {
         const chunk = cardIdsToFetch.slice(i, i + chunkSize);
         if (chunk.length === 0) continue;
         markInFlight(chunk);
         try {
-          const response = await abilities.getCardGraphs(chunk);
-          const graphsByCardId = response.graphs.reduce<Record<string, any>>((acc, graph) => {
-            acc[graph.card_id] = graph.ability_graph;
-            return acc;
-          }, {});
-          applyAbilityGraphsToState(graphsByCardId);
-          if (response.missing?.length) {
-            markMissing(response.missing);
-          }
-        } catch (err: any) {
-          if (err?.status !== 404) {
-            console.error('Failed to bulk load ability graphs:', err);
+          for (const cardId of chunk) {
+            try {
+              const response = await effects.getCardEffectGraph(cardId);
+              if (response?.effect_graph) {
+                applyEffectGraphsToState({ [cardId]: response.effect_graph });
+              }
+            } catch (err: any) {
+              if (err?.status === 404) {
+                markMissing([cardId]);
+              } else {
+                console.error('Failed to load effect graph:', err);
+              }
+            }
           }
         } finally {
           clearInFlight(chunk);
@@ -133,8 +134,7 @@ export const useAbilityGraphs = ({ gameState, cardMap, setGameState }: UseAbilit
 
     loadGraphs();
   }, [
-    abilityGraphs,
-    applyAbilityGraphsToState,
+    applyEffectGraphsToState,
     cardMap,
     clearInFlight,
     filterFetchableCardIds,
@@ -144,9 +144,8 @@ export const useAbilityGraphs = ({ gameState, cardMap, setGameState }: UseAbilit
   ]);
 
   return {
-    abilityGraphs,
-    applyAbilityGraphsToState,
-    loadAbilityGraphForObject,
+    effectGraphs,
+    applyEffectGraphsToState,
+    loadEffectGraphForObject,
   };
 };
-

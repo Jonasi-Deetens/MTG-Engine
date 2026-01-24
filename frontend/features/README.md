@@ -85,7 +85,6 @@ The game feature handles all gameplay functionality:
 | Component | Responsibility |
 |-----------|---------------|
 | ActionsPanel | Coordinator for game action UI (refactored version) |
-| LegacyActionsPanel | Original monolithic actions panel (for compatibility) |
 | PlayerMat | Player's play area |
 | StackView | Display of spell/ability stack |
 | TurnStatusCard | Current turn/step display |
@@ -94,7 +93,7 @@ The game feature handles all gameplay functionality:
 **Hooks:**
 | Hook | Responsibility |
 |------|---------------|
-| useAbilityGraphs | Load ability graphs for cards |
+| useEffectGraphs | Load effect graphs for cards |
 | useActivationCosts | Handle cost payments |
 | useCasting | Spell casting flow |
 | useCombatSelection | Attacker/blocker selection |

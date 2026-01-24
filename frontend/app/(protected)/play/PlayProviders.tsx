@@ -119,13 +119,13 @@ export function PlayProviders({ children }: { children: React.ReactNode }) {
     setSelectedCommandId: state.setSelectedCommandId,
     setSelectedBattlefieldId: state.setSelectedBattlefieldId,
     setSelectedStackIndex: state.setSelectedStackIndex,
-    loadAbilityGraphForObject: state.loadAbilityGraphForObject,
-    abilityGraphs: state.abilityGraphs,
+    loadEffectGraphForObject: state.loadEffectGraphForObject,
+    effectGraphs: state.effectGraphs,
     selectedGraph: state.selectedGraph,
   }), [
     state.selectedHandId, state.selectedCommandId, state.selectedBattlefieldId, state.selectedStackIndex,
     state.setSelectedHandId, state.setSelectedCommandId, state.setSelectedBattlefieldId, state.setSelectedStackIndex,
-    state.loadAbilityGraphForObject, state.abilityGraphs, state.selectedGraph,
+    state.loadEffectGraphForObject, state.effectGraphs, state.selectedGraph,
   ]);
 
   const turnValue = useMemo<TurnContextValue>(() => ({

@@ -81,11 +81,11 @@ class StackItemKind(str, Enum):
     SPELL = "spell"
     ACTIVATED_ABILITY = "activated_ability"
     TRIGGERED_ABILITY = "triggered_ability"
-    ABILITY_GRAPH = "ability_graph"
+    EFFECT_GRAPH = "effect_graph"
 
 
 # Type alias for backward compatibility with Literal type
-StackItemKindLiteral = Literal["spell", "activated_ability", "triggered_ability", "ability_graph"]
+StackItemKindLiteral = Literal["spell", "activated_ability", "triggered_ability", "effect_graph"]
 
 
 class Phase(str, Enum):

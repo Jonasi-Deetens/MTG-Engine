@@ -1,4 +1,4 @@
-"""Runtime MTG engine core and ability graph execution."""
+"""Runtime MTG engine core and effect graph execution."""
 
 from .state import GameState, GameObject, PlayerState, ResolveContext
 from .turn import TurnState, Phase, Step
@@ -7,7 +7,6 @@ from .turn_manager import TurnManager
 from .stack import Stack, StackItem
 from .events import Event, EventBus
 from .priority import PriorityManager
-from .ability_graph import AbilityGraphRuntimeAdapter
 from .ability_registry import AbilityRegistry
 from .commander import register_commander, apply_commander_tax, record_commander_damage
 
@@ -26,7 +25,6 @@ from .core import (
 )
 
 __all__ = [
-    "AbilityGraphRuntimeAdapter",
     "AbilityRegistry",
     "Event",
     "EventBus",

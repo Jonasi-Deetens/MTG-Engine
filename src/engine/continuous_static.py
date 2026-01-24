@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import Dict, List, Optional
 
-from .ability_graph import AbilityGraphRuntimeAdapter
 from .conditions import evaluate_conditions
 from .continuous_helpers import effect_sort_key, object_order
+from .effects.active_effects import ActiveEffect
 from .state import GameObject, GameState, ResolveContext
 from .zones import ZONE_BATTLEFIELD
 
@@ -126,58 +126,105 @@ def build_static_effect(effect: Dict, source: GameObject, game_state: GameState)
 
 
 def gather_static_layer_effects(game_state: GameState, effect_types: Optional[set[str]] = None) -> Dict[str, List[Dict]]:
-    adapter = AbilityGraphRuntimeAdapter(game_state)
     by_object: Dict[str, List[Dict]] = {}
-    for source in game_state.objects.values():
-        if source.zone != ZONE_BATTLEFIELD or source.phased_out:
-            continue
-        if not source.ability_graphs:
-            continue
-        for graph in source.ability_graphs:
-            runtime = None
-            effect_nodes: List[Dict] = []
-            if graph.get("abilityType") == "static":
-                runtime = adapter.build_runtime(graph)
-                if runtime.trigger or runtime.costs:
-                    continue
-                effect_nodes = [node for node in runtime.effects if isinstance(node, dict)]
-            else:
-                for node in graph.get("nodes", []) or []:
-                    if node.get("type") != "EFFECT":
-                        continue
-                    data = node.get("data") or {}
-                    if data.get("abilityType") == "static":
-                        effect_nodes.append(dict(data))
-
-            for effect_node in effect_nodes:
-                applies_to = effect_node.get("appliesTo", "self")
-                payload = effect_node.get("effect")
-                if not isinstance(payload, dict):
-                    continue
-                payload_type = payload.get("type")
-                if effect_types is not None and payload_type not in effect_types:
-                    continue
-                for target in iter_applies_to(game_state, source, applies_to):
-                    if target.zone != ZONE_BATTLEFIELD or target.phased_out:
-                        continue
-                    context = ResolveContext(
-                        source_id=source.id,
-                        controller_id=source.controller_id,
-                        targets={"target": target.id},
-                    )
-                    if runtime and not evaluate_conditions(game_state, runtime.conditions, context):
-                        continue
-                    effect = build_static_effect(payload, source, game_state)
-                    if not effect:
-                        continue
-                    message = (
-                        f"[graph] static_effect source={source.id} "
-                        f"target={target.id} effect={payload.get('type')}"
-                    )
-                    game_state.log(message)
-                    print(message, flush=True)
-                    by_object.setdefault(target.id, []).append(effect)
+    registry_effects = _iter_registry_static_effects(game_state, effect_types)
+    for obj_id, effects in registry_effects.items():
+        by_object.setdefault(obj_id, []).extend(effects)
     for effects in by_object.values():
         effects.sort(key=effect_sort_key)
     return by_object
+
+
+def _iter_registry_static_effects(
+    game_state: GameState,
+    effect_types: Optional[set[str]],
+) -> Dict[str, List[Dict]]:
+    by_object: Dict[str, List[Dict]] = {}
+    for active in list(game_state.active_effect_registry.effects):
+        if not _is_continuous_active(active, game_state):
+            continue
+        payload = _build_registry_payload(active)
+        if not payload:
+            continue
+        payload_type = payload.get("type")
+        if effect_types is not None and payload_type not in effect_types:
+            continue
+        source = game_state.objects.get(active.source_id)
+        if not source:
+            continue
+        applies_to = _resolve_applies_to(active)
+        for target in iter_applies_to(game_state, source, applies_to):
+            if target.zone != ZONE_BATTLEFIELD or target.phased_out:
+                continue
+            context = ResolveContext(
+                source_id=source.id,
+                controller_id=source.controller_id,
+                targets={"target": target.id},
+            )
+            conditions = [_to_dict(c) for c in active.effect_data.conditions]
+            if conditions and not evaluate_conditions(game_state, conditions, context):
+                continue
+            effect = build_static_effect(payload, source, game_state)
+            if not effect:
+                continue
+            message = (
+                f"[graph] static_effect source={source.id} "
+                f"target={target.id} effect={payload.get('type')}"
+            )
+            game_state.log(message)
+            print(message, flush=True)
+            by_object.setdefault(target.id, []).append(effect)
+    for effects in by_object.values():
+        effects.sort(key=effect_sort_key)
+    return by_object
+
+
+def _is_continuous_active(active: ActiveEffect, game_state: GameState) -> bool:
+    body = active.effect_data.effect
+    if getattr(body, "kind", None) != "continuous":
+        return False
+    duration = getattr(body, "duration", None)
+    duration_type = getattr(duration, "type", None) if duration else None
+    if duration_type != "while_in_zone":
+        return False
+    source = game_state.objects.get(active.source_id)
+    if not source:
+        return False
+    zone = getattr(duration, "zone", None)
+    if zone and source.zone != zone:
+        return False
+    return source.zone == ZONE_BATTLEFIELD and not source.phased_out
+
+
+def _build_registry_payload(active: ActiveEffect) -> Optional[Dict]:
+    body = active.effect_data.effect
+    modifier = getattr(body, "modifier", None)
+    if not modifier:
+        return None
+    if hasattr(modifier, "model_dump"):
+        payload = modifier.model_dump(by_alias=True)
+    else:
+        payload = dict(modifier)
+    payload_type = payload.get("type")
+    if payload_type:
+        payload["type"] = payload_type
+    return payload
+
+
+def _resolve_applies_to(active: ActiveEffect) -> str:
+    body = active.effect_data.effect
+    applies = getattr(body, "appliesTo", None)
+    if isinstance(applies, dict):
+        return applies.get("type") or "self"
+    if isinstance(applies, str):
+        return applies
+    return "self"
+
+
+def _to_dict(value) -> Dict:
+    if hasattr(value, "model_dump"):
+        return value.model_dump(by_alias=True)
+    if isinstance(value, dict):
+        return dict(value)
+    return {}
 
