@@ -35,6 +35,7 @@ def _apply_card_filters(
     set_code: Optional[str],
     layout: Optional[str],
     produced_mana: Optional[str],
+    lang: Optional[str],
     cmc_min: Optional[float],
     cmc_max: Optional[float],
     power_min: Optional[int],
@@ -82,6 +83,15 @@ def _apply_card_filters(
         params["layout"] = layout.lower()
         query = query.filter(text(f"LOWER({search_index}->>'layout') = :layout"))
 
+    if lang:
+        params["lang"] = lang.lower()
+        query = query.filter(
+            or_(
+                text("LOWER(lang) = :lang"),
+                text("LOWER(axis1_json->>'lang') = :lang"),
+            )
+        )
+
     color_list = [c.upper() for c in _split_filter_list(colors) if c.upper() in {"W", "U", "B", "R", "G", "C"}]
     if color_list:
         color_conditions = []
@@ -92,7 +102,7 @@ def _apply_card_filters(
         for idx, color in enumerate([c for c in color_list if c != "C"]):
             key = f"color_{idx}"
             params[key] = f'["{color}"]'
-            color_conditions.append(text(f"{fallback_colors} @> :{key}::jsonb"))
+            color_conditions.append(text(f"{fallback_colors} @> (:{key})::jsonb"))
         query = query.filter(or_(*color_conditions))
 
     identity_list = [c.upper() for c in _split_filter_list(color_identity) if c.upper() in {"W", "U", "B", "R", "G", "C"}]
@@ -105,7 +115,7 @@ def _apply_card_filters(
         for idx, color in enumerate([c for c in identity_list if c != "C"]):
             key = f"identity_{idx}"
             params[key] = f'["{color}"]'
-            identity_conditions.append(text(f"{fallback_color_identity} @> :{key}::jsonb"))
+            identity_conditions.append(text(f"{fallback_color_identity} @> (:{key})::jsonb"))
         query = query.filter(or_(*identity_conditions))
 
     type_list = _split_filter_list(types)
@@ -113,8 +123,12 @@ def _apply_card_filters(
         type_conditions = []
         for idx, value in enumerate(type_list):
             key = f"type_{idx}"
+            like_key = f"type_like_{idx}"
             params[key] = f'["{value}"]'
-            type_conditions.append(text(f"{fallback_card_types} @> :{key}::jsonb"))
+            params[like_key] = f"%{value}%"
+            # Check card_types array OR type_line string (case-insensitive)
+            type_conditions.append(text(f"{fallback_card_types} @> (:{key})::jsonb"))
+            type_conditions.append(text(f"LOWER({fallback_type_line}) LIKE LOWER(:{like_key})"))
         query = query.filter(or_(*type_conditions))
 
     super_list = _split_filter_list(supertypes)
@@ -123,7 +137,7 @@ def _apply_card_filters(
         for idx, value in enumerate(super_list):
             key = f"super_{idx}"
             params[key] = f'["{value}"]'
-            super_conditions.append(text(f"{fallback_supertypes} @> :{key}::jsonb"))
+            super_conditions.append(text(f"{fallback_supertypes} @> (:{key})::jsonb"))
         query = query.filter(or_(*super_conditions))
 
     sub_list = _split_filter_list(subtypes)
@@ -132,7 +146,7 @@ def _apply_card_filters(
         for idx, value in enumerate(sub_list):
             key = f"sub_{idx}"
             params[key] = f'["{value}"]'
-            sub_conditions.append(text(f"{fallback_subtypes} @> :{key}::jsonb"))
+            sub_conditions.append(text(f"{fallback_subtypes} @> (:{key})::jsonb"))
         query = query.filter(or_(*sub_conditions))
 
     keyword_list = _split_filter_list(keywords)
@@ -141,7 +155,7 @@ def _apply_card_filters(
         for idx, value in enumerate(keyword_list):
             key = f"keyword_{idx}"
             params[key] = f'["{value}"]'
-            keyword_conditions.append(text(f"{fallback_keywords} @> :{key}::jsonb"))
+            keyword_conditions.append(text(f"{fallback_keywords} @> (:{key})::jsonb"))
         query = query.filter(or_(*keyword_conditions))
 
     produced_list = [c.upper() for c in _split_filter_list(produced_mana) if c.upper() in {"W", "U", "B", "R", "G", "C"}]
@@ -150,7 +164,7 @@ def _apply_card_filters(
         for idx, value in enumerate(produced_list):
             key = f"produced_{idx}"
             params[key] = f'["{value}"]'
-            produced_conditions.append(text(f"{fallback_produced} @> :{key}::jsonb"))
+            produced_conditions.append(text(f"{fallback_produced} @> (:{key})::jsonb"))
         query = query.filter(or_(*produced_conditions))
 
     if cmc_min is not None:
@@ -212,6 +226,7 @@ def search_cards(
     set_code: Optional[str] = Query(None, description="Set code filter"),
     layout: Optional[str] = Query(None, description="Card layout filter"),
     produced_mana: Optional[str] = Query(None, description="Comma-separated produced mana colors"),
+    lang: Optional[str] = Query(None, description="Language code filter (e.g., 'en', 'ja')"),
     cmc_min: Optional[float] = Query(None, description="Minimum mana value (cmc)"),
     cmc_max: Optional[float] = Query(None, description="Maximum mana value (cmc)"),
     power_min: Optional[int] = Query(None, description="Minimum power"),
@@ -240,6 +255,7 @@ def search_cards(
         set_code=set_code,
         layout=layout,
         produced_mana=produced_mana,
+        lang=lang,
         cmc_min=cmc_min,
         cmc_max=cmc_max,
         power_min=power_min,
@@ -337,6 +353,7 @@ def list_cards(
     set_code: Optional[str] = Query(None, description="Set code filter"),
     layout: Optional[str] = Query(None, description="Card layout filter"),
     produced_mana: Optional[str] = Query(None, description="Comma-separated produced mana colors"),
+    lang: Optional[str] = Query(None, description="Language code filter (e.g., 'en', 'ja')"),
     cmc_min: Optional[float] = Query(None, description="Minimum mana value (cmc)"),
     cmc_max: Optional[float] = Query(None, description="Maximum mana value (cmc)"),
     power_min: Optional[int] = Query(None, description="Minimum power"),
@@ -364,6 +381,7 @@ def list_cards(
         set_code=set_code,
         layout=layout,
         produced_mana=produced_mana,
+        lang=lang,
         cmc_min=cmc_min,
         cmc_max=cmc_max,
         power_min=power_min,

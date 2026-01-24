@@ -136,7 +136,14 @@ export const cards = {
   list: async (
     page: number = 1, 
     pageSize: number = 20, 
-    filters?: { colors?: string[], type?: string, set_code?: string }
+    filters?: {
+      colors?: string[];
+      types?: string;
+      set_code?: string;
+      rarity?: string;
+      lang?: string;
+      keywords?: string;
+    }
   ): Promise<any> => {
     const params = new URLSearchParams();
     params.set('page', page.toString());
@@ -146,11 +153,20 @@ export const cards = {
       if (filters.colors && filters.colors.length > 0) {
         params.set('colors', filters.colors.join(','));
       }
-      if (filters.type) {
-        params.set('type', filters.type);
+      if (filters.types) {
+        params.set('types', filters.types);
       }
       if (filters.set_code) {
         params.set('set_code', filters.set_code);
+      }
+      if (filters.rarity) {
+        params.set('rarity', filters.rarity);
+      }
+      if (filters.lang) {
+        params.set('lang', filters.lang);
+      }
+      if (filters.keywords) {
+        params.set('keywords', filters.keywords);
       }
     }
     

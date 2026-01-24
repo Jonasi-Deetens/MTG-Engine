@@ -27,6 +27,9 @@ export default function SearchPage() {
     selectedColors,
     typeFilter,
     setFilter,
+    rarityFilter,
+    languageFilter,
+    keywordFilter,
     showFilters,
     setShowFilters,
     hasActiveFilters,
@@ -34,6 +37,9 @@ export default function SearchPage() {
     clearFilters,
     setTypeFilter,
     setSetFilter,
+    setRarityFilter,
+    setLanguageFilter,
+    setKeywordFilter,
   } = useSearchFilters();
 
   const {
@@ -51,6 +57,9 @@ export default function SearchPage() {
     selectedColors,
     typeFilter,
     setFilter,
+    rarityFilter,
+    languageFilter,
+    keywordFilter,
   });
 
   // Apply client-side filtering only in search mode
@@ -59,8 +68,16 @@ export default function SearchPage() {
     if (isBrowseMode) {
       return allCards;
     }
-    return applyFilters(allCards, selectedColors, typeFilter, setFilter);
-  }, [allCards, selectedColors, typeFilter, setFilter, isBrowseMode]);
+    return applyFilters(
+      allCards,
+      selectedColors,
+      typeFilter,
+      setFilter,
+      rarityFilter,
+      languageFilter,
+      keywordFilter
+    );
+  }, [allCards, selectedColors, typeFilter, setFilter, rarityFilter, languageFilter, keywordFilter, isBrowseMode]);
 
   // Paginate filtered cards
   const pagination = useMemo(() => {
@@ -110,6 +127,21 @@ export default function SearchPage() {
     setPage(1);
   }, [setSetFilter, setPage]);
 
+  const handleRarityFilterChange = useCallback((value: string) => {
+    setRarityFilter(value);
+    setPage(1);
+  }, [setRarityFilter, setPage]);
+
+  const handleLanguageFilterChange = useCallback((value: string) => {
+    setLanguageFilter(value);
+    setPage(1);
+  }, [setLanguageFilter, setPage]);
+
+  const handleKeywordFilterChange = useCallback((value: string) => {
+    setKeywordFilter(value);
+    setPage(1);
+  }, [setKeywordFilter, setPage]);
+
   const handleToggleColor = useCallback((color: string) => {
     toggleColor(color);
     setPage(1);
@@ -149,12 +181,18 @@ export default function SearchPage() {
           selectedColors={selectedColors}
           typeFilter={typeFilter}
           setFilter={setFilter}
+          rarityFilter={rarityFilter}
+          languageFilter={languageFilter}
+          keywordFilter={keywordFilter}
           showFilters={showFilters}
           hasActiveFilters={Boolean(hasActiveFilters)}
           onToggleFilters={() => setShowFilters(!showFilters)}
           onToggleColor={handleToggleColor}
           onTypeFilterChange={handleTypeFilterChange}
           onSetFilterChange={handleSetFilterChange}
+          onRarityFilterChange={handleRarityFilterChange}
+          onLanguageFilterChange={handleLanguageFilterChange}
+          onKeywordFilterChange={handleKeywordFilterChange}
           onClearFilters={handleClearFilters}
           isBrowseMode={isBrowseMode}
         />

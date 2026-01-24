@@ -2,18 +2,24 @@
 
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { COLORS, COLOR_NAMES } from '@/lib/constants/search';
+import { COLORS, COLOR_NAMES, RARITY_OPTIONS, LANGUAGE_OPTIONS } from '@/lib/constants/search';
 
 interface SearchFiltersProps {
   selectedColors: string[];
   typeFilter: string;
   setFilter: string;
+  rarityFilter: string;
+  languageFilter: string;
+  keywordFilter: string;
   showFilters: boolean;
   hasActiveFilters: boolean;
   onToggleFilters: () => void;
   onToggleColor: (color: string) => void;
   onTypeFilterChange: (value: string) => void;
   onSetFilterChange: (value: string) => void;
+  onRarityFilterChange: (value: string) => void;
+  onLanguageFilterChange: (value: string) => void;
+  onKeywordFilterChange: (value: string) => void;
   onClearFilters: () => void;
   isBrowseMode: boolean;
 }
@@ -22,12 +28,18 @@ export function SearchFilters({
   selectedColors,
   typeFilter,
   setFilter,
+  rarityFilter,
+  languageFilter,
+  keywordFilter,
   showFilters,
   hasActiveFilters,
   onToggleFilters,
   onToggleColor,
   onTypeFilterChange,
   onSetFilterChange,
+  onRarityFilterChange,
+  onLanguageFilterChange,
+  onKeywordFilterChange,
   onClearFilters,
   isBrowseMode,
 }: SearchFiltersProps) {
@@ -75,30 +87,76 @@ export function SearchFilters({
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-[color:var(--theme-text-secondary)] mb-2">
-              Type (contains)
-            </label>
-            <Input
-              type="text"
-              placeholder="e.g., Creature, Instant, Artifact"
-              value={typeFilter}
-              onChange={(e) => onTypeFilterChange(e.target.value)}
-              className="max-w-xs"
-            />
-          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-[color:var(--theme-text-secondary)] mb-2">
+                Card Type
+              </label>
+              <Input
+                type="text"
+                placeholder="e.g., Creature, Instant"
+                value={typeFilter}
+                onChange={(e) => onTypeFilterChange(e.target.value)}
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-[color:var(--theme-text-secondary)] mb-2">
-              Set Code
-            </label>
-            <Input
-              type="text"
-              placeholder="e.g., M21, CMR"
-              value={setFilter}
-              onChange={(e) => onSetFilterChange(e.target.value.toUpperCase())}
-              className="max-w-xs"
-            />
+            <div>
+              <label className="block text-sm font-medium text-[color:var(--theme-text-secondary)] mb-2">
+                Set Code
+              </label>
+              <Input
+                type="text"
+                placeholder="e.g., M21, CMR"
+                value={setFilter}
+                onChange={(e) => onSetFilterChange(e.target.value.toUpperCase())}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[color:var(--theme-text-secondary)] mb-2">
+                Rarity
+              </label>
+              <select
+                value={rarityFilter}
+                onChange={(e) => onRarityFilterChange(e.target.value)}
+                className="w-full px-3 py-2 rounded-md border border-[color:var(--theme-card-border)] bg-[color:var(--theme-card-bg)] text-[color:var(--theme-text-primary)] focus:outline-none focus:ring-2 focus:ring-[color:var(--theme-accent-primary)]"
+              >
+                {RARITY_OPTIONS.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[color:var(--theme-text-secondary)] mb-2">
+                Language
+              </label>
+              <select
+                value={languageFilter}
+                onChange={(e) => onLanguageFilterChange(e.target.value)}
+                className="w-full px-3 py-2 rounded-md border border-[color:var(--theme-card-border)] bg-[color:var(--theme-card-bg)] text-[color:var(--theme-text-primary)] focus:outline-none focus:ring-2 focus:ring-[color:var(--theme-accent-primary)]"
+              >
+                {LANGUAGE_OPTIONS.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[color:var(--theme-text-secondary)] mb-2">
+                Keyword
+              </label>
+              <Input
+                type="text"
+                placeholder="e.g., Flying, Trample"
+                value={keywordFilter}
+                onChange={(e) => onKeywordFilterChange(e.target.value)}
+              />
+            </div>
           </div>
         </div>
       )}

@@ -20,9 +20,12 @@ interface UseCardSearchOptions {
   selectedColors: string[];
   typeFilter: string;
   setFilter: string;
+  rarityFilter: string;
+  languageFilter: string;
+  keywordFilter: string;
 }
 
-export function useCardSearch({ selectedColors, typeFilter, setFilter }: UseCardSearchOptions) {
+export function useCardSearch({ selectedColors, typeFilter, setFilter, rarityFilter, languageFilter, keywordFilter }: UseCardSearchOptions) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const urlQuery = searchParams.get('q') || '';
@@ -43,7 +46,7 @@ export function useCardSearch({ selectedColors, typeFilter, setFilter }: UseCard
   const lastFetchedPage = useRef<number>(0);
   const lastSyncedQuery = useRef<string>('');
   const lastSyncedPage = useRef<number>(0);
-  const filtersKey = `${selectedColors.join(',')}-${typeFilter}-${setFilter}`;
+  const filtersKey = `${selectedColors.join(',')}-${typeFilter}-${setFilter}-${rarityFilter}-${languageFilter}-${keywordFilter}`;
   const lastFetchedFilters = useRef<string>('');
 
   // Initialize state from URL on mount only
@@ -78,15 +81,31 @@ export function useCardSearch({ selectedColors, typeFilter, setFilter }: UseCard
     
     try {
       // Build filter object for API call
-      const filters: { colors?: string[], type?: string, set_code?: string } = {};
+      const filters: {
+        colors?: string[];
+        types?: string;
+        set_code?: string;
+        rarity?: string;
+        lang?: string;
+        keywords?: string;
+      } = {};
       if (selectedColors.length > 0) {
         filters.colors = selectedColors;
       }
       if (typeFilter) {
-        filters.type = typeFilter;
+        filters.types = typeFilter;
       }
       if (setFilter) {
         filters.set_code = setFilter;
+      }
+      if (rarityFilter) {
+        filters.rarity = rarityFilter;
+      }
+      if (languageFilter) {
+        filters.lang = languageFilter;
+      }
+      if (keywordFilter) {
+        filters.keywords = keywordFilter;
       }
       
       // Use server-side filtering - backend will handle filtering and pagination
@@ -105,7 +124,7 @@ export function useCardSearch({ selectedColors, typeFilter, setFilter }: UseCard
     } finally {
       setLoading(false);
     }
-  }, [selectedColors, typeFilter, setFilter, filtersKey]);
+  }, [selectedColors, typeFilter, setFilter, rarityFilter, languageFilter, keywordFilter, filtersKey]);
 
   // Search mode: Load search results (fetch more for client-side filtering)
   const searchCards = useCallback(async (query: string) => {
@@ -162,8 +181,11 @@ export function useCardSearch({ selectedColors, typeFilter, setFilter }: UseCard
         const params = new URLSearchParams();
         params.set('page', targetPage.toString());
         if (selectedColors.length > 0) params.set('colors', selectedColors.join(','));
-        if (typeFilter) params.set('type', typeFilter);
+        if (typeFilter) params.set('types', typeFilter);
         if (setFilter) params.set('set_code', setFilter);
+        if (rarityFilter) params.set('rarity', rarityFilter);
+        if (languageFilter) params.set('lang', languageFilter);
+        if (keywordFilter) params.set('keywords', keywordFilter);
         router.replace(`/search?${params.toString()}`, { scroll: false });
         lastSyncedPage.current = targetPage;
         lastSyncedQuery.current = '';
@@ -183,8 +205,8 @@ export function useCardSearch({ selectedColors, typeFilter, setFilter }: UseCard
         if (page !== 1) setPage(1);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedQuery, isBrowseMode, page, loadBrowseCards, searchCards, router, filtersKey, selectedColors, typeFilter, setFilter]);
+     
+  }, [debouncedQuery, isBrowseMode, page, loadBrowseCards, searchCards, router, filtersKey, selectedColors, typeFilter, setFilter, rarityFilter, languageFilter, keywordFilter]);
 
   return {
     searchQuery,
