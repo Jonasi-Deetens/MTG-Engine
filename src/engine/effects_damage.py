@@ -16,8 +16,18 @@ def handle_damage(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
     amount = resolve_effect_amount(effect, context, 0)
     target_type = effect.get("target", "any")
     results: List[Dict[str, Any]] = []
-    if target_type in ("player", "any"):
-        for player_id in resolve_target_players(context, context.controller_id, resolver.game_state):
+    if target_type in (
+        "player",
+        "any",
+        "each_player",
+        "all_players",
+        "each_opponent",
+        "opponents",
+        "opponent",
+        "controller_of_target",
+    ):
+        player_targets = resolve_effect_players(resolver.game_state, context, effect, context.controller_id)
+        for player_id in player_targets:
             if player_id is not None and context.source_id:
                 source = resolver.game_state.objects.get(context.source_id)
                 if source:

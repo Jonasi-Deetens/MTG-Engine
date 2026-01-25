@@ -54,6 +54,27 @@ def apply_state_based_actions(game_state: GameState) -> None:
         previous_signature = signature
 
 
+def _controller_ignores_legend_rule(game_state: GameState, controller_id: int) -> bool:
+    for active in list(game_state.active_effect_registry.effects):
+        if active.controller_id != controller_id:
+            continue
+        body = active.effect_data.effect
+        if getattr(body, "kind", None) != "continuous":
+            continue
+        modifier = getattr(body, "modifier", None)
+        if modifier is None:
+            continue
+        if hasattr(modifier, "type"):
+            modifier_type = getattr(modifier, "type", None)
+        elif isinstance(modifier, dict):
+            modifier_type = modifier.get("type")
+        else:
+            modifier_type = None
+        if modifier_type == "ignore_legend_rule":
+            return True
+    return False
+
+
 def _apply_legend_rule(game_state: GameState) -> None:
     legend_groups = {}
     for obj in game_state.objects.values():
@@ -65,6 +86,8 @@ def _apply_legend_rule(game_state: GameState) -> None:
 
     for (controller_id, name), group in legend_groups.items():
         if len(group) <= 1:
+            continue
+        if _controller_ignores_legend_rule(game_state, controller_id):
             continue
         choice_key = f"legend_rule:{controller_id}:{name}"
         chosen_id = None

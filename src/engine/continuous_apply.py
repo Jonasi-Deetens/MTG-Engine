@@ -142,8 +142,8 @@ def apply_continuous_effects(game_state: GameState) -> None:
         dependency_sort=True,
     )
     apply_layer(
-        {"change_power_toughness"},
-        apply_layer_7c_modify_pt,
+        {"change_power_toughness", "modify_power_toughness_by_same_name"},
+        lambda obj: apply_layer_7c_modify_pt(game_state, obj),
         recompute_until_stable=True,
         signature_fn=pt_signature,
         dependency_sort=True,

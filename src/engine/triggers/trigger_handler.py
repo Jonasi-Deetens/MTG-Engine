@@ -291,6 +291,13 @@ class TriggerHandler:
                 t in {"creature", "artifact", "enchantment", "planeswalker", "land", "battle"}
                 for t in normalized_types
             )
+        if "noncreature" in card_types:
+            if "creature" in normalized_types:
+                return False
+            remaining = [card_type for card_type in card_types if card_type != "noncreature"]
+            if not remaining:
+                return True
+            return any(card_type in normalized_types for card_type in remaining)
 
         return any(card_type in normalized_types for card_type in card_types)
 
@@ -318,6 +325,13 @@ class TriggerHandler:
                 t in {"creature", "artifact", "enchantment", "planeswalker", "land", "battle"}
                 for t in normalized_types
             )
+        if "noncreature" in card_types:
+            if "creature" in normalized_types:
+                return False
+            remaining = [card_type for card_type in card_types if card_type != "noncreature"]
+            if not remaining:
+                return True
+            return any(card_type in normalized_types for card_type in remaining)
 
         return any(card_type in normalized_types for card_type in card_types)
 
@@ -524,6 +538,13 @@ class TriggerHandler:
                 t in {"creature", "artifact", "enchantment", "planeswalker", "land", "battle"}
                 for t in normalized_types
             )
+        if "noncreature" in card_types:
+            if "creature" in normalized_types:
+                return False
+            remaining = [card_type for card_type in card_types if card_type != "noncreature"]
+            if not remaining:
+                return True
+            return any(card_type in normalized_types for card_type in remaining)
 
         return any(card_type in normalized_types for card_type in card_types)
 

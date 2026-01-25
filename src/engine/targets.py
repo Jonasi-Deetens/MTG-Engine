@@ -44,6 +44,8 @@ def resolve_object_id(context: ResolveContext, key: str, fallback: Optional[str]
         spell_targets = context.targets.get("spell_targets")
         if isinstance(spell_targets, list) and spell_targets:
             return spell_targets[0]
+    if key.startswith("target_") and "target" in context.targets:
+        return context.targets.get("target")
     if "target" in context.targets:
         return context.targets["target"]
     return fallback

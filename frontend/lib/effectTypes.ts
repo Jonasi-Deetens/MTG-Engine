@@ -181,6 +181,7 @@ export const REPLACEMENT_ZONE_OPTIONS = [
 export const CARD_TYPE_FILTERS = [
   { value: 'any', label: 'Any Card' },
   { value: 'creature', label: 'Creature' },
+  { value: 'noncreature', label: 'Noncreature' },
   { value: 'artifact', label: 'Artifact' },
   { value: 'enchantment', label: 'Enchantment' },
   { value: 'aura', label: 'Aura' },

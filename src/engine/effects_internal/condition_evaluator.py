@@ -93,12 +93,18 @@ class ConditionEvaluator:
     def _evaluate_builtin(self, condition: Dict[str, Any], context: "ResolveContext") -> bool:
         """Evaluate a built-in condition type."""
         from ..targets import resolve_object, resolve_player_id
+        from ..effects_helpers import normalize_card_type
 
         condition_type = condition.get("type")
         comparison = condition.get("comparison", ">=")
         value = condition.get("value", 0)
         target_key = condition.get("target")
         permanent_type = condition.get("permanentType")
+        normalized_type = (
+            normalize_card_type(permanent_type)
+            if isinstance(permanent_type, str) and permanent_type != "any"
+            else permanent_type
+        )
         keyword = condition.get("keyword")
         counter_type = condition.get("counterType")
 
@@ -111,7 +117,7 @@ class ConditionEvaluator:
                 obj = self._game_state.objects.get(obj_id)
                 if not obj:
                     continue
-                if permanent_type and permanent_type != "any" and permanent_type not in obj.types:
+                if normalized_type and normalized_type != "any" and normalized_type not in obj.types:
                     continue
                 count += 1
             return _compare(count, ">=", value)
@@ -137,7 +143,7 @@ class ConditionEvaluator:
                 obj = self._game_state.objects.get(obj_id)
                 if not obj:
                     continue
-                if permanent_type and permanent_type != "any" and permanent_type not in obj.types:
+                if normalized_type and normalized_type != "any" and normalized_type not in obj.types:
                     continue
                 count += 1
             return _compare(count, ">=", value)
@@ -151,7 +157,7 @@ class ConditionEvaluator:
                 obj = self._game_state.objects.get(obj_id)
                 if not obj:
                     continue
-                if permanent_type and permanent_type != "any" and permanent_type not in obj.types:
+                if normalized_type and normalized_type != "any" and normalized_type not in obj.types:
                     continue
                 count += 1
             return _compare(count, ">=", value)
@@ -165,7 +171,7 @@ class ConditionEvaluator:
                 obj = self._game_state.objects.get(obj_id)
                 if not obj:
                     continue
-                if permanent_type and permanent_type != "any" and permanent_type not in obj.types:
+                if normalized_type and normalized_type != "any" and normalized_type not in obj.types:
                     continue
                 count += 1
             return _compare(count, ">=", value)
@@ -186,9 +192,9 @@ class ConditionEvaluator:
             obj = resolve_object(self._game_state, context, target_key or "target_permanent", context.source_id)
             if not obj:
                 return False
-            if not permanent_type:
+            if not normalized_type:
                 return False
-            return permanent_type in obj.types
+            return normalized_type in obj.types
 
         if condition_type == "is_tapped":
             obj = resolve_object(self._game_state, context, target_key or "target_permanent", context.source_id)

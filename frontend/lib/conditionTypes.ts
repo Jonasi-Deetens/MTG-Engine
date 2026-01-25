@@ -130,6 +130,7 @@ export const PERMANENT_TYPES = [
   { value: 'enchantment', label: 'Enchantment' },
   { value: 'planeswalker', label: 'Planeswalker' },
   { value: 'land', label: 'Land' },
+  { value: 'legendary', label: 'Legendary' },
   { value: 'instant', label: 'Instant' },
   { value: 'sorcery', label: 'Sorcery' },
   { value: 'any', label: 'Any Permanent' },
@@ -137,6 +138,7 @@ export const PERMANENT_TYPES = [
 
 export const CONDITION_TARGET_OPTIONS = [
   { value: 'self', label: 'This Permanent' },
+  { value: 'target', label: 'Affected Permanent' },
   { value: 'target_creature', label: 'Target Creature' },
   { value: 'target_permanent', label: 'Target Permanent' },
   { value: 'you', label: 'You' },

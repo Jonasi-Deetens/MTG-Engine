@@ -9,6 +9,7 @@ from .continuous_helpers import (
     effects_of_type,
 )
 from .state import GameObject, GameState
+from .zones import ZONE_BATTLEFIELD
 
 
 def reset_characteristics(obj: GameObject) -> None:
@@ -230,10 +231,32 @@ def apply_layer_7b_set_pt(obj: GameObject) -> None:
         obj.toughness = int(effect.get("toughness", obj.toughness or 0))
 
 
-def apply_layer_7c_modify_pt(obj: GameObject) -> None:
+def apply_layer_7c_modify_pt(game_state: GameState, obj: GameObject) -> None:
     for effect in effects_of_type(obj.temporary_effects, "modify_power_toughness"):
         obj.power = (obj.power or 0) + int(effect.get("power", 0))
         obj.toughness = (obj.toughness or 0) + int(effect.get("toughness", 0))
+    for effect in effects_of_type(obj.temporary_effects, "modify_power_toughness_by_same_name"):
+        if effect.get("excludeTargetTokens") and obj.is_token:
+            continue
+        power_per = int(effect.get("powerPer", 1))
+        toughness_per = int(effect.get("toughnessPer", 1))
+        count_other = effect.get("countOther", True)
+        count = 0
+        for other in game_state.objects.values():
+            if other.zone != ZONE_BATTLEFIELD or other.phased_out:
+                continue
+            if other.controller_id != obj.controller_id:
+                continue
+            if "Creature" not in other.types:
+                continue
+            if count_other and other.id == obj.id:
+                continue
+            if other.name != obj.name:
+                continue
+            count += 1
+        if count:
+            obj.power = (obj.power or 0) + power_per * count
+            obj.toughness = (obj.toughness or 0) + toughness_per * count
 
 
 def apply_layer_7d_counters(obj: GameObject) -> None:

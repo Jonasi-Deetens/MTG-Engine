@@ -544,7 +544,7 @@ def declare_attackers(
             raise ValueError("Phased out creatures cannot attack.")
         if obj.tapped:
             raise ValueError("Tapped creatures cannot attack.")
-        if "Defender" in obj.keywords:
+        if "Defender" in obj.keywords or "CantAttack" in obj.keywords:
             raise ValueError("Creatures with defender cannot attack.")
         if obj.entered_turn == game_state.turn.turn_number and "Haste" not in obj.keywords:
             raise ValueError("Creature has summoning sickness.")
@@ -597,6 +597,8 @@ def declare_blockers(
         attacker = game_state.objects.get(attacker_id)
         if not attacker or not attacker.is_attacking:
             raise ValueError("Invalid attacking creature.")
+        if "CantBeBlocked" in attacker.keywords:
+            raise ValueError("This creature can't be blocked.")
         if "Menace" in attacker.keywords and len(blocker_ids) == 1:
             raise ValueError("Menace requires two or more blockers.")
         if len(blocker_ids) != len(set(blocker_ids)):
@@ -613,6 +615,8 @@ def declare_blockers(
                 raise ValueError("Phased out creatures cannot block.")
             if blocker.tapped:
                 raise ValueError("Tapped creatures cannot block.")
+            if "CantBlock" in blocker.keywords:
+                raise ValueError("This creature can't block.")
             if blocker_id in used_blockers:
                 raise ValueError("A creature cannot block multiple attackers.")
             if "Flying" in attacker.keywords and not (

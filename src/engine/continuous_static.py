@@ -33,8 +33,28 @@ def iter_applies_to(game_state: GameState, source: GameObject, applies_to: str) 
         if applies_to == "creatures_you_control":
             if obj.controller_id == source.controller_id and "Creature" in obj.types:
                 results.append(obj)
+        elif applies_to == "legendary_creatures_you_control":
+            if (
+                obj.controller_id == source.controller_id
+                and "Creature" in obj.types
+                and "Legendary" in obj.types
+            ):
+                results.append(obj)
+        elif applies_to == "nontoken_creatures_you_control":
+            if (
+                obj.controller_id == source.controller_id
+                and "Creature" in obj.types
+                and not obj.is_token
+            ):
+                results.append(obj)
+        elif applies_to == "permanents_you_control":
+            if obj.controller_id == source.controller_id:
+                results.append(obj)
         elif applies_to == "all_creatures":
             if "Creature" in obj.types:
+                results.append(obj)
+        elif applies_to == "opponents_creatures":
+            if obj.controller_id != source.controller_id and "Creature" in obj.types:
                 results.append(obj)
         elif applies_to == "all_permanents":
             results.append(obj)
@@ -112,8 +132,22 @@ def build_static_effect(effect: Dict, source: GameObject, game_state: GameState)
             "power": int(effect.get("powerChange", 0)),
             "toughness": int(effect.get("toughnessChange", 0)),
         }, source, game_state)
+    if effect_type == "modify_power_toughness_by_same_name":
+        return stamp_static_effect({
+            "type": "modify_power_toughness_by_same_name",
+            "powerPer": int(effect.get("powerPer", 1)),
+            "toughnessPer": int(effect.get("toughnessPer", 1)),
+            "countOther": effect.get("countOther", True),
+            "excludeTargetTokens": effect.get("excludeTargetTokens", True),
+        }, source, game_state)
     if effect_type == "change_control":
         return stamp_static_effect({"type": "set_controller", "controller_id": source.controller_id}, source, game_state)
+    if effect_type == "cant_attack":
+        return stamp_static_effect({"type": "add_keyword", "keyword": "CantAttack"}, source, game_state)
+    if effect_type == "cant_block":
+        return stamp_static_effect({"type": "add_keyword", "keyword": "CantBlock"}, source, game_state)
+    if effect_type == "cant_be_blocked":
+        return stamp_static_effect({"type": "add_keyword", "keyword": "CantBeBlocked"}, source, game_state)
     if effect_type == "cda_power_toughness":
         return stamp_static_effect({
             "type": "set_cda_pt",

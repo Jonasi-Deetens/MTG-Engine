@@ -8,12 +8,15 @@ interface TriggerConfigProps {
 
 const TRIGGER_EVENTS = [
   'enters_battlefield',
+  'leaves_battlefield',
   'dies',
   'attacks',
   'blocks',
   'card_enters',
+  'spell_cast',
   'upkeep',
   'draw_step',
+  'end_step',
 ];
 
 const TRIGGER_SCOPES = ['self', 'any', 'you_control', 'opponent_control', 'you', 'opponent'];
