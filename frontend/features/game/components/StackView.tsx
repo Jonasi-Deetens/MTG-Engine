@@ -1,7 +1,7 @@
 'use client';
 
-import { Card } from '@/components/ui/Card';
 import { EngineCardMap, EngineGameObjectSnapshot, EngineStackItemSnapshot } from '@/lib/engine';
+import { BracketHeader } from '@/components/ui/play/NierUIElements';
 
 interface StackViewProps {
   stack: EngineStackItemSnapshot[];
@@ -115,68 +115,68 @@ export function StackView({ stack, objects, cardMap, targetChecks, selectedIndex
   };
 
   return (
-    <Card variant="bordered" className="p-4 space-y-2">
-      <div className="text-sm font-semibold text-[color:var(--theme-text-primary)]">Stack</div>
+    <div className="nier-panel space-y-3">
+      <BracketHeader>Stack</BracketHeader>
       {stack.length === 0 && (
         <div className="text-xs text-[color:var(--theme-text-secondary)]">Stack is empty</div>
       )}
       {stack.map((item, index) => {
         const isSelected = selectedIndex === index;
         return (
-        <button
-          type="button"
-          key={`${item.kind}-${index}`}
-          onClick={() => onSelectIndex?.(isSelected ? null : index)}
-          className={`w-full text-left rounded-md px-2 py-1 text-xs text-[color:var(--theme-text-secondary)] space-y-1 ${isSelected ? 'ring-1 ring-[color:var(--theme-accent-primary)] bg-[color:var(--theme-card-hover)]' : ''}`}
-        >
-          <div>
-            {getStackLabel(item)} · controller {item.controller_id ?? 'N/A'}
-          </div>
-          {getTargetSummary(item) && (
-            <div className="text-[color:var(--theme-text-secondary)]">{getTargetSummary(item)}</div>
-          )}
-          {getTargetStatus(item, index) && (
-            <div
-              className={
-                getTargetStatus(item, index)?.isLegal
-                  ? 'text-[color:var(--theme-status-success)]'
-                  : 'text-[color:var(--theme-status-error)]'
-              }
-            >
-              {getTargetStatus(item, index)?.isLegal
-                ? 'Targets legal'
-                : `Targets illegal${getTargetStatus(item, index)?.invalidCount ? ' (some invalid)' : ''}`}
+          <button
+            type="button"
+            key={`${item.kind}-${index}`}
+            onClick={() => onSelectIndex?.(isSelected ? null : index)}
+            className={`w-full text-left px-3 py-2 text-xs text-[color:var(--theme-text-secondary)] space-y-1 nier-stack-item ${isSelected ? 'ring-1 ring-[color:var(--theme-accent-primary)] bg-[color:var(--theme-card-hover)]' : ''}`}
+          >
+            <div>
+              {getStackLabel(item)} · controller {item.controller_id ?? 'N/A'}
             </div>
-          )}
-          {getTargetStatus(item, index)?.issues?.length > 0 && (
-            <div className="text-[color:var(--theme-text-secondary)]">
-              {getTargetStatus(item, index)?.issues
-                .map((issue) => {
-                  const [maybeId, rest] = issue.split(':');
-                  const id = maybeId?.trim();
-                  if (id && objectMap.has(id)) {
-                    const label = cardMap[id]?.name || objectMap.get(id)?.name || id;
-                    return `${label}:${rest ? rest : ''}`;
-                  }
-                  if (id && id.startsWith('Player')) {
+            {getTargetSummary(item) && (
+              <div className="text-[color:var(--theme-text-secondary)]">{getTargetSummary(item)}</div>
+            )}
+            {getTargetStatus(item, index) && (
+              <div
+                className={
+                  getTargetStatus(item, index)?.isLegal
+                    ? 'text-[color:var(--theme-status-success)]'
+                    : 'text-[color:var(--theme-status-error)]'
+                }
+              >
+                {getTargetStatus(item, index)?.isLegal
+                  ? 'Targets legal'
+                  : `Targets illegal${getTargetStatus(item, index)?.invalidCount ? ' (some invalid)' : ''}`}
+              </div>
+            )}
+            {getTargetStatus(item, index)?.issues?.length > 0 && (
+              <div className="text-[color:var(--theme-text-secondary)]">
+                {getTargetStatus(item, index)?.issues
+                  .map((issue) => {
+                    const [maybeId, rest] = issue.split(':');
+                    const id = maybeId?.trim();
+                    if (id && objectMap.has(id)) {
+                      const label = cardMap[id]?.name || objectMap.get(id)?.name || id;
+                      return `${label}:${rest ? rest : ''}`;
+                    }
+                    if (id && id.startsWith('Player')) {
+                      return issue;
+                    }
+                    if (id && !Number.isNaN(Number(id))) {
+                      const playerIndex = Number(id) + 1;
+                      return `Player ${playerIndex}:${rest ? rest : ''}`;
+                    }
+                    if (id && stack.some((entry) => entry.payload?.object_id === id)) {
+                      const label = cardMap[id]?.name || objectMap.get(id)?.name || id;
+                      return `${label}:${rest ? rest : ''}`;
+                    }
                     return issue;
-                  }
-                  if (id && !Number.isNaN(Number(id))) {
-                    const playerIndex = Number(id) + 1;
-                    return `Player ${playerIndex}:${rest ? rest : ''}`;
-                  }
-                  if (id && stack.some((entry) => entry.payload?.object_id === id)) {
-                    const label = cardMap[id]?.name || objectMap.get(id)?.name || id;
-                    return `${label}:${rest ? rest : ''}`;
-                  }
-                  return issue;
-                })
-                .join(' ')}
-            </div>
-          )}
-        </button>
-      );
+                  })
+                  .join(' ')}
+              </div>
+            )}
+          </button>
+        );
       })}
-    </Card>
+    </div>
   );
 }

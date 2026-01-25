@@ -80,6 +80,19 @@ def _hydrate_session_from_db(db: Session, game_id: str, user_id: int) -> tuple[G
     return game_state, session.version
 
 
+def _attach_effect_graph_to_object(game_state: GameState, object_id: str, effect_graph) -> None:
+    if not object_id or not effect_graph:
+        return
+    obj = game_state.objects.get(object_id)
+    if not obj:
+        return
+    graph_data = effect_graph.model_dump(by_alias=True) if hasattr(effect_graph, "model_dump") else effect_graph
+    if not obj.effect_graphs:
+        obj.effect_graphs = [graph_data]
+    if not obj.base_effect_graphs:
+        obj.base_effect_graphs = [graph_data]
+
+
 def _persist_snapshot(db: Session, game_id: str, snapshot: GameStateSnapshot, user_id: int) -> int:
     session = db.query(GameSession).filter_by(game_id=game_id, user_id=user_id).first()
     if not session:
@@ -433,6 +446,9 @@ def execute_engine_action(
             session_version = int(meta.get("version", 1))
         else:
             game_state, session_version = _hydrate_session_from_db(db, payload.game_id, user.id)
+
+    if payload.object_id and payload.effect_graph:
+        _attach_effect_graph_to_object(game_state, payload.object_id, payload.effect_graph)
 
     if action in ("resolve_graph", "check_targets"):
         AbilityRegistry(game_state)

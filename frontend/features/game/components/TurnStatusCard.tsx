@@ -1,7 +1,7 @@
 'use client';
 
-import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
+import { BracketHeader, HudValue, StatusIndicator } from '@/components/ui/play/NierUIElements';
+import { StylizedButton } from '@/components/ui/play/StylizedButton';
 
 interface TurnStatusCardProps {
   turnNumber: number;
@@ -25,26 +25,41 @@ export function TurnStatusCard({
   onAdvanceStep,
 }: TurnStatusCardProps) {
   return (
-    <Card variant="bordered" className="p-4 flex flex-wrap items-center justify-between gap-4">
-      <div>
-        <div className="text-sm text-[color:var(--theme-text-secondary)]">Turn</div>
-        <div className="text-lg font-semibold text-[color:var(--theme-text-primary)]">
-          {turnNumber} · {phase} / {step}
+    <div className="nier-panel space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="space-y-2">
+          <BracketHeader>Turn Status</BracketHeader>
+          <div className="flex flex-wrap items-center gap-6">
+            <HudValue label="Turn" value={turnNumber} />
+            <div className="space-y-1">
+              <div className="text-xs uppercase tracking-[0.22em] text-[color:var(--theme-text-muted)]">
+                Phase / Step
+              </div>
+              <div className="text-sm font-semibold text-[color:var(--theme-text-primary)]">
+                {phase} / {step}
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.18em] text-[color:var(--theme-text-secondary)]">
+            <span>Active: {activePlayerIndex + 1}</span>
+            {typeof currentPriority === 'number' && (
+              <span className="flex items-center gap-2">
+                <StatusIndicator tone="primary" pulse />
+                Priority {currentPriority + 1}
+              </span>
+            )}
+          </div>
         </div>
-        <div className="text-xs text-[color:var(--theme-text-secondary)]">
-          Active Player: {activePlayerIndex + 1}
-          {typeof currentPriority === 'number' && ` · Priority: ${currentPriority + 1}`}
+        <div className="flex flex-wrap gap-2">
+          <StylizedButton variant="secondary" onClick={onPassPriority} disabled={loading}>
+            Pass Priority
+          </StylizedButton>
+          <StylizedButton variant="primary" onClick={onAdvanceStep} disabled={loading}>
+            Advance Step
+          </StylizedButton>
         </div>
       </div>
-      <div className="flex gap-2">
-        <Button variant="outline" onClick={onPassPriority} disabled={loading}>
-          Pass Priority
-        </Button>
-        <Button variant="primary" onClick={onAdvanceStep} disabled={loading}>
-          Advance Step
-        </Button>
-      </div>
-    </Card>
+    </div>
   );
 }
 

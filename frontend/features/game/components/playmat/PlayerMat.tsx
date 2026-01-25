@@ -5,6 +5,7 @@ import { ZoneCard } from '../ZoneCard';
 import { getObjectsByIds } from '../objectUtils';
 import { getEtbChoiceDetail, getTemporaryDetail, getTemporaryStatus } from '../objectStatus';
 import { EngineGameObjectSnapshot, EnginePlayerSnapshot, EngineCardMap } from '@/lib/engine';
+import { BracketHeader, HudValue, StatusIndicator } from '@/components/ui/play/NierUIElements';
 
 interface PlayerMatProps {
   player: EnginePlayerSnapshot;
@@ -42,22 +43,33 @@ export function PlayerMat({
   const exileObjects = getObjectsByIds(player.exile, objects, 'exile');
   const libraryCount = player.library.length;
   const manaTotal = Object.values(player.mana_pool).reduce((sum, val) => sum + val, 0);
+  const manaEntries = Object.entries(player.mana_pool).filter(([, value]) => value > 0);
 
   return (
-    <div className="player-mat">
+    <div className="player-mat nier-panel">
       <div className="player-mat-header">
-        <div>
-          <div className="text-lg font-semibold text-[color:var(--theme-text-primary)]">
-            Player {player.id + 1}
+        <div className="space-y-2">
+          <BracketHeader>PLAYER {String(player.id + 1).padStart(2, '0')}</BracketHeader>
+          <div className="flex flex-wrap items-center gap-6">
+            <HudValue label="Life" value={player.life} />
+            <HudValue label="Mana Pool" value={manaTotal} tone="muted" />
           </div>
-          <div className="text-sm text-[color:var(--theme-text-secondary)]">
-            Life: {player.life} · Mana: {manaTotal}
-          </div>
+          {manaEntries.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-[color:var(--theme-text-muted)]">
+              {manaEntries.map(([color, value]) => (
+                <span key={color} className="flex items-center gap-2">
+                  <span className="nier-mana-pip" />
+                  {color}:{value}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
         {isActive && (
-          <span className="player-mat-active">
+          <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.22em] text-[color:var(--theme-text-secondary)]">
+            <StatusIndicator tone="primary" pulse />
             Active
-          </span>
+          </div>
         )}
       </div>
 

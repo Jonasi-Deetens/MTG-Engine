@@ -2,7 +2,8 @@
 
 import { DeckResponse } from '@/lib/decks';
 import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
+import { StylizedButton } from '@/components/ui/play/StylizedButton';
+import { StylizedNativeSelect } from '@/components/ui/play/StylizedNativeSelect';
 
 interface DeckSetupPanelProps {
   deckList: DeckResponse[];
@@ -32,10 +33,9 @@ export function DeckSetupPanel({
             <div className="text-xs uppercase text-[color:var(--theme-text-secondary)]">
               Player {index + 1}
             </div>
-            <select
+            <StylizedNativeSelect
               value={deckId ?? ''}
               onChange={(e) => onSelectDeck(index, e.target.value)}
-              className="w-full px-3 py-2 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none"
             >
               <option value="">Select Commander deck...</option>
               {deckList.map((deck) => (
@@ -43,14 +43,14 @@ export function DeckSetupPanel({
                   {deck.name}
                 </option>
               ))}
-            </select>
+            </StylizedNativeSelect>
           </div>
         ))}
       </div>
       <div className="flex justify-end">
-        <Button variant="primary" onClick={onStart} disabled={!canStart || loading}>
+        <StylizedButton variant="primary" onClick={onStart} disabled={!canStart || loading}>
           {loading ? 'Starting...' : 'Start Game'}
-        </Button>
+        </StylizedButton>
       </div>
     </Card>
   );

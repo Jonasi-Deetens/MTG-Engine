@@ -39,6 +39,7 @@ export function PlayActionsPanel() {
     selectedBattlefieldId,
     selectedStackIndex,
     setSelectedStackIndex,
+    effectGraphs,
   } = usePlaySelection();
 
   // Combat state
@@ -109,6 +110,7 @@ export function PlayActionsPanel() {
     setSelectedTargetPlayerIds,
     effectTargetGroups,
     hasEffectTargets,
+    copyTargetsCount,
     copyTargetsByEffectCount,
     copyEffectTargetGroups,
     copyTargetErrors,
@@ -201,6 +203,9 @@ export function PlayActionsPanel() {
   // Derive hasActivatedAbility
   const selectedBattlefieldObject = gameState?.objects.find((obj) => obj.id === selectedBattlefieldId);
   const hasActivatedAbility = selectedBattlefieldObject?.effect_graphs && selectedBattlefieldObject.effect_graphs.length > 0;
+  const selectedBattlefieldGraph = selectedBattlefieldId
+    ? effectGraphs[cardMap[selectedBattlefieldId]?.card_id ?? ''] ?? selectedBattlefieldObject?.effect_graphs?.[0]
+    : undefined;
 
   if (!gameState) return null;
 
@@ -266,6 +271,7 @@ export function PlayActionsPanel() {
           runEngineAction('activate_mana_ability', {
             player_id: currentPriority,
             object_id: selectedBattlefieldId ?? undefined,
+            effect_graph: selectedBattlefieldGraph,
           })
         }
         onActivateAbility={() =>
@@ -274,6 +280,7 @@ export function PlayActionsPanel() {
             object_id: selectedBattlefieldId ?? undefined,
             ability_index: 0,
             ability_type: 'activated',
+            effect_graph: selectedBattlefieldGraph,
             context: buildCastContext(selectedBattlefieldId ?? undefined, {
               wardAutoPay: autoPayWard,
               wardPayments: wardPaymentsPayload,

@@ -50,12 +50,18 @@ export function EffectBodyStep({ effect, onChange, previousSteps = [] }: EffectB
   const colorOptions = ['W', 'U', 'B', 'R', 'G'];
 
   const updateAction = (updates: Record<string, unknown>) => {
+    const nextAction = { ...action, ...updates };
+    const nextEffect = { ...effect.effect, action: nextAction };
+    const isManaAction = nextAction.type === 'mana' && effect.initiation === 'activated';
+    const nextTags = isManaAction
+      ? Array.from(new Set([...(effect.tags ?? []), 'mana']))
+      : (effect.tags ?? []).filter((tag) => tag !== 'mana');
+
     onChange({
       ...effect,
-      effect: {
-        ...effect.effect,
-        action: { ...action, ...updates },
-      },
+      resolution: isManaAction ? 'immediate' : effect.resolution,
+      tags: nextTags,
+      effect: nextEffect,
     });
   };
 

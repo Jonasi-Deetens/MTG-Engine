@@ -1,9 +1,9 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Card } from '@/components/ui/Card';
 import { EngineCardMap, EngineCombatStateSnapshot, EngineGameObjectSnapshot } from '@/lib/engine';
 import { isEligibleForCombatPass } from '@/lib/combatDamage';
+import { BracketHeader } from '@/components/ui/play/NierUIElements';
 
 interface CombatDamagePanelProps {
   active: boolean;
@@ -34,8 +34,8 @@ export function CombatDamagePanel({
   if (!active || !combatState) return null;
 
   return (
-    <Card variant="bordered" className="p-4 space-y-3">
-      <div className="text-sm font-semibold text-[color:var(--theme-text-primary)]">Combat Damage</div>
+    <div className="nier-panel space-y-3">
+      <BracketHeader>Combat Damage</BracketHeader>
       {damagePass && (
         <div className="text-xs text-[color:var(--theme-text-secondary)]">
           {damagePass === 'first_strike' ? 'First strike damage' : 'Regular damage'}
@@ -129,7 +129,7 @@ export function CombatDamagePanel({
           );
         })}
       </div>
-    </Card>
+    </div>
   );
 }
 

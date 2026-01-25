@@ -1,6 +1,5 @@
 'use client';
 
-import { Card } from '@/components/ui/Card';
 import { CastingActions } from './CastingActions';
 import { CombatActions } from './CombatActions';
 import { TargetingSection } from './TargetingSection';
@@ -245,7 +244,7 @@ export function ActionsPanel(props: ActionsPanelProps) {
   const showCastingActions = (selectedHandId || selectedCommandId || selectedBattlefieldId) && !showCombatActions;
 
   return (
-    <Card className="p-4 space-y-6">
+    <div className="nier-panel space-y-6">
       {/* Choices Section - Always visible when needed */}
       <ChoicesSection
         modalChoiceConfig={rest.modalChoiceConfig}
@@ -416,6 +415,6 @@ export function ActionsPanel(props: ActionsPanelProps) {
           onActivateAbility={rest.onActivateAbility}
         />
       )}
-    </Card>
+    </div>
   );
 }

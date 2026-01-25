@@ -2,14 +2,15 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { PlayerMat } from '@/features/game/components/playmat/PlayerMat';
-import { Button } from '@/components/ui/Button';
-import { Select } from '@/components/ui/Select';
+import { StylizedSelect } from '@/components/ui/play/StylizedSelect';
 import {
   usePlayGame,
   usePlayCombat,
   usePlaySelection,
   usePlayTurn,
 } from '@/app/(protected)/play/PlayProviders';
+import { BracketHeader } from '@/components/ui/play/NierUIElements';
+import { StylizedButton } from '@/components/ui/play/StylizedButton';
 
 type ViewMode = 'single' | 'all';
 
@@ -67,30 +68,28 @@ export function PlayMat() {
 
   return (
     <div className="space-y-4">
-      <div className="play-mat-toolbar">
+      <div className="play-mat-toolbar nier-panel">
         <div className="flex items-center gap-2">
-          <Button
+          <StylizedButton
             type="button"
-            size="sm"
-            variant={viewMode === 'single' ? 'secondary' : 'outline'}
+            variant={viewMode === 'single' ? 'primary' : 'ghost'}
             onClick={() => setViewMode('single')}
           >
             Single View
-          </Button>
-          <Button
+          </StylizedButton>
+          <StylizedButton
             type="button"
-            size="sm"
-            variant={viewMode === 'all' ? 'secondary' : 'outline'}
+            variant={viewMode === 'all' ? 'primary' : 'ghost'}
             onClick={() => setViewMode('all')}
           >
             All Players
-          </Button>
+          </StylizedButton>
         </div>
         {viewMode === 'single' && (
-          <div className="text-sm text-[color:var(--theme-text-secondary)] flex items-center gap-2">
-            <span>Focus</span>
-            <Select
-              className="min-w-[160px]"
+          <div className="text-xs text-[color:var(--theme-text-secondary)] flex items-center gap-2 uppercase tracking-[0.18em]">
+            <BracketHeader>Focus</BracketHeader>
+            <StylizedSelect
+              className="min-w-[160px] ml-2"
               options={playerOptions}
               value={String(selectedPlayerId)}
               onChange={(value) => setSelectedPlayerId(Number(value))}

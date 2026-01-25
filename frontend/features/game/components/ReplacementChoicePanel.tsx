@@ -1,8 +1,10 @@
 'use client';
 
-import { Card } from '@/components/ui/Card';
 import { ReplacementConflictEntry } from '../hooks/useReplacementConflicts';
 import { useEffect } from 'react';
+import { BracketHeader } from '@/components/ui/play/NierUIElements';
+import { StylizedButton } from '@/components/ui/play/StylizedButton';
+import { StylizedNativeSelect } from '@/components/ui/play/StylizedNativeSelect';
 
 interface ReplacementChoicePanelProps {
   conflicts: ReplacementConflictEntry[];
@@ -30,19 +32,13 @@ export function ReplacementChoicePanel({
   }, [highlightKey]);
 
   return (
-    <Card variant="bordered" className="p-4 space-y-3">
+    <div className="nier-panel space-y-3">
       <div className="flex items-center justify-between gap-3">
-        <div className="text-sm font-semibold text-[color:var(--theme-text-primary)]">
-          Replacement Choice Needed
-        </div>
+        <BracketHeader>Replacement Choice Needed</BracketHeader>
         {onNextHighlight && unresolved.length > 1 && (
-          <button
-            type="button"
-            onClick={onNextHighlight}
-            className="text-xs text-[color:var(--theme-text-secondary)] hover:text-[color:var(--theme-text-primary)]"
-          >
+          <StylizedButton type="button" variant="ghost" onClick={onNextHighlight}>
             Next unresolved
-          </button>
+          </StylizedButton>
         )}
       </div>
       <div className="text-xs text-[color:var(--theme-text-secondary)]">
@@ -60,10 +56,9 @@ export function ReplacementChoicePanel({
             <div className="text-xs text-[color:var(--theme-text-secondary)]">
               {entry.label}
             </div>
-            <select
+            <StylizedNativeSelect
               value={replacementChoices[entry.key] || ''}
               onChange={(e) => onSelectChoice(entry.key, e.target.value)}
-              className="px-2 py-1 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none text-xs"
             >
               <option value="">Auto (most recent)</option>
               {entry.options.map((effect) => (
@@ -71,11 +66,11 @@ export function ReplacementChoicePanel({
                   {effect.label || effect.replacement_zone || 'Replacement'}
                 </option>
               ))}
-            </select>
+            </StylizedNativeSelect>
           </div>
         ))}
       </div>
-    </Card>
+    </div>
   );
 }
 

@@ -1,6 +1,7 @@
 'use client';
 
-import { Button } from '@/components/ui/Button';
+import { StylizedButton } from '@/components/ui/play/StylizedButton';
+import { StylizedNativeSelect } from '@/components/ui/play/StylizedNativeSelect';
 import { CombatDamagePanel } from '../CombatDamagePanel';
 import { EngineCardMap, EngineCombatStateSnapshot } from '@/lib/engine';
 import { ReplacementConflictEntry } from '../../hooks/useReplacementConflicts';
@@ -89,10 +90,9 @@ export function CombatActions({
         {defenderOptions.length > 1 && (
           <div className="space-y-2">
             <label className="text-sm font-medium">Attack Target</label>
-            <select
+            <StylizedNativeSelect
               value={selectedDefenderId ?? ''}
               onChange={(e) => onSelectDefender(e.target.value || null)}
-              className="w-full rounded border bg-background px-3 py-2 text-sm"
             >
               <option value="">Select defender...</option>
               {defenderOptions.map((option) => (
@@ -100,7 +100,7 @@ export function CombatActions({
                   {option.label}
                 </option>
               ))}
-            </select>
+            </StylizedNativeSelect>
           </div>
         )}
 
@@ -110,13 +110,13 @@ export function CombatActions({
             : `${selectedAttackers.size} attacker${selectedAttackers.size === 1 ? '' : 's'} selected`}
         </p>
 
-        <Button
+        <StylizedButton
           onClick={onDeclareAttackers}
           disabled={loading}
           className="w-full"
         >
           Declare Attackers
-        </Button>
+        </StylizedButton>
       </div>
     );
   }
@@ -133,10 +133,9 @@ export function CombatActions({
         {attackers.length > 0 && (
           <div className="space-y-2">
             <label className="text-sm font-medium">Blocking</label>
-            <select
+            <StylizedNativeSelect
               value={activeAttackerId ?? ''}
               onChange={(e) => onSelectActiveAttacker(e.target.value)}
-              className="w-full rounded border bg-background px-3 py-2 text-sm"
             >
               {attackers.map((attackerId) => {
                 const name = cardMap[attackerId]?.name || attackerId;
@@ -146,7 +145,7 @@ export function CombatActions({
                   </option>
                 );
               })}
-            </select>
+            </StylizedNativeSelect>
           </div>
         )}
 
@@ -169,22 +168,22 @@ export function CombatActions({
                       {index + 1}. {name}
                     </span>
                     <div className="flex gap-1">
-                      <Button
-                        size="sm"
+                      <StylizedButton
                         variant="ghost"
                         onClick={() => onReorderBlockerUp(index)}
                         disabled={index === 0}
+                        className="px-2 py-1 text-xs"
                       >
                         ↑
-                      </Button>
-                      <Button
-                        size="sm"
+                      </StylizedButton>
+                      <StylizedButton
                         variant="ghost"
                         onClick={() => onReorderBlockerDown(index)}
                         disabled={index === activeBlockerOrder.length - 1}
+                        className="px-2 py-1 text-xs"
                       >
                         ↓
-                      </Button>
+                      </StylizedButton>
                     </div>
                   </div>
                 );
@@ -204,13 +203,13 @@ export function CombatActions({
           </div>
         )}
 
-        <Button
+        <StylizedButton
           onClick={onDeclareBlockers}
           disabled={loading || blockerErrors.length > 0}
           className="w-full"
         >
           Declare Blockers
-        </Button>
+        </StylizedButton>
       </div>
     );
   }
@@ -230,13 +229,13 @@ export function CombatActions({
           </div>
         )}
 
-        <Button
+        <StylizedButton
           onClick={onAssignCombatDamage}
           disabled={loading || hasUnresolvedDamageReplacements}
           className="w-full"
         >
           Assign Combat Damage
-        </Button>
+        </StylizedButton>
       </div>
     );
   }

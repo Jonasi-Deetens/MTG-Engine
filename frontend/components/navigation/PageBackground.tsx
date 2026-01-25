@@ -10,6 +10,7 @@ export function PageBackground({ children }: { children: React.ReactNode }) {
   
   // Landing page handles its own background, skip it here
   const isLandingPage = pathname === '/';
+  const isPlayPage = pathname?.startsWith('/play') ?? false;
   
   // Determine which background image to use based on route
   const isDashboard = pathname === '/dashboard';
@@ -32,6 +33,11 @@ export function PageBackground({ children }: { children: React.ReactNode }) {
   const registerBackgroundImage = useThemeImage('register');
   
   const getBackgroundStyle = (): React.CSSProperties => {
+    if (isPlayPage) {
+      return {
+        backgroundColor: 'var(--play-bg-primary, #dad4bb)',
+      };
+    }
     // Landing page uses the shared background + overlay
     if (isLandingPage) {
       return {
@@ -126,7 +132,10 @@ export function PageBackground({ children }: { children: React.ReactNode }) {
       className={`${isFixedHeightPage ? 'h-screen overflow-hidden' : 'min-h-screen overflow-x-hidden'} relative`}
       style={getBackgroundStyle()}
     >
-      <div className="absolute inset-0 bg-[color:var(--theme-bg-primary)]/70 pointer-events-none" />
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{ backgroundColor: isPlayPage ? 'transparent' : 'var(--theme-bg-primary)', opacity: isPlayPage ? 0 : 0.7 }}
+      />
       <div className="relative z-10">
         {children}
       </div>

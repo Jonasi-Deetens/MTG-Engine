@@ -699,14 +699,33 @@ def activate_mana_ability(game_state, turn_manager, player_id: int, object_id: s
         and step.get("effect", {}).get("initiation") == "activated"
     ]
     mana_index = None
+    mana_step = None
     for index, step in enumerate(activated_steps):
-        tags = step.get("effect", {}).get("tags") or []
-        resolution = step.get("effect", {}).get("resolution")
+        effect = step.get("effect", {}) or {}
+        tags = effect.get("tags") or []
+        resolution = effect.get("resolution")
+        action_type = (effect.get("effect") or {}).get("action", {}).get("type")
         if "mana" in tags and resolution == "immediate":
             mana_index = index
+            mana_step = step
+            break
+        if action_type == "mana":
+            mana_index = index
+            mana_step = step
             break
     if mana_index is None:
         raise ValueError("No mana ability found in effect graph.")
+
+    # Ensure mana abilities resolve immediately and are tagged
+    if mana_step:
+        effect = mana_step.get("effect") or {}
+        tags = list(effect.get("tags") or [])
+        if "mana" not in tags:
+            tags.append("mana")
+            effect["tags"] = tags
+        if effect.get("resolution") != "immediate":
+            effect["resolution"] = "immediate"
+            mana_step["effect"] = effect
 
     result = activate_ability(
         game_state,

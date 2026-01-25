@@ -1,7 +1,7 @@
 'use client';
 
-import { Card } from '@/components/ui/Card';
 import { usePlayGame } from '@/app/(protected)/play/PlayProviders';
+import { BracketHeader } from '@/components/ui/play/NierUIElements';
 
 export function PlayHeader() {
   // Using the focused usePlayGame() hook instead of the monolithic usePlayState()
@@ -19,9 +19,10 @@ export function PlayHeader() {
       </div>
 
       {error && (
-        <Card variant="bordered" className="p-4 text-[color:var(--theme-status-error)]">
-          {error}
-        </Card>
+        <div className="nier-panel space-y-2 text-[color:var(--play-status-error)]">
+          <BracketHeader>Error</BracketHeader>
+          <div className="text-sm">{error}</div>
+        </div>
       )}
     </div>
   );

@@ -15,12 +15,13 @@ export function RootChrome({ children }: RootChromeProps) {
   const pathname = usePathname();
   const isRootPage = pathname === '/';
   const isAuthPage = pathname === '/login' || pathname === '/register';
+  const isPlayPage = pathname?.startsWith('/play');
   const isSpacerHidden = isRootPage || isAuthPage;
   const shouldUseAppShell = !isRootPage && !isAuthPage;
 
   return (
     <PageBackground>
-      <TopNavbar variant="app" showSpacer={!isSpacerHidden} />
+      {!isPlayPage && <TopNavbar variant="app" showSpacer={!isSpacerHidden} />}
       {shouldUseAppShell ? <AppShell>{children}</AppShell> : children}
     </PageBackground>
   );

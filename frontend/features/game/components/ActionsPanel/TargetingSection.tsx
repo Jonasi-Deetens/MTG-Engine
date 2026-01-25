@@ -1,6 +1,7 @@
 'use client';
 
 import { TargetSelector } from '../TargetSelector';
+import { BracketHeader } from '@/components/ui/play/NierUIElements';
 import { EffectTargetGroup } from '../../hooks/useEffectTargeting';
 import { EngineCardMap } from '@/lib/engine';
 
@@ -82,7 +83,7 @@ export function TargetingSection({
 
   return (
     <div className="space-y-4">
-      <h3 className="text-sm font-semibold">Targets</h3>
+      <BracketHeader>Targets</BracketHeader>
 
       {/* Effect-based targeting */}
       {hasEffectTargets && effectTargetGroups.map((group) => (
@@ -145,7 +146,7 @@ export function TargetingSection({
       {/* Copy spell targets */}
       {copyEffectTargetGroups && copyEffectTargetGroups.length > 0 && (
         <div className="space-y-3">
-          <h4 className="text-sm font-medium">Copy Targets</h4>
+          <BracketHeader>Copy Targets</BracketHeader>
           {Array.from(new Set(copyEffectTargetGroups.map((entry) => entry.copyIndex))).map((copyIndex) => {
             const groups = copyEffectTargetGroups.filter((entry) => entry.copyIndex === copyIndex);
             return (
@@ -190,7 +191,7 @@ export function TargetingSection({
 
       {!copyEffectTargetGroups && copyTargetsEnabled && copyTargetsCount > 0 && (
         <div className="space-y-3">
-          <h4 className="text-sm font-medium">Copy Targets</h4>
+          <BracketHeader>Copy Targets</BracketHeader>
           {Array.from({ length: copyTargetsCount }).map((_, index) => {
             const selection = copyTargetSelections[index] ?? { objectIds: [], playerIds: [] };
             return (
