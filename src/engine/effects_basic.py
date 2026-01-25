@@ -3,6 +3,8 @@ from __future__ import annotations
 from typing import Any, Dict, List
 
 from .effects_helpers import (
+    normalize_card_type,
+    resolve_effect_amount,
     resolve_target_objects,
     resolve_target_players,
     resolve_effect_players,
@@ -46,7 +48,7 @@ def _draw_for_player(resolver, player_id: int, amount: int) -> Dict[str, Any]:
 
 
 def handle_draw(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
-    amount = int(effect.get("amount", 1))
+    amount = resolve_effect_amount(effect, context, 1)
     player_ids = resolve_effect_players(resolver.game_state, context, effect, context.controller_id)
     if not player_ids:
         return {"type": "draw", "status": "no_player"}
@@ -56,7 +58,7 @@ def handle_draw(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
 
 
 def handle_draw_each(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
-    amount = int(effect.get("amount", 1))
+    amount = resolve_effect_amount(effect, context, 1)
     player_ids = [player.id for player in resolver.game_state.players if not getattr(player, "removed_from_game", False)]
     ordered = apnap_player_order(resolver.game_state, player_ids) if len(player_ids) > 1 else player_ids
     results = [_draw_for_player(resolver, player_id, amount) for player_id in ordered]
@@ -64,22 +66,44 @@ def handle_draw_each(resolver, effect: Dict[str, Any], context) -> Dict[str, Any
 
 
 def handle_token(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
-    amount = int(effect.get("amount", 1))
+    amount = resolve_effect_amount(effect, context, 1)
     tokens = []
+    base_types = effect.get("tokenTypes")
+    subtype = effect.get("tokenSubtype")
+    if isinstance(subtype, str) and subtype:
+        subtype = subtype.strip()
+    token_types: List[str] = []
+    if isinstance(base_types, list):
+        for entry in base_types:
+            if not entry or entry == "any":
+                continue
+            token_types.append(normalize_card_type(str(entry)))
+    if not token_types:
+        token_types = ["Creature"]
+    if subtype:
+        subtype_name = subtype.title()
+        if subtype_name not in token_types:
+            token_types.append(subtype_name)
+    if "Token" not in token_types:
+        token_types.append("Token")
+    token_name = effect.get("tokenName") or (subtype.title() if subtype else "Token")
+    token_colors = effect.get("tokenColors")
+    colors = token_colors if isinstance(token_colors, list) else []
     for _ in range(amount):
         token = resolver.game_state.create_token(
-            name="Token",
+            name=token_name,
             controller_id=context.controller_id or 0,
             power=effect.get("power"),
             toughness=effect.get("toughness"),
-            types=["Creature", "Token"],
+            types=token_types,
+            colors=colors,
         )
         tokens.append(token.id)
     return {"type": "token", "created": tokens}
 
 
 def handle_counters(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
-    amount = int(effect.get("amount", 1))
+    amount = resolve_effect_amount(effect, context, 1)
     counter_type = effect.get("counterType", "+1/+1")
     results: List[Dict[str, Any]] = []
     for obj in resolve_target_objects(resolver.game_state, context, effect.get("target", "self")):
@@ -91,7 +115,7 @@ def handle_counters(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]
 
 
 def handle_life(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
-    amount = int(effect.get("amount", 0))
+    amount = resolve_effect_amount(effect, context, 0)
     player_ids = resolve_effect_players(resolver.game_state, context, effect, context.controller_id)
     if not player_ids:
         return {"type": "life", "status": "no_player"}
@@ -104,7 +128,7 @@ def handle_life(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
 
 
 def handle_lose_life(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
-    amount = int(effect.get("amount", 0))
+    amount = resolve_effect_amount(effect, context, 0)
     player_ids = resolve_effect_players(resolver.game_state, context, effect, context.controller_id)
     if not player_ids:
         return {"type": "lose_life", "status": "no_player"}
@@ -130,7 +154,7 @@ def handle_lose_life(resolver, effect: Dict[str, Any], context) -> Dict[str, Any
 
 
 def handle_add_poison(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
-    amount = int(effect.get("amount", 0))
+    amount = resolve_effect_amount(effect, context, 0)
     player_ids = resolve_effect_players(resolver.game_state, context, effect, context.controller_id)
     if not player_ids:
         return {"type": "add_poison", "status": "no_player"}
@@ -143,7 +167,7 @@ def handle_add_poison(resolver, effect: Dict[str, Any], context) -> Dict[str, An
 
 
 def handle_mana(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
-    amount = int(effect.get("amount", 1))
+    amount = resolve_effect_amount(effect, context, 1)
     mana_type = effect.get("manaType", "C")
     player_ids = resolve_effect_players(resolver.game_state, context, effect, context.controller_id)
     if not player_ids:
@@ -173,7 +197,7 @@ def handle_fight(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
 
 
 def handle_mill(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
-    amount = int(effect.get("amount", 1))
+    amount = resolve_effect_amount(effect, context, 1)
     player_ids = resolve_effect_players(resolver.game_state, context, effect, context.controller_id)
     if not player_ids:
         return {"type": "mill", "status": "no_player"}
@@ -192,7 +216,7 @@ def handle_mill(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
 
 
 def handle_discard(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
-    amount = int(effect.get("amount", 1))
+    amount = resolve_effect_amount(effect, context, 1)
     player_ids = resolve_effect_players(resolver.game_state, context, effect, context.controller_id)
     if not player_ids:
         return {"type": "discard", "status": "no_player"}
@@ -230,7 +254,7 @@ def handle_discard(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
 
 
 def handle_scry(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
-    amount = int(effect.get("amount", 1))
+    amount = resolve_effect_amount(effect, context, 1)
     player_ids = resolve_effect_players(resolver.game_state, context, effect, context.controller_id)
     if not player_ids:
         return {"type": "scry", "status": "no_player"}
@@ -259,7 +283,7 @@ def handle_scry(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
 
 
 def handle_look_at(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
-    amount = int(effect.get("amount", 1))
+    amount = resolve_effect_amount(effect, context, 1)
     zone = effect.get("zone", ZONE_LIBRARY)
     player_ids = resolve_effect_players(resolver.game_state, context, effect, context.controller_id)
     if not player_ids:

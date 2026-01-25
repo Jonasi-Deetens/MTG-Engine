@@ -1,6 +1,7 @@
-import { CostEntry, buildActivationCosts, formatActivationCostLabel } from '@/lib/activationCosts';
+import { CostEntry } from '@/lib/activationCosts';
 import { parseManaCostSymbols, serializeManaCostSymbols } from '@/lib/wardCosts';
 import type { EffectGraph } from '@/lib/unifiedEffect';
+import { formatOptionalCostLabel, normalizeOptionalCostEntry, OptionalCostEntry } from '@/lib/optionalCosts';
 
 export type OptionalCastCostOption = {
   tag: string;
@@ -15,28 +16,27 @@ export type AlternativeCostOption = {
   label: string;
 };
 
-const OPTIONAL_KEYWORDS: Record<
-  OptionalCastCostOption['kind'],
-  { repeatable: boolean; label: (costText: string) => string }
-> = {
-  kicker: { repeatable: false, label: (costText) => `Kicker ${costText}` },
-  multikicker: { repeatable: true, label: (costText) => `Multikicker ${costText}` },
-  buyback: { repeatable: false, label: (costText) => `Buyback ${costText}` },
-  entwine: { repeatable: false, label: (costText) => `Entwine ${costText}` },
-  replicate: { repeatable: true, label: (costText) => `Replicate ${costText}` },
-  conspire: { repeatable: false, label: () => 'Conspire' },
-};
-
 export const deriveOptionalCastCostsFromGraph = (graph?: EffectGraph | null): OptionalCastCostOption[] => {
   if (!graph?.steps?.length) return [];
-  // Optional cast costs are not represented in unified EffectGraph yet.
-  return [];
+  const raw = graph.optionalCosts ?? [];
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((entry) => entry && typeof entry === 'object')
+    .map((entry) => normalizeOptionalCostEntry(entry as OptionalCostEntry))
+    .map((entry) => ({
+      tag: entry.tag ?? '',
+      label: formatOptionalCostLabel(entry),
+      costs: entry.costs ?? [],
+      kind: entry.kind,
+      repeatable: !!entry.repeatable,
+    }))
+    .filter((entry) => entry.tag);
 };
 
 export const deriveAdditionalCostsFromGraph = (graph?: EffectGraph | null): CostEntry[] => {
   if (!graph?.steps?.length) return [];
-  // Spell additional costs are not represented in unified EffectGraph yet.
-  return [];
+  const additionalCosts = graph.additionalCosts ?? [];
+  return Array.isArray(additionalCosts) ? additionalCosts : [];
 };
 
 export const deriveAlternativeCastCostsFromGraph = (graph?: EffectGraph | null): AlternativeCostOption[] => {
@@ -95,33 +95,11 @@ const normalizeCostEntries = (data?: any): CostEntry[] => {
   return costs;
 };
 
-const formatCostsLabel = (costs: CostEntry[]) => {
-  if (!costs.length) return '';
-  return buildActivationCosts(costs).map(formatActivationCostLabel).join(', ');
-};
-
 const findManaCost = (data?: any) => {
   if (!data) return '';
   const costs = normalizeCostEntries(data);
   const mana = costs.find((entry) => entry.type === 'mana') as CostEntry | undefined;
   if (!mana || !('cost' in mana)) return '';
   return serializeManaCostSymbols(mana.cost as any);
-};
-
-const buildCostTag = (costs: CostEntry[]) => {
-  if (!costs.length) return '';
-  return costs
-    .map((cost) => {
-      if (cost.type === 'mana') return serializeManaCostSymbols(cost.cost as any);
-      if (cost.type === 'life' || cost.type === 'discard' || cost.type === 'exile_graveyard') {
-        return `${cost.type}:${cost.amount}`;
-      }
-      if (cost.type === 'tap_self') return 'tap_self';
-      if (cost.type === 'sacrifice_self') return 'sacrifice_self';
-      if (cost.type === 'tap') return `tap:${(cost as any).card_type ?? 'permanent'}`;
-      if (cost.type === 'sacrifice') return `sacrifice:${(cost as any).card_type ?? 'permanent'}`;
-      return cost.type;
-    })
-    .join('+');
 };
 

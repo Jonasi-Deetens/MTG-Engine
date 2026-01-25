@@ -2,7 +2,13 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from .effects_helpers import resolve_target_objects, resolve_target_object, resolve_effect_players, resolve_target_list_for_player, normalize_card_type
+from .effects_helpers import (
+    resolve_target_objects,
+    resolve_target_object,
+    resolve_effect_players,
+    resolve_target_list_for_player,
+    normalize_card_type,
+)
 from .state import ResolveContext
 from .events import Event
 from .targets import resolve_object_id, resolve_player_id
@@ -87,6 +93,9 @@ def handle_search(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
         if isinstance(override, dict):
             merged_targets.update(override)
     results = []
+    reveal_found = bool(effect.get("revealFound"))
+    destination_zone = effect.get("putFoundTo")
+    shuffle_after = bool(effect.get("shuffleAfter"))
     for player_id in player_ids:
         player = resolver.game_state.get_player(player_id)
         pool = getattr(player, zone, [])
@@ -107,13 +116,39 @@ def handle_search(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
             valid_found = [obj_id for obj_id in found_ids if obj_id in filtered_pool]
         else:
             valid_found = [obj_id for obj_id in found_ids if obj_id in pool]
+        moved = []
+        if destination_zone and valid_found:
+            dest_zone = destination_zone
+            for obj_id in valid_found:
+                resolver.game_state.move_object(obj_id, dest_zone)
+                moved.append(obj_id)
+        if shuffle_after:
+            resolver.game_state.zone_manager.shuffle_library(player_id)
+        if reveal_found and valid_found:
+            resolver.game_state.log(f"[graph] reveal_found player={player_id} cards={valid_found}")
         results.append({
             "player_id": player_id,
             "zone": zone,
             "found": valid_found,
             "filtered_pool": filtered_pool,  # Include for frontend reference
+            "moved": moved,
+            "revealed": reveal_found,
+            "shuffled": shuffle_after,
         })
     return {"type": "search", "results": results} if len(results) > 1 else {"type": "search", **results[0]}
+
+
+def _get_search_selection_for_node(context, node_id: str, player_id: int) -> List[str]:
+    if not node_id or not isinstance(getattr(context, "targets_by_effect", None), dict):
+        return []
+    node_targets = context.targets_by_effect.get(node_id, {})
+    results_by_player = node_targets.get("search_results_by_player", {})
+    selection = results_by_player.get(str(player_id)) or results_by_player.get(player_id)
+    if isinstance(selection, list):
+        return selection
+    if isinstance(selection, str):
+        return [selection]
+    return []
 
 
 def _matches_card_type_or_subtype(obj, card_type: str) -> bool:
@@ -159,6 +194,10 @@ def _filter_search_pool(
     
     card_type = effect.get("cardType")
     if isinstance(card_type, str) and card_type.lower() == "any":
+        card_type = None
+    is_basic_land = False
+    if isinstance(card_type, str) and card_type.lower() in ("basic_land", "basic land"):
+        is_basic_land = True
         card_type = None
     if isinstance(card_type, str):
         card_type = normalize_card_type(card_type)
@@ -257,7 +296,13 @@ def _filter_search_pool(
         obj = game_state.objects.get(obj_id)
         if not obj:
             continue
-        if card_type and not _matches_card_type_or_subtype(obj, card_type):
+        if is_basic_land:
+            if not (
+                _matches_card_type_or_subtype(obj, "basic")
+                and _matches_card_type_or_subtype(obj, "land")
+            ):
+                continue
+        elif card_type and not _matches_card_type_or_subtype(obj, card_type):
             continue
         if not _compare(obj.mana_value):
             continue
@@ -305,6 +350,108 @@ def handle_put_onto_battlefield(resolver, effect: Dict[str, Any], context) -> Di
     resolver.game_state.log(message)
     print(message, flush=True)
     return {"type": "put_onto_battlefield", "cards": card_ids}
+
+
+def handle_put_on_bottom_of_library(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
+    from .effects_internal.target_resolver import get_inferred_targets_from_previous_result
+
+    from_effect = effect.get("fromEffect")
+    card_ids: List[str] = []
+
+    if from_effect is not None and from_effect < len(context.previous_results):
+        card_ids = get_inferred_targets_from_previous_result(context.previous_results, from_effect)
+        if not card_ids:
+            card_ids = context.previous_results[from_effect].get("found", [])
+    else:
+        target_id = resolve_object_id(context, "target", None)
+        if target_id:
+            card_ids = [target_id]
+
+    moved: List[str] = []
+    for obj_id in card_ids:
+        obj = resolver.game_state.objects.get(obj_id)
+        if not obj:
+            continue
+        resolver.game_state.move_object(obj_id, ZONE_LIBRARY)
+        moved.append(obj_id)
+
+    message = f"[graph] put_on_bottom_of_library cards={moved}"
+    resolver.game_state.log(message)
+    print(message, flush=True)
+    return {"type": "put_on_bottom_of_library", "cards": moved, "moved": moved}
+
+
+def handle_look_at_pick_and_bottom(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
+    amount = int(effect.get("amount", 1))
+    pick_types = effect.get("pickTypes") or []
+    if isinstance(pick_types, str):
+        pick_types = [pick_types]
+    pick_max = int(effect.get("pickMax", 1))
+    pick_destination = effect.get("pickDestination", "hand")
+    reveal_chosen = effect.get("revealChosen", True)
+    order_bottom = effect.get("orderBottom", True)
+
+    player_ids = resolve_effect_players(resolver.game_state, context, effect, context.controller_id)
+    if not player_ids:
+        return {"type": "look_at_pick_and_bottom", "status": "no_player"}
+
+    results: List[Dict[str, Any]] = []
+    node_id = effect.get("_node_id")
+    pick_node_id = f"{node_id}:pick" if node_id else None
+    order_node_id = f"{node_id}:order" if node_id else None
+
+    for player_id in player_ids:
+        player = resolver.game_state.get_player(player_id)
+        top_ids = list(player.library[:amount])
+        if not top_ids:
+            results.append({"player_id": player_id, "looked": []})
+            continue
+
+        def matches_types(obj_id: str) -> bool:
+            if not pick_types:
+                return True
+            obj = resolver.game_state.objects.get(obj_id)
+            if not obj:
+                return False
+            return any(_matches_card_type_or_subtype(obj, normalize_card_type(t)) for t in pick_types if t)
+
+        pick_candidates = [obj_id for obj_id in top_ids if matches_types(obj_id)]
+        picked_ids = _get_search_selection_for_node(context, pick_node_id or "", player_id)
+        picked_id = next((obj_id for obj_id in picked_ids if obj_id in pick_candidates), None)
+        if pick_max <= 0:
+            picked_id = None
+
+        if picked_id:
+            destination = {
+                "hand": ZONE_HAND,
+                "battlefield": ZONE_BATTLEFIELD,
+                "graveyard": ZONE_GRAVEYARD,
+                "exile": ZONE_EXILE,
+            }.get(pick_destination, ZONE_HAND)
+            resolver.game_state.move_object(picked_id, destination)
+
+        rest_ids = [obj_id for obj_id in top_ids if obj_id != picked_id]
+        bottom_order = rest_ids
+        if order_bottom and order_node_id:
+            ordered = _get_search_selection_for_node(context, order_node_id, player_id)
+            if ordered:
+                ordered_filtered = [obj_id for obj_id in ordered if obj_id in rest_ids]
+                remaining = [obj_id for obj_id in rest_ids if obj_id not in ordered_filtered]
+                bottom_order = ordered_filtered + remaining
+
+        if rest_ids:
+            player.library = [obj_id for obj_id in player.library if obj_id not in rest_ids]
+            player.library.extend(bottom_order)
+
+        results.append({
+            "player_id": player_id,
+            "looked": top_ids,
+            "picked": picked_id,
+            "bottom": bottom_order,
+            "revealed": bool(picked_id and reveal_chosen),
+        })
+
+    return {"type": "look_at_pick_and_bottom", "results": results} if len(results) > 1 else {"type": "look_at_pick_and_bottom", **results[0]}
 
 
 def handle_attach(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:

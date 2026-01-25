@@ -67,22 +67,28 @@ class EffectRouter:
             self._game_state.log(f"Unhandled effect type: {effect_type}")
             return {"type": effect_type, "status": "unhandled"}
 
-        # Check per-effect condition if present
+        # Check per-effect conditions if present
         effect_condition = effect.get("condition")
+        effect_conditions = effect.get("conditions")
         is_optional = effect.get("optional", False)
-        
-        if effect_condition:
-            from ..conditions import evaluate_condition
-            condition_passed = evaluate_condition(self._game_state, effect_condition, context)
+
+        if effect_conditions or effect_condition:
+            from ..conditions import evaluate_condition, evaluate_conditions
+            if isinstance(effect_conditions, list) and effect_conditions:
+                condition_passed = evaluate_conditions(self._game_state, effect_conditions, context)
+                condition_label = "conditions"
+            else:
+                condition_passed = evaluate_condition(self._game_state, effect_condition, context)
+                condition_label = "condition"
             
             node_id = effect.get("_node_id") or effect.get("node_id", "unknown")
             self._game_state.log(
-                f"[effect] per-effect condition check node={node_id} "
-                f"type={effect_condition.get('type')} passed={condition_passed}"
+                f"[effect] per-effect {condition_label} check node={node_id} "
+                f"passed={condition_passed}"
             )
             print(
-                f"[graph] per-effect condition check node={node_id} "
-                f"type={effect_condition.get('type')} passed={condition_passed}",
+                f"[graph] per-effect {condition_label} check node={node_id} "
+                f"passed={condition_passed}",
                 flush=True
             )
             
@@ -184,7 +190,9 @@ def create_default_router(game_state: "GameState") -> EffectRouter:
         handle_destroy,
         handle_exile,
         handle_flicker,
+        handle_look_at_pick_and_bottom,
         handle_phase_out,
+        handle_put_on_bottom_of_library,
         handle_put_onto_battlefield,
         handle_regenerate,
         handle_return,
@@ -214,7 +222,9 @@ def create_default_router(game_state: "GameState") -> EffectRouter:
         "return": handle_return,
         "sacrifice": handle_sacrifice,
         "search": handle_search,
+        "look_at_pick_and_bottom": handle_look_at_pick_and_bottom,
         "put_onto_battlefield": handle_put_onto_battlefield,
+        "put_on_bottom_of_library": handle_put_on_bottom_of_library,
         "attach": handle_attach,
         "shuffle": handle_shuffle,
         "protection": handle_protection,

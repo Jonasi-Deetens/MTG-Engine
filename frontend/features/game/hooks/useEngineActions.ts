@@ -12,6 +12,8 @@ export interface PendingSearchChoice {
   min_selections: number;
   max_selections: number;
   source_id?: string;
+  order_required?: boolean;
+  label?: string;
 }
 
 interface UseEngineActionsArgs {

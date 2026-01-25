@@ -6,7 +6,9 @@ from typing import Any, Dict, Iterable, List, Optional
 def extract_optional_costs_from_graph(graph: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
     if not graph:
         return []
-    # Optional casting costs are not modeled in unified effect graphs yet.
+    costs = graph.get("optionalCosts") if isinstance(graph, dict) else None
+    if isinstance(costs, list):
+        return [entry for entry in costs if isinstance(entry, dict)]
     return []
 
 
@@ -20,7 +22,9 @@ def extract_splice_costs_from_graph(graph: Optional[Dict[str, Any]]) -> List[Dic
 def extract_additional_costs_from_graph(graph: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
     if not graph:
         return []
-    # Additional casting costs are not modeled in unified effect graphs yet.
+    costs = graph.get("additionalCosts") if isinstance(graph, dict) else None
+    if isinstance(costs, list):
+        return [entry for entry in costs if isinstance(entry, dict)]
     return []
 
 

@@ -2,14 +2,16 @@
 
 import { useEffect, useMemo, useState } from 'react';
 
-import type { SourceKind, UnifiedEffect } from '@/lib/unifiedEffect';
+import type { EffectStep, SourceKind, UnifiedEffect } from '@/lib/unifiedEffect';
 import { Button } from '@/components/ui/Button';
+import { formatEffect } from '@/lib/effectTypes';
 import { IntentStep } from './IntentStep';
 import { TriggerConfig } from './TriggerConfig';
 import { ActivatedConfig } from './ActivatedConfig';
 import { ContinuousConfig } from './ContinuousConfig';
 import { ReplacementConfig } from './ReplacementConfig';
 import { ConditionsStep } from './ConditionsStep';
+import { EffectCostStep } from './EffectCostStep';
 import { EffectBodyStep } from './EffectBodyStep';
 import { ReviewStep } from './ReviewStep';
 
@@ -27,6 +29,9 @@ interface EffectWizardProps {
   onClose: () => void;
   onSave: (effect: UnifiedEffect) => void;
   editingEffect?: UnifiedEffect | null;
+  editingStepId?: string | null;
+  steps?: EffectStep[];
+  sourceKind?: SourceKind;
   onSourceKindChange?: (sourceKind: SourceKind) => void;
 }
 
@@ -146,11 +151,35 @@ const createDefaultEffect = (intent: IntentType): UnifiedEffect => {
   };
 };
 
+const describeStep = (step: EffectStep): string => {
+  const body = step.effect.effect;
+  if (body.kind === 'one_shot') {
+    return formatEffect(body.action as any);
+  }
+  if (body.kind === 'continuous') {
+    const modifier = body.modifier as any;
+    if (modifier?.type === 'add_keyword' && modifier.keyword) {
+      return `Grant ${modifier.keyword}`;
+    }
+    return `Continuous (${modifier?.type || 'modifier'})`;
+  }
+  if (body.kind === 'replacement') {
+    return 'Replacement effect';
+  }
+  if (body.kind === 'prevention') {
+    return 'Prevention effect';
+  }
+  return 'Effect';
+};
+
 export function EffectWizard({
   isOpen,
   onClose,
   onSave,
   editingEffect,
+  editingStepId,
+  steps = [],
+  sourceKind,
   onSourceKindChange,
 }: EffectWizardProps) {
   const [intent, setIntent] = useState<IntentType | null>(null);
@@ -189,19 +218,40 @@ export function EffectWizard({
   }, [editingEffect, isOpen]);
 
   const stepKeys = useMemo(() => {
-    const keys = ['intent', 'config', 'conditions', 'effect', 'review'];
+    const keys = ['intent', 'config', 'conditions', 'costs', 'effect', 'review'];
     if (draft && draft.effect.kind !== 'one_shot') {
       return keys.filter((key) => key !== 'effect');
     }
     return keys;
   }, [draft]);
+  const previousSteps = useMemo(() => {
+    if (!steps.length) return [];
+    const currentIndex =
+      editingStepId ? steps.findIndex((step) => step.id === editingStepId) : steps.length;
+    const sliceIndex = currentIndex >= 0 ? currentIndex : steps.length;
+    return steps.slice(0, sliceIndex).map((step, index) => ({
+      index,
+      label: describeStep(step),
+    }));
+  }, [steps, editingStepId]);
+  const intentOptions: Array<{ id: IntentType; label: string; description: string }> = useMemo(
+    () => [
+      { id: 'triggered', label: 'Triggered', description: 'When/Whenever/At...' },
+      { id: 'activated', label: 'Activated', description: 'Pay a cost to...' },
+      { id: 'always_on', label: 'Always On', description: 'Static/continuous modifier' },
+      { id: 'spell', label: 'Spell Effect', description: 'Resolves when a spell resolves' },
+      { id: 'replacement', label: 'Replacement', description: 'Instead of...' },
+      { id: 'prevention', label: 'Prevention', description: 'Prevent damage or events' },
+      { id: 'keyword', label: 'Keyword', description: 'Add keyword ability' },
+    ],
+    []
+  );
 
   if (!isOpen) {
     return null;
   }
 
   const currentKey = stepKeys[stepIndex];
-
   const handleIntentSelect = (nextIntent: IntentType) => {
     setIntent(nextIntent);
     setDraft(createDefaultEffect(nextIntent));
@@ -236,7 +286,9 @@ export function EffectWizard({
           </h3>
         </div>
         <div className="px-6 py-4 space-y-4">
-          {currentKey === 'intent' && <IntentStep onSelect={handleIntentSelect} />}
+          {currentKey === 'intent' && (
+            <IntentStep onSelect={handleIntentSelect} intents={intentOptions} />
+          )}
           {currentKey === 'config' && draft && (
             <>
               {draft.initiation === 'triggered' && (
@@ -262,10 +314,13 @@ export function EffectWizard({
             </>
           )}
           {currentKey === 'conditions' && draft && (
-            <ConditionsStep effect={draft} onChange={setDraft} />
+            <ConditionsStep effect={draft} onChange={setDraft} previousSteps={previousSteps} />
+          )}
+          {currentKey === 'costs' && draft && (
+            <EffectCostStep effect={draft} onChange={setDraft} />
           )}
           {currentKey === 'effect' && draft && (
-            <EffectBodyStep effect={draft} onChange={setDraft} />
+            <EffectBodyStep effect={draft} onChange={setDraft} previousSteps={previousSteps} />
           )}
           {currentKey === 'review' && draft && <ReviewStep effect={draft} />}
         </div>

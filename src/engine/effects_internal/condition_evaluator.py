@@ -32,6 +32,22 @@ def _compare(value: int, comparison: str, expected: int) -> bool:
     return False
 
 
+def _previous_result_count(
+    previous_results: List[Dict[str, Any]],
+    index: int,
+) -> Optional[int]:
+    if index < 0 or index >= len(previous_results):
+        return None
+    prev_result = previous_results[index] or {}
+    for key in ["found", "cards", "targets", "object_ids", "target_id", "moved"]:
+        value = prev_result.get(key)
+        if isinstance(value, list):
+            return len(value)
+        if isinstance(value, str):
+            return 1
+    return 0
+
+
 class ConditionEvaluator:
     """Evaluates conditions for abilities and effects.
 
@@ -251,6 +267,25 @@ class ConditionEvaluator:
                     continue
                 count += 1
             return _compare(count, comparison, value)
+
+        if condition_type == "previous_effect_result_count":
+            index = condition.get("fromEffect", 0)
+            if not isinstance(index, int):
+                return False
+            count = _previous_result_count(context.previous_results, index)
+            if count is None:
+                return False
+            expected = condition.get("value", 1)
+            return _compare(count, comparison, expected)
+
+        if condition_type == "previous_effect_has_result":
+            index = condition.get("fromEffect", 0)
+            if not isinstance(index, int):
+                return False
+            count = _previous_result_count(context.previous_results, index)
+            if count is None:
+                return False
+            return count > 0
 
         # Unknown condition type - default to True
         logger.warning(f"Unknown condition type: {condition_type}")

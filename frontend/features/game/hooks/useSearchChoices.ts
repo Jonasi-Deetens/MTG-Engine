@@ -14,6 +14,7 @@ type SearchChoiceEntry = {
   candidates: Array<{ id: string; label: string }>;
   selectedIds: string[];
   maxSelections?: number | null;
+  orderRequired?: boolean;
   onChange: (ids: string[]) => void;
 };
 
@@ -61,7 +62,12 @@ export const useSearchChoices = ({
       const effect = node.data ?? {};
       const targetPlayers = resolvePlayerIdsForEffect(effect.target, gameState, currentPriority);
       const zone = effect.zone || 'library';
-      const maxSelections = typeof effect.amount === 'number' && effect.amount > 0 ? effect.amount : null;
+      const maxSelections =
+        typeof effect.max === 'number'
+          ? effect.max
+          : typeof effect.amount === 'number' && effect.amount > 0
+          ? effect.amount
+          : null;
       targetPlayers.forEach((playerId) => {
         const player = gameState.players.find((entry) => entry.id === playerId);
         if (!player) return;
@@ -103,9 +109,9 @@ export const useSearchChoices = ({
       const key = `pending:${choice.node_id}:${choice.player_id}`;
       const selected = selections[key] ?? [];
       const source = choice.source_id ? gameState.objects.find((o) => o.id === choice.source_id) : null;
-      const label = source?.name 
-        ? `Search for ${source.name}'s ability` 
-        : `Search ${choice.zone}`;
+      const label =
+        choice.label ||
+        (source?.name ? `Search for ${source.name}'s ability` : `Search ${choice.zone}`);
       return {
         id: key,
         nodeId: choice.node_id,
@@ -115,6 +121,7 @@ export const useSearchChoices = ({
         candidates: choice.options.map((opt) => ({ id: opt.id, label: opt.name })),
         selectedIds: selected,
         maxSelections: choice.max_selections,
+        orderRequired: choice.order_required,
         onChange: (ids: string[]) =>
           setSelections((prev) => ({
             ...prev,

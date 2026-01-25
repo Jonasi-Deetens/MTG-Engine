@@ -201,6 +201,8 @@ class TurnManager:
                         "min_selections": choice.min_selections,
                         "max_selections": choice.max_selections,
                         "source_id": choice.source_id,
+                        "order_required": choice.order_required,
+                        "label": choice.label,
                     }
                     for choice in result.pending_search_choices
                 ],

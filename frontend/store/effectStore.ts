@@ -2,6 +2,9 @@ import { create } from 'zustand';
 
 import type { CardData } from '@/store/builderStore';
 import type { EffectGraph, EffectStep, SourceKind, UnifiedEffect } from '@/lib/unifiedEffect';
+import type { CostEntry } from '@/lib/activationCosts';
+import type { OptionalCostEntry } from '@/lib/optionalCosts';
+import { normalizeOptionalCostEntry } from '@/lib/optionalCosts';
 
 export interface EffectValidation {
   errors: string[];
@@ -36,6 +39,18 @@ const createId = () => {
   }
   return Math.random().toString(36).slice(2);
 };
+
+const extractAdditionalCosts = (steps: EffectStep[]) =>
+  steps.flatMap((step) =>
+    Array.isArray(step.effect.additionalCosts) ? (step.effect.additionalCosts as CostEntry[]) : []
+  );
+
+const extractOptionalCosts = (steps: EffectStep[]) =>
+  steps.flatMap((step) =>
+    Array.isArray(step.effect.optionalCosts)
+      ? (step.effect.optionalCosts as OptionalCostEntry[]).map(normalizeOptionalCostEntry)
+      : []
+  );
 
 export const useEffectStore = create<EffectStoreState>((set, get) => ({
   currentCard: null,
@@ -82,11 +97,22 @@ export const useEffectStore = create<EffectStoreState>((set, get) => ({
     if (!steps.length) {
       return null;
     }
+    const additionalCosts = extractAdditionalCosts(steps);
+    const optionalCosts = extractOptionalCosts(steps);
     const graphId = currentCard?.card_id ? `graph-${currentCard.card_id}` : createId();
+    const linkedSteps = steps.map((step, index) => {
+      if (step.next || step.nextByMode) {
+        return step;
+      }
+      const nextStep = steps[index + 1];
+      return nextStep ? { ...step, next: [nextStep.id] } : step;
+    });
     return {
       id: graphId,
       sourceKind,
-      steps,
+      steps: linkedSteps,
+      ...(sourceKind === 'spell' && additionalCosts.length ? { additionalCosts } : {}),
+      ...(sourceKind === 'spell' && optionalCosts.length ? { optionalCosts } : {}),
     };
   },
 

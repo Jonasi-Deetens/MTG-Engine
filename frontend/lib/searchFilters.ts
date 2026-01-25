@@ -16,6 +16,9 @@ type SearchEffect = {
 const normalizeCardType = (value?: string) => {
   if (!value) return undefined;
   const lowered = value.trim().toLowerCase();
+  if (lowered === 'basic_land' || lowered === 'basic land') {
+    return 'basic_land';
+  }
   const mapping: Record<string, string> = {
     creature: 'Creature',
     artifact: 'Artifact',
@@ -38,6 +41,14 @@ const normalizeCardType = (value?: string) => {
  * "Aura" is a subtype found in type_line (e.g., "Enchantment — Aura"), not in types.
  */
 const matchesCardTypeOrSubtype = (obj: EngineGameObjectSnapshot, cardType: string) => {
+  if (cardType === 'basic_land') {
+    const isLand = (obj.types ?? []).includes('Land');
+    const typeLine = obj.type_line?.toLowerCase() ?? '';
+    const isBasic =
+      (obj.types ?? []).includes('Basic') ||
+      typeLine.split(/\s+/).includes('basic');
+    return isLand && isBasic;
+  }
   // Check types array first
   if ((obj.types ?? []).includes(cardType)) return true;
   

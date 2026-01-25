@@ -27,6 +27,13 @@ const CostItemSchema = z.object({
   manaType: z.string().optional(),
 }).passthrough();
 
+const OptionalCostSchema = z.object({
+  kind: z.string(),
+  tag: z.string().optional(),
+  repeatable: z.boolean().optional(),
+  costs: z.array(CostItemSchema).optional(),
+}).passthrough();
+
 const CostSpecSchema = z.object({
   items: z.array(CostItemSchema),
   timing: z.string().optional(),
@@ -129,6 +136,7 @@ const EffectGraphSchema = z.object({
   id: z.string(),
   sourceKind: SourceKindSchema,
   steps: z.array(EffectStepSchema),
+  optionalCosts: z.array(OptionalCostSchema).optional(),
   modal: z.object({
     min: z.number(),
     max: z.number().nullable().optional(),

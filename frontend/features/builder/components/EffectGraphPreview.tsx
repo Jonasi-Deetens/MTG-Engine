@@ -55,8 +55,8 @@ export function EffectGraphPreview({ graph }: EffectGraphPreviewProps) {
 
   return (
     <div className="space-y-4">
-      <div className="text-xs text-[color:var(--theme-text-secondary)]">
-        Source: {activeGraph.sourceKind}
+      <div className="text-xs text-[color:var(--theme-text-secondary)] space-y-1">
+        <div>Source: {activeGraph.sourceKind}</div>
       </div>
       <div className="space-y-2">
         {activeGraph.steps.map((step) => (

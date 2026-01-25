@@ -2,6 +2,8 @@
 
 // Shared effect type definitions for ability forms
 
+import { buildActivationCosts, formatActivationCostLabel } from '@/lib/activationCosts';
+
 export interface EffectTypeOption {
   value: string;
   label: string;
@@ -52,6 +54,7 @@ export const EFFECT_TYPE_OPTIONS: EffectTypeOption[] = [
   { value: 'sacrifice', label: 'Sacrifice', requiresTarget: true },
   { value: 'search', label: 'Search', requiresSearchFilters: true, requiresZone: true },
   { value: 'put_onto_battlefield', label: 'Put onto Battlefield', requiresTarget: false }, // Can use fromEffect instead
+  { value: 'put_on_bottom_of_library', label: 'Put on Bottom of Library', requiresTarget: false }, // Can use fromEffect instead
   { value: 'attach', label: 'Attach', requiresTarget: true, requiresAttachTarget: true }, // Can use fromEffect or attachTo
   { value: 'shuffle', label: 'Shuffle Library', requiresTarget: false },
   // New effect types
@@ -63,6 +66,7 @@ export const EFFECT_TYPE_OPTIONS: EffectTypeOption[] = [
   { value: 'discard', label: 'Discard', requiresTarget: true, requiresAmount: true, requiresDiscardType: true },
   { value: 'scry', label: 'Scry', requiresAmount: true },
   { value: 'look_at', label: 'Look At', requiresAmount: true, requiresZone: true, requiresPosition: true },
+  { value: 'look_at_pick_and_bottom', label: 'Look At, Choose, and Bottom', requiresAmount: true },
   { value: 'reveal', label: 'Reveal', requiresTarget: true },
   { value: 'copy_spell', label: 'Copy Spell', requiresTarget: true, requiresAmount: true },
   { value: 'enter_copy', label: 'As Enters Copy Target', requiresTarget: true },
@@ -107,6 +111,7 @@ export const TARGET_OPTIONS = [
   { value: 'creature', label: 'Target Creature' },
   { value: 'player', label: 'Target Player' },
   { value: 'opponent', label: 'Target Opponent' },
+  { value: 'controller_of_target', label: 'Controller of Target' },
   { value: 'each_player', label: 'Each Player' },
   { value: 'each_opponent', label: 'Each Opponent' },
   { value: 'creatures_you_control', label: 'Creatures You Control' },
@@ -184,6 +189,12 @@ export const CARD_TYPE_FILTERS = [
   { value: 'land', label: 'Land' },
   { value: 'instant', label: 'Instant' },
   { value: 'sorcery', label: 'Sorcery' },
+];
+
+export const SEARCH_CARD_TYPE_FILTERS = [
+  { value: 'any', label: 'Any Card' },
+  { value: 'basic_land', label: 'Basic Land' },
+  ...CARD_TYPE_FILTERS.filter((entry) => entry.value !== 'any'),
 ];
 
 export const COMPARE_AGAINST_ZONE_OPTIONS = [
@@ -324,6 +335,7 @@ export const CREATURE_TYPE_OPTIONS = [
   { value: 'snake', label: 'Snake' },
   { value: 'spider', label: 'Spider' },
   { value: 'insect', label: 'Insect' },
+  { value: 'elephant', label: 'Elephant' },
   { value: 'spirit', label: 'Spirit' },
   { value: 'horror', label: 'Horror' },
   { value: 'faerie', label: 'Faerie' },
@@ -382,32 +394,63 @@ export function formatDuration(duration: string | undefined): string {
 export function formatEffect(effect: any): string {
   if (!effect) return '';
   const maxTargetsText = effect.maxTargets ? ` (up to ${effect.maxTargets})` : '';
+  const kickerSuffix =
+    typeof effect.amountPerKicker === 'number' && effect.amountPerKicker > 0
+      ? ` (+${effect.amountPerKicker} per kicker)`
+      : '';
   if (effect.type === 'damage') {
-    return `Deal ${effect.amount || 0} damage${effect.target ? ` to ${effect.target}` : ''}${maxTargetsText}`;
+    return `Deal ${effect.amount || 0} damage${effect.target ? ` to ${effect.target}` : ''}${kickerSuffix}${maxTargetsText}`;
+  }
+  if (effect.type === 'additional_cost') {
+    const costs = Array.isArray(effect.costs) ? effect.costs : [];
+    if (!costs.length) {
+      return 'Additional cast cost';
+    }
+    const labels = buildActivationCosts(costs).map(formatActivationCostLabel).join(', ');
+    return `Additional cast cost: ${labels}`;
   }
   if (effect.type === 'draw') {
-    return `Draw ${effect.amount || 1} card${(effect.amount || 1) > 1 ? 's' : ''}`;
+    return `Draw ${effect.amount || 1} card${(effect.amount || 1) > 1 ? 's' : ''}${kickerSuffix}`;
   }
   if (effect.type === 'token') {
-    return `Create ${effect.amount || 1} token${(effect.amount || 1) > 1 ? 's' : ''}`;
+    const count = effect.amount || 1;
+    const power = effect.power;
+    const toughness = effect.toughness;
+    const typeLabels = Array.isArray(effect.tokenTypes)
+      ? effect.tokenTypes
+          .map((type: string) => CARD_TYPE_FILTERS.find((entry) => entry.value === type)?.label || type)
+          .filter(Boolean)
+      : [];
+    const subtype = effect.tokenSubtype
+      ? CREATURE_TYPE_OPTIONS.find((entry) => entry.value === effect.tokenSubtype)?.label || effect.tokenSubtype
+      : '';
+    const colorMap: Record<string, string> = { W: 'white', U: 'blue', B: 'black', R: 'red', G: 'green' };
+    const colors = Array.isArray(effect.tokenColors)
+      ? effect.tokenColors.map((c: string) => colorMap[c] || c).filter(Boolean)
+      : [];
+    const colorText = colors.length ? `${colors.join(' ')} ` : '';
+    const statText = power !== undefined && toughness !== undefined ? `${power}/${toughness} ` : '';
+    const typeText = subtype ? `${subtype} ` : '';
+    const baseTypes = typeLabels.length ? `${typeLabels.join(' ')} ` : '';
+    return `Create ${count} ${statText}${colorText}${typeText}${baseTypes}token${count > 1 ? 's' : ''}${kickerSuffix}`;
   }
   if (effect.type === 'counters') {
-    return `Put ${effect.amount || 1} +1/+1 counter${(effect.amount || 1) > 1 ? 's' : ''}${maxTargetsText}`;
+    return `Put ${effect.amount || 1} +1/+1 counter${(effect.amount || 1) > 1 ? 's' : ''}${kickerSuffix}${maxTargetsText}`;
   }
   if (effect.type === 'life') {
-    return `Gain ${effect.amount || 0} life`;
+    return `Gain ${effect.amount || 0} life${kickerSuffix}`;
   }
   if (effect.type === 'lose_life') {
-    return `Lose ${effect.amount || 0} life`;
+    return `Lose ${effect.amount || 0} life${kickerSuffix}`;
   }
   if (effect.type === 'add_poison') {
-    return `Add ${effect.amount || 0} poison counter${(effect.amount || 0) === 1 ? '' : 's'}`;
+    return `Add ${effect.amount || 0} poison counter${(effect.amount || 0) === 1 ? '' : 's'}${kickerSuffix}`;
   }
   if (effect.type === 'mana') {
     const amount = effect.amount || 1;
     const manaType = effect.manaType || 'C';
     const manaSymbol = manaType === 'C' ? 'C' : manaType;
-    return `Add ${'{' + manaSymbol + '}'.repeat(amount)}`;
+    return `Add ${'{' + manaSymbol + '}'.repeat(amount)}${kickerSuffix}`;
   }
   if (effect.type === 'untap') {
     const target = effect.untapTarget || 'self';
@@ -438,9 +481,26 @@ export function formatEffect(effect: any): string {
   if (effect.type === 'search') {
     const zone = effect.zone || 'library';
     const zoneLabel = zone === 'library' ? 'library' : zone;
+    const min = typeof effect.min === 'number' ? effect.min : 0;
+    const max = typeof effect.max === 'number' ? effect.max : 1;
+    let countText = '';
+    if (Number.isFinite(max)) {
+      if (min === 0) {
+        countText = `up to ${max}`;
+      } else if (min === max) {
+        countText = `${max}`;
+      } else {
+        countText = `${min}-${max}`;
+      }
+    }
     const filters = [];
     if (effect.cardType && effect.cardType !== 'any') {
-      filters.push(effect.cardType);
+      const cardTypeLabel =
+        effect.cardType === 'basic_land'
+          ? 'basic land'
+          : SEARCH_CARD_TYPE_FILTERS.find((entry) => entry.value === effect.cardType)?.label?.toLowerCase() ||
+            effect.cardType;
+      filters.push(cardTypeLabel);
     }
     if (effect.manaValueComparison) {
       if (effect.manaValueComparisonSource) {
@@ -469,14 +529,25 @@ export function formatEffect(effect: any): string {
         filters.push('different name');
       }
     }
-    const filterText = filters.length > 0 ? ` for ${filters.join(', ')}` : '';
-    return `Search your ${zoneLabel}${filterText}`;
+    const countPrefix = countText ? ` for ${countText}` : '';
+    const filterPrefix = filters.length > 0 ? (countText ? ' ' : ' for ') : '';
+    const filterText = filters.length > 0 ? `${filterPrefix}${filters.join(', ')}` : '';
+    const destination = effect.putFoundTo ? `, put into ${effect.putFoundTo}` : '';
+    const reveal = effect.revealFound ? ', reveal it' : '';
+    const shuffle = effect.shuffleAfter ? ', then shuffle' : '';
+    return `Search your ${zoneLabel}${countPrefix}${filterText}${reveal}${destination}${shuffle}`;
   }
   if (effect.type === 'put_onto_battlefield') {
     if (effect.fromEffect !== undefined) {
       return `Put the card from effect ${effect.fromEffect + 1} onto the battlefield`;
     }
     return `Put ${effect.target || 'target'} onto the battlefield`;
+  }
+  if (effect.type === 'put_on_bottom_of_library') {
+    if (effect.fromEffect !== undefined) {
+      return `Put the card from effect ${effect.fromEffect + 1} on the bottom of its owner's library`;
+    }
+    return `Put ${effect.target || 'target'} on the bottom of its owner's library`;
   }
   if (effect.type === 'attach') {
     const attachTo = effect.attachTo || 'target';
@@ -577,7 +648,7 @@ export function formatEffect(effect: any): string {
   if (effect.type === 'mill') {
     const target = effect.target || 'target player';
     const amount = effect.amount || 1;
-    return `Target ${target} mills ${amount} card${amount > 1 ? 's' : ''}${maxTargetsText}`;
+    return `Target ${target} mills ${amount} card${amount > 1 ? 's' : ''}${kickerSuffix}${maxTargetsText}`;
   }
   
   // Discard
@@ -586,13 +657,13 @@ export function formatEffect(effect: any): string {
     const amount = effect.amount || 1;
     const discardType = effect.discardType || 'chosen';
     const discardTypeLabel = DISCARD_TYPE_OPTIONS.find(opt => opt.value === discardType)?.label || discardType;
-    return `Target ${target} discards ${amount} card${amount > 1 ? 's' : ''} (${discardTypeLabel})${maxTargetsText}`;
+    return `Target ${target} discards ${amount} card${amount > 1 ? 's' : ''} (${discardTypeLabel})${kickerSuffix}${maxTargetsText}`;
   }
   
   // Scry
   if (effect.type === 'scry') {
     const amount = effect.amount || 1;
-    return `Scry ${amount}`;
+    return `Scry ${amount}${kickerSuffix}`;
   }
   
   // Look At
@@ -602,7 +673,13 @@ export function formatEffect(effect: any): string {
     const position = effect.position || 'top';
     const positionLabel = LOOK_AT_POSITION_OPTIONS.find(opt => opt.value === position)?.label || position;
     const zoneLabel = zone === 'library' ? 'your library' : `your ${zone}`;
-    return `Look at the ${positionLabel} ${amount} card${amount > 1 ? 's' : ''} of ${zoneLabel}`;
+    return `Look at the ${positionLabel} ${amount} card${amount > 1 ? 's' : ''} of ${zoneLabel}${kickerSuffix}`;
+  }
+  if (effect.type === 'look_at_pick_and_bottom') {
+    const amount = effect.amount || 1;
+    const types = Array.isArray(effect.pickTypes) ? effect.pickTypes : [];
+    const typeLabel = types.length ? types.join(', ') : 'a card';
+    return `Look at the top ${amount} cards. You may reveal ${typeLabel} and put it into your hand. Put the rest on the bottom in any order.`;
   }
   
   // Reveal

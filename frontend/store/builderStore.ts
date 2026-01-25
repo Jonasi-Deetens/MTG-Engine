@@ -122,6 +122,8 @@ export interface Effect {
   target?: string;
   maxTargets?: number;
   minTargets?: number;
+  min?: number;
+  max?: number;
   modeId?: string;
   manaType?: string;
   untapTarget?: string;

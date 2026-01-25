@@ -26,6 +26,7 @@ class EffectGraphResolver:
             normalized.model_dump(by_alias=True),
             context.__dict__,
         )
+        context.previous_results = []
         steps_by_id = {step.id: step for step in normalized.steps}
         if not steps_by_id:
             return {}
@@ -38,6 +39,7 @@ class EffectGraphResolver:
             if not step:
                 break
             result = self._resolve_effect(step, context)
+            context.previous_results.append(result or {})
             results[step.id] = result
             current_id = self._next_step_id(step, context)
 
@@ -51,6 +53,8 @@ class EffectGraphResolver:
         if kind == "one_shot":
             payload = _model_dump(body.action)
             payload.setdefault("type", getattr(body.action, "type", None))
+            if getattr(effect, "conditions", None):
+                payload["conditions"] = [cond for cond in effect.conditions]
             payload["_node_id"] = step.id
             return self._router.apply(payload, context)
 

@@ -74,7 +74,8 @@ export const useActivationCosts = ({
     const isTypeMatch = (entry: EngineGameObjectSnapshot, cardType?: string, nonland?: boolean) => {
       if (nonland && entry.types?.includes('Land')) return false;
       if (!cardType) return true;
-      return entry.types?.includes(cardType);
+      const normalized = cardType.toLowerCase();
+      return (entry.types ?? []).some((type) => String(type).toLowerCase() === normalized);
     };
     return buildActivationCosts(costs).map((cost) => {
       const discardOptions = cost.type === 'discard' ? handOptions : [];

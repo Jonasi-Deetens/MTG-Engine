@@ -10,9 +10,15 @@ interface ConditionBuilderProps {
   condition: StructuredCondition | string | undefined;
   onChange: (condition: StructuredCondition | undefined) => void;
   onRemove?: () => void;
+  previousSteps?: Array<{ index: number; label: string }>;
 }
 
-export function ConditionBuilder({ condition, onChange, onRemove }: ConditionBuilderProps) {
+export function ConditionBuilder({
+  condition,
+  onChange,
+  onRemove,
+  previousSteps = [],
+}: ConditionBuilderProps) {
   // Parse initial condition (handle both string and structured)
   const getInitialCondition = (): StructuredCondition | undefined => {
     if (!condition) return undefined;
@@ -32,6 +38,7 @@ export function ConditionBuilder({ condition, onChange, onRemove }: ConditionBui
   const [counterType, setCounterType] = useState<string>(getInitialCondition()?.counterType || '+1/+1');
   const [manaValue, setManaValue] = useState<number>(getInitialCondition()?.manaValue || 0);
   const [source, setSource] = useState<string>(getInitialCondition()?.source || 'triggering_source');
+  const [fromEffect, setFromEffect] = useState<number>(getInitialCondition()?.fromEffect ?? 0);
 
   const selectedConditionType = CONDITION_TYPE_OPTIONS.find((opt) => opt.value === conditionType);
   const lastConditionRef = useRef<string>('');
@@ -64,6 +71,9 @@ export function ConditionBuilder({ condition, onChange, onRemove }: ConditionBui
     if (selectedConditionType.requiresType) {
       structuredCondition.permanentType = permanentType;
     }
+    if (selectedConditionType.requiresEffectIndex) {
+      structuredCondition.fromEffect = fromEffect;
+    }
     if (conditionType === 'has_keyword') {
       structuredCondition.keyword = keyword;
     }
@@ -89,7 +99,7 @@ export function ConditionBuilder({ condition, onChange, onRemove }: ConditionBui
       lastConditionRef.current = conditionString;
       onChangeRef.current(structuredCondition);
     }
-  }, [conditionType, value, comparison, target, permanentType, keyword, counterType, manaValue, source, selectedConditionType]);
+  }, [conditionType, value, comparison, target, permanentType, keyword, counterType, manaValue, source, fromEffect, selectedConditionType]);
 
   // Sync internal state when external condition prop changes (but avoid loops)
   useEffect(() => {
@@ -108,6 +118,7 @@ export function ConditionBuilder({ condition, onChange, onRemove }: ConditionBui
         setCounterType(cond.counterType ?? '+1/+1');
         setManaValue(cond.manaValue ?? 0);
         setSource(cond.source ?? 'triggering_source');
+        setFromEffect(cond.fromEffect ?? 0);
         lastConditionRef.current = condString;
       }
     } else if (!condition && lastConditionRef.current !== '') {
@@ -146,6 +157,7 @@ export function ConditionBuilder({ condition, onChange, onRemove }: ConditionBui
             setCounterType('+1/+1');
             setManaValue(0);
             setSource('triggering_source');
+            setFromEffect(0);
           }}
           className="w-full px-3 py-2 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
         >
@@ -167,6 +179,29 @@ export function ConditionBuilder({ condition, onChange, onRemove }: ConditionBui
             min="0"
             className="w-full px-3 py-2 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
           />
+        </div>
+      )}
+
+      {selectedConditionType?.requiresEffectIndex && (
+        <div>
+          <label className="block text-xs text-[color:var(--theme-text-muted)] mb-1">Effect Index</label>
+          <select
+            value={fromEffect}
+            onChange={(e) => setFromEffect(Math.max(0, parseInt(e.target.value) || 0))}
+            className="w-full px-3 py-2 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+          >
+            {(previousSteps.length > 0
+              ? previousSteps
+              : Array.from({ length: 10 }, (_, index) => ({ index, label: `Step ${index + 1}` }))
+            ).map((step) => (
+              <option key={step.index} value={step.index}>
+                {step.label}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-[color:var(--theme-text-muted)] mt-1">
+            0-based index of the effect step to inspect.
+          </p>
         </div>
       )}
 

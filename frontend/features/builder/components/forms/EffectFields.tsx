@@ -11,7 +11,8 @@ import {
   MANA_TYPE_OPTIONS, 
   UNTAP_TARGET_OPTIONS, 
   ATTACH_TARGET_OPTIONS, 
-  CARD_TYPE_FILTERS, 
+  CARD_TYPE_FILTERS,
+  SEARCH_CARD_TYPE_FILTERS,
   SEARCH_ZONE_OPTIONS,
   COMPARE_AGAINST_ZONE_OPTIONS,
   COMPARE_AGAINST_SOURCE_OPTIONS,
@@ -682,12 +683,52 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
               onChange={(e) => onUpdate('cardType', e.target.value)}
               className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
             >
-              {CARD_TYPE_FILTERS.map((opt) => (
+              {SEARCH_CARD_TYPE_FILTERS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
                 </option>
               ))}
             </select>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Min Cards</label>
+              <select
+                value={effect.min ?? 0}
+                onChange={(e) => {
+                  const min = Number(e.target.value);
+                  const max = typeof effect.max === 'number' ? effect.max : 1;
+                  onUpdate('min', min);
+                  if (min > max) onUpdate('max', min);
+                }}
+                className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+              >
+                {Array.from({ length: 6 }, (_, index) => (
+                  <option key={index} value={index}>
+                    {index}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Max Cards</label>
+              <select
+                value={effect.max ?? 1}
+                onChange={(e) => {
+                  const max = Number(e.target.value);
+                  const min = typeof effect.min === 'number' ? effect.min : 0;
+                  onUpdate('max', max);
+                  if (max < min) onUpdate('min', max);
+                }}
+                className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+              >
+                {Array.from({ length: 6 }, (_, index) => (
+                  <option key={index} value={index}>
+                    {index}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
           <div>
             <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Mana Value Comparison</label>

@@ -23,6 +23,8 @@ class PendingSearchChoice:
     min_selections: int = 0
     max_selections: int = 1
     source_id: Optional[str] = None
+    order_required: bool = False
+    label: Optional[str] = None
 
 
 @dataclass
@@ -128,7 +130,7 @@ class StackResolver:
     def _check_search_choices_needed_effect_graph(
         self, item: "StackItem", provided_context: Optional[Dict[str, Any]] = None
     ) -> List[PendingSearchChoice]:
-        from ..effects_zone import _filter_search_pool
+        from ..effects_zone import _filter_search_pool, _matches_card_type_or_subtype
         from ..state import ResolveContext
         from ..zones import ZONE_LIBRARY
 
@@ -154,6 +156,18 @@ class StackResolver:
 
         pending_choices: List[PendingSearchChoice] = []
 
+        def _has_selection(node_key: str) -> bool:
+            if not node_key:
+                return False
+            node_targets = provided_targets.get(node_key, {}) if node_key else {}
+            search_results = node_targets.get("search_results_by_player", {})
+            ctx_targets = context_data.get("targets_by_effect", {})
+            ctx_node_targets = ctx_targets.get(node_key, {}) if node_key else {}
+            ctx_search_results = ctx_node_targets.get("search_results_by_player", {})
+            all_search_results = {**ctx_search_results, **search_results}
+            player_selection = all_search_results.get(str(controller_id)) or all_search_results.get(controller_id)
+            return player_selection is not None
+
         for step in steps:
             if not isinstance(step, dict):
                 continue
@@ -163,7 +177,82 @@ class StackResolver:
             if body.get("kind") != "one_shot":
                 continue
             action = body.get("action") or {}
-            if action.get("type") != "search":
+            action_type = action.get("type")
+            if action_type not in ("search", "look_at_pick_and_bottom"):
+                continue
+
+            if action_type == "look_at_pick_and_bottom":
+                pick_max = int(action.get("pickMax", 1))
+                amount = int(action.get("amount", 1))
+                if amount <= 0:
+                    continue
+                player = self._gs.get_player(controller_id)
+                if not player:
+                    continue
+                top_ids = list(player.library[:amount])
+                if not top_ids:
+                    continue
+                pick_types = action.get("pickTypes") or []
+                if isinstance(pick_types, str):
+                    pick_types = [pick_types]
+
+                def matches_types(obj_id: str) -> bool:
+                    if not pick_types:
+                        return True
+                    obj = self._gs.objects.get(obj_id)
+                    if not obj:
+                        return False
+                    return any(_matches_card_type_or_subtype(obj, t) for t in pick_types if t)
+
+                pick_candidates = [obj_id for obj_id in top_ids if matches_types(obj_id)]
+                if pick_max > 0 and pick_candidates:
+                    pick_node_id = f"{step_id}:pick" if step_id else None
+                    if pick_node_id and not _has_selection(pick_node_id):
+                        options = []
+                        for obj_id in pick_candidates:
+                            obj = self._gs.objects.get(obj_id)
+                            if obj:
+                                options.append({
+                                    "id": obj_id,
+                                    "name": obj.name,
+                                    "mana_value": obj.mana_value,
+                                    "type_line": obj.type_line,
+                                })
+                        pending_choices.append(PendingSearchChoice(
+                            node_id=pick_node_id,
+                            player_id=controller_id,
+                            zone=f"top {amount}",
+                            options=options,
+                            min_selections=0,
+                            max_selections=pick_max,
+                            source_id=context.source_id,
+                            label="Choose a card to reveal and put into hand",
+                        ))
+
+                if action.get("orderBottom", True) and top_ids:
+                    order_node_id = f"{step_id}:order" if step_id else None
+                    if order_node_id and not _has_selection(order_node_id):
+                        options = []
+                        for obj_id in top_ids:
+                            obj = self._gs.objects.get(obj_id)
+                            if obj:
+                                options.append({
+                                    "id": obj_id,
+                                    "name": obj.name,
+                                    "mana_value": obj.mana_value,
+                                    "type_line": obj.type_line,
+                                })
+                        pending_choices.append(PendingSearchChoice(
+                            node_id=order_node_id,
+                            player_id=controller_id,
+                            zone=f"top {amount}",
+                            options=options,
+                            min_selections=len(top_ids),
+                            max_selections=len(top_ids),
+                            source_id=context.source_id,
+                            order_required=True,
+                            label="Order the cards for the bottom",
+                        ))
                 continue
 
             zone = action.get("zone", ZONE_LIBRARY)

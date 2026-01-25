@@ -23,6 +23,8 @@ export const CONDITION_TYPE_VALUES = [
   'kicked',
   'kicker_count',
   'creatures_in_graveyard',
+  'previous_effect_result_count',
+  'previous_effect_has_result',
 ] as const;
 
 export type ConditionType = typeof CONDITION_TYPE_VALUES[number];
@@ -34,6 +36,7 @@ export interface ConditionTypeOption {
   requiresComparison?: boolean;
   requiresTarget?: boolean;
   requiresType?: boolean;
+  requiresEffectIndex?: boolean;
 }
 
 export const CONDITION_TYPE_OPTIONS: ConditionTypeOption[] = [
@@ -57,6 +60,18 @@ export const CONDITION_TYPE_OPTIONS: ConditionTypeOption[] = [
   { value: 'kicked', label: 'Was Kicked' },
   { value: 'kicker_count', label: 'Kicker Count', requiresComparison: true, requiresValue: true },
   { value: 'creatures_in_graveyard', label: 'Creatures in Graveyard', requiresComparison: true, requiresValue: true },
+  {
+    value: 'previous_effect_result_count',
+    label: 'Previous Effect Result Count',
+    requiresComparison: true,
+    requiresValue: true,
+    requiresEffectIndex: true,
+  },
+  {
+    value: 'previous_effect_has_result',
+    label: 'Previous Effect Has Result',
+    requiresEffectIndex: true,
+  },
 ];
 
 export const COMPARISON_OPERATORS = [
@@ -142,6 +157,7 @@ export interface StructuredCondition {
   counterType?: string;
   manaValue?: number;
   source?: string; // For mana value comparison - what to compare against (e.g., "triggering_source")
+  fromEffect?: number;
 }
 
 export function formatCondition(condition: StructuredCondition | string): string {
@@ -246,6 +262,16 @@ export function formatCondition(condition: StructuredCondition | string): string
       const gyOp = cond.comparison || '>=';
       const gyOpLabel = COMPARISON_OPERATORS.find(o => o.value === gyOp)?.label.split('(')[0].trim() || gyOp;
       return `Creatures in graveyard ${gyOpLabel} ${cond.value || 0}`;
+
+    case 'previous_effect_result_count':
+      const prevOp = cond.comparison || '>=';
+      const prevOpLabel = COMPARISON_OPERATORS.find(o => o.value === prevOp)?.label.split('(')[0].trim() || prevOp;
+      const effectIndex = typeof cond.fromEffect === 'number' ? cond.fromEffect + 1 : 1;
+      return `Effect ${effectIndex} result count ${prevOpLabel} ${cond.value || 0}`;
+
+    case 'previous_effect_has_result':
+      const hasIndex = typeof cond.fromEffect === 'number' ? cond.fromEffect + 1 : 1;
+      return `Effect ${hasIndex} has a result`;
     
     default:
       return 'Unknown condition';

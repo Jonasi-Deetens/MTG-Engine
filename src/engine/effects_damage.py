@@ -3,12 +3,17 @@ from __future__ import annotations
 from typing import Any, Dict, List
 
 from .damage import apply_damage_to_object, apply_damage_to_player
-from .effects_helpers import resolve_target_objects, resolve_target_players, resolve_target_object
+from .effects_helpers import (
+    resolve_effect_amount,
+    resolve_target_objects,
+    resolve_target_players,
+    resolve_target_object,
+)
 from .targets import resolve_object_id
 
 
 def handle_damage(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
-    amount = int(effect.get("amount", 0))
+    amount = resolve_effect_amount(effect, context, 0)
     target_type = effect.get("target", "any")
     results: List[Dict[str, Any]] = []
     if target_type in ("player", "any"):
@@ -39,7 +44,7 @@ def handle_damage(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
 
 
 def handle_prevent_damage(resolver, effect: Dict[str, Any], context) -> Dict[str, Any]:
-    amount = int(effect.get("amount", 1))
+    amount = resolve_effect_amount(effect, context, 1)
     obj = resolve_target_object(resolver.game_state, context, effect.get("target", "target_permanent"))
     if obj:
         resolver._add_temporary_effect(obj, {
@@ -68,7 +73,7 @@ def handle_redirect_damage(resolver, effect: Dict[str, Any], context) -> Dict[st
     source_id = resolve_object_id(context, "sourceTarget", None)
     redirect_id = resolve_object_id(context, "redirectTarget", None)
     redirect_player_id = resolve_target_players(context, None, resolver.game_state)[0] if not redirect_id else None
-    amount = int(effect.get("amount", 1))
+    amount = resolve_effect_amount(effect, context, 1)
     if not source_id or (not redirect_id and redirect_player_id is None):
         return {"type": "redirect_damage", "status": "no_target"}
     entry = {

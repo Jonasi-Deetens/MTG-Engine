@@ -11,9 +11,10 @@ type IntentType =
 
 interface IntentStepProps {
   onSelect: (intent: IntentType) => void;
+  intents?: Array<{ id: IntentType; label: string; description: string }>;
 }
 
-const intents: Array<{ id: IntentType; label: string; description: string }> = [
+const defaultIntents: Array<{ id: IntentType; label: string; description: string }> = [
   { id: 'triggered', label: 'Triggered', description: 'When/Whenever/At...' },
   { id: 'activated', label: 'Activated', description: 'Pay a cost to...' },
   { id: 'always_on', label: 'Always On', description: 'Static/continuous modifier' },
@@ -23,7 +24,7 @@ const intents: Array<{ id: IntentType; label: string; description: string }> = [
   { id: 'keyword', label: 'Keyword', description: 'Add keyword ability' },
 ];
 
-export function IntentStep({ onSelect }: IntentStepProps) {
+export function IntentStep({ onSelect, intents = defaultIntents }: IntentStepProps) {
   return (
     <div className="space-y-3">
       <p className="text-sm text-[color:var(--theme-text-secondary)]">

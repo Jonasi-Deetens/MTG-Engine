@@ -8,9 +8,10 @@ import type { StructuredCondition } from '@/lib/conditionTypes';
 interface ConditionsStepProps {
   effect: UnifiedEffect;
   onChange: (effect: UnifiedEffect) => void;
+  previousSteps?: Array<{ index: number; label: string }>;
 }
 
-export function ConditionsStep({ effect, onChange }: ConditionsStepProps) {
+export function ConditionsStep({ effect, onChange, previousSteps = [] }: ConditionsStepProps) {
   const conditions = (effect.conditions ?? []) as StructuredCondition[];
 
   const handleAdd = () => {
@@ -49,6 +50,7 @@ export function ConditionsStep({ effect, onChange }: ConditionsStepProps) {
                 condition={condition}
                 onChange={(updated) => handleUpdate(index, updated)}
                 onRemove={() => handleRemove(index)}
+                previousSteps={previousSteps}
               />
             </div>
           ))}

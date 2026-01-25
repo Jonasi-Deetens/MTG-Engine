@@ -14,6 +14,8 @@ export type EffectTag =
 export type SourceKind = 'spell' | 'permanent';
 
 import type { ConditionType } from './conditionTypes';
+import type { CostEntry } from './activationCosts';
+import type { OptionalCostEntry } from './optionalCosts';
 
 export interface ConditionSpec {
   type: ConditionType;
@@ -100,6 +102,8 @@ export interface UnifiedEffect {
   resolution: Resolution;
   persistence: Persistence;
   tags: EffectTag[];
+  additionalCosts?: CostEntry[];
+  optionalCosts?: OptionalCostEntry[];
   trigger?: TriggerSpec;
   cost?: CostSpec;
   conditions?: ConditionSpec[];
@@ -118,6 +122,8 @@ export interface EffectGraph {
   id: string;
   sourceKind: SourceKind;
   steps: EffectStep[];
+  additionalCosts?: CostEntry[];
+  optionalCosts?: OptionalCostEntry[];
   modal?: {
     min: number;
     max?: number | null;

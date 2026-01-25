@@ -12,6 +12,31 @@ def _is_any_target_object(obj: GameObject) -> bool:
     return any(card_type in (obj.types or []) for card_type in ANY_TARGET_TYPES)
 
 
+def resolve_effect_amount(effect: Dict[str, Any], context: ResolveContext, default: int = 0) -> int:
+    """Resolve a numeric amount, including kicker scaling."""
+    raw_amount = effect.get("amount", default)
+    try:
+        base_amount = int(raw_amount)
+    except (TypeError, ValueError):
+        base_amount = int(default)
+
+    per_kicker = effect.get("amountPerKicker", 0)
+    try:
+        per_kicker_amount = int(per_kicker) if per_kicker is not None else 0
+    except (TypeError, ValueError):
+        per_kicker_amount = 0
+
+    kicker_count = 0
+    if context and isinstance(getattr(context, "choices", None), dict):
+        try:
+            kicker_count = int(context.choices.get("kicker_count") or 0)
+        except (TypeError, ValueError):
+            kicker_count = 0
+
+    total = base_amount + (per_kicker_amount * kicker_count)
+    return max(0, total)
+
+
 def resolve_target_object(game_state: GameState, context: ResolveContext, target_key: str) -> Optional[GameObject]:
     fallback = context.source_id if target_key in ("self", "source") else None
     obj = resolve_object(game_state, context, target_key, fallback)
@@ -157,6 +182,12 @@ def resolve_effect_players(
     fallback_controller_id: Optional[int],
 ) -> List[int]:
     target_key = effect.get("target", "player")
+    if target_key == "controller_of_target":
+        target_id = resolve_object_id(context, "target", None)
+        if target_id:
+            obj = game_state.objects.get(target_id)
+            if obj:
+                return [obj.controller_id]
     if target_key in ("each_player", "all_players"):
         return [player.id for player in game_state.players if not getattr(player, "removed_from_game", False)]
     if target_key in ("each_opponent", "opponents"):

@@ -31,6 +31,7 @@ export default function BuilderPage() {
     updateStep,
     steps,
     setSourceKind,
+    sourceKind,
   } = useEffectStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -349,7 +350,7 @@ export default function BuilderPage() {
         {/* Main Section: Split between Builder and Preview */}
         <div className="grid grid-cols-2 gap-4">
           {/* Left: Effect Builder */}
-          <div className="bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] rounded-lg p-6 min-h-[500px]">
+          <div className="bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] rounded-lg p-6 min-h-[500px] space-y-4">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-[color:var(--theme-text-primary)]">Effects</h2>
               <Button variant="primary" size="sm" onClick={handleAddEffect}>
@@ -401,6 +402,9 @@ export default function BuilderPage() {
           }
         }}
         editingEffect={editingStep?.effect ?? null}
+        editingStepId={editingStepId}
+        steps={steps}
+        sourceKind={sourceKind}
         onSourceKindChange={setSourceKind}
       />
     </div>

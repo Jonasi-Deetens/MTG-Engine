@@ -56,6 +56,8 @@ class ConditionType(str, Enum):
     KICKED = "kicked"
     KICKER_COUNT = "kicker_count"
     CREATURES_IN_GRAVEYARD = "creatures_in_graveyard"
+    PREVIOUS_EFFECT_RESULT_COUNT = "previous_effect_result_count"
+    PREVIOUS_EFFECT_HAS_RESULT = "previous_effect_has_result"
 
 
 class ConditionSpec(BaseModel):
@@ -89,6 +91,16 @@ class CostSpec(BaseModel):
     items: List[CostItem] = Field(default_factory=list)
     timing: Optional[str] = None
     limit: Optional[Dict[str, Any]] = None
+
+    class Config:
+        extra = "allow"
+
+
+class OptionalCostSpec(BaseModel):
+    kind: str
+    tag: Optional[str] = None
+    repeatable: Optional[bool] = None
+    costs: List[CostItem] = Field(default_factory=list)
 
     class Config:
         extra = "allow"
@@ -223,6 +235,8 @@ class EffectGraph(BaseModel):
     id: str
     sourceKind: SourceKind = SourceKind.PERMANENT
     steps: List[EffectStep]
+    additionalCosts: Optional[List[CostItem]] = None
+    optionalCosts: Optional[List[OptionalCostSpec]] = None
     modal: Optional[Dict[str, Any]] = None
 
 

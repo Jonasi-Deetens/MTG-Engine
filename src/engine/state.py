@@ -212,6 +212,7 @@ class GameState:
         power: Optional[int] = None,
         toughness: Optional[int] = None,
         types: Optional[List[str]] = None,
+        colors: Optional[List[str]] = None,
     ) -> GameObject:
         token = GameObject(
             id=next_object_id(),
@@ -222,6 +223,7 @@ class GameState:
             zone=ZONE_BATTLEFIELD,
             power=power,
             toughness=toughness,
+            colors=list(colors or []),
             is_token=True,
         )
         self.add_object(token)
