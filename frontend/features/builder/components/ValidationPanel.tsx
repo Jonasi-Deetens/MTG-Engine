@@ -5,6 +5,7 @@
 import { useEffect, useState } from 'react';
 import { useEffectStore } from '@/store/effectStore';
 import { effects } from '@/lib/effects';
+import { getEffectGraphWarnings } from '@/lib/effectValidation';
 import { getErrorMessage } from '@/lib/utils/errors';
 import { Button } from '@/components/ui/Button';
 
@@ -33,12 +34,14 @@ export function ValidationPanel() {
       setValidating(true);
       try {
         const result = await effects.validate(graph);
-        setValidation(result.errors, [], result.valid);
+        const warnings = getEffectGraphWarnings(graph);
+        setValidation(result.errors, warnings, result.valid);
       } catch (error) {
         console.error('Validation error:', error);
+        const warnings = getEffectGraphWarnings(graph);
         setValidation(
           [getErrorMessage(error) || 'Failed to validate effects'],
-          [],
+          warnings,
           false
         );
       } finally {

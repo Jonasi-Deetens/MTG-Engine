@@ -71,7 +71,7 @@ export const useCasting = ({
 
   const handlePrepareCast = async () => {
     if (!selectedCastId || currentPriority === null) return;
-    // Always send effect_graph so it gets stored on the object for trigger registration
+    // Send graph for attachment (triggers), but only use for spell resolution if sourceKind=spell
     const graph = effectGraphs[cardMap[selectedCastId]?.card_id ?? ''];
     const response = await runEngineAction('prepare_cast', {
       player_id: currentPriority,
@@ -103,12 +103,13 @@ export const useCasting = ({
   const handleFinalizeCast = async () => {
     if (!selectedCastId || !preparedCast || preparedCast.objectId !== selectedCastId) return;
     if (currentPriority === null) return;
-    // Always send effect_graph so it gets stored on the object for trigger registration
+    // Send graph for attachment (triggers), but only use for spell resolution if sourceKind=spell
     const graph = effectGraphs[cardMap[selectedCastId]?.card_id ?? ''];
+    const graphForCast = graph?.sourceKind === 'spell' ? graph : undefined;
     const response = await runEngineAction('finalize_cast', {
       player_id: currentPriority,
       object_id: selectedCastId,
-      effect_graph: graph,
+      effect_graph: graphForCast,
       context: buildCastContext(selectedCastId, {
         wardAutoPay: autoPayWard,
         wardPayments,

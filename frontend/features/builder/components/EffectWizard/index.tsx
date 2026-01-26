@@ -230,6 +230,7 @@ export function EffectWizard({
       editingStepId ? steps.findIndex((step) => step.id === editingStepId) : steps.length;
     const sliceIndex = currentIndex >= 0 ? currentIndex : steps.length;
     return steps.slice(0, sliceIndex).map((step, index) => ({
+      id: step.id,
       index,
       label: describeStep(step),
     }));

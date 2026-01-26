@@ -688,10 +688,12 @@ function useCastingInternal({
   const handleFinalizeCast = useCallback(async () => {
     if (!selectedCastId || !preparedCast || preparedCast.objectId !== selectedCastId) return;
     if (priorityPlayer === null) return;
+    const graph = effectGraphs[cardMap[selectedCastId]?.card_id ?? ''];
+    const graphForCast = graph?.sourceKind === 'spell' ? graph : undefined;
     const response = await runEngineAction('finalize_cast', {
       player_id: priorityPlayer,
       object_id: selectedCastId,
-      effect_graph: effectGraphs[cardMap[selectedCastId]?.card_id ?? ''],
+      effect_graph: graphForCast,
       context: buildCastContext(selectedCastId, {
         wardAutoPay: autoPayWard,
         wardPayments: wardPaymentsPayload,

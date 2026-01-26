@@ -144,6 +144,46 @@ const EffectGraphSchema = z.object({
   }).optional(),
 });
 
+const isPermanentRoot = (step: EffectStep) => {
+  if (step.effect.initiation === 'triggered' && !!step.effect.trigger) return true;
+  if (step.effect.initiation === 'activated' && !!step.effect.cost) return true;
+  if (step.effect.effect.kind === 'continuous') return true;
+  if (step.effect.effect.kind === 'replacement') return true;
+  if (step.effect.effect.kind === 'prevention') return true;
+  return false;
+};
+
+const isSpellRoot = (step: EffectStep) => {
+  return (
+    step.effect.initiation === 'static' &&
+    step.effect.effect.kind === 'one_shot' &&
+    !step.effect.trigger &&
+    !step.effect.cost
+  );
+};
+
+const getRootSteps = (steps: EffectStep[]) => {
+  const referenced = new Set<string>();
+  const addReferenced = (value: string | string[] | undefined) => {
+    if (!value) return;
+    if (Array.isArray(value)) {
+      value.forEach((id) => referenced.add(id));
+      return;
+    }
+    referenced.add(value);
+  };
+  steps.forEach((step) => {
+    if (Array.isArray(step.next)) {
+      step.next.forEach((id) => referenced.add(id));
+    }
+    if (step.nextByMode) {
+      Object.values(step.nextByMode).forEach((nextId) => addReferenced(nextId as any));
+    }
+  });
+  const roots = steps.filter((step) => !referenced.has(step.id));
+  return roots.length ? roots : [steps[0]];
+};
+
 export function validateEffectGraph(graph: EffectGraph): { valid: boolean; errors: string[] } {
   const result = EffectGraphSchema.safeParse(graph);
   if (result.success) {
@@ -151,4 +191,17 @@ export function validateEffectGraph(graph: EffectGraph): { valid: boolean; error
   }
   const errors = result.error.issues.map((issue) => issue.message);
   return { valid: false, errors };
+}
+
+export function getEffectGraphWarnings(graph: EffectGraph | null): string[] {
+  if (!graph?.steps?.length) return [];
+  const roots = getRootSteps(graph.steps);
+  const hasPermanentRoot = roots.some(isPermanentRoot);
+  const hasSpellRoot = roots.some(isSpellRoot);
+  if (hasPermanentRoot && hasSpellRoot) {
+    return [
+      'Graph mixes triggered/activated/continuous roots with spell roots. Split into separate graphs to avoid incorrect source kind.',
+    ];
+  }
+  return [];
 }

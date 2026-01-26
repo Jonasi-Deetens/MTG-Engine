@@ -8,7 +8,7 @@ import type { StructuredCondition } from '@/lib/conditionTypes';
 interface ConditionsStepProps {
   effect: UnifiedEffect;
   onChange: (effect: UnifiedEffect) => void;
-  previousSteps?: Array<{ index: number; label: string }>;
+  previousSteps?: Array<{ id: string; index: number; label: string }>;
 }
 
 export function ConditionsStep({ effect, onChange, previousSteps = [] }: ConditionsStepProps) {

@@ -160,6 +160,7 @@ export interface StructuredCondition {
   manaValue?: number;
   source?: string; // For mana value comparison - what to compare against (e.g., "triggering_source")
   fromEffect?: number;
+  linkedToStepId?: string;
 }
 
 export function formatCondition(condition: StructuredCondition | string): string {

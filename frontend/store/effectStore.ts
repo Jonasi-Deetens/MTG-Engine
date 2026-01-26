@@ -97,22 +97,89 @@ export const useEffectStore = create<EffectStoreState>((set, get) => ({
     if (!steps.length) {
       return null;
     }
+    const referenced = new Set<string>();
+    const addReferenced = (value: string | string[] | undefined) => {
+      if (!value) return;
+      if (Array.isArray(value)) {
+        value.forEach((id) => referenced.add(id));
+        return;
+      }
+      referenced.add(value);
+    };
+    for (const step of steps) {
+      if (Array.isArray(step.next)) {
+        step.next.forEach((id) => referenced.add(id));
+      }
+      if (step.nextByMode) {
+        Object.values(step.nextByMode).forEach((nextId) => addReferenced(nextId));
+      }
+    }
+    const rootSteps = steps.filter((step) => !referenced.has(step.id));
+    const sourceRoots = rootSteps.length ? rootSteps : [steps[0]];
+    const hasPermanentRoot = sourceRoots.some((step) => {
+      if (step.effect.initiation === 'triggered' && !!step.effect.trigger) return true;
+      if (step.effect.initiation === 'activated' && !!step.effect.cost) return true;
+      if (step.effect.effect.kind === 'continuous') return true;
+      if (step.effect.effect.kind === 'replacement') return true;
+      if (step.effect.effect.kind === 'prevention') return true;
+      return false;
+    });
+    const effectiveSourceKind = hasPermanentRoot ? 'permanent' : sourceKind;
     const additionalCosts = extractAdditionalCosts(steps);
     const optionalCosts = extractOptionalCosts(steps);
     const graphId = currentCard?.card_id ? `graph-${currentCard.card_id}` : createId();
-    const linkedSteps = steps.map((step, index) => {
-      if (step.next || step.nextByMode) {
-        return step;
-      }
-      const nextStep = steps[index + 1];
-      return nextStep ? { ...step, next: [nextStep.id] } : step;
+    const stepIds = new Set(steps.map((step) => step.id));
+    const sanitizeNext = (value: string[] | undefined) => {
+      if (!Array.isArray(value)) return undefined;
+      const cleaned = value.filter((id) => stepIds.has(id));
+      return cleaned.length > 0 ? cleaned : undefined;
+    };
+    const sanitizeNextByMode = (value: Record<string, string> | undefined) => {
+      if (!value) return undefined;
+      const cleaned: Record<string, string> = {};
+      Object.entries(value).forEach(([mode, nextId]) => {
+        if (stepIds.has(nextId)) {
+          cleaned[mode] = nextId;
+        }
+      });
+      return Object.keys(cleaned).length > 0 ? cleaned : undefined;
+    };
+    const indexById = new Map(steps.map((step, index) => [step.id, index]));
+    const normalizeConditions = (conditions: EffectStep['effect']['conditions']) => {
+      if (!Array.isArray(conditions)) return conditions;
+      return conditions.map((condition) => {
+        if (!condition || typeof condition !== 'object') return condition;
+        const type = (condition as any).type;
+        if (
+          type !== 'previous_effect_has_result' &&
+          type !== 'previous_effect_result_count'
+        ) {
+          return condition;
+        }
+        const linkedTo = (condition as any).linkedToStepId;
+        if (!linkedTo || !indexById.has(linkedTo)) return condition;
+        return { ...condition, fromEffect: indexById.get(linkedTo) };
+      });
+    };
+
+    const linkedSteps = steps.map((step) => {
+      const next = sanitizeNext(step.next);
+      const nextByMode = sanitizeNextByMode(step.nextByMode);
+      const conditions = normalizeConditions(step.effect.conditions);
+      const effect = conditions ? { ...step.effect, conditions } : step.effect;
+      return {
+        ...step,
+        effect,
+        ...(next ? { next } : { next: undefined }),
+        ...(nextByMode ? { nextByMode } : { nextByMode: undefined }),
+      };
     });
     return {
       id: graphId,
-      sourceKind,
+      sourceKind: effectiveSourceKind,
       steps: linkedSteps,
-      ...(sourceKind === 'spell' && additionalCosts.length ? { additionalCosts } : {}),
-      ...(sourceKind === 'spell' && optionalCosts.length ? { optionalCosts } : {}),
+      ...(effectiveSourceKind === 'spell' && additionalCosts.length ? { additionalCosts } : {}),
+      ...(effectiveSourceKind === 'spell' && optionalCosts.length ? { optionalCosts } : {}),
     };
   },
 

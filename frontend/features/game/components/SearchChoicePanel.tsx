@@ -15,17 +15,18 @@ type SearchChoiceEntry = {
 };
 
 interface SearchChoicePanelProps {
-  entries: SearchChoiceEntry[];
+  entries?: SearchChoiceEntry[];
   cardMap: EngineCardMap;
 }
 
-export function SearchChoicePanel({ entries = [], cardMap }: SearchChoicePanelProps) {
-  if (!entries.length) return null;
+export function SearchChoicePanel({ entries, cardMap }: SearchChoicePanelProps) {
+  const safeEntries = entries ?? [];
+  if (!safeEntries.length) return null;
 
   return (
     <div className="space-y-3">
       <div className="text-xs uppercase text-[color:var(--theme-text-secondary)]">Search Choices</div>
-      {entries.map((entry) => (
+      {safeEntries.map((entry) => (
         <SearchChoiceEntryView key={entry.id} entry={entry} cardMap={cardMap} />
       ))}
     </div>

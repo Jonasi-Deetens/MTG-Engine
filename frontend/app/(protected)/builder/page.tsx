@@ -9,6 +9,7 @@ import { useEffectStore } from '@/store/effectStore';
 import type { CardData } from '@/store/builderStore';
 import { cards } from '@/lib/api';
 import { effects } from '@/lib/effects';
+import { getEffectGraphWarnings } from '@/lib/effectValidation';
 import { Button } from '@/components/ui/Button';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { CardPreview } from '@/components/cards/CardPreview';
@@ -115,12 +116,14 @@ export default function BuilderPage() {
     }
     try {
       const result = await effects.validate(graph);
-      setValidation(result.errors, [], result.valid);
+      const warnings = getEffectGraphWarnings(graph);
+      setValidation(result.errors, warnings, result.valid);
     } catch (err: any) {
       console.error('Validation error:', err);
+      const warnings = getEffectGraphWarnings(graph);
       setValidation(
         ['Failed to validate effects'],
-        [],
+        warnings,
         false
       );
     }

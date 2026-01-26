@@ -10,7 +10,7 @@ interface ConditionBuilderProps {
   condition: StructuredCondition | string | undefined;
   onChange: (condition: StructuredCondition | undefined) => void;
   onRemove?: () => void;
-  previousSteps?: Array<{ index: number; label: string }>;
+  previousSteps?: Array<{ id: string; index: number; label: string }>;
 }
 
 export function ConditionBuilder({
@@ -39,6 +39,9 @@ export function ConditionBuilder({
   const [manaValue, setManaValue] = useState<number>(getInitialCondition()?.manaValue || 0);
   const [source, setSource] = useState<string>(getInitialCondition()?.source || 'triggering_source');
   const [fromEffect, setFromEffect] = useState<number>(getInitialCondition()?.fromEffect ?? 0);
+  const [linkedToStepId, setLinkedToStepId] = useState<string | undefined>(
+    getInitialCondition()?.linkedToStepId
+  );
 
   const selectedConditionType = CONDITION_TYPE_OPTIONS.find((opt) => opt.value === conditionType);
   const lastConditionRef = useRef<string>('');
@@ -73,6 +76,9 @@ export function ConditionBuilder({
     }
     if (selectedConditionType.requiresEffectIndex) {
       structuredCondition.fromEffect = fromEffect;
+      if (linkedToStepId) {
+        structuredCondition.linkedToStepId = linkedToStepId;
+      }
     }
     if (conditionType === 'has_keyword') {
       structuredCondition.keyword = keyword;
@@ -99,7 +105,20 @@ export function ConditionBuilder({
       lastConditionRef.current = conditionString;
       onChangeRef.current(structuredCondition);
     }
-  }, [conditionType, value, comparison, target, permanentType, keyword, counterType, manaValue, source, fromEffect, selectedConditionType]);
+  }, [
+    conditionType,
+    value,
+    comparison,
+    target,
+    permanentType,
+    keyword,
+    counterType,
+    manaValue,
+    source,
+    fromEffect,
+    linkedToStepId,
+    selectedConditionType,
+  ]);
 
   // Sync internal state when external condition prop changes (but avoid loops)
   useEffect(() => {
@@ -119,6 +138,7 @@ export function ConditionBuilder({
         setManaValue(cond.manaValue ?? 0);
         setSource(cond.source ?? 'triggering_source');
         setFromEffect(cond.fromEffect ?? 0);
+        setLinkedToStepId(cond.linkedToStepId);
         lastConditionRef.current = condString;
       }
     } else if (!condition && lastConditionRef.current !== '') {
@@ -126,6 +146,16 @@ export function ConditionBuilder({
       lastConditionRef.current = '';
     }
   }, [condition]);
+
+  useEffect(() => {
+    if (!selectedConditionType?.requiresEffectIndex) return;
+    if (linkedToStepId) return;
+    if (!previousSteps.length) return;
+    const match = previousSteps.find((step) => step.index === fromEffect) ?? previousSteps[0];
+    if (match) {
+      setLinkedToStepId(match.id);
+    }
+  }, [fromEffect, linkedToStepId, previousSteps, selectedConditionType?.requiresEffectIndex]);
 
   return (
     <div className="space-y-3 bg-[color:var(--theme-card-hover)] rounded-lg p-4 border border-[color:var(--theme-card-border)]">
@@ -184,23 +214,43 @@ export function ConditionBuilder({
 
       {selectedConditionType?.requiresEffectIndex && (
         <div>
-          <label className="block text-xs text-[color:var(--theme-text-muted)] mb-1">Effect Index</label>
-          <select
-            value={fromEffect}
-            onChange={(e) => setFromEffect(Math.max(0, parseInt(e.target.value) || 0))}
-            className="w-full px-3 py-2 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
-          >
-            {(previousSteps.length > 0
-              ? previousSteps
-              : Array.from({ length: 10 }, (_, index) => ({ index, label: `Step ${index + 1}` }))
-            ).map((step) => (
-              <option key={step.index} value={step.index}>
-                {step.label}
-              </option>
-            ))}
-          </select>
+          <label className="block text-xs text-[color:var(--theme-text-muted)] mb-1">Linked Step</label>
+          {previousSteps.length > 0 ? (
+            <select
+              value={linkedToStepId ?? previousSteps[0]?.id ?? ''}
+              onChange={(e) => {
+                const nextId = e.target.value;
+                setLinkedToStepId(nextId);
+                const match = previousSteps.find((step) => step.id === nextId);
+                if (match) {
+                  setFromEffect(match.index);
+                }
+              }}
+              className="w-full px-3 py-2 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+            >
+              {previousSteps.map((step) => (
+                <option key={step.id} value={step.id}>
+                  {step.label}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <select
+              value={fromEffect}
+              onChange={(e) => setFromEffect(Math.max(0, parseInt(e.target.value) || 0))}
+              className="w-full px-3 py-2 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+            >
+              {Array.from({ length: 10 }, (_, index) => ({ index, label: `Step ${index + 1}` })).map(
+                (step) => (
+                  <option key={step.index} value={step.index}>
+                    {step.label}
+                  </option>
+                )
+              )}
+            </select>
+          )}
           <p className="text-xs text-[color:var(--theme-text-muted)] mt-1">
-            0-based index of the effect step to inspect.
+            Links to a prior step; index is stored for engine evaluation.
           </p>
         </div>
       )}
