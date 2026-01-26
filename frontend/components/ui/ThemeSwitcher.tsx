@@ -12,6 +12,7 @@ const themeIcons: Record<Theme, React.ComponentType<{ className?: string }>> = {
   sakura: Sun,
   neon: Moon,
   dark: Moon,
+  nier: Sun,
 };
 
 const themeLabels: Record<Theme, string> = {
@@ -19,6 +20,7 @@ const themeLabels: Record<Theme, string> = {
   sakura: 'Sakura',
   neon: 'Neon',
   dark: 'Dark',
+  nier: 'NieR',
 };
 
 export function ThemeSwitcher() {

@@ -6,7 +6,6 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { CardModal } from '@/components/ui/CardModal';
 import { Card } from '@/components/ui/Card';
-import { HoverShadow } from '@/components/ui/HoverShadow';
 import { CardVersionSelector } from './CardVersionSelector';
 import { cards } from '@/lib/api';
 
@@ -87,9 +86,8 @@ export function CardPreview({ card, onVersionChange, onAddToDeck, showAddButton 
     <>
       <Card
         variant="bare"
-        className={`aspect-[63/88] relative overflow-visible rounded-xl flex items-center justify-center transition-transform duration-200 ${disableClick ? '' : 'hover:scale-105'}`}
+        className={`card-preview aspect-[63/88] relative overflow-visible rounded-xl flex items-center justify-center transition-transform duration-200 ${disableClick ? '' : 'hover:scale-105'}`}
       >
-        <HoverShadow />
         <div 
           className={`absolute inset-0 ${disableClick ? '' : 'cursor-pointer'} rounded-xl`}
           onClick={disableClick ? undefined : handleCardClick}

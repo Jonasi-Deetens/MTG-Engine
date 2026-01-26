@@ -2,6 +2,7 @@
 
 import { ManaPaymentDetail, hasComplexManaCost } from '@/lib/manaPayment';
 import { WardCost } from '@/lib/wardCosts';
+import { Select } from '@/components/ui/Select';
 
 type WardTargetEntry = {
   objectId: string;
@@ -111,7 +112,7 @@ export function WardPaymentPanel({
                       {(entry.cost.cost.hybrids ?? []).map(([colorA, colorB], idx) => (
                         <label key={`ward-hybrid-${target.objectId}-${index}-${idx}`} className="flex items-center gap-2">
                           <span className="text-[color:var(--theme-text-secondary)]">Hybrid</span>
-                          <select
+                          <Select
                             value={detail.hybrid_choices[idx] ?? colorA}
                             onChange={(e) =>
                               onUpdateWardPaymentDetail(target.objectId, (prev) => {
@@ -120,17 +121,17 @@ export function WardPaymentPanel({
                                 return { ...prev, hybrid_choices: next };
                               })
                             }
-                            className="flex-1 px-2 py-1 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+                            className="flex-1"
                           >
                             <option value={colorA}>{colorA}</option>
                             <option value={colorB}>{colorB}</option>
-                          </select>
+                          </Select>
                         </label>
                       ))}
                       {(entry.cost.cost.two_brids ?? []).map(([genericValue, color], idx) => (
                         <label key={`ward-two-brid-${target.objectId}-${index}-${idx}`} className="flex items-center gap-2">
                           <span className="text-[color:var(--theme-text-secondary)]">Two-brid</span>
-                          <select
+                          <Select
                             value={detail.two_brid_choices[idx] ? 'color' : 'generic'}
                             onChange={(e) =>
                               onUpdateWardPaymentDetail(target.objectId, (prev) => {
@@ -139,17 +140,17 @@ export function WardPaymentPanel({
                                 return { ...prev, two_brid_choices: next };
                               })
                             }
-                            className="flex-1 px-2 py-1 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+                            className="flex-1"
                           >
                             <option value="color">{color}</option>
                             <option value="generic">{genericValue} generic</option>
-                          </select>
+                          </Select>
                         </label>
                       ))}
                       {(entry.cost.cost.phyrexian ?? []).map((color, idx) => (
                         <label key={`ward-phyrexian-${target.objectId}-${index}-${idx}`} className="flex items-center gap-2">
                           <span className="text-[color:var(--theme-text-secondary)]">Phyrexian</span>
-                          <select
+                          <Select
                             value={detail.phyrexian_choices[idx] ? 'life' : 'mana'}
                             onChange={(e) =>
                               onUpdateWardPaymentDetail(target.objectId, (prev) => {
@@ -158,11 +159,11 @@ export function WardPaymentPanel({
                                 return { ...prev, phyrexian_choices: next };
                               })
                             }
-                            className="flex-1 px-2 py-1 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+                            className="flex-1"
                           >
                             <option value="mana">{color} mana</option>
                             <option value="life">2 life</option>
-                          </select>
+                          </Select>
                         </label>
                       ))}
                     </div>
@@ -201,7 +202,7 @@ export function WardPaymentPanel({
                   {!autoPayWard && entry.cost.type === 'discard' && (
                     <div className="flex items-center gap-2 text-xs">
                       <span className="text-[color:var(--theme-text-secondary)]">Discard</span>
-                      <select
+                      <Select
                         multiple
                         value={payment.discard_ids ?? []}
                         onChange={(e) =>
@@ -210,20 +211,20 @@ export function WardPaymentPanel({
                             discard_ids: Array.from(e.target.selectedOptions).map((option) => option.value),
                           }))
                         }
-                        className="flex-1 px-2 py-1 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+                        className="flex-1"
                       >
                         {entry.discardOptions.map((option) => (
                           <option key={`ward-discard-${target.objectId}-${index}-${option.value}`} value={option.value}>
                             {option.label}
                           </option>
                         ))}
-                      </select>
+                      </Select>
                     </div>
                   )}
                   {!autoPayWard && entry.cost.type === 'sacrifice' && (
                     <div className="flex items-center gap-2 text-xs">
                       <span className="text-[color:var(--theme-text-secondary)]">Sacrifice</span>
-                      <select
+                      <Select
                         value={payment.sacrifice_id ?? ''}
                         onChange={(e) =>
                           onUpdateWardPayment(target.objectId, index, (prev) => ({
@@ -231,7 +232,7 @@ export function WardPaymentPanel({
                             sacrifice_id: e.target.value || undefined,
                           }))
                         }
-                        className="flex-1 px-2 py-1 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+                        className="flex-1"
                       >
                         <option value="">Select permanent</option>
                         {entry.sacrificeOptions.map((option) => (
@@ -239,13 +240,13 @@ export function WardPaymentPanel({
                             {option.label}
                           </option>
                         ))}
-                      </select>
+                      </Select>
                     </div>
                   )}
                   {!autoPayWard && entry.cost.type === 'tap' && (
                     <div className="flex items-center gap-2 text-xs">
                       <span className="text-[color:var(--theme-text-secondary)]">Tap</span>
-                      <select
+                      <Select
                         value={payment.tap_id ?? ''}
                         onChange={(e) =>
                           onUpdateWardPayment(target.objectId, index, (prev) => ({
@@ -253,7 +254,7 @@ export function WardPaymentPanel({
                             tap_id: e.target.value || undefined,
                           }))
                         }
-                        className="flex-1 px-2 py-1 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+                        className="flex-1"
                       >
                         <option value="">Select permanent</option>
                         {entry.tapOptions.map((option) => (
@@ -261,7 +262,7 @@ export function WardPaymentPanel({
                             {option.label}
                           </option>
                         ))}
-                      </select>
+                      </Select>
                     </div>
                   )}
                 </div>

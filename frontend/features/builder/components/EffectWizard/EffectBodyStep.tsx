@@ -11,6 +11,7 @@ import {
   SEARCH_CARD_TYPE_FILTERS,
   COMPARE_AGAINST_ZONE_OPTIONS,
 } from '@/lib/effectTypes';
+import { Select } from '@/components/ui/Select';
 
 interface EffectBodyStepProps {
   effect: UnifiedEffect;
@@ -88,7 +89,7 @@ export function EffectBodyStep({ effect, onChange, previousSteps = [] }: EffectB
         <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">
           Effect Type
         </label>
-        <select
+        <Select
           className="mt-1 w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-sm"
           value={effectType}
           onChange={(e) => updateAction({ type: e.target.value })}
@@ -98,7 +99,7 @@ export function EffectBodyStep({ effect, onChange, previousSteps = [] }: EffectB
               {opt.label}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
       <label className="flex items-center gap-2 text-xs text-[color:var(--theme-text-secondary)]">
@@ -126,7 +127,7 @@ export function EffectBodyStep({ effect, onChange, previousSteps = [] }: EffectB
           <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">
             Target
           </label>
-          <select
+          <Select
             className="mt-1 w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-sm"
             value={action.target ?? 'any'}
             onChange={(e) => updateAction({ target: e.target.value })}
@@ -136,7 +137,7 @@ export function EffectBodyStep({ effect, onChange, previousSteps = [] }: EffectB
                 {opt.label}
               </option>
             ))}
-          </select>
+          </Select>
           {supportsTokenConfig && action.target === 'controller_of_target' && (
             <div className="mt-1 text-xs text-[color:var(--theme-text-muted)]">
               Uses the controller of the selected target from a previous step.
@@ -149,7 +150,7 @@ export function EffectBodyStep({ effect, onChange, previousSteps = [] }: EffectB
           <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">
             Attach To
           </label>
-          <select
+          <Select
             className="mt-1 w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-sm"
             value={action.attachTo ?? 'source'}
             onChange={(e) => updateAction({ attachTo: e.target.value })}
@@ -159,7 +160,7 @@ export function EffectBodyStep({ effect, onChange, previousSteps = [] }: EffectB
                 {opt.label}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       )}
       {supportsTokenConfig && (
@@ -222,7 +223,7 @@ export function EffectBodyStep({ effect, onChange, previousSteps = [] }: EffectB
               <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">
                 Creature Subtype
               </label>
-              <select
+              <Select
                 className="mt-1 w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-sm"
                 value={action.tokenSubtype ?? ''}
                 onChange={(e) => updateAction({ tokenSubtype: e.target.value || undefined })}
@@ -233,7 +234,7 @@ export function EffectBodyStep({ effect, onChange, previousSteps = [] }: EffectB
                     {opt.label}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div>
               <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">
@@ -297,7 +298,7 @@ export function EffectBodyStep({ effect, onChange, previousSteps = [] }: EffectB
               <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">
                 Max Picks
               </label>
-              <select
+              <Select
                 className="mt-1 w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-sm"
                 value={action.pickMax ?? 1}
                 onChange={(e) => updateAction({ pickMax: Number(e.target.value) })}
@@ -307,13 +308,13 @@ export function EffectBodyStep({ effect, onChange, previousSteps = [] }: EffectB
                     {index}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div>
               <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">
                 Destination
               </label>
-              <select
+              <Select
                 className="mt-1 w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-sm"
                 value={action.pickDestination ?? 'hand'}
                 onChange={(e) => updateAction({ pickDestination: e.target.value })}
@@ -322,7 +323,7 @@ export function EffectBodyStep({ effect, onChange, previousSteps = [] }: EffectB
                 <option value="battlefield">Battlefield</option>
                 <option value="graveyard">Graveyard</option>
                 <option value="exile">Exile</option>
-              </select>
+              </Select>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -379,7 +380,7 @@ export function EffectBodyStep({ effect, onChange, previousSteps = [] }: EffectB
           <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">
             Mana Type
           </label>
-          <select
+          <Select
             className="mt-1 w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-sm"
             value={action.manaType ?? 'C'}
             onChange={(e) => updateAction({ manaType: e.target.value })}
@@ -389,7 +390,7 @@ export function EffectBodyStep({ effect, onChange, previousSteps = [] }: EffectB
                 {opt.label}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       )}
 
@@ -400,7 +401,7 @@ export function EffectBodyStep({ effect, onChange, previousSteps = [] }: EffectB
             <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">
               Zone
             </label>
-            <select
+            <Select
               className="mt-1 w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-sm"
               value={action.zone ?? 'library'}
               onChange={(e) => updateAction({ zone: e.target.value })}
@@ -410,13 +411,13 @@ export function EffectBodyStep({ effect, onChange, previousSteps = [] }: EffectB
                   {opt.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           <div>
             <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">
               Card Type Filter
             </label>
-            <select
+            <Select
               className="mt-1 w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-sm"
               value={action.cardType ?? 'any'}
               onChange={(e) => updateAction({ cardType: e.target.value })}
@@ -426,7 +427,7 @@ export function EffectBodyStep({ effect, onChange, previousSteps = [] }: EffectB
                   {opt.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -434,7 +435,7 @@ export function EffectBodyStep({ effect, onChange, previousSteps = [] }: EffectB
               <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">
                 Put Found Into
               </label>
-              <select
+              <Select
                 className="mt-1 w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-sm"
                 value={action.putFoundTo ?? ''}
                 onChange={(e) =>
@@ -446,7 +447,7 @@ export function EffectBodyStep({ effect, onChange, previousSteps = [] }: EffectB
                 <option value="battlefield">Battlefield</option>
                 <option value="graveyard">Graveyard</option>
                 <option value="exile">Exile</option>
-              </select>
+              </Select>
             </div>
             <div className="flex flex-col justify-end gap-2 text-xs text-[color:var(--theme-text-secondary)]">
               <label className="flex items-center gap-2">
@@ -472,7 +473,7 @@ export function EffectBodyStep({ effect, onChange, previousSteps = [] }: EffectB
               <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">
                 Min Cards
               </label>
-              <select
+              <Select
                 className="mt-1 w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-sm"
                 value={action.min ?? 0}
                 onChange={(e) => {
@@ -486,13 +487,13 @@ export function EffectBodyStep({ effect, onChange, previousSteps = [] }: EffectB
                     {index}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div>
               <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">
                 Max Cards
               </label>
-              <select
+              <Select
                 className="mt-1 w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-sm"
                 value={action.max ?? 1}
                 onChange={(e) => {
@@ -506,7 +507,7 @@ export function EffectBodyStep({ effect, onChange, previousSteps = [] }: EffectB
                     {index}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
           </div>
           <div>
@@ -514,7 +515,7 @@ export function EffectBodyStep({ effect, onChange, previousSteps = [] }: EffectB
               Mana Value Comparison
             </label>
             <div className="mt-1 space-y-2">
-              <select
+              <Select
                 className="w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-sm"
                 value={action.manaValueComparison ?? '<='}
                 onChange={(e) => updateAction({ manaValueComparison: e.target.value })}
@@ -524,12 +525,12 @@ export function EffectBodyStep({ effect, onChange, previousSteps = [] }: EffectB
                 <option value=">=">≥ (Greater than or equal)</option>
                 <option value=">">&gt; (Greater than)</option>
                 <option value="==">= (Equal)</option>
-              </select>
+              </Select>
               <div>
                 <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">
                   Compare Against
                 </label>
-                <select
+                <Select
                   className="mt-1 w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-sm"
                   value={action.manaValueComparisonSource ?? 'fixed_value'}
                   onChange={(e) => {
@@ -544,7 +545,7 @@ export function EffectBodyStep({ effect, onChange, previousSteps = [] }: EffectB
                   <option value="triggering_source">Triggering Source</option>
                   <option value="triggering_aura">The Triggering Aura</option>
                   <option value="triggering_spell">The Triggering Spell</option>
-                </select>
+                </Select>
               </div>
               {(!action.manaValueComparisonSource || action.manaValueComparisonSource === 'fixed_value') && (
                 <input
@@ -595,7 +596,7 @@ export function EffectBodyStep({ effect, onChange, previousSteps = [] }: EffectB
                   <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">
                     Compare Against Type
                   </label>
-                  <select
+                  <Select
                     className="mt-1 w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-sm"
                     value={
                       typeof action.differentName === 'object'
@@ -620,13 +621,13 @@ export function EffectBodyStep({ effect, onChange, previousSteps = [] }: EffectB
                         {opt.label}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
                 <div>
                   <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">
                     Compare Against Zone
                   </label>
-                  <select
+                  <Select
                     className="mt-1 w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-sm"
                     value={
                       typeof action.differentName === 'object'
@@ -651,7 +652,7 @@ export function EffectBodyStep({ effect, onChange, previousSteps = [] }: EffectB
                         {opt.label}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
               </div>
             )}
@@ -664,7 +665,7 @@ export function EffectBodyStep({ effect, onChange, previousSteps = [] }: EffectB
           <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">
             Use Results From
           </label>
-          <select
+          <Select
             className="mt-1 w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-sm"
             value={action.fromEffect ?? ''}
             onChange={(e) =>
@@ -677,7 +678,7 @@ export function EffectBodyStep({ effect, onChange, previousSteps = [] }: EffectB
                 Step {step.index + 1}: {step.label}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       )}
     </div>

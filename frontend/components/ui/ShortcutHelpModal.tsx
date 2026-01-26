@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/Button";
+import { ArchiveSectionHeader } from "@/components/ui/ArchiveSectionHeader";
 
 interface ShortcutHelpModalProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ const shortcuts = [
       { keys: "Ctrl + Space / Cmd + K", label: "Quick search" },
       { keys: "G then C", label: "Go to Collection" },
       { keys: "G then D", label: "Go to Decks" },
+      { keys: "G then B", label: "Go to Builder" },
       { keys: "Alt + D", label: "Last viewed deck" },
     ],
   },
@@ -88,24 +90,27 @@ export function ShortcutHelpModal({ isOpen, onClose }: ShortcutHelpModalProps) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-4 sm:p-5 space-y-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h2 className="font-heading text-lg sm:text-xl font-semibold text-[color:var(--theme-text-primary)]">
-                Shortcuts
-              </h2>
-              <p className="text-xs sm:text-sm text-[color:var(--theme-text-secondary)]">
-                Press <span className="font-mono">Esc</span> to close
-              </p>
-            </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={onClose}
-              aria-label="Close shortcuts"
-            >
-              Close
-            </Button>
+          <div>
+            <ArchiveSectionHeader
+              title="Shortcuts"
+              status="HELP_INDEX: LOADED"
+              className="mb-2"
+              titleClassName="text-lg sm:text-xl"
+              action={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={onClose}
+                  aria-label="Close shortcuts"
+                >
+                  Close
+                </Button>
+              }
+            />
+            <p className="text-xs sm:text-sm text-[color:var(--theme-text-secondary)]">
+              Press <span className="font-mono">Esc</span> to close
+            </p>
           </div>
 
           <div className="flex flex-wrap gap-4 max-h-[70vh] overflow-y-auto pr-1">

@@ -1,7 +1,7 @@
 'use client';
 
-import { StylizedButton } from '@/components/ui/play/StylizedButton';
-import { StylizedNativeSelect } from '@/components/ui/play/StylizedNativeSelect';
+import { Button } from '@/components/ui/Button';
+import { Select } from '@/components/ui/Select';
 import { ManaPaymentPanel } from '../ManaPaymentPanel';
 import { ActivationCostPanel } from '../ActivationCostPanel';
 import { OptionalCostPanel } from '../OptionalCostPanel';
@@ -212,9 +212,9 @@ export function CastingActions({
     <div className="space-y-4">
       {/* Play Land Button */}
       {showLandButton && (
-        <StylizedButton onClick={onPlayLand} disabled={loading} variant="secondary" className="w-full">
+        <Button onClick={onPlayLand} disabled={loading} variant="secondary" className="w-full">
           Play Land
-        </StylizedButton>
+        </Button>
       )}
 
       {/* Cast Spell Section */}
@@ -224,7 +224,7 @@ export function CastingActions({
           {alternativeCostOptions.length > 0 && !isPrepared && (
             <div className="space-y-2">
               <label className="text-sm font-medium">Cost Option</label>
-              <StylizedNativeSelect
+              <Select
                 value={selectedAlternativeCostTag ?? ''}
                 onChange={(e) => onSelectAlternativeCost(e.target.value || null)}
               >
@@ -234,7 +234,7 @@ export function CastingActions({
                     {option.label}
                   </option>
                 ))}
-              </StylizedNativeSelect>
+              </Select>
             </div>
           )}
 
@@ -269,9 +269,9 @@ export function CastingActions({
 
           {/* Prepare Cast Button */}
           {!isPrepared && (
-            <StylizedButton onClick={onPrepareCast} disabled={loading} className="w-full">
+            <Button onClick={onPrepareCast} disabled={loading} className="w-full">
               Prepare Cast
-            </StylizedButton>
+            </Button>
           )}
 
           {/* Mana Payment */}
@@ -353,13 +353,13 @@ export function CastingActions({
                 />
               )}
 
-              <StylizedButton
+              <Button
                 onClick={onFinalizeCast}
                 disabled={loading || !canFinalize}
                 className="w-full"
               >
                 Cast Spell
-              </StylizedButton>
+              </Button>
             </>
           )}
         </div>
@@ -367,9 +367,9 @@ export function CastingActions({
 
       {/* Tap for Mana */}
       {showTapButton && (
-        <StylizedButton onClick={onTapForMana} disabled={loading} variant="secondary" className="w-full">
+        <Button onClick={onTapForMana} disabled={loading} variant="secondary" className="w-full">
           Tap for Mana
-        </StylizedButton>
+        </Button>
       )}
 
       {/* Activate Ability */}
@@ -388,13 +388,13 @@ export function CastingActions({
               onUpdatePaymentDetail={onUpdateActivationPaymentDetail}
             />
           )}
-          <StylizedButton
+          <Button
             onClick={onActivateAbility}
             disabled={loading || hasActivationCostErrors}
             className="w-full"
           >
             Activate Ability
-          </StylizedButton>
+          </Button>
         </div>
       )}
     </div>

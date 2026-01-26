@@ -81,7 +81,7 @@ export function TopNavbar({ variant = 'app', showSpacer = true }: TopNavbarProps
             <Link href="/" className="flex items-center gap-2 flex-shrink-0">
               <BookOpen className={`w-6 h-6 ${styles.logo}`} />
               <span className={`font-heading text-xl font-bold ${styles.logo} hidden sm:inline`}>
-                MTG Engine
+                MTG Simulator
               </span>
             </Link>
 

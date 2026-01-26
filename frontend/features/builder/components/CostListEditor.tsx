@@ -3,6 +3,7 @@
 import { CostEntry } from '@/lib/activationCosts';
 import { ManaCostData } from '@/lib/wardCosts';
 import { Button } from '@/components/ui/Button';
+import { Select } from '@/components/ui/Select';
 
 const COST_TYPES: Array<{ value: CostEntry['type']; label: string }> = [
   { value: 'mana', label: 'Mana' },
@@ -84,17 +85,17 @@ export function CostListEditor({ label = 'Costs', value, onChange }: CostListEdi
       {value.map((cost, index) => (
         <div key={`cost-${index}`} className="grid grid-cols-1 gap-2 rounded border border-[color:var(--theme-border-default)] p-3">
           <div className="flex items-center gap-2">
-            <select
+            <Select
               value={cost.type}
               onChange={(e) => handleTypeChange(index, e.target.value as CostEntry['type'])}
-              className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+              className="w-full"
             >
               {COST_TYPES.map((entry) => (
                 <option key={entry.value} value={entry.value}>
                   {entry.label}
                 </option>
               ))}
-            </select>
+            </Select>
             <Button variant="ghost" onClick={() => handleRemove(index)} className="text-xs">
               Remove
             </Button>
@@ -179,7 +180,7 @@ export function CostListEditor({ label = 'Costs', value, onChange }: CostListEdi
                 <div>Hybrid symbols</div>
                 {normalizeManaCost(cost.cost).hybrids.map(([colorA, colorB], hybridIndex) => (
                   <div key={`hybrid-${hybridIndex}`} className="flex items-center gap-2">
-                    <select
+                    <Select
                       value={colorA}
                       onChange={(e) => {
                         const normalized = normalizeManaCost(cost.cost);
@@ -187,15 +188,15 @@ export function CostListEditor({ label = 'Costs', value, onChange }: CostListEdi
                         hybrids[hybridIndex] = [e.target.value, hybrids[hybridIndex][1]];
                         updateCost(index, { ...cost, cost: { ...normalized, hybrids } });
                       }}
-                      className="flex-1 px-2 py-1 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)]"
+                      className="flex-1"
                     >
                       {COLOR_OPTIONS.map((color) => (
                         <option key={`hybrid-a-${color}`} value={color}>
                           {color}
                         </option>
                       ))}
-                    </select>
-                    <select
+                    </Select>
+                    <Select
                       value={colorB}
                       onChange={(e) => {
                         const normalized = normalizeManaCost(cost.cost);
@@ -203,14 +204,14 @@ export function CostListEditor({ label = 'Costs', value, onChange }: CostListEdi
                         hybrids[hybridIndex] = [hybrids[hybridIndex][0], e.target.value];
                         updateCost(index, { ...cost, cost: { ...normalized, hybrids } });
                       }}
-                      className="flex-1 px-2 py-1 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)]"
+                      className="flex-1"
                     >
                       {COLOR_OPTIONS.map((color) => (
                         <option key={`hybrid-b-${color}`} value={color}>
                           {color}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                     <Button
                       variant="ghost"
                       onClick={() => {
@@ -254,7 +255,7 @@ export function CostListEditor({ label = 'Costs', value, onChange }: CostListEdi
                       }}
                       className="w-20 px-2 py-1 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)]"
                     />
-                    <select
+                    <Select
                       value={color}
                       onChange={(e) => {
                         const normalized = normalizeManaCost(cost.cost);
@@ -262,14 +263,14 @@ export function CostListEditor({ label = 'Costs', value, onChange }: CostListEdi
                         two_brids[twoBridIndex] = [two_brids[twoBridIndex][0], e.target.value];
                         updateCost(index, { ...cost, cost: { ...normalized, two_brids } });
                       }}
-                      className="flex-1 px-2 py-1 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)]"
+                      className="flex-1"
                     >
                       {COLOR_OPTIONS.map((colorOption) => (
                         <option key={`two-brid-${colorOption}`} value={colorOption}>
                           {colorOption}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                     <Button
                       variant="ghost"
                       onClick={() => {
@@ -301,7 +302,7 @@ export function CostListEditor({ label = 'Costs', value, onChange }: CostListEdi
                 <div>Phyrexian symbols</div>
                 {normalizeManaCost(cost.cost).phyrexian.map((color, phyIndex) => (
                   <div key={`phyrexian-${phyIndex}`} className="flex items-center gap-2">
-                    <select
+                    <Select
                       value={color}
                       onChange={(e) => {
                         const normalized = normalizeManaCost(cost.cost);
@@ -309,14 +310,14 @@ export function CostListEditor({ label = 'Costs', value, onChange }: CostListEdi
                         phyrexian[phyIndex] = e.target.value;
                         updateCost(index, { ...cost, cost: { ...normalized, phyrexian } });
                       }}
-                      className="flex-1 px-2 py-1 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)]"
+                      className="flex-1"
                     >
                       {COLOR_OPTIONS.map((colorOption) => (
                         <option key={`phyrexian-${colorOption}`} value={colorOption}>
                           {colorOption}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                     <Button
                       variant="ghost"
                       onClick={() => {
@@ -369,10 +370,10 @@ export function CostListEditor({ label = 'Costs', value, onChange }: CostListEdi
           )}
           {(cost.type === 'sacrifice' || cost.type === 'tap') && (
             <div className="flex items-center gap-2">
-              <select
+              <Select
                 value={cost.card_type ?? ''}
                 onChange={(e) => updateCost(index, { ...cost, card_type: e.target.value || undefined })}
-                className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+                className="w-full"
               >
                 <option value="">Any Permanent</option>
                 <option value="creature">Creature</option>
@@ -380,7 +381,7 @@ export function CostListEditor({ label = 'Costs', value, onChange }: CostListEdi
                 <option value="enchantment">Enchantment</option>
                 <option value="land">Land</option>
                 <option value="planeswalker">Planeswalker</option>
-              </select>
+              </Select>
               <label className="flex items-center gap-2 text-xs text-[color:var(--theme-text-secondary)]">
                 <input
                   type="checkbox"

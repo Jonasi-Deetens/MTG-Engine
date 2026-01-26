@@ -1,7 +1,7 @@
 // Theme configuration system
 // Defines semantic color structure for all themes
 
-export type Theme = 'light' | 'dark' | 'sakura' | 'neon';
+export type Theme = 'light' | 'dark' | 'sakura' | 'neon' | 'nier';
 
 export interface ThemeColors {
   background: {
@@ -242,6 +242,66 @@ export const themes: Record<Theme, ThemeColors> = {
       ghost: {
         text: '#cbd5f5',     // cool light
         hover: '#111827',   // slate-900
+      },
+    },
+  },
+  nier: {
+    background: {
+      primary: '#dad4bb',
+      secondary: '#e1dbc6',
+      tertiary: '#d2c9ab',
+    },
+    foreground: {
+      primary: '#454138',
+      secondary: '#5a564b',
+      muted: '#7a7464',
+    },
+    border: {
+      default: '#9c9787',
+      hover: '#9c9787',
+      focus: '#9c9787',
+    },
+    accent: {
+      primary: '#9c9787',
+      secondary: '#7a7464',
+      hover: '#6f6a5d',
+    },
+    status: {
+      success: '#2f7d5f',
+      warning: '#b38a3a',
+      error: '#8b4049',
+      info: '#4a6a7f',
+    },
+    card: {
+      background: '#e8e4d4',
+      border: '#9c9787',
+      hover: '#ded7c1',
+    },
+    input: {
+      background: '#c4bea5',
+      border: '#9c9787',
+      text: '#454138',
+      placeholder: '#7a7464',
+    },
+    button: {
+      primary: {
+        bg: '#454138',
+        text: '#dad4bb',
+        hover: '#35312a',
+      },
+      secondary: {
+        bg: '#c4bea5',
+        text: '#454138',
+        hover: '#b6b09a',
+      },
+      outline: {
+        border: '#9c9787',
+        text: '#454138',
+        hover: '#6f6a5d',
+      },
+      ghost: {
+        text: '#7a7464',
+        hover: '#cfc7ad',
       },
     },
   },

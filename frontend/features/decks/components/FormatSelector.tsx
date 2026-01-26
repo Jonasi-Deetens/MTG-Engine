@@ -2,6 +2,8 @@
 
 // frontend/components/decks/FormatSelector.tsx
 
+import { Select } from '@/components/ui/Select';
+
 interface FormatSelectorProps {
   value: string;
   onChange: (format: string) => void;
@@ -23,18 +25,18 @@ export function FormatSelector({ value, onChange, disabled = false }: FormatSele
       <label className="block text-xs font-medium text-[color:var(--theme-text-secondary)] mb-1">
         Format
       </label>
-      <select
+      <Select
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        className="w-full px-2 py-1.5 text-sm bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none disabled:opacity-50"
+        className="w-full"
       >
         {FORMATS.map((format) => (
           <option key={format.value} value={format.value}>
             {format.label}
           </option>
         ))}
-      </select>
+      </Select>
     </div>
   );
 }

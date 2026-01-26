@@ -27,8 +27,11 @@ export function LandingSearchBar({ searchQuery, onSearchChange, onSearch }: Land
           onChange={(e) => onSearchChange(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Search for Magic: The Gathering cards..."
-          className="w-full pl-14 pr-12 py-4 bg-[color:var(--theme-input-bg)]/95 backdrop-blur-sm text-[color:var(--theme-input-text)] text-lg rounded-lg border-2 focus:border-[color:var(--theme-border-focus)] focus:outline-none shadow-xl transition-colors"
-          style={{ borderColor: 'var(--theme-input-border)' }}
+          className="w-full pl-14 pr-12 py-4 text-[color:var(--theme-input-text)] text-lg rounded-lg border-2 focus:border-[color:var(--theme-border-focus)] focus:outline-none shadow-[6px_6px_0_color-mix(in_srgb,var(--theme-border-default)_70%,transparent)] transition-colors"
+          style={{
+            borderColor: 'var(--theme-input-border)',
+            background: 'color-mix(in srgb, var(--theme-bg-secondary) 75%, transparent)',
+          }}
           autoFocus
         />
         {searchQuery && (

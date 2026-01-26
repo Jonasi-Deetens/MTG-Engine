@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import Link from 'next/link';
 import { CardPreview } from '@/components/cards/CardPreview';
 import { isEditableTarget } from '@/context/ShortcutContext';
+import { LoadingState } from '@/components/ui/LoadingState';
 
 export default function CollectionDetailPage() {
   const params = useParams();
@@ -109,11 +110,7 @@ export default function CollectionDetailPage() {
   }, [collection, focusedCardId, collectionId]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[color:var(--theme-bg-primary)] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[color:var(--theme-accent-primary)]"></div>
-      </div>
-    );
+    return <LoadingState />;
   }
 
   if (error || !collection) {
@@ -142,7 +139,10 @@ export default function CollectionDetailPage() {
         </Link>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="font-heading text-3xl font-bold text-[color:var(--theme-text-primary)] mb-2">
+            <h1
+              className="font-heading text-3xl font-bold text-[color:var(--theme-text-primary)] mb-2 nier-glitch"
+              data-text={collection.name}
+            >
               {collection.name}
             </h1>
             {collection.description && (

@@ -3,8 +3,8 @@
 import { ReplacementConflictEntry } from '../hooks/useReplacementConflicts';
 import { useEffect } from 'react';
 import { BracketHeader } from '@/components/ui/play/NierUIElements';
-import { StylizedButton } from '@/components/ui/play/StylizedButton';
-import { StylizedNativeSelect } from '@/components/ui/play/StylizedNativeSelect';
+import { Button } from '@/components/ui/Button';
+import { Select } from '@/components/ui/Select';
 
 interface ReplacementChoicePanelProps {
   conflicts: ReplacementConflictEntry[];
@@ -36,9 +36,9 @@ export function ReplacementChoicePanel({
       <div className="flex items-center justify-between gap-3">
         <BracketHeader>Replacement Choice Needed</BracketHeader>
         {onNextHighlight && unresolved.length > 1 && (
-          <StylizedButton type="button" variant="ghost" onClick={onNextHighlight}>
+          <Button type="button" variant="ghost" onClick={onNextHighlight}>
             Next unresolved
-          </StylizedButton>
+          </Button>
         )}
       </div>
       <div className="text-xs text-[color:var(--theme-text-secondary)]">
@@ -56,7 +56,7 @@ export function ReplacementChoicePanel({
             <div className="text-xs text-[color:var(--theme-text-secondary)]">
               {entry.label}
             </div>
-            <StylizedNativeSelect
+            <Select
               value={replacementChoices[entry.key] || ''}
               onChange={(e) => onSelectChoice(entry.key, e.target.value)}
             >
@@ -66,7 +66,7 @@ export function ReplacementChoicePanel({
                   {effect.label || effect.replacement_zone || 'Replacement'}
                 </option>
               ))}
-            </StylizedNativeSelect>
+            </Select>
           </div>
         ))}
       </div>

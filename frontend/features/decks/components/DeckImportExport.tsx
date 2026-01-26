@@ -4,6 +4,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
+import { Select } from '@/components/ui/Select';
 import { decks, DeckExportResponse } from '@/lib/decks';
 
 interface DeckImportExportProps {
@@ -83,14 +84,14 @@ export function DeckImportExport({ deckId, onImportSuccess }: DeckImportExportPr
       <div className="space-y-2">
         <h3 className="text-lg font-semibold text-[color:var(--theme-text-primary)]">Export Deck</h3>
         <div className="flex gap-2">
-          <select
+          <Select
             value={exportFormat}
             onChange={(e) => setExportFormat(e.target.value as 'text' | 'json')}
-            className="px-3 py-2 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+            className="w-full"
           >
             <option value="text">Text Format</option>
             <option value="json">JSON Format</option>
-          </select>
+          </Select>
           <Button
             onClick={handleExport}
             disabled={exporting}

@@ -18,7 +18,7 @@ const cinzel = Cinzel({
 });
 
 export const metadata: Metadata = {
-  title: "MTG Engine",
+  title: "MTG Simulator",
   description: "Magic: The Gathering card search and engine",
 };
 

@@ -7,10 +7,11 @@ import { useRouter } from 'next/navigation';
 import { decks, DeckResponse, DeckDetailResponse } from '@/lib/decks';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { Select } from '@/components/ui/Select';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { DeckCard } from '@/features/decks/components/DeckCard';
 import { SearchInput } from '@/components/ui/SearchInput';
-import { DeckListSkeleton } from '@/components/skeletons/DeckListSkeleton';
+import { LoadingState } from '@/components/ui/LoadingState';
 import { BookOpen, SearchX } from 'lucide-react';
 import Link from 'next/link';
 
@@ -73,7 +74,10 @@ export default function DecksPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-heading text-3xl font-bold text-[color:var(--theme-text-primary)] mb-2">
+          <h1
+            className="font-heading text-3xl font-bold text-[color:var(--theme-text-primary)] mb-2 nier-glitch"
+            data-text="My Decks"
+          >
             My Decks
           </h1>
           <p className="text-[color:var(--theme-text-secondary)]">
@@ -96,10 +100,10 @@ export default function DecksPage() {
             placeholder="Search decks..."
           />
         </div>
-        <select
+        <Select
           value={formatFilter}
           onChange={(e) => setFormatFilter(e.target.value)}
-          className="px-3 py-2 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+          className="min-w-[160px]"
         >
           <option value="">All Formats</option>
           <option value="Commander">Commander</option>
@@ -108,7 +112,7 @@ export default function DecksPage() {
           <option value="Pauper">Pauper</option>
           <option value="Legacy">Legacy</option>
           <option value="Vintage">Vintage</option>
-        </select>
+        </Select>
       </div>
 
       {error && (
@@ -118,7 +122,7 @@ export default function DecksPage() {
       )}
 
       {loading ? (
-        <DeckListSkeleton />
+        <LoadingState fullScreen={false} className="py-12" />
       ) : filteredDecks.length === 0 ? (
         <Card variant="elevated">
           {decksList.length === 0 ? (

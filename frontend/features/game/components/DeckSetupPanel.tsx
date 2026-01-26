@@ -2,8 +2,8 @@
 
 import { DeckResponse } from '@/lib/decks';
 import { Card } from '@/components/ui/Card';
-import { StylizedButton } from '@/components/ui/play/StylizedButton';
-import { StylizedNativeSelect } from '@/components/ui/play/StylizedNativeSelect';
+import { Button } from '@/components/ui/Button';
+import { Select } from '@/components/ui/Select';
 
 interface DeckSetupPanelProps {
   deckList: DeckResponse[];
@@ -33,7 +33,7 @@ export function DeckSetupPanel({
             <div className="text-xs uppercase text-[color:var(--theme-text-secondary)]">
               Player {index + 1}
             </div>
-            <StylizedNativeSelect
+            <Select
               value={deckId ?? ''}
               onChange={(e) => onSelectDeck(index, e.target.value)}
             >
@@ -43,14 +43,14 @@ export function DeckSetupPanel({
                   {deck.name}
                 </option>
               ))}
-            </StylizedNativeSelect>
+            </Select>
           </div>
         ))}
       </div>
       <div className="flex justify-end">
-        <StylizedButton variant="primary" onClick={onStart} disabled={!canStart || loading}>
+        <Button variant="primary" onClick={onStart} disabled={!canStart || loading}>
           {loading ? 'Starting...' : 'Start Game'}
-        </StylizedButton>
+        </Button>
       </div>
     </Card>
   );

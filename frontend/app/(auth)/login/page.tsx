@@ -46,11 +46,14 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         <Card variant="elevated" className="p-8">
           <div className="text-center mb-8">
-            <h1 className="font-heading text-3xl font-bold text-[color:var(--theme-text-primary)] mb-2">
+            <h1
+              className="font-heading text-3xl font-bold text-[color:var(--theme-text-primary)] mb-2 nier-glitch"
+              data-text="Welcome Back"
+            >
               Welcome Back
             </h1>
             <p className="text-[color:var(--theme-text-secondary)]">
-              Sign in to access the MTG Engine
+              Sign in to access the MTG Simulator
             </p>
           </div>
 

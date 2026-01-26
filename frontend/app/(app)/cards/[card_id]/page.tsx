@@ -18,6 +18,8 @@ import { RarityBadge } from '@/components/ui/RarityBadge';
 import { LegalityDisplay } from '@/components/cards/LegalityDisplay';
 import { useAuth } from '@/context/AuthContext';
 import { isEditableTarget } from '@/context/ShortcutContext';
+import { ArchiveSectionHeader } from '@/components/ui/ArchiveSectionHeader';
+import { LoadingState } from '@/components/ui/LoadingState';
 
 export default function CardDetailPage() {
   const params = useParams();
@@ -142,11 +144,7 @@ export default function CardDetailPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[color:var(--theme-bg-primary)] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[color:var(--theme-accent-primary)]"></div>
-      </div>
-    );
+    return <LoadingState />;
   }
 
   if (error || !card) {
@@ -231,7 +229,12 @@ export default function CardDetailPage() {
               <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-2 flex-wrap mb-2">
-                    <h1 className="text-3xl font-bold text-[color:var(--theme-text-primary)]">{card.name}</h1>
+                    <h1
+                      className="text-3xl font-bold text-[color:var(--theme-text-primary)] nier-glitch"
+                      data-text={card.name}
+                    >
+                      {card.name}
+                    </h1>
                     {card.rarity && <RarityBadge rarity={card.rarity} />}
                   </div>
                   {card.mana_cost && (
@@ -365,17 +368,22 @@ export default function CardDetailPage() {
               </div>
             ) : effectGraph ? (
               <div className="bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] rounded-lg p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-2xl font-bold text-[color:var(--theme-text-primary)]">Saved Effect Graph</h2>
-                  <div className="flex items-center gap-2">
-                    <Button onClick={handleExportGraph} variant="outline" size="sm">
-                      Export JSON
-                    </Button>
-                    <Button onClick={handleEditInBuilder} variant="secondary" size="sm">
-                      Edit Effects
-                    </Button>
-                  </div>
-                </div>
+                <ArchiveSectionHeader
+                  title="Saved Effect Graph"
+                  status="GRAPH_ARCHIVE: READY"
+                  className="mb-4"
+                  titleClassName="text-2xl font-bold"
+                  action={
+                    <>
+                      <Button onClick={handleExportGraph} variant="outline" size="sm">
+                        Export JSON
+                      </Button>
+                      <Button onClick={handleEditInBuilder} variant="secondary" size="sm">
+                        Edit Effects
+                      </Button>
+                    </>
+                  }
+                />
                 <div className="bg-[color:var(--theme-card-hover)] border border-[color:var(--theme-card-border)] rounded-lg p-4">
                   <EffectGraphPreview graph={effectGraph} />
                 </div>
@@ -396,9 +404,11 @@ export default function CardDetailPage() {
         {/* All Versions Section */}
         {allVersions.length > 1 && (
           <div className="bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] rounded-lg p-6">
-            <h2 className="text-2xl font-bold text-[color:var(--theme-text-primary)] mb-4">
-              All Printings ({allVersions.length})
-            </h2>
+            <ArchiveSectionHeader
+              title={`All Printings (${allVersions.length})`}
+              status="PRINTINGS_INDEX: READY"
+              titleClassName="text-2xl font-bold"
+            />
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
               {allVersions.map((version) => (
                 <Link

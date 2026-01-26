@@ -80,7 +80,10 @@ export default function CollectionsPage() {
           <Link href="/my-cards" className="text-[color:var(--theme-text-secondary)] hover:text-[color:var(--theme-accent-primary)] transition-colors mb-2 inline-block">
             ← Back to My Cards
           </Link>
-          <h1 className="font-heading text-3xl font-bold text-[color:var(--theme-text-primary)] mb-2">
+          <h1
+            className="font-heading text-3xl font-bold text-[color:var(--theme-text-primary)] mb-2 nier-glitch"
+            data-text="Collections"
+          >
             Collections
           </h1>
           <p className="text-[color:var(--theme-text-secondary)]">

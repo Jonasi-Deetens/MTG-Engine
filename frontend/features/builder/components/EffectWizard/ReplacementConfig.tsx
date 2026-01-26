@@ -1,5 +1,6 @@
 import type { UnifiedEffect } from '@/lib/unifiedEffect';
 import { ZONE_OPTIONS } from '@/lib/effectTypes';
+import { Select } from '@/components/ui/Select';
 
 interface ReplacementConfigProps {
   effect: UnifiedEffect;
@@ -47,7 +48,7 @@ export function ReplacementConfig({ effect, onChange, kind }: ReplacementConfigP
           <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">
             Replaces Event
           </label>
-          <select
+          <Select
             className="mt-1 w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-sm"
             value={eventType}
             onChange={(e) =>
@@ -65,7 +66,7 @@ export function ReplacementConfig({ effect, onChange, kind }: ReplacementConfigP
                 {opt.label}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         {eventType === 'replace_zone_change' && (
           <div className="grid grid-cols-2 gap-3">
@@ -73,7 +74,7 @@ export function ReplacementConfig({ effect, onChange, kind }: ReplacementConfigP
               <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">
                 From Zone
               </label>
-              <select
+              <Select
                 className="mt-1 w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-sm"
                 value={(withPayload?.fromZone as string) ?? 'battlefield'}
                 onChange={(e) =>
@@ -88,13 +89,13 @@ export function ReplacementConfig({ effect, onChange, kind }: ReplacementConfigP
                     {opt.label}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div>
               <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">
                 To Zone
               </label>
-              <select
+              <Select
                 className="mt-1 w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-sm"
                 value={(withPayload?.toZone as string) ?? 'exile'}
                 onChange={(e) =>
@@ -109,7 +110,7 @@ export function ReplacementConfig({ effect, onChange, kind }: ReplacementConfigP
                     {opt.label}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
           </div>
         )}
@@ -142,7 +143,7 @@ export function ReplacementConfig({ effect, onChange, kind }: ReplacementConfigP
         <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">
           Prevents Event
         </label>
-        <select
+        <Select
           className="mt-1 w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-sm"
           value={(prevents?.event as string) ?? 'damage'}
           onChange={(e) =>
@@ -160,7 +161,7 @@ export function ReplacementConfig({ effect, onChange, kind }: ReplacementConfigP
               {opt.label}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
       <div>
         <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">

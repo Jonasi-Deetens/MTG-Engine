@@ -6,10 +6,10 @@ import { useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { CardGrid } from '@/components/cards/CardGrid';
-import { CardGridSkeleton } from '@/components/skeletons/CardSkeleton';
 import { Card } from '@/components/ui/Card';
 import { Pagination } from '@/components/ui/Pagination';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { LoadingState } from '@/components/ui/LoadingState';
 import { SearchX } from 'lucide-react';
 import { cards } from '@/lib/api';
 import { useCardSearch } from '@/features/search/hooks/useCardSearch';
@@ -158,7 +158,10 @@ export default function SearchPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-heading text-3xl font-bold text-[color:var(--theme-text-primary)] mb-2">
+          <h1
+            className="font-heading text-3xl font-bold text-[color:var(--theme-text-primary)] mb-2 nier-glitch"
+            data-text={isBrowseMode ? 'Browse Cards' : 'Card Search'}
+          >
             {isBrowseMode ? 'Browse Cards' : 'Card Search'}
           </h1>
           <p className="text-[color:var(--theme-text-secondary)]">
@@ -207,7 +210,7 @@ export default function SearchPage() {
       )}
 
       {loading ? (
-        <CardGridSkeleton count={PAGE_SIZE} />
+        <LoadingState fullScreen={false} className="py-12" />
       ) : (
         <>
           {pagination.cards.length === 0 ? (

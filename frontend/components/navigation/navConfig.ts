@@ -8,7 +8,6 @@ import {
   Code,
   BookOpen,
   Heart,
-  Rocket,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -51,9 +50,7 @@ export const navGroups: NavGroup[] = [
 ];
 
 // Standalone items (not in groups)
-export const standaloneNavItems: NavItem[] = [
-  { href: '/getting-started', icon: Rocket, label: 'Getting Started', requiresAuth: false },
-];
+export const standaloneNavItems: NavItem[] = [];
 
 // Legacy: All items flattened (for backward compatibility if needed)
 export const navItems: NavItem[] = [

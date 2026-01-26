@@ -14,8 +14,9 @@ import { CardPreview } from '@/components/cards/CardPreview';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { QuickActions } from '@/components/dashboard/QuickActions';
+import { ArchiveSectionHeader } from '@/components/ui/ArchiveSectionHeader';
 import { DeckCard } from '@/features/decks/components/DeckCard';
-import { DashboardSkeleton } from '@/components/skeletons/DashboardSkeleton';
+import { LoadingState } from '@/components/ui/LoadingState';
 import { BookOpen, Heart, Folder } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -86,14 +87,17 @@ export default function DashboardPage() {
   }, []);
 
   if (loading) {
-    return <DashboardSkeleton />;
+    return <LoadingState />;
   }
 
   return (
     <div className="space-y-8">
       {/* Welcome Section */}
       <div>
-        <h1 className="font-heading text-4xl font-bold text-[color:var(--theme-text-primary)] mb-2">
+        <h1
+          className="font-heading text-4xl font-bold text-[color:var(--theme-text-primary)] mb-2 nier-glitch"
+          data-text="Welcome Back"
+        >
           Welcome Back
         </h1>
         <p className="text-[color:var(--theme-text-secondary)] text-lg">
@@ -178,15 +182,19 @@ export default function DashboardPage() {
       {/* Recent Decks */}
       {recentDecks.length > 0 && (
         <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-heading text-2xl font-bold text-[color:var(--theme-text-primary)]">Recent Decks</h2>
-            <Link href="/decks">
-              <Button variant="outline" size="sm">
-                View All
-              </Button>
-            </Link>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <ArchiveSectionHeader
+            title="Recent Decks"
+            status="DECK_ARCHIVE: SYNCED"
+            className="mb-4"
+            action={
+              <Link href="/decks">
+                <Button variant="outline" size="sm">
+                  View All
+                </Button>
+              </Link>
+            }
+          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-4">
             {recentDecks.map((deck) => {
               const detail = deckDetails[deck.id];
               return (
@@ -206,25 +214,29 @@ export default function DashboardPage() {
       {/* Featured Cards */}
       {featuredCards.length > 0 && (
         <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-heading text-2xl font-bold text-[color:var(--theme-text-primary)]">Featured Cards</h2>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={async () => {
-                try {
-                  const card = await cards.getRandom();
-                  if (card?.card_id) {
-                    router.push(`/cards/${card.card_id}`);
+          <ArchiveSectionHeader
+            title="Featured Cards"
+            status="CARD_INDEX: READY"
+            className="mb-4"
+            action={
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  try {
+                    const card = await cards.getRandom();
+                    if (card?.card_id) {
+                      router.push(`/cards/${card.card_id}`);
+                    }
+                  } catch (err) {
+                    console.error('Failed to get random card:', err);
                   }
-                } catch (err) {
-                  console.error('Failed to get random card:', err);
-                }
-              }}
-            >
-              Random Card
-            </Button>
-          </div>
+                }}
+              >
+                Random Card
+              </Button>
+            }
+          />
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-4xl">
             {featuredCards.map((card) => (
               <div key={card.card_id} className="flex justify-center">
@@ -247,9 +259,6 @@ export default function DashboardPage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/search">
               <Button variant="primary">Search Cards</Button>
-            </Link>
-            <Link href="/getting-started">
-              <Button variant="outline">Getting Started Guide</Button>
             </Link>
           </div>
         </Card>

@@ -5,11 +5,11 @@
 import { useState, useEffect } from 'react';
 import { collections, FavoriteResponse } from '@/lib/collections';
 import { CardGrid } from '@/components/cards/CardGrid';
-import { CardGridSkeleton } from '@/components/skeletons/CardSkeleton';
 import { CardData } from '@/components/cards/CardPreview';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Card } from '@/components/ui/Card';
+import { LoadingState } from '@/components/ui/LoadingState';
 import { Heart } from 'lucide-react';
 import Link from 'next/link';
 
@@ -47,7 +47,10 @@ export default function FavoritesPage() {
           <Link href="/my-cards" className="text-[color:var(--theme-text-secondary)] hover:text-[color:var(--theme-accent-primary)] transition-colors mb-2 inline-block">
             ← Back to My Cards
           </Link>
-          <h1 className="font-heading text-3xl font-bold text-[color:var(--theme-text-primary)] mb-2">
+          <h1
+            className="font-heading text-3xl font-bold text-[color:var(--theme-text-primary)] mb-2 nier-glitch"
+            data-text="Favorites"
+          >
             Favorites
           </h1>
           <p className="text-[color:var(--theme-text-secondary)]">
@@ -63,7 +66,7 @@ export default function FavoritesPage() {
       )}
 
       {loading && favorites.length === 0 ? (
-        <CardGridSkeleton count={24} />
+        <LoadingState fullScreen={false} className="py-12" />
       ) : favorites.length === 0 ? (
         <Card variant="elevated">
           <EmptyState

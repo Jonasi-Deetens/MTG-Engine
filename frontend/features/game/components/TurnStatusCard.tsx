@@ -1,7 +1,7 @@
 'use client';
 
 import { BracketHeader, HudValue, StatusIndicator } from '@/components/ui/play/NierUIElements';
-import { StylizedButton } from '@/components/ui/play/StylizedButton';
+import { Button } from '@/components/ui/Button';
 
 interface TurnStatusCardProps {
   turnNumber: number;
@@ -51,12 +51,12 @@ export function TurnStatusCard({
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <StylizedButton variant="secondary" onClick={onPassPriority} disabled={loading}>
+          <Button variant="secondary" onClick={onPassPriority} disabled={loading}>
             Pass Priority
-          </StylizedButton>
-          <StylizedButton variant="primary" onClick={onAdvanceStep} disabled={loading}>
+          </Button>
+          <Button variant="primary" onClick={onAdvanceStep} disabled={loading}>
             Advance Step
-          </StylizedButton>
+          </Button>
         </div>
       </div>
     </div>

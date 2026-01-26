@@ -5,6 +5,7 @@
 
 import { Effect, EffectCondition, useBuilderStore, ValidationError } from '@/store/builderStore';
 import { ConditionBuilder } from '@/features/builder/components/ConditionBuilder';
+import { Select } from '@/components/ui/Select';
 import { 
   EFFECT_TYPE_OPTIONS, 
   TARGET_OPTIONS, 
@@ -114,7 +115,7 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
       {/* Effect Type */}
       <div>
         <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Type</label>
-        <select
+        <Select
           value={effect.type || 'damage'}
           onChange={(e) => {
             const nextType = e.target.value;
@@ -140,23 +141,23 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
               onUpdate('maxTargets', undefined);
             }
           }}
-          className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+          className="w-full"
         >
           {filteredEffectTypes.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
       {modeOptions && modeOptions.length > 0 && (
         <div>
           <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Mode</label>
-          <select
+          <Select
             value={effect.modeId || ''}
             onChange={(e) => onUpdate('modeId', e.target.value || undefined)}
-            className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+            className="w-full"
           >
             <option value="">No mode (always apply)</option>
             {modeOptions.map((opt) => (
@@ -164,7 +165,7 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
                 {opt.label}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       )}
 
@@ -217,17 +218,17 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
         <div className="space-y-2">
           <div>
             <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Mana Type</label>
-            <select
+            <Select
               value={effect.manaType || 'C'}
               onChange={(e) => onUpdate('manaType', e.target.value)}
-              className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+              className="w-full"
             >
               {MANA_TYPE_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           <div>
             <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Amount</label>
@@ -246,10 +247,10 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
       {selectedEffectType?.requiresTarget && (
         <div>
           <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Target</label>
-          <select
+          <Select
             value={effect.target || 'any'}
             onChange={(e) => onUpdate('target', e.target.value)}
-            className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+            className="w-full"
           >
             {(effect.type === 'counter_spell'
               ? TARGET_OPTIONS.filter((opt) => opt.value === 'spell')
@@ -259,7 +260,7 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
                 {opt.label}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       )}
 
@@ -313,17 +314,17 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
       {selectedEffectType?.requiresTypeName && (
         <div>
           <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Type</label>
-          <select
+          <Select
             value={effect.typeName || 'creature'}
             onChange={(e) => onUpdate('typeName', e.target.value)}
-            className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+            className="w-full"
           >
             {typeOptionsWithChosen.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
               </option>
             ))}
-          </select>
+          </Select>
           {getFieldErrors('type').map((error, idx) => (
             <div key={`type-name-error-${idx}`} className="text-xs text-[color:var(--theme-status-error)]">
               {error.message}
@@ -371,17 +372,17 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
       {selectedEffectType?.requiresColor && (
         <div>
           <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Color</label>
-          <select
+          <Select
             value={effect.color || 'W'}
             onChange={(e) => onUpdate('color', e.target.value)}
-            className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+            className="w-full"
           >
             {colorOptionsWithChosen.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
               </option>
             ))}
-          </select>
+          </Select>
           {getFieldErrors('color').map((error, idx) => (
             <div key={`color-name-error-${idx}`} className="text-xs text-[color:var(--theme-status-error)]">
               {error.message}
@@ -394,14 +395,14 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
         <div className="space-y-2">
           <div>
             <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Template</label>
-            <select
+            <Select
               value={getCdaTemplateValue(effect)}
               onChange={(e) => {
                 const selected = CDA_TEMPLATE_OPTIONS.find((opt) => opt.value === e.target.value);
                 if (!selected) return;
                 Object.entries(selected.config).forEach(([field, value]) => onUpdate(field, value));
               }}
-              className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+              className="w-full"
             >
               <option value="custom">Custom</option>
               {CDA_TEMPLATE_OPTIONS.map((opt) => (
@@ -409,11 +410,11 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
                   {opt.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           <div>
             <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">CDA Source</label>
-            <select
+            <Select
               value={effect.cdaSource || 'controlled'}
               onChange={(e) => {
                 const nextSource = e.target.value;
@@ -425,60 +426,60 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
                   onUpdate('cdaZone', 'hand');
                 }
               }}
-              className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+              className="w-full"
             >
               {CDA_SOURCE_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           {effect.cdaSource === 'controlled' && (
             <div>
               <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Count Type</label>
-              <select
+              <Select
                 value={effect.cdaType || 'Permanent'}
                 onChange={(e) => onUpdate('cdaType', e.target.value)}
-                className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+                className="w-full"
               >
                 {CDA_TYPE_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
                     {opt.label}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
           )}
           {effect.cdaSource === 'zone' && (
             <div>
               <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Zone</label>
-              <select
+              <Select
                 value={effect.cdaZone || 'hand'}
                 onChange={(e) => onUpdate('cdaZone', e.target.value)}
-                className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+                className="w-full"
               >
                 {CDA_ZONE_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
                     {opt.label}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
           )}
           <div>
             <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Sets</label>
-            <select
+            <Select
               value={effect.cdaSet || 'both'}
               onChange={(e) => onUpdate('cdaSet', e.target.value)}
-              className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+              className="w-full"
             >
               {CDA_SET_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         </div>
       )}
@@ -489,47 +490,47 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
             <>
               <div>
                 <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">From Zone</label>
-                <select
+                <Select
                   value={effect.fromZone || 'battlefield'}
                   onChange={(e) => onUpdate('fromZone', e.target.value)}
-                  className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+                  className="w-full"
                 >
                   {ZONE_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>
                       {opt.label}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
               <div>
                 <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">To Zone</label>
-                <select
+                <Select
                   value={effect.toZone || 'graveyard'}
                   onChange={(e) => onUpdate('toZone', e.target.value)}
-                  className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+                  className="w-full"
                 >
                   {ZONE_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>
                       {opt.label}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
             </>
           )}
           <div>
             <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Replacement Zone</label>
-            <select
+            <Select
               value={effect.replacementZone || (effect.type === 'replace_zone_change' ? 'exile' : 'skip')}
               onChange={(e) => onUpdate('replacementZone', e.target.value)}
-              className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+              className="w-full"
             >
               {(effect.type === 'replace_zone_change' ? ZONE_OPTIONS : REPLACEMENT_ZONE_OPTIONS).map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         </div>
       )}
@@ -641,17 +642,17 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
       {selectedEffectType?.requiresUntapTarget && (
         <div>
           <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Target</label>
-          <select
+          <Select
             value={effect.untapTarget || 'self'}
             onChange={(e) => onUpdate('untapTarget', e.target.value)}
-            className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+            className="w-full"
           >
             {UNTAP_TARGET_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       )}
 
@@ -659,17 +660,17 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
       {selectedEffectType?.requiresZone && (
         <div>
           <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Zone</label>
-          <select
+          <Select
             value={effect.zone || 'library'}
             onChange={(e) => onUpdate('zone', e.target.value)}
-            className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+            className="w-full"
           >
             {SEARCH_ZONE_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       )}
 
@@ -678,22 +679,22 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
         <div className="space-y-2">
           <div>
             <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Card Type</label>
-            <select
+            <Select
               value={effect.cardType || 'any'}
               onChange={(e) => onUpdate('cardType', e.target.value)}
-              className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+              className="w-full"
             >
               {SEARCH_CARD_TYPE_FILTERS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Min Cards</label>
-              <select
+              <Select
                 value={effect.min ?? 0}
                 onChange={(e) => {
                   const min = Number(e.target.value);
@@ -701,18 +702,18 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
                   onUpdate('min', min);
                   if (min > max) onUpdate('max', min);
                 }}
-                className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+                className="w-full"
               >
                 {Array.from({ length: 6 }, (_, index) => (
                   <option key={index} value={index}>
                     {index}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div>
               <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Max Cards</label>
-              <select
+              <Select
                 value={effect.max ?? 1}
                 onChange={(e) => {
                   const max = Number(e.target.value);
@@ -720,33 +721,33 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
                   onUpdate('max', max);
                   if (max < min) onUpdate('min', max);
                 }}
-                className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+                className="w-full"
               >
                 {Array.from({ length: 6 }, (_, index) => (
                   <option key={index} value={index}>
                     {index}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
           </div>
           <div>
             <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Mana Value Comparison</label>
             <div className="space-y-2">
-              <select
+              <Select
                 value={effect.manaValueComparison || '<='}
                 onChange={(e) => onUpdate('manaValueComparison', e.target.value)}
-                className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+                className="w-full"
               >
                 <option value="<=">≤ (Less than or equal)</option>
                 <option value="<">&lt; (Less than)</option>
                 <option value=">=">≥ (Greater than or equal)</option>
                 <option value=">">&gt; (Greater than)</option>
                 <option value="==">= (Equal)</option>
-              </select>
+              </Select>
               <div>
                 <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Compare Against</label>
-                <select
+                <Select
                   value={effect.manaValueComparisonSource || 'fixed_value'}
                   onChange={(e) => {
                     const newValue = e.target.value;
@@ -756,13 +757,13 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
                       onUpdate('manaValueComparisonValue', undefined);
                     }
                   }}
-                  className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+                  className="w-full"
                 >
                   <option value="fixed_value">Fixed Value</option>
                   <option value="triggering_source">Triggering Source</option>
                   <option value="triggering_aura">The Triggering Aura</option>
                   <option value="triggering_spell">The Triggering Spell</option>
-                </select>
+                </Select>
               </div>
               {(!effect.manaValueComparisonSource || effect.manaValueComparisonSource === 'fixed_value') && (
                 <input
@@ -812,7 +813,7 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
                   <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">
                     Compare Against Type <span className="text-[color:var(--theme-text-muted)]">(optional)</span>
                   </label>
-                  <select
+                  <Select
                     value={
                       typeof effect.differentName === 'object' 
                         ? (effect.differentName.compareAgainstType || 'any')
@@ -825,14 +826,14 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
                         compareAgainstType: e.target.value === 'any' ? undefined : e.target.value,
                       });
                     }}
-                    className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+                    className="w-full"
                   >
                     {CARD_TYPE_FILTERS.map((opt) => (
                       <option key={opt.value} value={opt.value}>
                         {opt.label}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                   <p className="text-xs text-[color:var(--theme-text-muted)] mt-1">
                     Leave as "Any" to compare against all cards, or select a specific type (e.g., "Aura" for Light-Paws)
                   </p>
@@ -841,7 +842,7 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
                   <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">
                     Compare Against Source <span className="text-[color:var(--theme-text-muted)]">(optional)</span>
                   </label>
-                  <select
+                  <Select
                     value={
                       typeof effect.differentName === 'object'
                         ? (effect.differentName.compareAgainstSource || '')
@@ -858,7 +859,7 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
                         compareAgainstSource: nextValue,
                       });
                     }}
-                    className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+                    className="w-full"
                   >
                     <option value="">None</option>
                     {COMPARE_AGAINST_SOURCE_OPTIONS.map((opt) => (
@@ -866,7 +867,7 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
                         {opt.label}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                   <p className="text-xs text-[color:var(--theme-text-muted)] mt-1">
                     Uses a specific source card name (e.g., the triggering Aura) instead of zone-wide matching.
                   </p>
@@ -878,7 +879,7 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
                   <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">
                     Compare Against Zone
                   </label>
-                  <select
+                  <Select
                     value={
                       typeof effect.differentName === 'object' 
                         ? (effect.differentName.compareAgainstZone || 'controlled')
@@ -891,14 +892,14 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
                         compareAgainstZone: e.target.value,
                       });
                     }}
-                    className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+                    className="w-full"
                   >
                     {COMPARE_AGAINST_ZONE_OPTIONS.map((opt) => (
                       <option key={opt.value} value={opt.value}>
                         {opt.label}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
               </div>
             )}
@@ -910,17 +911,17 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
       {selectedEffectType?.requiresAttachTarget && (
         <div>
           <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Attach To</label>
-          <select
+          <Select
             value={effect.attachTo || (effect.type === 'attach' ? 'target' : 'self')}
             onChange={(e) => onUpdate('attachTo', e.target.value)}
-            className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+            className="w-full"
           >
             {ATTACH_TARGET_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
               </option>
             ))}
-          </select>
+          </Select>
           {effect.type === 'attach' && (
             <label className="flex items-center gap-2 text-xs text-[color:var(--theme-text-secondary)] mt-2">
               <input
@@ -939,17 +940,17 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
       {selectedEffectType?.requiresDuration && (
         <div>
           <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Duration</label>
-          <select
+          <Select
             value={effect.duration || 'until_end_of_turn'}
             onChange={(e) => onUpdate('duration', e.target.value)}
-            className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+            className="w-full"
           >
             {DURATION_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       )}
 
@@ -957,20 +958,20 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
       {selectedEffectType?.requiresChoice && (
         <div>
           <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Player Choice</label>
-          <select
+          <Select
             value={effect.choice || 'color'}
             onChange={(e) => {
               onUpdate('choice', e.target.value);
               onUpdate('choiceValue', undefined);
             }}
-            className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+            className="w-full"
           >
             {CHOICE_TYPE_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
               </option>
             ))}
-          </select>
+          </Select>
           <p className="text-xs text-[color:var(--theme-text-muted)] mt-1">
             Player will choose this at runtime
           </p>
@@ -981,34 +982,34 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
         <div>
           <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Choice Value</label>
           {effect.choice === 'color' ? (
-            <select
+            <Select
               value={effect.choiceValue || 'W'}
               onChange={(e) => onUpdate('choiceValue', e.target.value)}
-              className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+              className="w-full"
             >
               {COLOR_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
                 </option>
               ))}
-            </select>
+            </Select>
           ) : effect.choice === 'card_type' ? (
-            <select
+            <Select
               value={effect.choiceValue || 'creature'}
               onChange={(e) => onUpdate('choiceValue', e.target.value)}
-              className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+              className="w-full"
             >
               {CARD_TYPE_FILTERS.filter((opt) => opt.value !== 'any').map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
                 </option>
               ))}
-            </select>
+            </Select>
           ) : effect.choice === 'creature_type' ? (
-            <select
+            <Select
               value={effect.choiceValue || ''}
               onChange={(e) => onUpdate('choiceValue', e.target.value)}
-              className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+              className="w-full"
             >
               <option value="">Select creature type</option>
               {CREATURE_TYPE_OPTIONS.map((opt) => (
@@ -1016,7 +1017,7 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
                   {opt.label}
                 </option>
               ))}
-            </select>
+            </Select>
           ) : (
             <input
               type="text"
@@ -1033,7 +1034,7 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
       {selectedEffectType?.requiresProtectionType && (
         <div>
           <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Protection From</label>
-          <select
+          <Select
             value={effect.protectionType || 'white'}
             onChange={(e) => {
               onUpdate('protectionType', e.target.value);
@@ -1044,14 +1045,14 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
                 onUpdate('choice', undefined);
               }
             }}
-            className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+            className="w-full"
           >
             {PROTECTION_TYPE_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       )}
 
@@ -1059,10 +1060,10 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
       {selectedEffectType?.requiresKeyword && (
         <div>
           <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Keyword</label>
-          <select
+          <Select
             value={effect.keyword || ''}
             onChange={(e) => onUpdate('keyword', e.target.value)}
-            className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+            className="w-full"
           >
             <option value="">Select a keyword</option>
             {keywords.map((opt) => (
@@ -1070,7 +1071,7 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
                 {opt.label}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       )}
 
@@ -1105,31 +1106,31 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
             <>
               <div>
                 <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Your Creature</label>
-                <select
+                <Select
                   value={effect.yourCreature || 'creature'}
                   onChange={(e) => onUpdate('yourCreature', e.target.value)}
-                  className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+                  className="w-full"
                 >
                   {TARGET_OPTIONS.filter(opt => opt.value === 'creature' || opt.value === 'self').map((opt) => (
                     <option key={opt.value} value={opt.value}>
                       {opt.label}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
               <div>
                 <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Opponent's Creature</label>
-                <select
+                <Select
                   value={effect.opponentCreature || 'creature'}
                   onChange={(e) => onUpdate('opponentCreature', e.target.value)}
-                  className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+                  className="w-full"
                 >
                   {TARGET_OPTIONS.filter(opt => opt.value === 'creature').map((opt) => (
                     <option key={opt.value} value={opt.value}>
                       {opt.label}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
             </>
           )}
@@ -1137,31 +1138,31 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
             <>
               <div>
                 <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Source Target (would receive damage)</label>
-                <select
+                <Select
                   value={effect.sourceTarget || 'creature'}
                   onChange={(e) => onUpdate('sourceTarget', e.target.value)}
-                  className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+                  className="w-full"
                 >
                   {TARGET_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>
                       {opt.label}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
               <div>
                 <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Redirect Target (receives damage instead)</label>
-                <select
+                <Select
                   value={effect.redirectTarget || 'creature'}
                   onChange={(e) => onUpdate('redirectTarget', e.target.value)}
-                  className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+                  className="w-full"
                 >
                   {TARGET_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>
                       {opt.label}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
             </>
           )}
@@ -1172,17 +1173,17 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
       {selectedEffectType?.requiresDiscardType && (
         <div>
           <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Discard Type</label>
-          <select
+          <Select
             value={effect.discardType || 'chosen'}
             onChange={(e) => onUpdate('discardType', e.target.value)}
-            className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+            className="w-full"
           >
             {DISCARD_TYPE_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       )}
 
@@ -1190,17 +1191,17 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
       {selectedEffectType?.requiresPosition && (
         <div>
           <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">Position</label>
-          <select
+          <Select
             value={effect.position || 'top'}
             onChange={(e) => onUpdate('position', e.target.value)}
-            className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+            className="w-full"
           >
             {LOOK_AT_POSITION_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       )}
 
@@ -1225,13 +1226,13 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
           <label className="block text-xs text-[color:var(--theme-text-secondary)] mb-1">
             Reference Previous Effect <span className="text-[color:var(--theme-text-muted)]">(optional)</span>
           </label>
-          <select
+          <Select
             value={effect.fromEffect !== undefined ? effect.fromEffect.toString() : ''}
             onChange={(e) => {
               const value = e.target.value === '' ? undefined : parseInt(e.target.value);
               onUpdate('fromEffect', value);
             }}
-            className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+            className="w-full"
           >
             <option value="">None (use target/other fields)</option>
             {allEffects.slice(0, index).map((prevEffect, prevIndex) => {
@@ -1243,7 +1244,7 @@ export function EffectFields({ effect, index, allEffects, nodeId, allowedEffectT
                 </option>
               );
             })}
-          </select>
+          </Select>
           {effect.fromEffect !== undefined && (
             <p className="text-xs text-[color:var(--theme-accent-primary)] mt-1">
               ✓ Will use the result from effect {effect.fromEffect + 1}

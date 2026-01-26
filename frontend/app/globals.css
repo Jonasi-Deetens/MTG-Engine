@@ -168,6 +168,1183 @@
   --theme-overlay-strong: rgba(0, 0, 0, 0.9);
 }
 
+/* NieR theme (play-page theme promoted) */
+[data-theme="nier"] {
+  --theme-bg-primary: #c3baa0;
+  --theme-bg-secondary: #e1dbc6;
+  --theme-bg-tertiary: #d2c9ab;
+  --theme-text-primary: #454138;
+  --theme-text-secondary: #5a564b;
+  --theme-text-muted: #7a7464;
+  --theme-border-default: #9c9787;
+  --theme-border-hover: #9c9787;
+  --theme-border-focus: #9c9787;
+  --theme-accent-primary: #9c9787;
+  --theme-accent-secondary: #7a7464;
+  --theme-accent-hover: #6f6a5d;
+  --theme-status-success: #2f7d5f;
+  --theme-status-warning: #b38a3a;
+  --theme-status-error: #8b4049;
+  --theme-status-info: #4a6a7f;
+  --theme-card-bg: #cfc7ad;
+  --theme-card-border: #9c9787;
+  --theme-card-hover: #ded7c1;
+  --theme-input-bg: #c4bea5;
+  --theme-input-border: #9c9787;
+  --theme-input-text: #454138;
+  --theme-input-placeholder: #7a7464;
+  --theme-button-primary-bg: #454138;
+  --theme-button-primary-text: #dad4bb;
+  --theme-button-primary-hover: #35312a;
+  --theme-button-secondary-bg: #c4bea5;
+  --theme-button-secondary-text: #454138;
+  --theme-button-secondary-hover: #b6b09a;
+  --theme-button-outline-border: #9c9787;
+  --theme-button-outline-text: #454138;
+  --theme-button-outline-hover: #6f6a5d;
+  --theme-button-ghost-text: #7a7464;
+  --theme-button-ghost-hover: #cfc7ad;
+  --theme-nav-active: #9c9787;
+  --theme-nav-active-border: #9c9787;
+  --theme-overlay: rgba(26, 25, 21, 0.6);
+  --theme-overlay-strong: rgba(26, 25, 21, 0.85);
+}
+
+.page-background {
+  background-color: var(--theme-bg-primary);
+  position: relative;
+  overflow: hidden;
+}
+
+.page-background-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.page-background-content {
+  position: relative;
+  z-index: 10;
+}
+
+[data-theme="nier"] .page-background {
+  background-image: none !important;
+}
+
+[data-theme="nier"] .page-background::before,
+[data-theme="nier"] .page-background::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+[data-theme="nier"] .page-background.nier-premium-bg::before,
+[data-theme="nier"] .page-background.nier-premium-bg::after {
+  content: none;
+  background-image: none;
+}
+
+[data-theme="nier"] .page-background::before {
+  opacity: 0.22;
+  background-image:
+    linear-gradient(
+      to right,
+      color-mix(in srgb, var(--theme-border-default) 35%, transparent) 0 1px,
+      transparent 1px 100%
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--theme-border-default) 25%, transparent) 0 1px,
+      transparent 1px 100%
+    ),
+    linear-gradient(
+      135deg,
+      transparent 0 78%,
+      color-mix(in srgb, var(--theme-border-default) 35%, transparent) 78% 79%,
+      transparent 79% 100%
+    ),
+    linear-gradient(
+      -135deg,
+      transparent 0 82%,
+      color-mix(in srgb, var(--theme-accent-secondary) 25%, transparent) 82% 83%,
+      transparent 83% 100%
+    ),
+    linear-gradient(
+      90deg,
+      transparent 0 35%,
+      color-mix(in srgb, var(--theme-accent-primary) 30%, transparent) 35% 36%,
+      transparent 36% 100%
+    ),
+    linear-gradient(
+      0deg,
+      transparent 0 45%,
+      color-mix(in srgb, var(--theme-accent-secondary) 25%, transparent) 45% 46%,
+      transparent 46% 100%
+    ),
+    linear-gradient(
+      90deg,
+      transparent 0 70%,
+      color-mix(in srgb, var(--theme-border-default) 35%, transparent) 70% 71%,
+      transparent 71% 100%
+    );
+  background-size: 120px 120px, 120px 120px, 220px 220px, 260px 260px, 240px 90px, 180px 140px, 120px 48px;
+  background-position:
+    0 0,
+    0 0,
+    8% 12%,
+    92% 86%,
+    0 0,
+    40px 20px,
+    20px 10px;
+  animation: nierGridSweep 18s linear infinite, nierRectsPulse 10s ease-in-out infinite, nierMicroDrift 22s linear infinite;
+}
+
+[data-theme="nier"] .page-background::after {
+  position: fixed;
+  inset: 0;
+  opacity: 0.32;
+  background-image:
+    linear-gradient(
+      -135deg,
+      transparent 0 46%,
+      color-mix(in srgb, var(--theme-button-primary-bg) 15%, #000000 85%) 46% 49%,
+      transparent 49% 100%
+    ),
+    linear-gradient(
+      -135deg,
+      transparent 0 51%,
+      color-mix(in srgb, var(--theme-button-primary-bg) 12%, #000000 88%) 51% 54%,
+      transparent 54% 100%
+    ),
+    linear-gradient(
+      -135deg,
+      transparent 0 55%,
+      color-mix(in srgb, var(--theme-button-primary-bg) 10%, #000000 90%) 55% 58%,
+      transparent 58% 100%
+    );
+  background-size: 420px 420px, 360px 360px, 320px 320px;
+  background-position:
+    left -10px bottom -60px,
+    left 20px bottom -10px,
+    left -40px bottom 40px;
+  background-repeat: no-repeat;
+  animation: none;
+}
+
+@keyframes nierGridSweep {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(-24px, 18px, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes nierRectsPulse {
+  0% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0.25;
+  }
+  50% {
+    transform: translate3d(-12px, 10px, 0);
+    opacity: 0.45;
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0.3;
+  }
+}
+
+@keyframes nierMicroDrift {
+  0% {
+    background-position: 0 0, 40px 20px, 20px 10px;
+  }
+  50% {
+    background-position: -16px 8px, 32px 28px, 12px 18px;
+  }
+  100% {
+    background-position: 0 0, 40px 20px, 20px 10px;
+  }
+}
+
+/* NieR theme component styling */
+[data-theme="nier"] .nier-panel {
+  position: relative;
+  border: 1px solid var(--theme-border-default);
+  border-radius: 0;
+  padding: 16px;
+  background: var(--theme-card-bg);
+  background-image:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--theme-border-default) 60%, transparent) 0%,
+      color-mix(in srgb, var(--theme-border-default) 60%, transparent) 40%,
+      transparent 40%,
+      transparent 100%
+    ),
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--theme-border-default) 40%, transparent) 0%,
+      color-mix(in srgb, var(--theme-border-default) 40%, transparent) 55%,
+      transparent 55%,
+      transparent 100%
+    ),
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--theme-border-default) 70%, transparent),
+      color-mix(in srgb, var(--theme-border-default) 70%, transparent)
+    ),
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--theme-border-default) 55%, transparent),
+      color-mix(in srgb, var(--theme-border-default) 55%, transparent)
+    ),
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--theme-border-default) 40%, transparent),
+      color-mix(in srgb, var(--theme-border-default) 40%, transparent)
+    ),
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--theme-status-success) 100%, #ffffff 10%),
+      color-mix(in srgb, var(--theme-status-success) 100%, #ffffff 10%)
+    );
+  background-size: 34px 1px, 24px 1px, 4px 4px, 4px 4px, 4px 4px, 4px 4px;
+  background-position:
+    top 10px right 14px,
+    top 16px right 22px,
+    bottom 10px right 14px,
+    bottom 10px right 22px,
+    bottom 10px right 30px,
+    bottom 10px right 14px;
+  background-repeat: no-repeat;
+  animation: nierRightSquareBlink 2.2s steps(2, end) infinite;
+  box-shadow: 6px 6px 0 color-mix(in srgb, var(--theme-border-default) 70%, transparent);
+}
+
+[data-theme="nier"] .nier-panel::before,
+[data-theme="nier"] .nier-panel::after {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--theme-border-default);
+}
+
+[data-theme="nier"] .nier-panel::before {
+  top: -6px;
+  left: -6px;
+  border-right: none;
+  border-bottom: none;
+}
+
+[data-theme="nier"] .nier-panel::after {
+  bottom: -6px;
+  right: -6px;
+  border-left: none;
+  border-top: none;
+}
+
+[data-theme="nier"] .nier-bracket-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+}
+
+[data-theme="nier"] .nier-bracket-header-text {
+  position: relative;
+  padding: 2px 10px;
+}
+
+[data-theme="nier"] .nier-bracket-header-text::before,
+[data-theme="nier"] .nier-bracket-header-text::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border: 1px solid var(--theme-border-default);
+  transform: translateY(-50%);
+}
+
+[data-theme="nier"] .nier-bracket-header-text::before {
+  left: -12px;
+  border-right: none;
+  border-top: none;
+}
+
+[data-theme="nier"] .nier-bracket-header-text::after {
+  right: -12px;
+  border-left: none;
+  border-bottom: none;
+}
+
+[data-theme="nier"] .nier-hud-value {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+[data-theme="nier"] .nier-hud-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--theme-text-muted);
+}
+
+[data-theme="nier"] .nier-hud-number {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+}
+
+[data-theme="nier"] .nier-hud-primary .nier-hud-number {
+  color: var(--theme-text-primary);
+}
+
+[data-theme="nier"] .nier-hud-muted .nier-hud-number {
+  color: var(--theme-text-secondary);
+}
+
+[data-theme="nier"] .nier-glow-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--theme-accent-primary);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--theme-accent-primary) 80%, transparent);
+  animation: nierGlowPulse 2s ease-in-out infinite;
+}
+
+[data-theme="nier"] .nier-divider {
+  height: 1px;
+  background: color-mix(in srgb, var(--theme-border-default) 70%, transparent);
+  position: relative;
+}
+
+[data-theme="nier"] .nier-divider::before,
+[data-theme="nier"] .nier-divider::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border: 1px solid var(--theme-border-default);
+  transform: translateY(-50%);
+}
+
+[data-theme="nier"] .nier-divider::before {
+  left: 0;
+  border-right: none;
+  border-top: none;
+}
+
+[data-theme="nier"] .nier-divider::after {
+  right: 0;
+  border-left: none;
+  border-bottom: none;
+}
+
+[data-theme="nier"] .nier-zone {
+  border: 1px solid var(--theme-border-default);
+  background: color-mix(in srgb, var(--theme-bg-secondary) 75%, transparent);
+  padding: 16px;
+  position: relative;
+  background-image:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--theme-border-default) 70%, transparent),
+      color-mix(in srgb, var(--theme-border-default) 70%, transparent)
+    ),
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--theme-border-default) 55%, transparent),
+      color-mix(in srgb, var(--theme-border-default) 55%, transparent)
+    ),
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--theme-border-default) 40%, transparent),
+      color-mix(in srgb, var(--theme-border-default) 40%, transparent)
+    );
+  background-size: 4px 4px, 4px 4px, 4px 4px;
+  background-position: bottom 10px right 14px, bottom 10px right 22px, bottom 10px right 30px;
+  background-repeat: no-repeat;
+}
+
+[data-theme="nier"] .nier-zone::before,
+[data-theme="nier"] .nier-zone::after {
+  content: "";
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border: 1px solid var(--theme-border-default);
+  pointer-events: none;
+}
+
+[data-theme="nier"] .nier-zone::before {
+  top: -6px;
+  right: -6px;
+  border-left: none;
+  border-bottom: none;
+}
+
+[data-theme="nier"] .nier-zone::after {
+  bottom: -6px;
+  left: -6px;
+  border-right: none;
+  border-top: none;
+}
+
+[data-theme="nier"] .nier-card-slot {
+  border: 1px dashed color-mix(in srgb, var(--theme-border-default) 60%, transparent);
+  background: repeating-linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--theme-bg-tertiary) 70%, transparent) 0px,
+      color-mix(in srgb, var(--theme-bg-tertiary) 70%, transparent) 1px,
+      transparent 1px,
+      transparent 8px
+    );
+  border-radius: 0;
+  min-height: 120px;
+}
+
+[data-theme="nier"] .nier-card-placeholder {
+  background:
+    linear-gradient(135deg, transparent 10px, color-mix(in srgb, var(--theme-bg-secondary) 80%, transparent) 10px),
+    repeating-linear-gradient(
+      45deg,
+      color-mix(in srgb, var(--theme-bg-tertiary) 70%, transparent) 0px,
+      color-mix(in srgb, var(--theme-bg-tertiary) 70%, transparent) 1px,
+      transparent 1px,
+      transparent 10px
+    );
+  border: 1px solid var(--theme-border-default);
+  border-radius: 0;
+}
+
+[data-theme="nier"] .nier-stack-item {
+  position: relative;
+  border-left: 1px solid var(--theme-border-default);
+  padding-left: 12px;
+}
+
+[data-theme="nier"] .nier-stack-item::before {
+  content: "";
+  position: absolute;
+  left: -4px;
+  top: 12px;
+  width: 8px;
+  height: 8px;
+  border: 1px solid var(--theme-border-default);
+  background: var(--theme-bg-secondary);
+}
+
+[data-theme="nier"] .nier-mana-pip {
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--theme-border-default);
+  background: color-mix(in srgb, var(--theme-accent-primary) 60%, transparent);
+}
+
+[data-theme="nier"] select {
+  background: var(--theme-input-bg);
+  color: var(--theme-input-text);
+  border: 1px solid var(--theme-input-border);
+  border-radius: 0;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New");
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+[data-theme="nier"] select:focus {
+  outline: none;
+  border-color: var(--theme-accent-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-accent-primary) 35%, transparent);
+}
+
+[data-theme="nier"] .nier-corner-mark {
+  position: relative;
+}
+
+[data-theme="nier"] .nier-corner-mark::before,
+[data-theme="nier"] .nier-corner-mark::after {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--theme-border-default);
+  opacity: 0.8;
+}
+
+[data-theme="nier"] .nier-corner-mark::before {
+  top: -6px;
+  left: -6px;
+  border-right: none;
+  border-bottom: none;
+}
+
+[data-theme="nier"] .nier-corner-mark::after {
+  bottom: -6px;
+  right: -6px;
+  border-left: none;
+  border-top: none;
+}
+
+[data-theme="nier"] .nier-data-line {
+  position: relative;
+  height: 1px;
+  background: color-mix(in srgb, var(--theme-border-default) 75%, transparent);
+}
+
+[data-theme="nier"] .nier-data-line::before,
+[data-theme="nier"] .nier-data-line::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  border: 1px solid var(--theme-border-default);
+  background: color-mix(in srgb, var(--theme-accent-primary) 45%, transparent);
+  transform: translateY(-50%);
+}
+
+[data-theme="nier"] .nier-data-line::before {
+  left: 0;
+}
+
+[data-theme="nier"] .nier-data-line::after {
+  right: 0;
+}
+
+[data-theme="nier"] .nier-status-dot {
+  width: 8px;
+  height: 8px;
+  border: 1px solid var(--theme-border-default);
+  background: var(--theme-accent-primary);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--theme-accent-primary) 70%, transparent);
+}
+
+[data-theme="nier"] .nier-status-dot.nier-status-muted {
+  background: var(--theme-text-muted);
+  box-shadow: none;
+}
+
+[data-theme="nier"] .nier-status-dot.nier-status-alert {
+  background: var(--theme-status-warning);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--theme-status-warning) 70%, transparent);
+}
+
+[data-theme="nier"] .nier-status-dot.nier-status-pulse {
+  animation: nierGlowPulse 2s ease-in-out infinite;
+}
+
+[data-theme="nier"] input[type="checkbox"] {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--theme-border-default);
+  background: color-mix(in srgb, var(--theme-bg-secondary) 70%, transparent);
+  display: inline-grid;
+  place-items: center;
+}
+
+[data-theme="nier"] input[type="checkbox"]::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border: 1px solid transparent;
+  background: var(--theme-accent-primary);
+  opacity: 0;
+}
+
+[data-theme="nier"] input[type="checkbox"]:checked::before {
+  opacity: 1;
+}
+
+[data-theme="nier"] input[type="text"],
+[data-theme="nier"] input[type="number"],
+[data-theme="nier"] input[type="search"],
+[data-theme="nier"] textarea {
+  background: color-mix(in srgb, var(--theme-bg-secondary) 75%, transparent);
+  color: var(--theme-input-text);
+  border: 1px solid var(--theme-input-border);
+  border-radius: 0;
+}
+
+[data-theme="nier"] input[type="text"]:focus,
+[data-theme="nier"] input[type="number"]:focus,
+[data-theme="nier"] input[type="search"]:focus,
+[data-theme="nier"] textarea:focus,
+[data-theme="nier"] select:focus {
+  outline: none;
+  border-color: var(--theme-accent-primary);
+  box-shadow:
+    0 0 0 1px var(--theme-accent-primary),
+    0 0 10px color-mix(in srgb, var(--theme-accent-primary) 35%, transparent);
+}
+
+[data-theme="nier"] button:disabled,
+[data-theme="nier"] [role="button"][aria-disabled="true"] {
+  opacity: 0.6;
+  background-image: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--theme-border-default) 35%, transparent) 0,
+    color-mix(in srgb, var(--theme-border-default) 35%, transparent) 2px,
+    transparent 2px,
+    transparent 6px
+  );
+}
+
+[data-theme="nier"] .nier-card-selected::before,
+[data-theme="nier"] .nier-card-selected::after {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--theme-accent-primary);
+}
+
+[data-theme="nier"] .nier-card-selected::before {
+  top: -6px;
+  left: -6px;
+  border-right: none;
+  border-bottom: none;
+}
+
+[data-theme="nier"] .nier-card-selected::after {
+  bottom: -6px;
+  right: -6px;
+  border-left: none;
+  border-top: none;
+}
+
+[data-theme="nier"] .nier-button {
+  position: relative;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  padding: 8px 14px;
+  border: 1px solid var(--theme-border-default);
+  background: transparent;
+  color: var(--theme-text-primary);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+
+[data-theme="nier"] .nier-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+}
+
+[data-theme="nier"] .nier-button-primary {
+  background: var(--theme-text-primary);
+  color: var(--theme-bg-primary);
+}
+
+[data-theme="nier"] .nier-button-secondary {
+  background: color-mix(in srgb, var(--theme-bg-secondary) 85%, transparent);
+  color: var(--theme-text-primary);
+}
+
+[data-theme="nier"] .nier-button-outline {
+  background: transparent;
+  color: var(--theme-text-primary);
+}
+
+[data-theme="nier"] .nier-button::after {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border: 1px solid transparent;
+  pointer-events: none;
+  opacity: 0;
+}
+
+[data-theme="nier"] .nier-button:hover::after {
+  border-color: color-mix(in srgb, var(--theme-accent-primary) 60%, transparent);
+  animation: nierButtonSweep 0.35s ease-out forwards;
+}
+
+[data-theme="nier"] .nier-scanline {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.03),
+    rgba(0, 0, 0, 0.03) 1px,
+    transparent 1px,
+    transparent 6px
+  );
+  mix-blend-mode: multiply;
+  opacity: 0.4;
+}
+
+[data-theme="nier"] .nier-glitch {
+  position: relative;
+}
+
+[data-theme="nier"] .nier-glitch::before,
+[data-theme="nier"] .nier-glitch::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  background: var(--theme-bg-primary);
+}
+
+[data-theme="nier"] .nier-glitch::before {
+  animation: glitch 2s infinite linear alternate-reverse;
+  color: #9c9787;
+  z-index: -1;
+}
+
+[data-theme="nier"] .nier-glitch::after {
+  animation: glitch 3s infinite linear alternate-reverse;
+  color: #7a7464;
+  z-index: -2;
+}
+
+[data-theme="nier"] .nier-frame {
+  position: relative;
+}
+
+[data-theme="nier"] .nier-frame::before,
+[data-theme="nier"] .nier-frame::after {
+  content: "";
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-color: var(--theme-text-primary);
+  pointer-events: none;
+}
+
+[data-theme="nier"] .nier-frame::before {
+  top: 0;
+  left: 0;
+  border-top: 1px solid;
+  border-left: 1px solid;
+}
+
+[data-theme="nier"] .nier-frame::after {
+  bottom: 0;
+  right: 0;
+  border-bottom: 1px solid;
+  border-right: 1px solid;
+}
+
+[data-theme="nier"] .nier-noise::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  opacity: 0.03;
+  z-index: 9999;
+}
+
+[data-theme="nier"] .nier-panel > .nier-scanline {
+  animation: nierScanlineMove 6s ease-in-out infinite;
+}
+
+[data-theme="nier"] .ui-button {
+  border-radius: 0;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New");
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  position: relative;
+  z-index: 0;
+  font-size: 0.875rem;
+}
+
+[data-theme="nier"] .ui-button > * {
+  position: relative;
+  z-index: 1;
+}
+
+[data-theme="nier"] .ui-button[data-variant="primary"],
+[data-theme="nier"] .ui-button[data-variant="secondary"],
+[data-theme="nier"] .ui-button[data-variant="outline"],
+[data-theme="nier"] .ui-button[data-variant="ghost"] {
+  border: 1px solid transparent !important;
+}
+
+[data-theme="nier"] .ui-button[data-variant="primary"] {
+  background: var(--theme-text-primary) !important;
+  color: var(--theme-bg-primary) !important;
+  padding: 0.75rem 2rem;
+}
+
+[data-theme="nier"] .ui-button[data-variant="secondary"],
+[data-theme="nier"] .ui-button[data-variant="outline"],
+[data-theme="nier"] .ui-button[data-variant="ghost"] {
+  background: transparent !important;
+  color: var(--theme-text-primary) !important;
+  padding: 0.5rem 1.5rem;
+}
+
+[data-theme="nier"] .ui-button[data-variant="ghost"] {
+  padding: 0.5rem 1rem;
+}
+
+[data-theme="nier"] .ui-button[data-variant="primary"]::before,
+[data-theme="nier"] .ui-button[data-variant="secondary"]::before,
+[data-theme="nier"] .ui-button[data-variant="outline"]::before,
+[data-theme="nier"] .ui-button[data-variant="ghost"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--theme-text-primary);
+  pointer-events: none;
+}
+
+[data-theme="nier"] .ui-button[data-variant="primary"]::after,
+[data-theme="nier"] .ui-button[data-variant="secondary"]::after,
+[data-theme="nier"] .ui-button[data-variant="outline"]::after,
+[data-theme="nier"] .ui-button[data-variant="ghost"]::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  right: -1px;
+  bottom: -1px;
+  border: 1px solid color-mix(in srgb, var(--theme-text-primary) 35%, transparent);
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+[data-theme="nier"] .ui-button[data-variant="primary"]:hover {
+  background: transparent !important;
+  color: var(--theme-text-primary) !important;
+}
+
+[data-theme="nier"] .ui-button[data-variant="secondary"]:hover,
+[data-theme="nier"] .ui-button[data-variant="ghost"]:hover,
+[data-theme="nier"] .ui-button[data-variant="outline"]:hover {
+  background: var(--theme-text-primary) !important;
+  color: var(--theme-bg-primary) !important;
+}
+
+[data-theme="nier"] .ui-button[data-variant="primary"]:hover::after,
+[data-theme="nier"] .ui-button[data-variant="secondary"]:hover::after,
+[data-theme="nier"] .ui-button[data-variant="outline"]:hover::after,
+[data-theme="nier"] .ui-button[data-variant="ghost"]:hover::after {
+  opacity: 0;
+}
+
+[data-theme="nier"] .ui-card {
+  border-radius: 0;
+}
+
+[data-theme="nier"] .ui-card > div,
+[data-theme="nier"] .ui-card > section,
+[data-theme="nier"] .ui-card > header,
+[data-theme="nier"] .ui-card > footer {
+  background: transparent !important;
+  border-radius: 0 !important;
+}
+
+[data-theme="nier"] select {
+  border-radius: 0 !important;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New");
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  background: var(--theme-input-bg) !important;
+  color: var(--theme-input-text) !important;
+  border: 1px solid var(--theme-input-border) !important;
+  padding: 0.25rem 0.5rem !important;
+  font-size: 0.75rem !important;
+}
+
+[data-theme="nier"] select:hover {
+  border-color: var(--theme-accent-primary) !important;
+}
+
+[data-theme="nier"] select:focus {
+  border-color: var(--theme-accent-primary) !important;
+  outline: none;
+}
+
+[data-theme="nier"] .ui-card > *:not(.absolute):not(.relative):not(.fixed):not(.sticky) {
+  position: relative;
+  z-index: 1;
+}
+
+[data-theme="nier"] .ui-card > .absolute {
+  z-index: 1;
+}
+
+[data-theme="nier"] .ui-card[data-variant="default"],
+[data-theme="nier"] .ui-card[data-variant="bordered"],
+[data-theme="nier"] .ui-card[data-variant="elevated"],
+[data-theme="nier"] .ui-card[data-variant="bare"] {
+  position: relative;
+  overflow: visible;
+}
+
+[data-theme="nier"] .ui-card[data-variant="default"],
+[data-theme="nier"] .ui-card[data-variant="bordered"],
+[data-theme="nier"] .ui-card[data-variant="elevated"],
+[data-theme="nier"] .ui-card[data-variant="bare"] {
+  border: 1px solid var(--theme-border-default);
+  background: var(--theme-card-bg);
+  background-image:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--theme-border-default) 60%, transparent) 0%,
+      color-mix(in srgb, var(--theme-border-default) 60%, transparent) 40%,
+      transparent 40%,
+      transparent 100%
+    ),
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--theme-border-default) 40%, transparent) 0%,
+      color-mix(in srgb, var(--theme-border-default) 40%, transparent) 55%,
+      transparent 55%,
+      transparent 100%
+    ),
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--theme-border-default) 70%, transparent),
+      color-mix(in srgb, var(--theme-border-default) 70%, transparent)
+    ),
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--theme-border-default) 55%, transparent),
+      color-mix(in srgb, var(--theme-border-default) 55%, transparent)
+    ),
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--theme-border-default) 40%, transparent),
+      color-mix(in srgb, var(--theme-border-default) 40%, transparent)
+    ),
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--theme-status-success) 100%, #ffffff 10%),
+      color-mix(in srgb, var(--theme-status-success) 100%, #ffffff 10%)
+    );
+  background-size: 34px 1px, 24px 1px, 4px 4px, 4px 4px, 4px 4px, 4px 4px;
+  background-position:
+    top 10px right 14px,
+    top 16px right 22px,
+    bottom 10px right 14px,
+    bottom 10px right 22px,
+    bottom 10px right 30px,
+    bottom 10px right 14px;
+  background-repeat: no-repeat;
+  animation: nierRightSquareBlink 2.2s steps(2, end) infinite;
+  box-shadow: 6px 6px 0 color-mix(in srgb, var(--theme-border-default) 70%, transparent);
+}
+
+@keyframes nierRightSquareBlink {
+  0%, 55% {
+    background-image:
+      linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--theme-border-default) 60%, transparent) 0%,
+        color-mix(in srgb, var(--theme-border-default) 60%, transparent) 40%,
+        transparent 40%,
+        transparent 100%
+      ),
+      linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--theme-border-default) 40%, transparent) 0%,
+        color-mix(in srgb, var(--theme-border-default) 40%, transparent) 55%,
+        transparent 55%,
+        transparent 100%
+      ),
+      linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--theme-border-default) 70%, transparent),
+        color-mix(in srgb, var(--theme-border-default) 70%, transparent)
+      ),
+      linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--theme-border-default) 55%, transparent),
+        color-mix(in srgb, var(--theme-border-default) 55%, transparent)
+      ),
+      linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--theme-border-default) 40%, transparent),
+        color-mix(in srgb, var(--theme-border-default) 40%, transparent)
+      ),
+      linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--theme-status-success) 100%, #ffffff 10%),
+        color-mix(in srgb, var(--theme-status-success) 100%, #ffffff 10%)
+      );
+  }
+  56%, 100% {
+    background-image:
+      linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--theme-border-default) 60%, transparent) 0%,
+        color-mix(in srgb, var(--theme-border-default) 60%, transparent) 40%,
+        transparent 40%,
+        transparent 100%
+      ),
+      linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--theme-border-default) 40%, transparent) 0%,
+        color-mix(in srgb, var(--theme-border-default) 40%, transparent) 55%,
+        transparent 55%,
+        transparent 100%
+      ),
+      linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--theme-border-default) 70%, transparent),
+        color-mix(in srgb, var(--theme-border-default) 70%, transparent)
+      ),
+      linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--theme-border-default) 55%, transparent),
+        color-mix(in srgb, var(--theme-border-default) 55%, transparent)
+      ),
+      linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--theme-border-default) 40%, transparent),
+        color-mix(in srgb, var(--theme-border-default) 40%, transparent)
+      ),
+      linear-gradient(
+        90deg,
+        transparent,
+        transparent
+      );
+  }
+}
+
+[data-theme="nier"] .ui-card[data-variant="default"]::before,
+[data-theme="nier"] .ui-card[data-variant="bordered"]::before,
+[data-theme="nier"] .ui-card[data-variant="elevated"]::before,
+[data-theme="nier"] .ui-card[data-variant="bare"]::before,
+[data-theme="nier"] .ui-card[data-variant="default"]::after,
+[data-theme="nier"] .ui-card[data-variant="bordered"]::after,
+[data-theme="nier"] .ui-card[data-variant="elevated"]::after,
+[data-theme="nier"] .ui-card[data-variant="bare"]::after {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--theme-border-default);
+}
+
+[data-theme="nier"] .ui-card[data-variant="default"]::before,
+[data-theme="nier"] .ui-card[data-variant="bordered"]::before,
+[data-theme="nier"] .ui-card[data-variant="elevated"]::before,
+[data-theme="nier"] .ui-card[data-variant="bare"]::before {
+  top: -6px;
+  left: -6px;
+  border-right: none;
+  border-bottom: none;
+}
+
+[data-theme="nier"] .ui-card[data-variant="default"]::after,
+[data-theme="nier"] .ui-card[data-variant="bordered"]::after,
+[data-theme="nier"] .ui-card[data-variant="elevated"]::after,
+[data-theme="nier"] .ui-card[data-variant="bare"]::after {
+  bottom: -6px;
+  right: -6px;
+  border-left: none;
+  border-top: none;
+}
+
+[data-theme="nier"] .ui-card .rounded-xl,
+[data-theme="nier"] .ui-card .rounded-lg,
+[data-theme="nier"] .ui-card .rounded-md,
+[data-theme="nier"] .ui-card .rounded-full,
+[data-theme="nier"] .ui-card img {
+  border-radius: 0 !important;
+}
+
+
+@keyframes nierGlowPulse {
+  0% {
+    box-shadow: 0 0 6px color-mix(in srgb, var(--theme-accent-primary) 70%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 12px color-mix(in srgb, var(--theme-accent-primary) 90%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 6px color-mix(in srgb, var(--theme-accent-primary) 70%, transparent);
+  }
+}
+
+@keyframes glitch {
+  0% {
+    clip-path: inset(40% 0 61% 0);
+    transform: translate(-2px, 2px);
+  }
+  20% {
+    clip-path: inset(92% 0 1% 0);
+    transform: translate(2px, -2px);
+  }
+  40% {
+    clip-path: inset(43% 0 1% 0);
+    transform: translate(-2px, 0);
+  }
+  60% {
+    clip-path: inset(25% 0 58% 0);
+    transform: translate(2px, 2px);
+  }
+  80% {
+    clip-path: inset(54% 0 7% 0);
+    transform: translate(-2px, -2px);
+  }
+  100% {
+    clip-path: inset(58% 0 43% 0);
+    transform: translate(0);
+  }
+}
+
+@keyframes scanline {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes flicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.98;
+  }
+  25%,
+  75% {
+    opacity: 0.96;
+  }
+}
+
+@keyframes nierScanlineMove {
+  0% {
+    transform: translateY(-20%);
+  }
+  100% {
+    transform: translateY(20%);
+  }
+}
+
+@keyframes nierButtonSweep {
+  0% {
+    opacity: 0;
+    transform: translateX(-20%);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(20%);
+  }
+}
+
 /* Dark theme (red/black gothic theme) */
 [data-theme="dark"] {
   --theme-bg-primary: #0a0a0a; /* very dark gray (slightly lighter than pure black) */
@@ -252,6 +1429,10 @@ body {
 .card-elevated-shadow {
   box-shadow: 0 4px 6px -1px rgba(245, 158, 11, 0.1), 
               0 2px 4px -1px rgba(245, 158, 11, 0.06);
+}
+
+.card-preview {
+  box-shadow: none !important;
 }
 
 [data-theme="sakura"] .card-elevated-shadow {

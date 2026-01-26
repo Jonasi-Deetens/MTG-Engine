@@ -1,6 +1,7 @@
 'use client';
 
 import { ManaPaymentDetail } from '@/lib/manaPayment';
+import { Select } from '@/components/ui/Select';
 
 interface ManaPaymentPanelProps {
   active: boolean;
@@ -65,7 +66,7 @@ export function ManaPaymentPanel({
           {(cost.hybrids ?? []).map(([colorA, colorB]: [string, string], index: number) => (
             <label key={`hybrid-${index}`} className="flex items-center gap-2">
               <span className="text-[color:var(--theme-text-secondary)]">Hybrid</span>
-              <select
+              <Select
                 value={manaPaymentDetail.hybrid_choices[index] ?? colorA}
                 onChange={(e) =>
                   onUpdatePaymentDetail((prev) => {
@@ -74,17 +75,17 @@ export function ManaPaymentPanel({
                     return { ...prev, hybrid_choices: next };
                   })
                 }
-                className="flex-1 px-2 py-1 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+                className="flex-1"
               >
                 <option value={colorA}>{colorA}</option>
                 <option value={colorB}>{colorB}</option>
-              </select>
+              </Select>
             </label>
           ))}
           {(cost.two_brids ?? []).map(([genericValue, color]: [number, string], index: number) => (
             <label key={`two-brid-${index}`} className="flex items-center gap-2">
               <span className="text-[color:var(--theme-text-secondary)]">Two-brid</span>
-              <select
+              <Select
                 value={manaPaymentDetail.two_brid_choices[index] ? 'color' : 'generic'}
                 onChange={(e) =>
                   onUpdatePaymentDetail((prev) => {
@@ -93,17 +94,17 @@ export function ManaPaymentPanel({
                     return { ...prev, two_brid_choices: next };
                   })
                 }
-                className="flex-1 px-2 py-1 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+                className="flex-1"
               >
                 <option value="color">{color}</option>
                 <option value="generic">{genericValue} generic</option>
-              </select>
+              </Select>
             </label>
           ))}
           {(cost.phyrexian ?? []).map((color: string, index: number) => (
             <label key={`phyrexian-${index}`} className="flex items-center gap-2">
               <span className="text-[color:var(--theme-text-secondary)]">Phyrexian</span>
-              <select
+              <Select
                 value={manaPaymentDetail.phyrexian_choices[index] ? 'life' : 'mana'}
                 onChange={(e) =>
                   onUpdatePaymentDetail((prev) => {
@@ -112,11 +113,11 @@ export function ManaPaymentPanel({
                     return { ...prev, phyrexian_choices: next };
                   })
                 }
-                className="flex-1 px-2 py-1 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+                className="flex-1"
               >
                 <option value="mana">{color} mana</option>
                 <option value="life">2 life</option>
-              </select>
+              </Select>
             </label>
           ))}
         </div>

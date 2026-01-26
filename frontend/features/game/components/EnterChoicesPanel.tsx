@@ -2,6 +2,7 @@
 
 import { CARD_TYPE_FILTERS, CHOICE_TYPE_OPTIONS, COLOR_OPTIONS } from '@/lib/effectTypes';
 import { EnterChoiceConfig } from '@/lib/enterChoices';
+import { Select } from '@/components/ui/Select';
 
 interface EnterChoicesPanelProps {
   configs: EnterChoiceConfig[];
@@ -38,17 +39,17 @@ export function EnterChoicesPanel({
           return (
             <label key={`enter-choice-${config.choiceType}`} className="flex items-center gap-2 text-xs">
               <span className="text-[color:var(--theme-text-secondary)]">{label}</span>
-              <select
+              <Select
                 value={value || 'W'}
                 onChange={(e) => onChange(config.choiceType, e.target.value)}
-                className="flex-1 px-2 py-1 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+                className="flex-1"
               >
                 {COLOR_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
                     {opt.label}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
           );
         }
@@ -56,17 +57,17 @@ export function EnterChoicesPanel({
           return (
             <label key={`enter-choice-${config.choiceType}`} className="flex items-center gap-2 text-xs">
               <span className="text-[color:var(--theme-text-secondary)]">{label}</span>
-              <select
+              <Select
                 value={value || 'creature'}
                 onChange={(e) => onChange(config.choiceType, e.target.value)}
-                className="flex-1 px-2 py-1 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+                className="flex-1"
               >
                 {CARD_TYPE_FILTERS.filter((opt) => opt.value !== 'any').map((opt) => (
                   <option key={opt.value} value={opt.value}>
                     {opt.label}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
           );
         }
@@ -74,10 +75,10 @@ export function EnterChoicesPanel({
           return (
             <label key={`enter-choice-${config.choiceType}`} className="flex items-center gap-2 text-xs">
               <span className="text-[color:var(--theme-text-secondary)]">{label}</span>
-              <select
+              <Select
                 value={value}
                 onChange={(e) => onChange(config.choiceType, e.target.value)}
-                className="flex-1 px-2 py-1 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+                className="flex-1"
               >
                 <option value="">Select target</option>
                 {targetOptions.map((opt) => (
@@ -85,7 +86,7 @@ export function EnterChoicesPanel({
                     {opt.label}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
           );
         }

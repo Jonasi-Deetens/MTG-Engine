@@ -5,10 +5,11 @@
 import { useState, useEffect } from 'react';
 import { collections, FavoriteResponse } from '@/lib/collections';
 import { CardGrid } from '@/components/cards/CardGrid';
-import { CardGridSkeleton } from '@/components/skeletons/CardSkeleton';
 import { CardData } from '@/components/cards/CardPreview';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { ArchiveSectionHeader } from '@/components/ui/ArchiveSectionHeader';
+import { LoadingState } from '@/components/ui/LoadingState';
 import Link from 'next/link';
 
 export default function MyCardsPage() {
@@ -50,7 +51,10 @@ export default function MyCardsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-heading text-3xl font-bold text-[color:var(--theme-text-primary)] mb-2">
+        <h1
+          className="font-heading text-3xl font-bold text-[color:var(--theme-text-primary)] mb-2 nier-glitch"
+          data-text="My Cards"
+        >
           My Cards
         </h1>
         <p className="text-[color:var(--theme-text-secondary)]">
@@ -89,14 +93,14 @@ export default function MyCardsPage() {
       </div>
 
       <div>
-        <h2 className="text-2xl font-bold text-[color:var(--theme-text-primary)] mb-4">Recent Favorites</h2>
+        <ArchiveSectionHeader title="Recent Favorites" status="FAVORITES: SYNCED" />
         {error && (
           <div className="p-4 bg-[color:var(--theme-status-error)]/20 border border-[color:var(--theme-status-error)]/50 rounded-lg text-[color:var(--theme-status-error)] mb-4">
             {error}
           </div>
         )}
         {loading && favorites.length === 0 ? (
-          <CardGridSkeleton count={12} />
+          <LoadingState fullScreen={false} className="py-12" />
         ) : favorites.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-[color:var(--theme-text-secondary)] text-lg">No favorites yet</p>

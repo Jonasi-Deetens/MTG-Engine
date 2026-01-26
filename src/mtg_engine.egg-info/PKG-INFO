@@ -1,7 +1,7 @@
 Metadata-Version: 2.4
 Name: mtg-engine
 Version: 0.1.0
-Summary: MTG Engine with Scryfall integration and Axis1 mapping
+Summary: MTG Simulator with Scryfall integration and Axis1 mapping
 Author: Jonasi
 Requires-Python: >=3.12
 Requires-Dist: fastapi==0.115.0

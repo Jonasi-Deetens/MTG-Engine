@@ -5,6 +5,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { LoadingState } from '@/components/ui/LoadingState';
 
 export default function ProtectedLayout({
   children,
@@ -21,11 +22,7 @@ export default function ProtectedLayout({
   }, [loading, isAuthenticated, router]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[color:var(--theme-bg-primary)]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[color:var(--theme-accent-primary)]"></div>
-      </div>
-    );
+    return <LoadingState />;
   }
 
   if (!isAuthenticated) {

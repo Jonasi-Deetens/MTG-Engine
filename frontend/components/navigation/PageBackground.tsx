@@ -3,10 +3,13 @@
 // frontend/components/navigation/PageBackground.tsx
 
 import { usePathname } from 'next/navigation';
+import { useTheme } from '@/context/ThemeContext';
 import { useThemeImage } from '@/hooks/useThemeImage';
+import { NierPremiumBackground } from '@/components/ui/NierPremiumBackground';
 
 export function PageBackground({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { currentTheme } = useTheme();
   
   // Landing page handles its own background, skip it here
   const isLandingPage = pathname === '/';
@@ -34,9 +37,7 @@ export function PageBackground({ children }: { children: React.ReactNode }) {
   
   const getBackgroundStyle = (): React.CSSProperties => {
     if (isPlayPage) {
-      return {
-        backgroundColor: 'var(--play-bg-primary, #dad4bb)',
-      };
+      return {};
     }
     // Landing page uses the shared background + overlay
     if (isLandingPage) {
@@ -127,18 +128,24 @@ export function PageBackground({ children }: { children: React.ReactNode }) {
   // Login and register pages should be fixed height like landing page
   const isFixedHeightPage = isLandingPage || isLoginPage || isRegisterPage;
   
+  const overlayColor = isPlayPage ? 'transparent' : 'var(--theme-bg-primary)';
+
+  const overlayOpacity = isPlayPage ? 0 : 0.7;
+  const showNierBackground = currentTheme === 'nier';
+
   return (
-    <div 
-      className={`${isFixedHeightPage ? 'h-screen overflow-hidden' : 'min-h-screen overflow-x-hidden'} relative`}
+    <div
+      className={`${isFixedHeightPage ? 'h-screen overflow-hidden' : 'min-h-screen overflow-x-hidden'} relative page-background ${
+        showNierBackground ? 'nier-premium-bg' : ''
+      }`}
       style={getBackgroundStyle()}
     >
+      {showNierBackground && <NierPremiumBackground className="z-[1]" />}
       <div
-        className="absolute inset-0 pointer-events-none"
-        style={{ backgroundColor: isPlayPage ? 'transparent' : 'var(--theme-bg-primary)', opacity: isPlayPage ? 0 : 0.7 }}
+        className="page-background-overlay pointer-events-none"
+        style={{ backgroundColor: overlayColor, opacity: overlayOpacity }}
       />
-      <div className="relative z-10">
-        {children}
-      </div>
+      <div className="page-background-content">{children}</div>
     </div>
   );
 }

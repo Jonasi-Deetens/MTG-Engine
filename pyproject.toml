@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "mtg-engine"
 version = "0.1.0"
-description = "MTG Engine with Scryfall integration and Axis1 mapping"
+description = "MTG Simulator with Scryfall integration and Axis1 mapping"
 authors = [
     { name = "Jonasi" }
 ]

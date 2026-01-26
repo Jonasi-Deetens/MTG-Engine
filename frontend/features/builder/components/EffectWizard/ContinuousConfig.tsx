@@ -1,6 +1,7 @@
 import type { UnifiedEffect } from '@/lib/unifiedEffect';
 import { COLOR_OPTIONS, ZONE_OPTIONS } from '@/lib/effectTypes';
 import { KEYWORD_OPTIONS, PERMANENT_TYPES } from '@/lib/conditionTypes';
+import { Select } from '@/components/ui/Select';
 
 interface ContinuousConfigProps {
   effect: UnifiedEffect;
@@ -108,7 +109,7 @@ export function ContinuousConfig({ effect, onChange }: ContinuousConfigProps) {
           <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">
             Applies To
           </label>
-          <select
+          <Select
             className="mt-1 w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-sm"
             value={typeof body.appliesTo === 'string' ? body.appliesTo : (body.appliesTo as any)?.type ?? 'self'}
             onChange={(e) => updateBody({ appliesTo: { type: e.target.value } })}
@@ -118,7 +119,7 @@ export function ContinuousConfig({ effect, onChange }: ContinuousConfigProps) {
                 {opt.label}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       </div>
 
@@ -126,7 +127,7 @@ export function ContinuousConfig({ effect, onChange }: ContinuousConfigProps) {
         <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">
           Modifier Type
         </label>
-        <select
+        <Select
           className="mt-1 w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-sm"
           value={modifierType}
           onChange={(e) => {
@@ -143,7 +144,7 @@ export function ContinuousConfig({ effect, onChange }: ContinuousConfigProps) {
               {opt.label}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
       {((body.modifier as any)?.type === 'add_keyword' || (body.modifier as any)?.type === 'remove_keyword') && (
@@ -151,7 +152,7 @@ export function ContinuousConfig({ effect, onChange }: ContinuousConfigProps) {
           <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">
             Keyword
           </label>
-          <select
+          <Select
             className="mt-1 w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-sm"
             value={(body.modifier as any)?.keyword ?? ''}
             onChange={(e) => updateBody({ modifier: { ...(body.modifier as any), keyword: e.target.value } })}
@@ -162,7 +163,7 @@ export function ContinuousConfig({ effect, onChange }: ContinuousConfigProps) {
                 {opt.label}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       )}
 
@@ -198,7 +199,7 @@ export function ContinuousConfig({ effect, onChange }: ContinuousConfigProps) {
           <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">
             Type
           </label>
-          <select
+          <Select
             className="mt-1 w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-sm"
             value={(body.modifier as any)?.typeName ?? 'creature'}
             onChange={(e) => updateBody({ modifier: { ...(body.modifier as any), typeName: e.target.value } })}
@@ -208,7 +209,7 @@ export function ContinuousConfig({ effect, onChange }: ContinuousConfigProps) {
                 {opt.label}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       )}
 
@@ -248,7 +249,7 @@ export function ContinuousConfig({ effect, onChange }: ContinuousConfigProps) {
           <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">
             Color
           </label>
-          <select
+          <Select
             className="mt-1 w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-sm"
             value={(body.modifier as any)?.color ?? 'W'}
             onChange={(e) => updateBody({ modifier: { ...(body.modifier as any), color: e.target.value } })}
@@ -258,7 +259,7 @@ export function ContinuousConfig({ effect, onChange }: ContinuousConfigProps) {
                 {opt.label}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       )}
 
@@ -300,7 +301,7 @@ export function ContinuousConfig({ effect, onChange }: ContinuousConfigProps) {
               <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">
                 Power per Match
               </label>
-              <select
+              <Select
                 className="mt-1 w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-sm"
                 value={(body.modifier as any)?.powerPer ?? 1}
                 onChange={(e) => updateBody({ modifier: { ...(body.modifier as any), powerPer: Number(e.target.value) } })}
@@ -310,13 +311,13 @@ export function ContinuousConfig({ effect, onChange }: ContinuousConfigProps) {
                     {value >= 0 ? `+${value}` : value}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div>
               <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">
                 Toughness per Match
               </label>
-              <select
+              <Select
                 className="mt-1 w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-sm"
                 value={(body.modifier as any)?.toughnessPer ?? 1}
                 onChange={(e) => updateBody({ modifier: { ...(body.modifier as any), toughnessPer: Number(e.target.value) } })}
@@ -326,7 +327,7 @@ export function ContinuousConfig({ effect, onChange }: ContinuousConfigProps) {
                     {value >= 0 ? `+${value}` : value}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -362,7 +363,7 @@ export function ContinuousConfig({ effect, onChange }: ContinuousConfigProps) {
           <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">
             Duration
           </label>
-          <select
+          <Select
             className="mt-1 w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-sm"
             value={durationType}
             onChange={(e) => {
@@ -379,14 +380,14 @@ export function ContinuousConfig({ effect, onChange }: ContinuousConfigProps) {
                 {opt.label}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         {durationType === 'while_in_zone' && (
           <div>
             <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">
               Zone
             </label>
-            <select
+            <Select
               className="mt-1 w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-sm"
               value={(body.duration as any)?.zone ?? 'battlefield'}
               onChange={(e) => updateBody({ duration: { type: 'while_in_zone', zone: e.target.value } })}
@@ -396,7 +397,7 @@ export function ContinuousConfig({ effect, onChange }: ContinuousConfigProps) {
                   {opt.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         )}
       </div>

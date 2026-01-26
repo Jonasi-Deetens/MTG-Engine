@@ -20,7 +20,9 @@ export function Card({ children, variant = 'default', className, style, ...props
   
   return (
     <div
+      data-variant={variant}
       className={cn(
+        'ui-card',
         baseClasses,
         variants[variant],
         variant === 'elevated' && 'card-elevated-shadow',

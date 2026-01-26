@@ -94,7 +94,7 @@ except Exception as e:
     print(f"WARNING: Could not create database tables: {e}")
 
 app = FastAPI(
-    title="MTG Engine API",
+    title="MTG Simulator API",
     description="Magic: The Gathering card engine API",
     version="1.0.0"
 )
@@ -135,7 +135,7 @@ def get_db():
 @app.get("/")
 def root():
     """Health check endpoint."""
-    return {"status": "ok", "message": "MTG Engine API"}
+    return {"status": "ok", "message": "MTG Simulator API"}
 
 
 @app.get("/health")

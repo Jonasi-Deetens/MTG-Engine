@@ -2,13 +2,11 @@
 
 // frontend/components/decks/DeckCard.tsx
 
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { DeckResponse, DeckDetailResponse } from '@/lib/decks';
 import { Button } from '@/components/ui/Button';
-import { StatusBadge } from '@/components/ui/StatusBadge';
-import { Card } from '@/components/ui/Card';
-import { HoverShadow } from '@/components/ui/HoverShadow';
-import { BookOpen, Users, Globe, Lock } from 'lucide-react';
+import { BookOpen, Users, Layers, Clock, Lock } from 'lucide-react';
 
 interface DeckCardProps {
   deck: DeckResponse;
@@ -31,6 +29,12 @@ export function DeckCard({
   const isCommanderDeck = deck.format === 'Commander' && deck.commander_count > 0;
   const commanders = deckDetail?.commanders || [];
   const cards = deckDetail?.cards || [];
+  const [scanProgress, setScanProgress] = useState(0);
+  const scanTimerRef = useRef<number | null>(null);
+  const cardId = useMemo(
+    () => Math.random().toString(36).substring(2, 8).toUpperCase(),
+    []
+  );
 
   // Prefer art_crop (art-only, no frame) for better background effect
   let artUrl: string | undefined;
@@ -56,104 +60,173 @@ export function DeckCard({
     return date.toLocaleDateString();
   };
 
+  const handleMouseEnter = () => {
+    if (scanTimerRef.current) {
+      window.clearInterval(scanTimerRef.current);
+    }
+    setScanProgress(0);
+    let progress = 0;
+    scanTimerRef.current = window.setInterval(() => {
+      progress += 5;
+      setScanProgress(progress);
+      if (progress >= 100 && scanTimerRef.current) {
+        window.clearInterval(scanTimerRef.current);
+        scanTimerRef.current = null;
+      }
+    }, 30);
+  };
+
+  const handleMouseLeave = () => {
+    if (scanTimerRef.current) {
+      window.clearInterval(scanTimerRef.current);
+      scanTimerRef.current = null;
+    }
+    setScanProgress(0);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (scanTimerRef.current) {
+        window.clearInterval(scanTimerRef.current);
+      }
+    };
+  }, []);
+
   return (
-    <Card
-      variant="bare"
-      className={`relative flex flex-col sm:flex-row items-stretch hover:scale-105 rounded-lg ${className || ''}`}
+    <div
+      className={`relative w-full max-w-sm cursor-pointer group ${className || ''}`}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       tabIndex={0}
     >
-      <HoverShadow />
-      {/* Side image panel (art) */}
-      <div className="w-full sm:w-40 shrink-0 h-48 sm:h-auto relative rounded-lg flex-none bg-[color:var(--theme-bg-tertiary)] aspect-[5/7]">
-        {artUrl ? (
-          <img
-            src={artUrl}
-            alt={deck.name + ' art'}
-            className="w-full h-full object-cover object-center sm:rounded-l-lg rounded-t-lg sm:rounded-tr-none"
-            draggable={false}
-            loading="lazy"
-          />
-        ) : (
-          <div className="w-full h-full bg-[color:var(--theme-bg-secondary)]/60 flex items-center justify-center sm:rounded-l-lg rounded-t-lg sm:rounded-tr-none">
-            <BookOpen className="opacity-60 w-12 h-12 text-[color:var(--theme-text-muted)]" />
-          </div>
-        )}
-      </div>
+      <div className="relative bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-border-default)] overflow-hidden">
+        <div className="absolute -top-1.5 -left-1.5 w-4 h-4 border-t border-l border-[color:var(--theme-border-default)] z-20" />
+        <div className="absolute -bottom-1.5 -right-1.5 w-4 h-4 border-b border-r border-[color:var(--theme-border-default)] z-20" />
 
-      {/* Content panel */}
-      <div
-        className="flex-1 flex flex-col justify-between p-4 gap-3 rounded-b-lg sm:rounded-bl-none sm:rounded-r-lg relative z-10 bg-[color:var(--theme-bg-primary)] bg-opacity-80 backdrop-blur-sm">
-        <div>
-          <div className="flex flex-row flex-wrap items-center justify-between gap-2 mb-1">
-            <h3 className="text-lg sm:text-xl font-semibold text-[color:var(--theme-text-primary)] break-words flex-1 min-w-0 leading-tight">
-              <span className="truncate block">{deck.name}</span>
-            </h3>
-            <div className="flex items-center gap-2 ml-2">
-              {deck.is_public ? (
-                <StatusBadge
-                  label="Public"
-                  variant="success"
-                  icon={Globe}
-                  size="sm"
-                />
-              ) : (
-                <StatusBadge
-                  label="Private"
-                  variant="default"
-                  icon={Lock}
-                  size="sm"
-                />
-              )}
-            </div>
-          </div>
-
-          {/* BADGES ROW */}
-          <div className="flex flex-wrap items-center gap-2 mb-2">
-            <StatusBadge label={deck.format} variant="info" size="sm" />
-            {deck.commander_count > 0 && (
-              <span className="flex items-center gap-1 text-xs px-2 py-0.5 bg-[color:var(--theme-accent-primary)]/10 text-[color:var(--theme-accent-primary)] rounded font-medium">
-                <Users className="w-3.5 h-3.5" />
-                {deck.commander_count} commander{deck.commander_count > 1 ? 's' : ''}
+        <div className="relative h-48 overflow-hidden">
+          {artUrl ? (
+            <img
+              src={artUrl}
+              alt={commanders[0]?.card?.name || deck.name}
+              className="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-105"
+              draggable={false}
+              loading="lazy"
+            />
+          ) : (
+            <div className="w-full h-full bg-[color:var(--theme-bg-secondary)] flex items-center justify-center">
+              <span className="font-mono text-xs text-[color:var(--theme-text-muted)] tracking-widest">
+                NO_IMAGE_DATA
               </span>
-            )}
-            <span className="flex items-center gap-1 text-xs px-2 py-0.5 bg-[color:var(--theme-card-bg)] text-[color:var(--theme-text-secondary)] rounded font-medium">
-              <BookOpen className="w-3.5 h-3.5" />
-              {deck.card_count} cards
+            </div>
+          )}
+
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[color:var(--theme-card-bg)]/80" />
+
+          <div
+            className="absolute inset-0 opacity-20 transition-opacity duration-300"
+            style={{
+              backgroundImage: `
+                linear-gradient(to right, var(--theme-text-primary) 1px, transparent 1px),
+                linear-gradient(to bottom, var(--theme-text-primary) 1px, transparent 1px)
+              `,
+              backgroundSize: '20px 20px',
+            }}
+          />
+
+          <div
+            className="absolute left-0 right-0 h-px bg-[color:var(--theme-text-primary)]/60 transition-all duration-75"
+            style={{ top: `${scanProgress}%` }}
+          >
+            <div className="absolute inset-0 bg-[color:var(--theme-text-primary)]/40 blur-sm" />
+          </div>
+
+          <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-[color:var(--theme-bg-primary)]/90 border border-[color:var(--theme-border-default)] px-2 py-1">
+            <Lock className="w-3 h-3 text-[color:var(--theme-text-muted)]" />
+            <span className="font-mono text-[12px] tracking-widest text-[color:var(--theme-text-muted)] uppercase">
+              {deck.is_public ? 'Public' : 'Private'}
             </span>
           </div>
 
-          {/* Description */}
-          {deck.description && (
-            <p className="text-[color:var(--theme-text-secondary)] text-sm mb-2 line-clamp-2">
-              {deck.description}
-            </p>
-          )}
+          <div className="absolute top-3 right-3 bg-[color:var(--theme-text-primary)] text-[color:var(--theme-bg-primary)] px-2 py-1">
+            <span className="font-mono text-[12px] tracking-widest uppercase flex items-center gap-1">
+              {deck.format}
+            </span>
+          </div>
 
-          {/* Commanders (for commander format) */}
-          {isCommanderDeck && commanders.length > 0 && (
-            <div className="my-1 flex flex-wrap items-center gap-2">
-              <span className="text-xs font-semibold uppercase text-[color:var(--theme-text-muted)] mr-2 tracking-widest">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 opacity-0 group-hover:opacity-60 transition-opacity duration-300">
+            <div className="absolute top-0 left-1/2 w-px h-3 bg-[color:var(--theme-text-primary)] -translate-x-1/2" />
+            <div className="absolute bottom-0 left-1/2 w-px h-3 bg-[color:var(--theme-text-primary)] -translate-x-1/2" />
+            <div className="absolute left-0 top-1/2 w-3 h-px bg-[color:var(--theme-text-primary)] -translate-y-1/2" />
+            <div className="absolute right-0 top-1/2 w-3 h-px bg-[color:var(--theme-text-primary)] -translate-y-1/2" />
+            <div className="absolute inset-3 border border-[color:var(--theme-text-primary)]/50" />
+          </div>
+        </div>
+
+        <div className="p-4 space-y-2">
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="font-sans font-semibold text-lg text-[color:var(--theme-text-primary)] tracking-wide leading-tight">
+              {deck.name}
+            </h3>
+            <div className="flex items-center gap-3 text-[color:var(--theme-text-muted)] shrink-0">
+              <div className="flex items-center gap-1">
+                <Users className="w-3.5 h-3.5" />
+                <span className="font-mono text-[11px]">{deck.commander_count}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Layers className="w-3.5 h-3.5" />
+                <span className="font-mono text-[11px]">{deck.card_count}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="relative h-px bg-[color:var(--theme-border-default)]">
+            <div className="absolute left-0 top-0 w-2 h-px bg-[color:var(--theme-text-primary)]" />
+            <div className="absolute right-0 top-0 w-2 h-px bg-[color:var(--theme-text-primary)]" />
+          </div>
+
+          <p className="font-mono text-xs text-[color:var(--theme-text-muted)] leading-relaxed line-clamp-2">
+            {deck.description || 'No description provided.'}
+          </p>
+
+          {commanders.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 -mt-1">
+              <span className="inline-flex items-center font-mono text-[10px] leading-none tracking-[0.2em] text-[color:var(--theme-text-muted)] uppercase">
                 Commanders
               </span>
-              {commanders.map((commander, idx) => (
-                <span className="inline-block text-xs px-2 py-0.5 rounded bg-[color:var(--theme-accent-primary)]/10 text-[color:var(--theme-accent-primary)]" key={commander.card_id}>
+              {commanders.map((commander) => (
+                <span
+                  key={commander.card_id}
+                  className="bg-[color:var(--theme-bg-secondary)] border border-[color:var(--theme-border-default)] px-2 py-0.5 font-mono text-xs leading-none text-[color:var(--theme-text-primary)]"
+                >
                   {commander.card.name}
-                  {idx < commanders.length - 1 && ','}
                 </span>
               ))}
             </div>
           )}
-        </div>
 
-        <div className="flex flex-row flex-wrap items-end justify-between ">
-          {/* Last updated */}
-          <div className="text-xs text-[color:var(--theme-text-muted)] mr-2">
-            Updated {formatRelativeTime(deck.updated_at)}
+          <div className="flex items-center justify-between pt-1">
+            <div className="flex items-center gap-1.5 text-[color:var(--theme-text-muted)]">
+              <Clock className="w-3 h-3" />
+              <span className="font-mono text-[10px] tracking-wider">
+                Updated {formatRelativeTime(deck.updated_at)}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="w-16 h-1 bg-[color:var(--theme-bg-secondary)] overflow-hidden">
+                <div
+                  className="h-full bg-[color:var(--theme-text-primary)] transition-all duration-75"
+                  style={{ width: `${scanProgress}%` }}
+                />
+              </div>
+              <span className="font-mono text-[10px] text-[color:var(--theme-text-muted)] w-8">
+                {scanProgress.toString().padStart(3, '0')}%
+              </span>
+            </div>
           </div>
 
-          {/* ACTION BUTTONS */}
           {showActions && (
-            <div className="flex gap-2 mt-1 min-w-[170px]">
+            <div className="flex gap-2 pt-2">
               <Link href={`/decks/${deck.id}`} className="flex-1 min-w-0">
                 <Button variant="primary" size="sm" className="w-full">
                   View
@@ -180,9 +253,20 @@ export function DeckCard({
             </div>
           )}
         </div>
+
+        <div className="bg-[color:var(--theme-bg-secondary)]/50 border-t border-[color:var(--theme-border-default)] px-4 py-2 flex items-center justify-between">
+          <span className="font-mono text-[9px] tracking-[0.15em] text-[color:var(--theme-text-muted)]">
+            DECK::ARCHIVE
+          </span>
+          <span className="font-mono text-[9px] tracking-[0.15em] text-[color:var(--theme-text-muted)]">
+            ID_{cardId}
+          </span>
+        </div>
       </div>
 
-    </Card>
+      <div className="absolute -top-2 -left-2 w-2 h-2 border-t border-l border-[color:var(--theme-accent-primary)]" />
+      <div className="absolute -bottom-2 -right-2 w-2 h-2 border-b border-r border-[color:var(--theme-accent-primary)]" />
+    </div>
   );
 }
 

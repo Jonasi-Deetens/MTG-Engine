@@ -1,5 +1,6 @@
 import type { UnifiedEffect } from '@/lib/unifiedEffect';
 import { MANA_TYPE_OPTIONS } from '@/lib/effectTypes';
+import { Select } from '@/components/ui/Select';
 
 interface ActivatedConfigProps {
   effect: UnifiedEffect;
@@ -30,7 +31,7 @@ export function ActivatedConfig({ effect, onChange }: ActivatedConfigProps) {
         <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">
           Cost Type
         </label>
-        <select
+        <Select
           className="mt-1 w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-sm"
           value={item.type}
           onChange={(e) => updateItem({ type: e.target.value })}
@@ -40,7 +41,7 @@ export function ActivatedConfig({ effect, onChange }: ActivatedConfigProps) {
               {opt.label}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
       {item.type === 'mana' && (
@@ -49,7 +50,7 @@ export function ActivatedConfig({ effect, onChange }: ActivatedConfigProps) {
             <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">
               Mana Type
             </label>
-            <select
+            <Select
               className="mt-1 w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-sm"
               value={item.manaType ?? 'C'}
               onChange={(e) => updateItem({ manaType: e.target.value })}
@@ -59,7 +60,7 @@ export function ActivatedConfig({ effect, onChange }: ActivatedConfigProps) {
                   {opt.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           <div>
             <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">

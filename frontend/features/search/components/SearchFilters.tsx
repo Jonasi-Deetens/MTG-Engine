@@ -2,6 +2,7 @@
 
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
 import { COLORS, COLOR_NAMES, RARITY_OPTIONS, LANGUAGE_OPTIONS, CARD_TYPE_OPTIONS } from '@/lib/constants/search';
 
 interface SearchFiltersProps {
@@ -126,34 +127,34 @@ export function SearchFilters({
               <label className="block text-sm font-medium text-[color:var(--theme-text-secondary)] mb-2">
                 Rarity
               </label>
-              <select
+              <Select
                 value={rarityFilter}
                 onChange={(e) => onRarityFilterChange(e.target.value)}
-                className="w-full px-3 py-2 rounded-md border border-[color:var(--theme-card-border)] bg-[color:var(--theme-card-bg)] text-[color:var(--theme-text-primary)] focus:outline-none focus:ring-2 focus:ring-[color:var(--theme-accent-primary)]"
+                className="w-full"
               >
                 {RARITY_OPTIONS.map(option => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-[color:var(--theme-text-secondary)] mb-2">
                 Language
               </label>
-              <select
+              <Select
                 value={languageFilter}
                 onChange={(e) => onLanguageFilterChange(e.target.value)}
-                className="w-full px-3 py-2 rounded-md border border-[color:var(--theme-card-border)] bg-[color:var(--theme-card-bg)] text-[color:var(--theme-text-primary)] focus:outline-none focus:ring-2 focus:ring-[color:var(--theme-accent-primary)]"
+                className="w-full"
               >
                 {LANGUAGE_OPTIONS.map(option => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
 
             <div>

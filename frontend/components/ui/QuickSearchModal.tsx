@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { Button } from "@/components/ui/Button";
+import { ArchiveSectionHeader } from "@/components/ui/ArchiveSectionHeader";
 
 interface QuickSearchModalProps {
   isOpen: boolean;
@@ -63,26 +64,28 @@ export function QuickSearchModal({
             onSubmit();
           }}
         >
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h2 className="font-heading text-lg sm:text-xl font-semibold text-[color:var(--theme-text-primary)]">
-                Search cards
-              </h2>
-              <p className="text-xs sm:text-sm text-[color:var(--theme-text-secondary)]">
-                Press <span className="font-mono">Enter</span> to open full
-                search • <span className="font-mono">Esc</span> to close
-              </p>
-            </div>
-
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={onClose}
-              aria-label="Close modal"
-            >
-              Close
-            </Button>
+          <div>
+            <ArchiveSectionHeader
+              title="Search cards"
+              status="SEARCH_INDEX: READY"
+              className="mb-2"
+              titleClassName="text-lg sm:text-xl"
+              action={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={onClose}
+                  aria-label="Close modal"
+                >
+                  Close
+                </Button>
+              }
+            />
+            <p className="text-xs sm:text-sm text-[color:var(--theme-text-secondary)]">
+              Press <span className="font-mono">Enter</span> to open full
+              search • <span className="font-mono">Esc</span> to close
+            </p>
           </div>
 
           <div className="max-w-2xl">

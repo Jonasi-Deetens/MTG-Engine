@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { PlayerMat } from '@/features/game/components/playmat/PlayerMat';
-import { StylizedSelect } from '@/components/ui/play/StylizedSelect';
+import { Select } from '@/components/ui/Select';
 import {
   usePlayGame,
   usePlayCombat,
@@ -10,7 +10,7 @@ import {
   usePlayTurn,
 } from '@/app/(protected)/play/PlayProviders';
 import { BracketHeader } from '@/components/ui/play/NierUIElements';
-import { StylizedButton } from '@/components/ui/play/StylizedButton';
+import { Button } from '@/components/ui/Button';
 
 type ViewMode = 'single' | 'all';
 
@@ -70,29 +70,29 @@ export function PlayMat() {
     <div className="space-y-4">
       <div className="play-mat-toolbar nier-panel">
         <div className="flex items-center gap-2">
-          <StylizedButton
+          <Button
             type="button"
             variant={viewMode === 'single' ? 'primary' : 'ghost'}
             onClick={() => setViewMode('single')}
           >
             Single View
-          </StylizedButton>
-          <StylizedButton
+          </Button>
+          <Button
             type="button"
             variant={viewMode === 'all' ? 'primary' : 'ghost'}
             onClick={() => setViewMode('all')}
           >
             All Players
-          </StylizedButton>
+          </Button>
         </div>
         {viewMode === 'single' && (
           <div className="text-xs text-[color:var(--theme-text-secondary)] flex items-center gap-2 uppercase tracking-[0.18em]">
             <BracketHeader>Focus</BracketHeader>
-            <StylizedSelect
+            <Select
               className="min-w-[160px] ml-2"
               options={playerOptions}
               value={String(selectedPlayerId)}
-              onChange={(value) => setSelectedPlayerId(Number(value))}
+              onChange={(e) => setSelectedPlayerId(Number(e.target.value))}
             />
           </div>
         )}

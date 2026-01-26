@@ -8,12 +8,13 @@ import { useDeckStore } from '@/store/deckStore';
 import { decks } from '@/lib/decks';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { ArchiveSectionHeader } from '@/components/ui/ArchiveSectionHeader';
 import { DeckCardList } from '@/features/decks/components/DeckCardList';
 import { DeckValidationPanel } from '@/features/decks/components/DeckValidationPanel';
 import { ManaCurveChart } from '@/features/decks/components/ManaCurveChart';
 import { CardTypeBreakdown } from '@/features/decks/components/CardTypeBreakdown';
 import { CardPreview } from '@/components/cards/CardPreview';
-import { DeckDetailSkeleton } from '@/components/skeletons/DeckDetailSkeleton';
+import { LoadingState } from '@/components/ui/LoadingState';
 
 export default function DeckDetailPage() {
   const params = useParams();
@@ -74,7 +75,7 @@ export default function DeckDetailPage() {
   };
 
   if (loading || (isInitialLoad && !currentDeck && !error)) {
-    return <DeckDetailSkeleton />;
+    return <LoadingState />;
   }
 
   if (error || !currentDeck) {
@@ -108,7 +109,10 @@ export default function DeckDetailPage() {
           >
             ← Back to Decks
           </Button>
-          <h1 className="font-heading text-3xl font-bold text-[color:var(--theme-text-primary)] mb-2">
+          <h1
+            className="font-heading text-3xl font-bold text-[color:var(--theme-text-primary)] mb-2 nier-glitch"
+            data-text={currentDeck.name}
+          >
             {currentDeck.name}
           </h1>
           {currentDeck.description && (
@@ -149,7 +153,11 @@ export default function DeckDetailPage() {
           {currentDeck.commanders.length > 0 && (
             <Card variant="elevated">
               <div className="p-6 space-y-4">
-                <h2 className="text-xl font-semibold text-[color:var(--theme-text-primary)]">Commanders</h2>
+                <ArchiveSectionHeader
+                  title="Commanders"
+                  status="COMMANDER_DATA: SYNCED"
+                  titleClassName="text-xl font-semibold"
+                />
                 <div className="flex gap-4">
                   {currentDeck.commanders.map((commander, index) => (
                     <div key={commander.card_id} className="text-center">
@@ -167,9 +175,11 @@ export default function DeckDetailPage() {
           {/* Deck List */}
           <Card variant="elevated">
             <div className="p-6 space-y-4">
-              <h2 className="text-xl font-semibold text-[color:var(--theme-text-primary)]">
-                Deck List ({currentDeck.card_count} cards)
-              </h2>
+              <ArchiveSectionHeader
+                title={`Deck List (${currentDeck.card_count} cards)`}
+                status="DECK_LIST: READY"
+                titleClassName="text-xl font-semibold"
+              />
               <DeckCardList
                 cards={currentDeck.cards}
                 showControls={false}
@@ -219,9 +229,11 @@ export default function DeckDetailPage() {
             return (
               <Card variant="elevated">
                 <div className="p-6 space-y-4">
-                  <h2 className="text-xl font-semibold text-[color:var(--theme-text-primary)]">
-                    Price Summary
-                  </h2>
+                  <ArchiveSectionHeader
+                    title="Price Summary"
+                    status="PRICE_INDEX: READY"
+                    titleClassName="text-xl font-semibold"
+                  />
                   <div className="space-y-3">
                     <div>
                       <div className="text-sm text-[color:var(--theme-text-secondary)] mb-1">

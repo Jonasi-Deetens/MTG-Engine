@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { LoadingState } from '@/components/ui/LoadingState';
 import { Layers } from 'lucide-react';
 
 export default function TemplatesPage() {
@@ -28,17 +29,16 @@ export default function TemplatesPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[color:var(--theme-bg-primary)] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[color:var(--theme-accent-primary)]"></div>
-      </div>
-    );
+    return <LoadingState />;
   }
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-heading text-3xl font-bold text-[color:var(--theme-text-primary)] mb-2">
+        <h1
+          className="font-heading text-3xl font-bold text-[color:var(--theme-text-primary)] mb-2 nier-glitch"
+          data-text="Ability Templates"
+        >
           Ability Templates
         </h1>
         <p className="text-[color:var(--theme-text-secondary)]">

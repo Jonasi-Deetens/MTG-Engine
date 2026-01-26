@@ -131,6 +131,13 @@ export function ShortcutProvider({
           pendingKey = null;
           return;
         }
+        if (sequence === "gb") {
+          e.preventDefault();
+          e.stopPropagation();
+          router.push("/builder");
+          pendingKey = null;
+          return;
+        }
         if (sequence === "nd") {
           e.preventDefault();
           e.stopPropagation();

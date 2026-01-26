@@ -1,7 +1,7 @@
 'use client';
 
-import { StylizedButton } from '@/components/ui/play/StylizedButton';
-import { StylizedNativeSelect } from '@/components/ui/play/StylizedNativeSelect';
+import { Button } from '@/components/ui/Button';
+import { Select } from '@/components/ui/Select';
 import { CombatDamagePanel } from '../CombatDamagePanel';
 import { EngineCardMap, EngineCombatStateSnapshot } from '@/lib/engine';
 import { ReplacementConflictEntry } from '../../hooks/useReplacementConflicts';
@@ -90,7 +90,7 @@ export function CombatActions({
         {defenderOptions.length > 1 && (
           <div className="space-y-2">
             <label className="text-sm font-medium">Attack Target</label>
-            <StylizedNativeSelect
+            <Select
               value={selectedDefenderId ?? ''}
               onChange={(e) => onSelectDefender(e.target.value || null)}
             >
@@ -100,7 +100,7 @@ export function CombatActions({
                   {option.label}
                 </option>
               ))}
-            </StylizedNativeSelect>
+            </Select>
           </div>
         )}
 
@@ -110,13 +110,13 @@ export function CombatActions({
             : `${selectedAttackers.size} attacker${selectedAttackers.size === 1 ? '' : 's'} selected`}
         </p>
 
-        <StylizedButton
+        <Button
           onClick={onDeclareAttackers}
           disabled={loading}
           className="w-full"
         >
           Declare Attackers
-        </StylizedButton>
+        </Button>
       </div>
     );
   }
@@ -133,7 +133,7 @@ export function CombatActions({
         {attackers.length > 0 && (
           <div className="space-y-2">
             <label className="text-sm font-medium">Blocking</label>
-            <StylizedNativeSelect
+            <Select
               value={activeAttackerId ?? ''}
               onChange={(e) => onSelectActiveAttacker(e.target.value)}
             >
@@ -145,7 +145,7 @@ export function CombatActions({
                   </option>
                 );
               })}
-            </StylizedNativeSelect>
+            </Select>
           </div>
         )}
 
@@ -168,22 +168,22 @@ export function CombatActions({
                       {index + 1}. {name}
                     </span>
                     <div className="flex gap-1">
-                      <StylizedButton
+                      <Button
                         variant="ghost"
                         onClick={() => onReorderBlockerUp(index)}
                         disabled={index === 0}
                         className="px-2 py-1 text-xs"
                       >
                         ↑
-                      </StylizedButton>
-                      <StylizedButton
+                      </Button>
+                      <Button
                         variant="ghost"
                         onClick={() => onReorderBlockerDown(index)}
                         disabled={index === activeBlockerOrder.length - 1}
                         className="px-2 py-1 text-xs"
                       >
                         ↓
-                      </StylizedButton>
+                      </Button>
                     </div>
                   </div>
                 );
@@ -203,13 +203,13 @@ export function CombatActions({
           </div>
         )}
 
-        <StylizedButton
+        <Button
           onClick={onDeclareBlockers}
           disabled={loading || blockerErrors.length > 0}
           className="w-full"
         >
           Declare Blockers
-        </StylizedButton>
+        </Button>
       </div>
     );
   }
@@ -229,13 +229,13 @@ export function CombatActions({
           </div>
         )}
 
-        <StylizedButton
+        <Button
           onClick={onAssignCombatDamage}
           disabled={loading || hasUnresolvedDamageReplacements}
           className="w-full"
         >
           Assign Combat Damage
-        </StylizedButton>
+        </Button>
       </div>
     );
   }

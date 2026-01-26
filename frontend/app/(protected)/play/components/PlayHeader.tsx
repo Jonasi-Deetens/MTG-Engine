@@ -10,7 +10,10 @@ export function PlayHeader() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="font-heading text-3xl font-bold text-[color:var(--theme-text-primary)] mb-2">
+        <h1
+          className="font-heading text-3xl font-bold text-[color:var(--theme-text-primary)] mb-2 nier-glitch"
+          data-text="Playtest Commander"
+        >
           Playtest Commander
         </h1>
         <p className="text-[color:var(--theme-text-secondary)]">
@@ -19,7 +22,7 @@ export function PlayHeader() {
       </div>
 
       {error && (
-        <div className="nier-panel space-y-2 text-[color:var(--play-status-error)]">
+        <div className="nier-panel space-y-2 text-[color:var(--theme-status-error)]">
           <BracketHeader>Error</BracketHeader>
           <div className="text-sm">{error}</div>
         </div>

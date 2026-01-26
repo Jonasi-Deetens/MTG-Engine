@@ -1,6 +1,7 @@
 'use client';
 
 import { Button } from '@/components/ui/Button';
+import { Select } from '@/components/ui/Select';
 import type { CostEntry } from '@/lib/activationCosts';
 import type { OptionalCostEntry, OptionalCostKind } from '@/lib/optionalCosts';
 import { OPTIONAL_COST_KIND_OPTIONS } from '@/lib/optionalCosts';
@@ -42,7 +43,7 @@ export function OptionalCostListEditor({ value, onChange }: OptionalCostListEdit
       {value.map((entry, index) => (
         <div key={`optional-cost-${index}`} className="space-y-2 rounded border border-[color:var(--theme-border-default)] p-3">
           <div className="flex items-center gap-2">
-            <select
+            <Select
               value={entry.kind}
               onChange={(e) => handleKindChange(index, e.target.value as OptionalCostKind)}
               className="w-full px-2 py-1.5 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] text-sm focus:border-[color:var(--theme-border-focus)] focus:outline-none"
@@ -52,7 +53,7 @@ export function OptionalCostListEditor({ value, onChange }: OptionalCostListEdit
                   {opt.label}
                 </option>
               ))}
-            </select>
+            </Select>
             <Button variant="ghost" onClick={() => handleRemove(index)} className="text-xs">
               Remove
             </Button>

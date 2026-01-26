@@ -5,8 +5,8 @@
 import { useState, useMemo } from 'react';
 import { CardData } from '@/components/cards/CardPreview';
 import { CardPreview } from '@/components/cards/CardPreview';
-import { CardGridSkeleton } from '@/components/skeletons/CardSkeleton';
 import { Button } from '@/components/ui/Button';
+import { LoadingState } from '@/components/ui/LoadingState';
 import { Filter, X } from 'lucide-react';
 
 interface LandingSearchResultsProps {
@@ -147,9 +147,7 @@ export function LandingSearchResults({
             <p className="text-[color:var(--theme-status-error)] text-sm">{error}</p>
           </div>
         ) : searching ? (
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-2 pb-4">
-            <CardGridSkeleton count={16} />
-          </div>
+          <LoadingState fullScreen={false} className="py-8" />
         ) : filteredResults.length > 0 ? (
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-2 pb-4">
             {filteredResults.map((card) => (

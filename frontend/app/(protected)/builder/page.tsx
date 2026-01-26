@@ -18,6 +18,7 @@ import { EffectGraphPreview } from '@/features/builder/components/EffectGraphPre
 import { EffectList } from '@/features/builder/components/EffectList';
 import { EffectWizard } from '@/features/builder/components/EffectWizard';
 import { isEditableTarget } from '@/context/ShortcutContext';
+import { ArchiveSectionHeader } from '@/components/ui/ArchiveSectionHeader';
 
 export default function BuilderPage() {
   const searchParams = useSearchParams();
@@ -226,7 +227,12 @@ export default function BuilderPage() {
         {/* Top Section: Card Preview */}
         <div className="bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold text-[color:var(--theme-text-primary)]">Ability Builder</h1>
+            <h1
+              className="text-2xl font-bold text-[color:var(--theme-text-primary)] nier-glitch"
+              data-text="Ability Builder"
+            >
+              Ability Builder
+            </h1>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
                 <div className="w-64">
@@ -269,7 +275,12 @@ export default function BuilderPage() {
               </div>
               <div className="flex-1 text-[color:var(--theme-text-secondary)] space-y-3">
                 <div>
-                  <h2 className="text-2xl font-bold text-[color:var(--theme-text-primary)] mb-1">{currentCard.name}</h2>
+                  <ArchiveSectionHeader
+                    title={currentCard.name}
+                    status="CARD_RECORD: ACTIVE"
+                    className="mb-1"
+                    titleClassName="text-2xl font-bold tracking-[0.15em] normal-case"
+                  />
                   {currentCard.mana_cost && (
                     <p className="text-base font-mono text-[color:var(--theme-accent-primary)]">
                       {currentCard.mana_cost}
@@ -341,11 +352,6 @@ export default function BuilderPage() {
             <div className="text-center py-8 text-[color:var(--theme-text-secondary)]">
               <p className="text-lg mb-2">No card selected</p>
               <p className="text-sm mb-4">Search for a card by name or click "Random Card" to start building abilities</p>
-              <Link href="/getting-started">
-                <Button variant="outline" size="sm">
-                  View Getting Started Guide
-                </Button>
-              </Link>
             </div>
           )}
         </div>
@@ -354,18 +360,27 @@ export default function BuilderPage() {
         <div className="grid grid-cols-2 gap-4">
           {/* Left: Effect Builder */}
           <div className="bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] rounded-lg p-6 min-h-[500px] space-y-4">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-[color:var(--theme-text-primary)]">Effects</h2>
-              <Button variant="primary" size="sm" onClick={handleAddEffect}>
-                Add Effect
-              </Button>
-            </div>
+            <ArchiveSectionHeader
+              title="Effects"
+              status="EFFECT_QUEUE: READY"
+              className="mb-4"
+              titleClassName="text-xl font-bold"
+              action={
+                <Button variant="primary" size="sm" onClick={handleAddEffect}>
+                  Add Effect
+                </Button>
+              }
+            />
             <EffectList onEdit={handleEditEffect} />
           </div>
 
           {/* Right: Tree View Preview */}
           <div className="bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] rounded-lg p-6 min-h-[500px] overflow-y-auto">
-            <h2 className="text-xl font-bold text-[color:var(--theme-text-primary)] mb-4">Effect Preview</h2>
+            <ArchiveSectionHeader
+              title="Effect Preview"
+              status="GRAPH_VIEW: LIVE"
+              titleClassName="text-xl font-bold"
+            />
             <EffectGraphPreview />
           </div>
         </div>

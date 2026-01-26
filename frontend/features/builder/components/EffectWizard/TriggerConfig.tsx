@@ -1,5 +1,6 @@
 import type { UnifiedEffect } from '@/lib/unifiedEffect';
 import { CARD_TYPE_FILTERS } from '@/lib/effectTypes';
+import { Select } from '@/components/ui/Select';
 
 interface TriggerConfigProps {
   effect: UnifiedEffect;
@@ -51,7 +52,7 @@ export function TriggerConfig({ effect, onChange }: TriggerConfigProps) {
         <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">
           Trigger Event
         </label>
-        <select
+        <Select
           className="mt-1 w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-sm"
           value={event}
           onChange={(e) => {
@@ -72,14 +73,14 @@ export function TriggerConfig({ effect, onChange }: TriggerConfigProps) {
               {evt.replace(/_/g, ' ')}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
       <div>
         <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">
           Scope
         </label>
-        <select
+        <Select
           className="mt-1 w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-sm"
           value={scope}
           onChange={(e) => {
@@ -100,7 +101,7 @@ export function TriggerConfig({ effect, onChange }: TriggerConfigProps) {
               {scope.replace(/_/g, ' ')}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
       {showCardTypeFilter && (

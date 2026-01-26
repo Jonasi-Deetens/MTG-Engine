@@ -12,6 +12,7 @@ import { useDeckStore } from '@/store/deckStore';
 import { Card } from '@/components/ui/Card';
 import { CardModal } from '@/components/ui/CardModal';
 import { Button } from '@/components/ui/Button';
+import { ArchiveSectionHeader } from '@/components/ui/ArchiveSectionHeader';
 import { DeckBuilderHeader } from '@/features/decks/components/builder/DeckBuilderHeader';
 import { DeckInfoForm } from '@/features/decks/components/builder/DeckInfoForm';
 import { DeckBuilderGrid } from '@/features/decks/components/builder/DeckBuilderGrid';
@@ -334,16 +335,21 @@ export default function DeckBuilderPage() {
         <div className="fixed inset-0 bg-[color:var(--theme-overlay)] z-50 flex items-center justify-center p-4">
           <Card variant="elevated" className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-[color:var(--theme-text-primary)]">Import Deck List</h2>
-                <Button
-                  onClick={() => setShowImport(false)}
-                  variant="outline"
-                  size="sm"
-                >
-                  Close
-                </Button>
-              </div>
+              <ArchiveSectionHeader
+                title="Import Deck List"
+                status="IMPORT_CHANNEL: READY"
+                className="mb-4"
+                titleClassName="text-xl font-semibold"
+                action={
+                  <Button
+                    onClick={() => setShowImport(false)}
+                    variant="outline"
+                    size="sm"
+                  >
+                    Close
+                  </Button>
+                }
+              />
               <DeckImport
                 deckId={currentDeck.id}
                 onImportSuccess={() => {

@@ -15,7 +15,10 @@ export function DeckBuilderHeader({ deckName, onImportClick, deckId }: DeckBuild
   return (
     <div className="flex items-center justify-between gap-4 pb-3 border-b border-[color:var(--theme-card-border)]">
       <div className="flex-1">
-        <h1 className="font-heading text-2xl font-bold text-[color:var(--theme-text-primary)] mb-1">
+        <h1
+          className="font-heading text-2xl font-bold text-[color:var(--theme-text-primary)] mb-1 nier-glitch"
+          data-text={deckName ? `Editing: ${deckName}` : 'Deck Builder'}
+        >
           {deckName ? `Editing: ${deckName}` : 'Deck Builder'}
         </h1>
       </div>
