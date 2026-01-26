@@ -63,14 +63,23 @@ export function NierHeader({ showSpacer = true }: NierHeaderProps) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`group relative font-mono text-xs tracking-[0.2em] transition-colors ${
+                  className={`group relative font-mono text-xs tracking-[0.2em] px-3 py-2 transition-colors ${
                     isActive
-                      ? "text-[color:var(--theme-text-primary)]"
+                      ? "bg-[color:var(--theme-button-primary-bg)] text-[color:var(--theme-button-primary-text)]"
                       : "text-[color:var(--theme-text-secondary)] hover:text-[color:var(--theme-text-primary)]"
                   }`}
                 >
+                  <span
+                    className={`absolute left-0 top-0 h-full w-[2px] ${
+                      isActive ? "bg-[color:var(--theme-text-primary)]" : "bg-transparent"
+                    }`}
+                  />
                   <span className="relative z-10">{item.label.toUpperCase()}</span>
-                  <span className="absolute bottom-0 left-0 w-0 h-px bg-[color:var(--theme-border-default)] group-hover:w-full transition-all duration-300" />
+                  <span
+                    className={`absolute bottom-0 left-0 h-px bg-[color:var(--theme-text-primary)] transition-all duration-300 ${
+                      isActive ? "w-full" : "w-0 group-hover:w-full"
+                    }`}
+                  />
                 </Link>
               );
             })}
@@ -124,14 +133,19 @@ export function NierHeader({ showSpacer = true }: NierHeaderProps) {
                   key={item.href}
                   href={item.href}
                   onClick={() => setMobileOpen(false)}
-                  className={`flex items-center justify-between font-mono text-xs tracking-[0.2em] transition-colors ${
+                  className={`group relative flex items-center justify-between font-mono text-xs tracking-[0.2em] px-3 py-2 transition-colors ${
                     isActive
-                      ? "text-[color:var(--theme-text-primary)]"
+                      ? "bg-[color:var(--theme-button-primary-bg)] text-[color:var(--theme-button-primary-text)]"
                       : "text-[color:var(--theme-text-secondary)] hover:text-[color:var(--theme-text-primary)]"
                   }`}
                 >
-                  <span>{item.label.toUpperCase()}</span>
-                  <span className="text-[color:var(--theme-text-muted)]">→</span>
+                  <span
+                    className={`absolute left-0 top-0 h-full w-[2px] ${
+                      isActive ? "bg-[color:var(--theme-text-primary)]" : "bg-transparent"
+                    }`}
+                  />
+                  <span className="relative z-10">{item.label.toUpperCase()}</span>
+                  <span className="relative z-10 text-[color:var(--theme-text-muted)]">→</span>
                 </Link>
               );
             })}

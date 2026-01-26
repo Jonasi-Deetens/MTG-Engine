@@ -1433,6 +1433,58 @@ body {
 
 .card-preview {
   box-shadow: none !important;
+  position: relative;
+  background-image: none !important;
+}
+
+[data-theme="nier"] .card-preview::before,
+[data-theme="nier"] .card-preview::after {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--theme-border-default);
+  pointer-events: none;
+  z-index: 3;
+}
+
+[data-theme="nier"] .card-preview::before {
+  top: -6px;
+  left: -6px;
+  border-right: none;
+  border-bottom: none;
+}
+
+[data-theme="nier"] .card-preview::after {
+  bottom: -6px;
+  right: -6px;
+  border-left: none;
+  border-top: none;
+}
+
+.card-preview-overlay {
+  position: absolute;
+  inset: -1px;
+  pointer-events: none;
+  z-index: 2;
+  background-image:
+    linear-gradient(var(--theme-border-default), var(--theme-border-default)),
+    linear-gradient(var(--theme-border-default), var(--theme-border-default)),
+    linear-gradient(var(--theme-border-default), var(--theme-border-default)),
+    linear-gradient(var(--theme-border-default), var(--theme-border-default));
+  background-size:
+    12px 12px,
+    12px 12px,
+    12px 12px,
+    12px 12px;
+  background-position:
+    top -1px left -1px,
+    top -1px right -1px,
+    bottom -1px left -1px,
+    bottom -1px right -1px;
+  background-repeat: no-repeat;
+  mix-blend-mode: normal;
+  opacity: 1;
 }
 
 [data-theme="sakura"] .card-elevated-shadow {

@@ -79,17 +79,18 @@ export function ShortcutHelpModal({ isOpen, onClose }: ShortcutHelpModalProps) {
 
   const modalContent = (
     <div
-      className="fixed inset-0 z-[9999] flex items-start justify-center bg-[color:var(--theme-overlay-strong)]/70 backdrop-blur-sm p-4 sm:p-8"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-[color:var(--theme-overlay-strong)]/70 backdrop-blur-sm p-4 sm:p-8"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-label="Shortcut help"
     >
       <div
-        className="w-full max-w-2xl rounded-xl bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] shadow-xl"
+        className="ui-card w-full max-w-3xl bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-border-default)] shadow-xl"
+        data-variant="default"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-4 sm:p-5 space-y-4">
+        <div className="p-4 sm:p-6 space-y-4">
           <div>
             <ArchiveSectionHeader
               title="Shortcuts"
@@ -113,25 +114,25 @@ export function ShortcutHelpModal({ isOpen, onClose }: ShortcutHelpModalProps) {
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-4 max-h-[70vh] overflow-y-auto pr-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[70vh] overflow-y-auto pr-1">
             {shortcuts.map((section) => (
               <div
                 key={section.group}
-                className="space-y-2 w-full sm:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.667rem)]"
+                className="space-y-2"
               >
-                <div className="text-xs uppercase text-[color:var(--theme-text-secondary)]">
+                <div className="text-xs uppercase tracking-[0.2em] font-mono text-[color:var(--theme-text-secondary)]">
                   {section.group}
                 </div>
                 <div className="space-y-2">
                   {section.items.map((item) => (
                     <div
                       key={item.label}
-                      className="flex items-center justify-between gap-4 rounded-lg border border-[color:var(--theme-card-border)] bg-[color:var(--theme-bg-secondary)]/60 px-3 py-2"
+                      className="flex items-center justify-between gap-4 border border-[color:var(--theme-border-default)] bg-[color:var(--theme-card-bg)] px-3 py-2"
                     >
                       <span className="text-sm text-[color:var(--theme-text-primary)]">
                         {item.label}
                       </span>
-                      <span className="font-mono text-xs text-[color:var(--theme-text-secondary)]">
+                      <span className="font-mono text-[10px] tracking-[0.12em] text-[color:var(--theme-text-secondary)] uppercase">
                         {item.keys}
                       </span>
                     </div>

@@ -92,8 +92,9 @@ export function CardPreview({ card, onVersionChange, onAddToDeck, showAddButton 
           className={`absolute inset-0 ${disableClick ? '' : 'cursor-pointer'} rounded-xl`}
           onClick={disableClick ? undefined : handleCardClick}
         >
+          <div className="card-preview-overlay rounded-xl z-10" />
           {imageUrl ? (
-            <div className="relative w-full h-full rounded-xl">
+            <div className="relative w-full h-full rounded-xl z-0">
               <Image
                 src={imageUrl}
                 alt={card.name}
@@ -112,7 +113,7 @@ export function CardPreview({ card, onVersionChange, onAddToDeck, showAddButton 
 
         {/* Add to Deck Button Overlay */}
         {showAddButton && onAddToDeck && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0">
             <div className="w-12 h-12 rounded-full bg-[color:var(--theme-button-primary-bg)]/90 text-[color:var(--theme-button-primary-text)] shadow-lg flex items-center justify-center pointer-events-none">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -139,7 +140,7 @@ export function CardPreview({ card, onVersionChange, onAddToDeck, showAddButton 
               e.stopPropagation();
               setIsModalOpen(true);
             }}
-            className="absolute top-2 right-2 p-2 bg-[color:var(--theme-card-bg)]/90 hover:bg-[color:var(--theme-card-bg)] text-[color:var(--theme-text-primary)] rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg z-10 border border-[color:var(--theme-card-border)]"
+            className="absolute top-2 right-2 p-2 bg-[color:var(--theme-card-bg)]/90 text-[color:var(--theme-text-primary)] rounded-full opacity-0 shadow-lg z-10 border border-[color:var(--theme-card-border)]"
             aria-label="View card details"
           >
             <svg
