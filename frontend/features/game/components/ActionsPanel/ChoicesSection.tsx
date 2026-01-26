@@ -152,17 +152,7 @@ export function ChoicesSection({
       {/* Search choices */}
       {hasSearchChoices && (
         <div className="space-y-3">
-          <h3 className="text-sm font-semibold">Search Choices</h3>
-          {searchEntries.map((entry) => (
-            <SearchChoicePanel
-              key={entry.id}
-              label={entry.label}
-              candidates={entry.candidates}
-              selectedIds={entry.selectedIds}
-              maxSelections={entry.maxSelections ?? undefined}
-              onChange={entry.onChange}
-            />
-          ))}
+          <SearchChoicePanel entries={searchEntries} cardMap={cardMap} />
           {searchErrors.length > 0 && (
             <ul className="text-sm text-destructive">
               {searchErrors.map((error, index) => (

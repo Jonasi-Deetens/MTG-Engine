@@ -125,6 +125,13 @@ export const deriveTargetHintsForTarget = (
 export const deriveTargetSpecs = (effect: any): EffectTargetSpec[] => {
   if (!effect || !effect.type) return [];
   const specs: EffectTargetSpec[] = [];
+  if (effect.type === 'search') {
+    return specs;
+  }
+  const hasFromEffect = typeof effect.fromEffect === 'number';
+  const minTargets = effect.minTargets;
+  const maxTargets = effect.maxTargets;
+  const shouldInferTargets = hasFromEffect && minTargets == null && maxTargets == null;
   if (effect.type === 'fight') {
     specs.push({
       key: 'yourCreature',
@@ -166,6 +173,9 @@ export const deriveTargetSpecs = (effect: any): EffectTargetSpec[] => {
     return specs;
   }
   if (effect.type === 'attach') {
+    if (effect.attachTo === 'source' || effect.attachTo === 'self') {
+      return specs;
+    }
     specs.push({
       key: 'attach_to',
       label: 'Attach to',
@@ -175,6 +185,9 @@ export const deriveTargetSpecs = (effect: any): EffectTargetSpec[] => {
       allowPlayers: false,
       required: true,
     });
+    return specs;
+  }
+  if (shouldInferTargets) {
     return specs;
   }
   const target = effect.target || effect.untapTarget;
@@ -208,6 +221,18 @@ const filterEffectSteps = (
   return graph.steps.filter((step) => {
     if (!step?.effect) return false;
     return isEffectActiveForModes(step.effect, modalConfig ?? null, selectedModes);
+  });
+};
+
+const filterEffectNodes = (
+  graph: any,
+  modalConfig?: ModalChoiceConfig | null,
+  selectedModes: string[] = []
+) => {
+  if (!graph || !Array.isArray(graph.nodes)) return [];
+  return graph.nodes.filter((node: any) => {
+    if (!node?.data) return false;
+    return isEffectActiveForModes(node.data, modalConfig ?? null, selectedModes);
   });
 };
 
