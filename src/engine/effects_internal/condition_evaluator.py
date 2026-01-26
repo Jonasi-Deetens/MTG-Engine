@@ -62,8 +62,18 @@ class ConditionEvaluator:
         self._handlers: Dict[str, ConditionHandler] = {}
         self._register_default_handlers()
 
+    def _normalize_condition(self, condition: Any) -> Dict[str, Any]:
+        if isinstance(condition, dict):
+            return condition
+        if hasattr(condition, "model_dump"):
+            return condition.model_dump()
+        if hasattr(condition, "dict"):
+            return condition.dict()
+        return {}
+
     def evaluate(self, condition: Dict[str, Any], context: "ResolveContext") -> bool:
         """Evaluate a single condition."""
+        condition = self._normalize_condition(condition)
         condition_type = condition.get("type")
 
         # Try custom handler first

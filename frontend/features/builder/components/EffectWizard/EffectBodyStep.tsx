@@ -1,12 +1,15 @@
 import type { UnifiedEffect } from '@/lib/unifiedEffect';
+import { useEffect } from 'react';
 import {
   CARD_TYPE_FILTERS,
   CREATURE_TYPE_OPTIONS,
   EFFECT_TYPE_OPTIONS,
   MANA_TYPE_OPTIONS,
   TARGET_OPTIONS,
+  ATTACH_TARGET_OPTIONS,
   SEARCH_ZONE_OPTIONS,
   SEARCH_CARD_TYPE_FILTERS,
+  COMPARE_AGAINST_ZONE_OPTIONS,
 } from '@/lib/effectTypes';
 
 interface EffectBodyStepProps {
@@ -48,6 +51,20 @@ export function EffectBodyStep({ effect, onChange, previousSteps = [] }: EffectB
   const supportsLookAtPick = effectType === 'look_at_pick_and_bottom';
   const supportsTokenConfig = effectType === 'token';
   const colorOptions = ['W', 'U', 'B', 'R', 'G'];
+
+  useEffect(() => {
+    const updates: Record<string, unknown> = {};
+    if (effectType === 'search') {
+      if (!action.zone) updates.zone = 'library';
+      if (!action.manaValueComparison) updates.manaValueComparison = '<=';
+    }
+    if (effectType === 'attach' && !action.attachTo) {
+      updates.attachTo = 'source';
+    }
+    if (Object.keys(updates).length > 0) {
+      updateAction(updates);
+    }
+  }, [effectType, action.zone, action.manaValueComparison, action.attachTo]);
 
   const updateAction = (updates: Record<string, unknown>) => {
     const nextAction = { ...action, ...updates };
@@ -127,6 +144,24 @@ export function EffectBodyStep({ effect, onChange, previousSteps = [] }: EffectB
           )}
         </div>
       </div>
+      {effectType === 'attach' && (
+        <div>
+          <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">
+            Attach To
+          </label>
+          <select
+            className="mt-1 w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-sm"
+            value={action.attachTo ?? 'source'}
+            onChange={(e) => updateAction({ attachTo: e.target.value })}
+          >
+            {ATTACH_TARGET_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
       {supportsTokenConfig && (
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
@@ -473,6 +508,153 @@ export function EffectBodyStep({ effect, onChange, previousSteps = [] }: EffectB
                 ))}
               </select>
             </div>
+          </div>
+          <div>
+            <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">
+              Mana Value Comparison
+            </label>
+            <div className="mt-1 space-y-2">
+              <select
+                className="w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-sm"
+                value={action.manaValueComparison ?? '<='}
+                onChange={(e) => updateAction({ manaValueComparison: e.target.value })}
+              >
+                <option value="<=">≤ (Less than or equal)</option>
+                <option value="<">&lt; (Less than)</option>
+                <option value=">=">≥ (Greater than or equal)</option>
+                <option value=">">&gt; (Greater than)</option>
+                <option value="==">= (Equal)</option>
+              </select>
+              <div>
+                <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">
+                  Compare Against
+                </label>
+                <select
+                  className="mt-1 w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-sm"
+                  value={action.manaValueComparisonSource ?? 'fixed_value'}
+                  onChange={(e) => {
+                    const nextValue = e.target.value;
+                    updateAction({
+                      manaValueComparisonSource: nextValue,
+                      ...(nextValue === 'fixed_value' ? {} : { manaValueComparisonValue: undefined }),
+                    });
+                  }}
+                >
+                  <option value="fixed_value">Fixed Value</option>
+                  <option value="triggering_source">Triggering Source</option>
+                  <option value="triggering_aura">The Triggering Aura</option>
+                  <option value="triggering_spell">The Triggering Spell</option>
+                </select>
+              </div>
+              {(!action.manaValueComparisonSource || action.manaValueComparisonSource === 'fixed_value') && (
+                <input
+                  className="w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-sm"
+                  type="number"
+                  placeholder="Value"
+                  min="0"
+                  value={action.manaValueComparisonValue ?? ''}
+                  onChange={(e) =>
+                    updateAction({
+                      manaValueComparisonValue: e.target.value ? Number(e.target.value) : undefined,
+                    })
+                  }
+                />
+              )}
+            </div>
+          </div>
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-xs text-[color:var(--theme-text-secondary)]">
+              <input
+                type="checkbox"
+                checked={
+                  typeof action.differentName === 'object'
+                    ? action.differentName.enabled
+                    : !!action.differentName
+                }
+                onChange={(e) => {
+                  const enabled = e.target.checked;
+                  if (enabled) {
+                    updateAction({
+                      differentName: {
+                        enabled: true,
+                        compareAgainstType: 'any',
+                        compareAgainstZone: 'controlled',
+                      },
+                    });
+                  } else {
+                    updateAction({ differentName: false });
+                  }
+                }}
+              />
+              Different name check
+            </label>
+            {((typeof action.differentName === 'object' && action.differentName.enabled) ||
+              action.differentName === true) && (
+              <div className="pl-4 space-y-2 border-l border-[color:var(--theme-card-border)]">
+                <div>
+                  <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">
+                    Compare Against Type
+                  </label>
+                  <select
+                    className="mt-1 w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-sm"
+                    value={
+                      typeof action.differentName === 'object'
+                        ? action.differentName.compareAgainstType ?? 'any'
+                        : 'any'
+                    }
+                    onChange={(e) => {
+                      const current =
+                        typeof action.differentName === 'object'
+                          ? action.differentName
+                          : { enabled: true, compareAgainstZone: 'controlled' };
+                      updateAction({
+                        differentName: {
+                          ...current,
+                          compareAgainstType: e.target.value === 'any' ? undefined : e.target.value,
+                        },
+                      });
+                    }}
+                  >
+                    {CARD_TYPE_FILTERS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">
+                    Compare Against Zone
+                  </label>
+                  <select
+                    className="mt-1 w-full rounded border border-[color:var(--theme-card-border)] bg-transparent px-2 py-1 text-sm"
+                    value={
+                      typeof action.differentName === 'object'
+                        ? action.differentName.compareAgainstZone ?? 'controlled'
+                        : 'controlled'
+                    }
+                    onChange={(e) => {
+                      const current =
+                        typeof action.differentName === 'object'
+                          ? action.differentName
+                          : { enabled: true, compareAgainstType: 'any' };
+                      updateAction({
+                        differentName: {
+                          ...current,
+                          compareAgainstZone: e.target.value,
+                        },
+                      });
+                    }}
+                  >
+                    {COMPARE_AGAINST_ZONE_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

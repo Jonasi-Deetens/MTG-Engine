@@ -41,7 +41,8 @@ from engine.rules import (
     prepare_cast,
 )
 from engine.turn import Phase, Step
-from engine.zones import ZONE_BATTLEFIELD, ZONE_COMMAND, ZONE_HAND
+from engine.turn_handling.phase_handler import PhaseHandler
+from engine.zones import ZONE_BATTLEFIELD, ZONE_COMMAND, ZONE_HAND, ZONE_LIBRARY
 
 
 router = APIRouter(prefix="/api/engine", tags=["engine"])
@@ -390,6 +391,20 @@ def create_game_session(
 ):
     game_id = str(uuid4())
     snapshot = payload.game_state
+    game_state = _build_game_state(snapshot)
+    phase_handler = PhaseHandler(game_state, get_active_player_id=lambda: 0)
+    for player in game_state.players:
+        hand_ids = list(player.hand)
+        if hand_ids:
+            player.library = [obj_id for obj_id in player.library if obj_id not in hand_ids] + hand_ids
+            for obj_id in hand_ids:
+                obj = game_state.objects.get(obj_id)
+                if obj:
+                    obj.zone = ZONE_LIBRARY
+            player.hand = []
+        game_state.zone_manager.shuffle_library(player.id)
+        phase_handler.draw_cards(player.id, getattr(player, "max_hand_size", 7))
+    snapshot = _serialize_game_state(game_state)
     session = GameSession(
         game_id=game_id,
         user_id=user.id,
@@ -398,7 +413,7 @@ def create_game_session(
     )
     db.add(session)
     db.commit()
-    _cache_session(game_id, _build_game_state(snapshot), session.version, user_id=user.id)
+    _cache_session(game_id, game_state, session.version, user_id=user.id)
     return GameSessionResponse(game_id=game_id, game_state=snapshot, version=session.version)
 
 

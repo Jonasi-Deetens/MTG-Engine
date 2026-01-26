@@ -256,7 +256,10 @@ export function EffectWizard({
     setIntent(nextIntent);
     setDraft(createDefaultEffect(nextIntent));
     if (onSourceKindChange) {
-      onSourceKindChange(nextIntent === 'spell' ? 'spell' : 'permanent');
+      const isChainedStep = steps.length > 0 && sourceKind === 'permanent';
+      if (!(isChainedStep && nextIntent === 'spell')) {
+        onSourceKindChange(nextIntent === 'spell' ? 'spell' : 'permanent');
+      }
     }
     setStepIndex(1);
   };
@@ -285,7 +288,7 @@ export function EffectWizard({
             {editingEffect ? 'Edit Effect' : 'Add Effect'}
           </h3>
         </div>
-        <div className="px-6 py-4 space-y-4">
+        <div className="px-6 py-4 space-y-4 max-h-[70vh] overflow-y-auto">
           {currentKey === 'intent' && (
             <IntentStep onSelect={handleIntentSelect} intents={intentOptions} />
           )}

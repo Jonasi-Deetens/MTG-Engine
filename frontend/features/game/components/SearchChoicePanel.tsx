@@ -19,7 +19,7 @@ interface SearchChoicePanelProps {
   cardMap: EngineCardMap;
 }
 
-export function SearchChoicePanel({ entries, cardMap }: SearchChoicePanelProps) {
+export function SearchChoicePanel({ entries = [], cardMap }: SearchChoicePanelProps) {
   if (!entries.length) return null;
 
   return (
