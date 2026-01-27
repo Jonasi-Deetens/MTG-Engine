@@ -10,7 +10,8 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     | 'outline'
     | 'ghost'
     | 'danger'
-    | 'link';
+    | 'link'
+    | 'frame';
   size?: 'xs' | 'sm' | 'md' | 'lg';
   isLoading?: boolean;
 }
@@ -34,6 +35,7 @@ export function Button({
     ghost: 'bg-transparent hover:bg-[color:var(--theme-button-ghost-hover)] text-[color:var(--theme-button-ghost-text)] hover:text-[color:var(--theme-text-primary)]',
     danger: 'bg-[color:var(--theme-status-error)] hover:opacity-90 text-[color:var(--theme-text-primary)]',
     link: 'bg-transparent text-[color:var(--theme-accent-primary)] hover:text-[color:var(--theme-accent-hover)] underline-offset-4 hover:underline p-0',
+    frame: 'bg-transparent text-[color:var(--theme-accent-primary)] nier-frame nier-frame--accent rounded-none hover:bg-[color:var(--theme-accent-primary)]/10 hover:text-[color:var(--theme-accent-hover)]',
   };
   
   const sizes = {

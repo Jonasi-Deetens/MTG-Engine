@@ -94,12 +94,12 @@ export function DeckCard({
 
   return (
     <div
-      className={`relative w-full max-w-sm cursor-pointer group ${className || ''}`}
+      className={`relative w-full max-w-sm h-full cursor-pointer group ${className || ''}`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       tabIndex={0}
     >
-      <div className="relative bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-border-default)] overflow-hidden">
+      <div className="relative h-full flex flex-col bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-border-default)] overflow-hidden">
         <div className="absolute -top-1.5 -left-1.5 w-4 h-4 border-t border-l border-[color:var(--theme-border-default)] z-20" />
         <div className="absolute -bottom-1.5 -right-1.5 w-4 h-4 border-b border-r border-[color:var(--theme-border-default)] z-20" />
 
@@ -162,7 +162,7 @@ export function DeckCard({
           </div>
         </div>
 
-        <div className="p-4 space-y-2">
+        <div className="p-4 space-y-2 flex-1 flex flex-col">
           <div className="flex items-start justify-between gap-2">
             <h3 className="font-sans font-semibold text-lg text-[color:var(--theme-text-primary)] tracking-wide leading-tight">
               {deck.name}
@@ -204,54 +204,58 @@ export function DeckCard({
             </div>
           )}
 
-          <div className="flex items-center justify-between pt-1">
-            <div className="flex items-center gap-1.5 text-[color:var(--theme-text-muted)]">
-              <Clock className="w-3 h-3" />
-              <span className="font-mono text-[10px] tracking-wider">
-                Updated {formatRelativeTime(deck.updated_at)}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <div className="w-16 h-1 bg-[color:var(--theme-bg-secondary)] overflow-hidden">
-                <div
-                  className="h-full bg-[color:var(--theme-text-primary)] transition-all duration-75"
-                  style={{ width: `${scanProgress}%` }}
-                />
+          <div className="mt-auto space-y-2">
+            <div className="flex items-center justify-between pt-1">
+              <div className="flex items-center gap-1.5 text-[color:var(--theme-text-muted)]">
+                <Clock className="w-3 h-3" />
+                <span className="font-mono text-[10px] tracking-wider">
+                  Updated {formatRelativeTime(deck.updated_at)}
+                </span>
               </div>
-              <span className="font-mono text-[10px] text-[color:var(--theme-text-muted)] w-8">
-                {scanProgress.toString().padStart(3, '0')}%
-              </span>
-            </div>
-          </div>
 
-          {showActions && (
-            <div className="flex gap-2 pt-2">
-              <Link href={`/decks/${deck.id}`} className="flex-1 min-w-0">
-                <Button variant="primary" size="sm" className="w-full">
-                  View
-                </Button>
-              </Link>
-              <Link href={`/decks/builder?deck=${deck.id}`} className="flex-1 min-w-0">
-                <Button variant="outline" size="sm" className="w-full">
-                  Edit
-                </Button>
-              </Link>
-              {onDelete && (
-                <Button
-                  onClick={e => {
-                    e.preventDefault();
-                    onDelete(deck.id, deck.name);
-                  }}
-                  variant="outline"
-                  size="sm"
-                  className="text-[color:var(--theme-status-error)] hover:opacity-90 min-w-0"
-                >
-                  Delete
-                </Button>
-              )}
+              <div className="flex items-center gap-2">
+                <div className="w-16 h-1 bg-[color:var(--theme-bg-secondary)] overflow-hidden">
+                  <div
+                    className="h-full bg-[color:var(--theme-text-primary)] transition-all duration-75"
+                    style={{ width: `${scanProgress}%` }}
+                  />
+                </div>
+                <span className="font-mono text-[10px] text-[color:var(--theme-text-muted)] w-8">
+                  {scanProgress.toString().padStart(3, '0')}%
+                </span>
+              </div>
             </div>
-          )}
+
+            {showActions && (
+              <div className="flex gap-2 pt-2 items-stretch">
+                <Link href={`/decks/${deck.id}`} className="flex-1 min-w-0">
+                  <Button variant="primary" size="sm" className="w-full h-full">
+                    View
+                  </Button>
+                </Link>
+                <Link href={`/decks/builder?deck=${deck.id}`} className="flex-1 min-w-0">
+                  <Button variant="outline" size="sm" className="w-full h-full">
+                    Edit
+                  </Button>
+                </Link>
+                {onDelete && (
+                  <div className="flex-1 min-w-0">
+                    <Button
+                      onClick={e => {
+                        e.preventDefault();
+                        onDelete(deck.id, deck.name);
+                      }}
+                      variant="outline"
+                      size="sm"
+                      className="w-full h-full text-[color:var(--theme-status-error)] hover:opacity-90"
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="bg-[color:var(--theme-bg-secondary)]/50 border-t border-[color:var(--theme-border-default)] px-4 py-2 flex items-center justify-between">

@@ -128,9 +128,6 @@ export function PageBackground({ children }: { children: React.ReactNode }) {
   // Login and register pages should be fixed height like landing page
   const isFixedHeightPage = isLandingPage || isLoginPage || isRegisterPage;
   
-  const overlayColor = isPlayPage ? 'transparent' : 'var(--theme-bg-primary)';
-
-  const overlayOpacity = isPlayPage ? 0 : 0.7;
   const showNierBackground = currentTheme === 'nier';
 
   return (
@@ -141,10 +138,6 @@ export function PageBackground({ children }: { children: React.ReactNode }) {
       style={getBackgroundStyle()}
     >
       {showNierBackground && <NierPremiumBackground className="z-[1]" />}
-      <div
-        className="page-background-overlay pointer-events-none"
-        style={{ backgroundColor: overlayColor, opacity: overlayOpacity }}
-      />
       <div className="page-background-content">{children}</div>
     </div>
   );

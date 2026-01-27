@@ -59,18 +59,20 @@ export function CardModal({ isOpen, onClose, card, imageUrl }: CardModalProps) {
           <div className="text-xs font-mono tracking-[0.3em] text-[color:var(--theme-text-secondary)]">
             CARD_VIEW
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <FavoriteButton cardId={card.card_id} size="md" />
+          <div className="flex flex-wrap items-stretch gap-2">
+            <div className="pr-3 flex items-center h-8">
+              <FavoriteButton cardId={card.card_id} size="md" />
+            </div>
             <Button
               type="button"
               variant="primary"
               size="xs"
+              className="gap-2 h-8"
               onClick={() => {
                 onClose();
                 router.push(`/cards/${card.card_id}`);
               }}
               aria-label="View card details"
-              className="gap-2"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -91,11 +93,11 @@ export function CardModal({ isOpen, onClose, card, imageUrl }: CardModalProps) {
             </Button>
             <Button
               type="button"
-              variant="secondary"
+              variant="frame"
               size="xs"
               onClick={onClose}
               aria-label="Close modal"
-              className="gap-2"
+              className="h-8 w-8 p-0"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -111,7 +113,6 @@ export function CardModal({ isOpen, onClose, card, imageUrl }: CardModalProps) {
                 <line x1="18" y1="6" x2="6" y2="18"></line>
                 <line x1="6" y1="6" x2="18" y2="18"></line>
               </svg>
-              <span className="text-[10px] tracking-[0.2em] uppercase hidden sm:inline">Close</span>
             </Button>
           </div>
         </div>
@@ -137,7 +138,10 @@ export function CardModal({ isOpen, onClose, card, imageUrl }: CardModalProps) {
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4 mb-2">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 flex-wrap mb-2">
-                    <h1 className="font-heading text-2xl sm:text-3xl lg:text-4xl font-bold text-[color:var(--theme-text-primary)] leading-tight">
+                    <h1
+                      className="font-heading text-2xl sm:text-3xl lg:text-4xl font-bold text-[color:var(--theme-text-primary)] leading-tight nier-glitch nier-glitch--transparent"
+                      data-text={card.name}
+                    >
                       {card.name}
                     </h1>
                     {card.rarity && <RarityBadge rarity={card.rarity} />}

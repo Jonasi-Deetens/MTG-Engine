@@ -30,7 +30,7 @@ export function ArchiveSectionHeader({
       </h2>
       <div className="flex-1 h-px bg-[color:var(--theme-text-primary)]/30" />
       <div className="flex items-center gap-3 shrink-0">
-        <div className="font-mono text-xs tracking-wider text-[color:var(--theme-text-muted)] uppercase">
+        <div className="font-mono text-xs tracking-wider text-[color:var(--theme-accent-secondary)] uppercase">
           {status}
         </div>
         {action ? <div className="flex items-center gap-2">{action}</div> : null}

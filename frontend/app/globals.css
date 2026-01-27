@@ -38,8 +38,6 @@
   --theme-button-ghost-hover: #fef3c7; /* amber-100 - light amber hover */
   --theme-nav-active: #f59e0b; /* amber-500 - active color for default/light theme */
   --theme-nav-active-border: #f59e0b; /* amber-500 - border color for active nav */
-  --theme-overlay: rgba(0, 0, 0, 0.6);
-  --theme-overlay-strong: rgba(0, 0, 0, 0.85);
 }
 
 /* Light theme (Elesh Norn white-yellow with amber/orange accents) */
@@ -80,8 +78,6 @@
   --theme-button-ghost-hover: #fef3c7; /* amber-100 - light amber hover */
   --theme-nav-active: #f59e0b; /* amber-500 - active color for light theme */
   --theme-nav-active-border: #f59e0b; /* amber-500 - border color for active nav */
-  --theme-overlay: rgba(0, 0, 0, 0.6);
-  --theme-overlay-strong: rgba(0, 0, 0, 0.85);
 }
 
 /* Sakura theme (whitish with pink accents) */
@@ -122,8 +118,6 @@
   --theme-button-ghost-hover: #fde6f0; /* light pink hover */
   --theme-nav-active: #f08ab0; /* sakura pink - active nav item */
   --theme-nav-active-border: #f08ab0; /* sakura pink - active nav border */
-  --theme-overlay: rgba(0, 0, 0, 0.6);
-  --theme-overlay-strong: rgba(0, 0, 0, 0.85);
 }
 
 /* Neon theme (dark with neon accents) */
@@ -164,8 +158,6 @@
   --theme-button-ghost-hover: #111827;
   --theme-nav-active: #22d3ee; /* cyan-400 */
   --theme-nav-active-border: #22d3ee; /* cyan-400 */
-  --theme-overlay: rgba(0, 0, 0, 0.8);
-  --theme-overlay-strong: rgba(0, 0, 0, 0.9);
 }
 
 /* NieR theme (play-page theme promoted) */
@@ -179,9 +171,9 @@
   --theme-border-default: #9c9787;
   --theme-border-hover: #9c9787;
   --theme-border-focus: #9c9787;
-  --theme-accent-primary: #9c9787;
-  --theme-accent-secondary: #7a7464;
-  --theme-accent-hover: #6f6a5d;
+  --theme-accent-primary: #8b4049;
+  --theme-accent-secondary: #8b4049;
+  --theme-accent-hover: #a45a63;
   --theme-status-success: #2f7d5f;
   --theme-status-warning: #b38a3a;
   --theme-status-error: #8b4049;
@@ -204,10 +196,8 @@
   --theme-button-outline-hover: #6f6a5d;
   --theme-button-ghost-text: #7a7464;
   --theme-button-ghost-hover: #cfc7ad;
-  --theme-nav-active: #9c9787;
-  --theme-nav-active-border: #9c9787;
-  --theme-overlay: rgba(26, 25, 21, 0.6);
-  --theme-overlay-strong: rgba(26, 25, 21, 0.85);
+  --theme-nav-active: #8fb9b3;
+  --theme-nav-active-border: #8fb9b3;
 }
 
 .page-background {
@@ -217,9 +207,7 @@
 }
 
 .page-background-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
+  display: none;
 }
 
 .page-background-content {
@@ -231,106 +219,14 @@
   background-image: none !important;
 }
 
+[data-theme="nier"] .page-background-overlay {
+  display: none;
+}
+
 [data-theme="nier"] .page-background::before,
 [data-theme="nier"] .page-background::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 1;
-}
-
-[data-theme="nier"] .page-background.nier-premium-bg::before,
-[data-theme="nier"] .page-background.nier-premium-bg::after {
   content: none;
   background-image: none;
-}
-
-[data-theme="nier"] .page-background::before {
-  opacity: 0.22;
-  background-image:
-    linear-gradient(
-      to right,
-      color-mix(in srgb, var(--theme-border-default) 35%, transparent) 0 1px,
-      transparent 1px 100%
-    ),
-    linear-gradient(
-      to bottom,
-      color-mix(in srgb, var(--theme-border-default) 25%, transparent) 0 1px,
-      transparent 1px 100%
-    ),
-    linear-gradient(
-      135deg,
-      transparent 0 78%,
-      color-mix(in srgb, var(--theme-border-default) 35%, transparent) 78% 79%,
-      transparent 79% 100%
-    ),
-    linear-gradient(
-      -135deg,
-      transparent 0 82%,
-      color-mix(in srgb, var(--theme-accent-secondary) 25%, transparent) 82% 83%,
-      transparent 83% 100%
-    ),
-    linear-gradient(
-      90deg,
-      transparent 0 35%,
-      color-mix(in srgb, var(--theme-accent-primary) 30%, transparent) 35% 36%,
-      transparent 36% 100%
-    ),
-    linear-gradient(
-      0deg,
-      transparent 0 45%,
-      color-mix(in srgb, var(--theme-accent-secondary) 25%, transparent) 45% 46%,
-      transparent 46% 100%
-    ),
-    linear-gradient(
-      90deg,
-      transparent 0 70%,
-      color-mix(in srgb, var(--theme-border-default) 35%, transparent) 70% 71%,
-      transparent 71% 100%
-    );
-  background-size: 120px 120px, 120px 120px, 220px 220px, 260px 260px, 240px 90px, 180px 140px, 120px 48px;
-  background-position:
-    0 0,
-    0 0,
-    8% 12%,
-    92% 86%,
-    0 0,
-    40px 20px,
-    20px 10px;
-  animation: nierGridSweep 18s linear infinite, nierRectsPulse 10s ease-in-out infinite, nierMicroDrift 22s linear infinite;
-}
-
-[data-theme="nier"] .page-background::after {
-  position: fixed;
-  inset: 0;
-  opacity: 0.32;
-  background-image:
-    linear-gradient(
-      -135deg,
-      transparent 0 46%,
-      color-mix(in srgb, var(--theme-button-primary-bg) 15%, #000000 85%) 46% 49%,
-      transparent 49% 100%
-    ),
-    linear-gradient(
-      -135deg,
-      transparent 0 51%,
-      color-mix(in srgb, var(--theme-button-primary-bg) 12%, #000000 88%) 51% 54%,
-      transparent 54% 100%
-    ),
-    linear-gradient(
-      -135deg,
-      transparent 0 55%,
-      color-mix(in srgb, var(--theme-button-primary-bg) 10%, #000000 90%) 55% 58%,
-      transparent 58% 100%
-    );
-  background-size: 420px 420px, 360px 360px, 320px 320px;
-  background-position:
-    left -10px bottom -60px,
-    left 20px bottom -10px,
-    left -40px bottom 40px;
-  background-repeat: no-repeat;
-  animation: none;
 }
 
 @keyframes nierGridSweep {
@@ -899,6 +795,11 @@
   background: var(--theme-bg-primary);
 }
 
+[data-theme="nier"] .nier-glitch.nier-glitch--transparent::before,
+[data-theme="nier"] .nier-glitch.nier-glitch--transparent::after {
+  background: transparent;
+}
+
 [data-theme="nier"] .nier-glitch::before {
   animation: glitch 2s infinite linear alternate-reverse;
   color: #9c9787;
@@ -921,8 +822,12 @@
   position: absolute;
   width: 20px;
   height: 20px;
-  border-color: var(--theme-text-primary);
+  border-color: var(--nier-frame-color, var(--theme-text-primary));
   pointer-events: none;
+}
+
+[data-theme="nier"] .nier-frame--accent {
+  --nier-frame-color: var(--theme-accent-primary);
 }
 
 [data-theme="nier"] .nier-frame::before {
@@ -1231,7 +1136,7 @@
   position: absolute;
   width: 10px;
   height: 10px;
-  border: 1px solid var(--theme-border-default);
+  border: 1px solid var(--theme-accent-primary);
 }
 
 [data-theme="nier"] .ui-card[data-variant="default"]::before,
@@ -1383,8 +1288,6 @@
   --theme-button-ghost-hover: #1a1a1a; /* dark gray hover */
   --theme-nav-active: #e5e7eb; /* bright whitish gray - active nav item */
   --theme-nav-active-border: #e5e7eb; /* bright whitish gray - active nav border */
-  --theme-overlay: rgba(0, 0, 0, 0.8);
-  --theme-overlay-strong: rgba(0, 0, 0, 0.9);
 }
 
 
@@ -1443,7 +1346,7 @@ body {
   position: absolute;
   width: 10px;
   height: 10px;
-  border: 1px solid var(--theme-border-default);
+  border: 1px solid var(--theme-accent-primary);
   pointer-events: none;
   z-index: 3;
 }

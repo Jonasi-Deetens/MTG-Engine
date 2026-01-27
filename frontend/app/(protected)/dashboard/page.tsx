@@ -156,7 +156,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between mb-4">
               <span className="text-[color:var(--theme-text-secondary)] text-sm uppercase tracking-wide">Collections</span>
               <div className="p-2 rounded-lg">
-                <Folder className="w-6 h-6 text-[color:var(--theme-status-info)]" />
+                <Folder className="w-6 h-6 text-[color:var(--theme-accent-secondary)]" />
               </div>
             </div>
             <div className="text-4xl font-bold text-[color:var(--theme-text-primary)] mb-4">{stats.collections}</div>
