@@ -12,6 +12,7 @@ import React, {
 import { useRouter } from "next/navigation";
 import { QuickSearchModal } from "@/components/ui/QuickSearchModal";
 import { ShortcutHelpModal } from "@/components/ui/ShortcutHelpModal";
+import { GameModal } from "@/components/ui/GameModal";
 
 type ShortcutContextValue = {
   openQuickSearch: () => void;
@@ -53,6 +54,7 @@ export function ShortcutProvider({
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [isGameOpen, setIsGameOpen] = useState(false);
 
   const openQuickSearch = useCallback(() => setIsOpen(true), []);
   const closeQuickSearch = useCallback(() => {
@@ -62,6 +64,8 @@ export function ShortcutProvider({
   const toggleQuickSearch = useCallback(() => setIsOpen((v) => !v), []);
   const openShortcutHelp = useCallback(() => setIsHelpOpen(true), []);
   const closeShortcutHelp = useCallback(() => setIsHelpOpen(false), []);
+  const openGame = useCallback(() => setIsGameOpen(true), []);
+  const closeGame = useCallback(() => setIsGameOpen(false), []);
 
   const submit = useCallback(() => {
     const q = query.trim();
@@ -138,6 +142,13 @@ export function ShortcutProvider({
           pendingKey = null;
           return;
         }
+        if (sequence === "gg") {
+          e.preventDefault();
+          e.stopPropagation();
+          openGame();
+          pendingKey = null;
+          return;
+        }
         if (sequence === "nd") {
           e.preventDefault();
           e.stopPropagation();
@@ -156,7 +167,7 @@ export function ShortcutProvider({
 
     window.addEventListener("keydown", onKeyDown, { passive: false });
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [enableCmdK, router]);
+  }, [enableCmdK, openGame, router]);
 
   const value = useMemo<ShortcutContextValue>(
     () => ({
@@ -190,6 +201,7 @@ export function ShortcutProvider({
         ?
       </button>
       <ShortcutHelpModal isOpen={isHelpOpen} onClose={closeShortcutHelp} />
+      <GameModal isOpen={isGameOpen} onClose={closeGame} />
     </ShortcutContext.Provider>
   );
 }

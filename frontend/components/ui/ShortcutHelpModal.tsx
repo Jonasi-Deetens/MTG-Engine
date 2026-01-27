@@ -22,6 +22,10 @@ const shortcuts = [
     ],
   },
   {
+    group: "Fun",
+    items: [{ keys: "G then G", label: "Open mini-game" }],
+  },
+  {
     group: "Deckbuilding",
     items: [
       { keys: "N then D", label: "New Deck" },
