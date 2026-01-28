@@ -1405,3 +1405,294 @@ body {
               0 2px 4px -1px rgba(229, 231, 235, 0.06);
 }
 
+:root {
+  --boss-primary: #12100e;
+  --boss-accent: #ff4500;
+  --boss-ascended: #e14b7a;
+  --boss-border: #ffffff;
+  --transition-speed: 0.3s;
+}
+
+.boss-sprite {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.boss-container {
+  position: relative;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-speed) ease-in-out;
+  background: var(--boss-primary);
+  border: 3px solid var(--boss-border);
+  animation: boss-spin 10s linear infinite;
+  transform-origin: center;
+}
+
+.npc-sprite {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 2px solid #bba985;
+  background: #d6c8ad;
+  box-shadow: 0 0 10px rgba(214, 200, 173, 0.35);
+  pointer-events: none;
+  animation: npc-float 2.8s ease-in-out infinite;
+}
+
+.npc-hostile {
+  background: #0d0c0b;
+  border-color: #c03a3a;
+  box-shadow: 0 0 12px rgba(192, 58, 58, 0.4);
+}
+
+.npc-bubble {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  max-width: 200px;
+  padding: 6px 10px;
+  border: 1px solid #cbbfa8;
+  background: rgba(245, 238, 226, 0.9);
+  color: #3a342c;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+    monospace;
+  pointer-events: none;
+  animation: npc-bubble-flicker 2.4s ease-in-out infinite;
+}
+
+.npc-bubble--hostile {
+  border-color: #c03a3a;
+  background: rgba(20, 16, 16, 0.9);
+  color: #f0d8d8;
+  animation: npc-bubble-flicker 1.6s ease-in-out infinite;
+}
+
+.npc-bubble::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid rgba(245, 238, 226, 0.9);
+}
+
+.boss-bubble {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  max-width: 220px;
+  padding: 8px 12px;
+  border: 1px solid var(--boss-accent);
+  background: rgba(18, 16, 14, 0.9);
+  color: #e7e0d0;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+    monospace;
+  pointer-events: none;
+  animation: npc-bubble-flicker 2s ease-in-out infinite;
+}
+
+.boss-bubble::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 7px solid rgba(18, 16, 14, 0.9);
+}
+
+@keyframes npc-float {
+  0% {
+    transform: translate(-50%, -50%) translateY(-2px);
+  }
+  50% {
+    transform: translate(-50%, -50%) translateY(2px);
+  }
+  100% {
+    transform: translate(-50%, -50%) translateY(-2px);
+  }
+}
+
+@keyframes npc-bubble-flicker {
+  0%,
+  100% {
+    opacity: 0.9;
+  }
+  50% {
+    opacity: 0.65;
+  }
+}
+
+.boss-phase-2 {
+  background: rgba(245, 242, 236, 0.95);
+  border-color: var(--boss-accent);
+}
+
+.boss-phase-3 {
+  background: rgba(255, 255, 255, 0.98);
+  border-color: #ffffff;
+  box-shadow: 0 0 20px #fff;
+}
+
+.boss-ascended {
+  border-color: var(--boss-ascended);
+  animation: boss-spin 10s linear infinite, glitch 0.2s infinite;
+}
+
+.boss-ascended {
+  transform: scale(1.2);
+  box-shadow:
+    0 0 24px rgba(225, 75, 122, 0.55),
+    0 0 40px rgba(225, 75, 122, 0.35);
+  background: radial-gradient(circle at 30% 30%, rgba(225, 75, 122, 0.55), rgba(18, 16, 14, 0.85));
+}
+
+.boss-core {
+  width: 32%;
+  height: 32%;
+  background: rgba(60, 56, 48, 0.7);
+  z-index: 2;
+}
+
+.boss-ascended .boss-core {
+  width: 38%;
+  height: 38%;
+  background: rgba(40, 8, 16, 0.9);
+  box-shadow: 0 0 16px rgba(225, 75, 122, 0.6);
+  transform: rotate(45deg);
+}
+
+.boss-phase-2 .boss-core {
+  background: rgba(120, 48, 68, 0.75);
+}
+
+.boss-phase-3 .boss-core {
+  background: rgba(220, 220, 220, 0.85);
+}
+
+.boss-container::before,
+.boss-container::after {
+  content: "";
+  position: absolute;
+  background: var(--boss-accent);
+  transition: background var(--transition-speed);
+}
+
+.boss-container::before {
+  width: 90%;
+  height: 2px;
+}
+
+.boss-container::after {
+  width: 2px;
+  height: 90%;
+}
+
+.spikes-overlay {
+  position: absolute;
+  width: 140%;
+  height: 140%;
+  border: 2px dashed var(--boss-accent);
+  border-radius: 50%;
+  animation: pulse-ring 1.4s ease-out infinite;
+}
+
+.boss-ascended .spikes-overlay {
+  width: 160%;
+  height: 160%;
+  border: 2px solid rgba(225, 75, 122, 0.8);
+  box-shadow: 0 0 18px rgba(225, 75, 122, 0.45);
+  animation: ascended-pulse 1.1s ease-out infinite;
+}
+
+@keyframes boss-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes glitch {
+  0% {
+    transform: translate(0) rotate(0deg);
+    filter: hue-rotate(0deg);
+  }
+  25% {
+    transform: translate(-3px, 2px);
+  }
+  50% {
+    transform: translate(3px, -1px);
+    opacity: 0.8;
+  }
+  75% {
+    transform: translate(-1px, -2px);
+  }
+  100% {
+    transform: translate(0);
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.2);
+    opacity: 0;
+  }
+}
+
+@keyframes ascended-pulse {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.85;
+  }
+  100% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+}
+
+@keyframes death-sequence {
+  to {
+    transform: scale(0.3);
+    opacity: 0;
+    filter: grayscale(1);
+  }
+}
+
+.is-dying {
+  animation: death-sequence 1s forwards;
+}
+
+.is-transitioning {
+  animation: boss-spin 2s linear infinite, pulse-glow 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes pulse-glow {
+  from {
+    box-shadow: 0 0 5px var(--boss-accent);
+  }
+  to {
+    box-shadow: 0 0 25px var(--boss-accent);
+  }
+}
+

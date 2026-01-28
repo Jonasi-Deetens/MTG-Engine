@@ -3,6 +3,10 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { GameCanvas } from "@/components/game/GameCanvas";
 import { GameHUD } from "@/components/game/GameHUD";
+import { BossBubbles } from "@/components/game/BossBubbles";
+import { BossSprite } from "@/components/game/BossSprite";
+import { NpcBubbles } from "@/components/game/NpcBubbles";
+import { NpcSprite } from "@/components/game/NpcSprite";
 import { useGameState } from "@/hooks/useGameState";
 
 type ThemeColors = {
@@ -21,7 +25,7 @@ const fallbackColors: ThemeColors = {
 
 export function ArrowGame() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [bounds, setBounds] = useState({ width: 0, height: 0 });
   const [colors, setColors] = useState<ThemeColors>(fallbackColors);
   const pointerPositionRef = useRef({ x: 0, y: 0 });
@@ -134,7 +138,7 @@ export function ArrowGame() {
     (deltaMs: number) => {
       actions.update(deltaMs, bounds, playerPositionRef.current);
       if (bounds.width && bounds.height) {
-        const speed = 260;
+        const speed = state.playerStats.moveSpeed;
         const deltaSec = deltaMs / 1000;
         const dx =
           (moveRef.current.right ? 1 : 0) - (moveRef.current.left ? 1 : 0);
@@ -154,10 +158,10 @@ export function ArrowGame() {
         }
       }
       if (state.status !== "playing") return;
-      if (!isFiringRef.current) return;
+      if (!state.playerStats.fireOnHold || !isFiringRef.current) return;
       fireCooldownRef.current -= deltaMs;
       if (fireCooldownRef.current <= 0) {
-        fireCooldownRef.current = 140;
+        fireCooldownRef.current = state.playerStats.fireCooldownMs;
         actions.shoot(playerPositionRef.current, pointerPositionRef.current);
       }
     },
@@ -199,25 +203,51 @@ export function ArrowGame() {
         status={state.status}
         colors={colors}
         canvasRef={canvasRef}
+        elapsedMs={state.elapsedMs}
         playerRef={playerPositionRef}
         orbsRef={refs.orbsRef}
         lasersRef={refs.lasersRef}
         bossesRef={refs.bossesRef}
         projectilesRef={refs.projectilesRef}
+        enemyProjectilesRef={refs.enemyProjectilesRef}
+        npcProjectilesRef={refs.npcProjectilesRef}
+        rewardRef={refs.rewardRef}
         pointerRef={refs.pointerRef}
         onFrame={handleFrame}
         onPointerMove={handlePointerMove}
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
       />
+      <NpcSprite npcs={state.npcs} bounds={bounds} />
+      <NpcBubbles
+        npcs={state.npcs}
+        storyPhase={state.storyPhase}
+        npcDialogueIndex={state.npcDialogueIndex}
+        npcBubbleVisibleMs={state.npcBubbleVisibleMs}
+        bounds={bounds}
+      />
+      <BossBubbles
+        boss={state.boss}
+        bossDialogueIndex={state.bossDialogueIndex}
+        bossBubbleVisibleMs={state.bossBubbleVisibleMs}
+        isAscended={state.boss?.isAscended ?? false}
+        bossPhaseMessage={state.bossPhaseMessage}
+        bossPhaseMessageMs={state.bossPhaseMessageMs}
+      />
+      <BossSprite boss={state.boss} bounds={bounds} />
       <GameHUD
         status={state.status}
         score={state.score}
         lives={state.lives}
+        maxLives={state.maxLives}
         elapsedMs={state.elapsedMs}
+        upgradeOptions={state.upgradeOptions}
+        boss={state.boss}
+        missionComplete={state.missionComplete}
         onStart={actions.startGame}
         onResume={actions.resumeGame}
         onReset={actions.resetGame}
+        onSelectUpgrade={actions.applyUpgrade}
       />
     </div>
   );

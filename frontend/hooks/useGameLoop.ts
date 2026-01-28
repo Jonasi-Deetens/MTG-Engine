@@ -6,43 +6,50 @@ export function useGameLoop(onFrame: GameLoopCallback) {
   const [isRunning, setIsRunning] = useState(false);
   const frameRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number | null>(null);
+  const isRunningRef = useRef(false);
+  const onFrameRef = useRef(onFrame);
 
-  const loop = useCallback(
-    (time: number) => {
-      if (!isRunning) return;
-      if (lastTimeRef.current === null) {
-        lastTimeRef.current = time;
-      }
-      const deltaMs = time - (lastTimeRef.current ?? time);
+  useEffect(() => {
+    onFrameRef.current = onFrame;
+  }, [onFrame]);
+
+  const loop = useCallback((time: number) => {
+    if (!isRunningRef.current) return;
+    if (lastTimeRef.current === null) {
       lastTimeRef.current = time;
-      onFrame(deltaMs);
-      frameRef.current = window.requestAnimationFrame(loop);
-    },
-    [isRunning, onFrame]
-  );
+    }
+    const deltaMs = time - (lastTimeRef.current ?? time);
+    lastTimeRef.current = time;
+    onFrameRef.current(deltaMs);
+    frameRef.current = window.requestAnimationFrame(loop);
+  }, []);
 
-  const start = useCallback(() => setIsRunning(true), []);
-  const stop = useCallback(() => setIsRunning(false), []);
+  const start = useCallback(() => {
+    if (isRunningRef.current) return;
+    isRunningRef.current = true;
+    setIsRunning(true);
+    frameRef.current = window.requestAnimationFrame(loop);
+  }, [loop]);
+  const stop = useCallback(() => {
+    if (!isRunningRef.current) return;
+    isRunningRef.current = false;
+    setIsRunning(false);
+    if (frameRef.current !== null) {
+      window.cancelAnimationFrame(frameRef.current);
+      frameRef.current = null;
+    }
+    lastTimeRef.current = null;
+  }, []);
 
   useEffect(() => {
     if (!isRunning) {
-      if (frameRef.current !== null) {
-        window.cancelAnimationFrame(frameRef.current);
-        frameRef.current = null;
-      }
-      lastTimeRef.current = null;
       return;
     }
 
-    frameRef.current = window.requestAnimationFrame(loop);
     return () => {
-      if (frameRef.current !== null) {
-        window.cancelAnimationFrame(frameRef.current);
-      }
-      frameRef.current = null;
-      lastTimeRef.current = null;
+      stop();
     };
-  }, [isRunning, loop]);
+  }, [isRunning, stop]);
 
   return { isRunning, start, stop };
 }
