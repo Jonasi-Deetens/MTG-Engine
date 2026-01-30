@@ -156,8 +156,8 @@ export default function SearchPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
           <h1
             className="font-heading text-3xl font-bold text-[color:var(--theme-text-primary)] mb-2 nier-glitch"
             data-text={isBrowseMode ? 'Browse Cards' : 'Card Search'}
@@ -170,7 +170,9 @@ export default function SearchPage() {
               : 'Search through Magic: The Gathering cards'}
           </p>
         </div>
-        <SearchHeader onRandomClick={handleRandomCard} />
+        <div className="flex w-full sm:w-auto">
+          <SearchHeader onRandomClick={handleRandomCard} />
+        </div>
       </div>
 
       <div className="space-y-4">

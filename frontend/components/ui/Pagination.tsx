@@ -90,37 +90,38 @@ export function Pagination({
   const endItem = total ? Math.min(currentPage * pageSize, total) : undefined;
 
   return (
-    <div className={cn('flex flex-col items-center gap-4', className)}>
+    <div className={cn('flex flex-col items-stretch gap-3 sm:items-center sm:gap-4', className)}>
       {/* Results info */}
       {total && startItem !== undefined && endItem !== undefined && (
-        <div className="text-sm text-[color:var(--theme-text-secondary)]">
+        <div className="text-xs font-mono tracking-[0.2em] uppercase text-[color:var(--theme-text-muted)] text-center sm:text-left">
           Showing {startItem.toLocaleString()}-{endItem.toLocaleString()} of {total.toLocaleString()} cards
         </div>
       )}
       
       {/* Pagination controls */}
-      <div className="flex items-center gap-2">
+      <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-center">
         {/* Previous button */}
         <Button
           variant="outline"
           size="sm"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage <= 1}
-          className="flex items-center gap-1"
+          className="flex w-full items-center justify-center gap-2 font-mono text-xs tracking-[0.2em] uppercase sm:w-auto"
         >
           <ChevronLeft className="w-4 h-4" />
           <span className="hidden sm:inline">Previous</span>
+          <span className="sm:hidden">Prev</span>
         </Button>
 
         {/* Page numbers */}
         {showPageNumbers && (
-          <div className="flex items-center gap-1">
+          <div className="flex flex-wrap items-center justify-center gap-1">
             {pageNumbers.map((page, index) => {
               if (page === 'ellipsis') {
                 return (
                   <span
                     key={`ellipsis-${index}`}
-                    className="px-2 text-[color:var(--theme-text-secondary)]"
+                    className="px-2 text-[color:var(--theme-text-secondary)] font-mono text-xs"
                   >
                     ...
                   </span>
@@ -134,7 +135,7 @@ export function Pagination({
                   key={page}
                   onClick={() => onPageChange(page)}
                   className={cn(
-                    'min-w-[2.5rem] px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200',
+                    'min-w-[2.25rem] px-2.5 py-1.5 text-xs font-mono tracking-[0.2em] uppercase rounded-none transition-all duration-200',
                     isActive
                       ? 'bg-[color:var(--theme-accent-primary)] text-[color:var(--theme-button-primary-text)]'
                       : 'bg-[color:var(--theme-card-bg)] text-[color:var(--theme-text-secondary)] hover:bg-[color:var(--theme-card-hover)] hover:text-[color:var(--theme-text-primary)] border border-[color:var(--theme-card-border)]'
@@ -155,9 +156,10 @@ export function Pagination({
           size="sm"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage >= totalPages}
-          className="flex items-center gap-1"
+          className="flex w-full items-center justify-center gap-2 font-mono text-xs tracking-[0.2em] uppercase sm:w-auto"
         >
           <span className="hidden sm:inline">Next</span>
+          <span className="sm:hidden">Next</span>
           <ChevronRight className="w-4 h-4" />
         </Button>
       </div>

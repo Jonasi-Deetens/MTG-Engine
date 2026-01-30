@@ -9,12 +9,12 @@ interface SearchHeaderProps {
 
 export function SearchHeader({ onRandomClick }: SearchHeaderProps) {
   return (
-    <div className="flex items-center justify-between mb-6">
+    <div className="flex w-full items-center justify-between sm:w-auto">
       <Button
         onClick={onRandomClick}
         variant="outline"
         size="sm"
-        className="flex items-center gap-2"
+        className="flex w-full items-center justify-center gap-2 sm:w-auto"
       >
         <Sparkles className="w-4 h-4" />
         Random Card

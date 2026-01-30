@@ -46,11 +46,12 @@ export function SearchFilters({
 }: SearchFiltersProps) {
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-2">
         <Button
           onClick={onToggleFilters}
           variant="outline"
           size="sm"
+          className="font-mono text-xs tracking-[0.2em] uppercase"
         >
           {showFilters ? 'Hide' : 'Show'} Filters
         </Button>
@@ -59,6 +60,7 @@ export function SearchFilters({
             onClick={onClearFilters}
             variant="outline"
             size="sm"
+            className="font-mono text-xs tracking-[0.2em] uppercase"
           >
             Clear Filters
           </Button>
@@ -67,8 +69,8 @@ export function SearchFilters({
 
       {showFilters && (
         <div className="bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] rounded-lg p-4 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-[color:var(--theme-text-secondary)] mb-2">
+          <div className="pb-4 border-b border-[color:var(--theme-card-border)]">
+            <label className="block text-xs font-mono tracking-[0.2em] uppercase text-[color:var(--theme-text-muted)] mb-2">
               Colors
             </label>
             <div className="flex flex-wrap gap-2">
@@ -76,7 +78,7 @@ export function SearchFilters({
                 <button
                   key={color}
                   onClick={() => onToggleColor(color)}
-                  className={`px-3 py-1 rounded text-sm font-medium transition-colors cursor-pointer ${
+                  className={`px-3 py-1 rounded-none text-xs font-mono tracking-[0.2em] uppercase transition-colors cursor-pointer ${
                     selectedColors.includes(color)
                       ? 'bg-[color:var(--theme-accent-primary)] text-[color:var(--theme-button-primary-text)]'
                       : 'bg-[color:var(--theme-card-hover)] text-[color:var(--theme-text-secondary)] hover:bg-[color:var(--theme-card-hover)] hover:text-[color:var(--theme-text-primary)] border border-[color:var(--theme-card-border)]'
@@ -90,7 +92,7 @@ export function SearchFilters({
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-[color:var(--theme-text-secondary)] mb-2">
+              <label className="block text-xs font-mono tracking-[0.2em] uppercase text-[color:var(--theme-text-muted)] mb-2">
                 Card Types
               </label>
               <div className="flex flex-wrap gap-2">
@@ -99,7 +101,7 @@ export function SearchFilters({
                     key={option.value}
                     type="button"
                     onClick={() => onToggleType(option.value)}
-                    className={`px-3 py-1 rounded text-sm font-medium transition-colors cursor-pointer ${
+                    className={`px-3 py-1 rounded-none text-xs font-mono tracking-[0.2em] uppercase transition-colors cursor-pointer ${
                       typeFilters.includes(option.value)
                         ? 'bg-[color:var(--theme-accent-primary)] text-[color:var(--theme-button-primary-text)]'
                         : 'bg-[color:var(--theme-card-hover)] text-[color:var(--theme-text-secondary)] hover:bg-[color:var(--theme-card-hover)] hover:text-[color:var(--theme-text-primary)] border border-[color:var(--theme-card-border)]'
@@ -112,7 +114,7 @@ export function SearchFilters({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[color:var(--theme-text-secondary)] mb-2">
+              <label className="block text-xs font-mono tracking-[0.2em] uppercase text-[color:var(--theme-text-muted)] mb-2">
                 Set Code
               </label>
               <Input
@@ -124,7 +126,7 @@ export function SearchFilters({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[color:var(--theme-text-secondary)] mb-2">
+              <label className="block text-xs font-mono tracking-[0.2em] uppercase text-[color:var(--theme-text-muted)] mb-2">
                 Rarity
               </label>
               <Select
@@ -141,7 +143,7 @@ export function SearchFilters({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[color:var(--theme-text-secondary)] mb-2">
+              <label className="block text-xs font-mono tracking-[0.2em] uppercase text-[color:var(--theme-text-muted)] mb-2">
                 Language
               </label>
               <Select
@@ -158,7 +160,7 @@ export function SearchFilters({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[color:var(--theme-text-secondary)] mb-2">
+              <label className="block text-xs font-mono tracking-[0.2em] uppercase text-[color:var(--theme-text-muted)] mb-2">
                 Keyword
               </label>
               <Input

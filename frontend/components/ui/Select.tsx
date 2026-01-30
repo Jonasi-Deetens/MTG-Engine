@@ -24,33 +24,35 @@ export function Select({
   ...props
 }: SelectProps) {
   return (
-    <select
-      className={cn(
-        className,
-        'w-full px-2 py-1 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)]',
-        'border border-[color:var(--theme-input-border)] rounded-none',
-        'text-xs font-mono uppercase tracking-[0.12em]',
-        'hover:border-[color:var(--theme-accent-primary)]',
-        'focus:border-[color:var(--theme-accent-primary)] focus:outline-none',
-        'transition-all duration-200',
-        disabled && 'opacity-50 cursor-not-allowed'
-      )}
-      disabled={disabled}
-      {...props}
-    >
-      {options ? (
-        <>
-          {placeholder && <option value="">{placeholder}</option>}
-          {options.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </>
-      ) : (
-        children
-      )}
-    </select>
+    <div className="select-wrapper">
+      <select
+        className={cn(
+          className,
+          'select-input w-full px-4 py-2 pr-10 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)]',
+          'border border-[color:var(--theme-input-border)] rounded-lg',
+          'text-xs font-mono uppercase tracking-[0.12em] appearance-none',
+          'hover:border-[color:var(--theme-accent-primary)]',
+          'focus:outline-none focus:ring-2 focus:ring-[color:var(--theme-border-focus)] focus:border-[color:var(--theme-border-focus)]',
+          'transition-all duration-200',
+          disabled && 'opacity-50 cursor-not-allowed'
+        )}
+        disabled={disabled}
+        {...props}
+      >
+        {options ? (
+          <>
+            {placeholder && <option value="">{placeholder}</option>}
+            {options.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </>
+        ) : (
+          children
+        )}
+      </select>
+    </div>
   );
 }
 

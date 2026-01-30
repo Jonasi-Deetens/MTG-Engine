@@ -51,15 +51,16 @@ export function CardModal({ isOpen, onClose, card, imageUrl }: CardModalProps) {
     >
       {/* Content container - prevent click propagation */}
       <div
-        className="ui-card relative w-full h-auto flex flex-col items-stretch justify-center p-3 lg:p-4 gap-4 lg:gap-5 max-w-4xl max-h-[85vh]"
+        className="ui-card relative w-full max-w-4xl max-h-[90vh] overflow-hidden"
         data-variant="default"
         onClick={(e) => e.stopPropagation()}
       >
+        <div className="w-full flex flex-col items-stretch justify-start p-3 sm:p-4 gap-4 lg:gap-5 max-h-[90vh] overflow-y-auto">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[color:var(--theme-border-default)] pb-2 lg:pb-3">
           <div className="text-xs font-mono tracking-[0.3em] text-[color:var(--theme-text-secondary)]">
             CARD_VIEW
           </div>
-          <div className="flex flex-wrap items-stretch gap-2">
+          <div className="flex w-full flex-wrap items-stretch justify-end gap-2 sm:w-auto sm:justify-start">
             <div className="pr-3 flex items-center h-8">
               <FavoriteButton cardId={card.card_id} size="md" />
             </div>
@@ -118,21 +119,25 @@ export function CardModal({ isOpen, onClose, card, imageUrl }: CardModalProps) {
         </div>
         <div className="flex flex-col lg:flex-row items-stretch gap-4 lg:gap-5">
           {/* Card Image */}
-          <div className="flex-shrink-0 w-full max-w-[220px] sm:max-w-[260px] lg:max-w-[260px] h-auto max-h-[40vh] sm:max-h-[50vh] lg:max-h-[65vh] flex items-center justify-center">
-            <div className="relative w-full aspect-[63/88] bg-[color:var(--theme-card-bg)] p-2">
-              <Image
-                src={imageUrl}
-                alt={card.name}
-                fill
-                className="object-contain"
-                priority
-                unoptimized
-              />
+          <div className="flex-shrink-0 w-full max-w-full sm:max-w-[260px] lg:max-w-[260px] aspect-[63/88] flex items-center justify-center">
+            <div className="relative w-full h-full bg-[color:var(--theme-card-bg)] p-2">
+              <div className="relative w-full overflow-hidden">
+                <div className="card-modal-overlay" />
+                <Image
+                  src={imageUrl}
+                  alt={card.name}
+                  width={630}
+                  height={880}
+                  className="w-full h-auto object-contain"
+                  priority
+                  unoptimized
+                />
+              </div>
             </div>
           </div>
 
           {/* Card Details */}
-          <div className="flex-1 w-full space-y-3 lg:space-y-4 text-[color:var(--theme-text-primary)] p-1 overflow-y-auto max-h-[50vh] lg:max-h-[70vh] pr-2">
+          <div className="flex-1 w-full space-y-3 lg:space-y-4 text-[color:var(--theme-text-primary)] p-1 pr-2">
             {/* Name and Mana Cost */}
             <div>
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4 mb-2">
@@ -183,7 +188,7 @@ export function CardModal({ isOpen, onClose, card, imageUrl }: CardModalProps) {
                   <p className="text-xs text-[color:var(--theme-text-muted)] uppercase tracking-wider">
                     Power
                   </p>
-                  <p className="text-lg text-[color:var(--theme-text-secondary)] font-semibold">
+                  <p className="text-lg text-[color:var(--theme-accent-secondary)] font-semibold">
                     {card.power}
                   </p>
                 </div>
@@ -193,7 +198,7 @@ export function CardModal({ isOpen, onClose, card, imageUrl }: CardModalProps) {
                   <p className="text-xs text-[color:var(--theme-text-muted)] uppercase tracking-wider">
                     Toughness
                   </p>
-                  <p className="text-lg text-[color:var(--theme-text-secondary)] font-semibold">
+                  <p className="text-lg text-[color:var(--theme-accent-secondary)] font-semibold">
                     {card.toughness}
                   </p>
                 </div>
@@ -283,12 +288,9 @@ export function CardModal({ isOpen, onClose, card, imageUrl }: CardModalProps) {
           </div>
           </div>
         </div>
+        </div>
       </div>
 
-      {/* Click outside to close hint */}
-      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-[color:var(--theme-text-muted)] text-xs font-mono tracking-[0.2em] z-[10000] pointer-events-none">
-        CLICK OUTSIDE OR PRESS ESC TO CLOSE
-      </div>
     </div>
   );
 

@@ -72,8 +72,8 @@ export default function DecksPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
           <h1
             className="font-heading text-3xl font-bold text-[color:var(--theme-text-primary)] mb-2 nier-glitch"
             data-text="My Decks"
@@ -84,35 +84,39 @@ export default function DecksPage() {
             Create and manage your Magic: The Gathering decks
           </p>
         </div>
-        <Link href="/decks/builder">
-          <Button variant="primary">
-            Create New Deck
-          </Button>
-        </Link>
+        <div className="flex w-full justify-end sm:w-auto">
+          <Link href="/decks/builder">
+            <Button variant="primary">
+              Create New Deck
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Filters */}
-      <div className="flex gap-4 items-center">
-        <div className="flex-1 max-w-2xl">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+        <div className="w-full sm:flex-1 sm:max-w-2xl">
           <SearchInput
             value={searchQuery}
             onChange={setSearchQuery}
             placeholder="Search decks..."
           />
         </div>
-        <Select
-          value={formatFilter}
-          onChange={(e) => setFormatFilter(e.target.value)}
-          className="min-w-[160px]"
-        >
-          <option value="">All Formats</option>
-          <option value="Commander">Commander</option>
-          <option value="Standard">Standard</option>
-          <option value="Modern">Modern</option>
-          <option value="Pauper">Pauper</option>
-          <option value="Legacy">Legacy</option>
-          <option value="Vintage">Vintage</option>
-        </Select>
+        <div className="flex w-full justify-end sm:w-auto">
+          <Select
+            value={formatFilter}
+            onChange={(e) => setFormatFilter(e.target.value)}
+            className="max-w-[12rem] sm:min-w-[160px]"
+          >
+            <option value="">All Formats</option>
+            <option value="Commander">Commander</option>
+            <option value="Standard">Standard</option>
+            <option value="Modern">Modern</option>
+            <option value="Pauper">Pauper</option>
+            <option value="Legacy">Legacy</option>
+            <option value="Vintage">Vintage</option>
+          </Select>
+        </div>
       </div>
 
       {error && (
