@@ -35,11 +35,11 @@ export function IntentStep({ onSelect, intents = defaultIntents }: IntentStepPro
           <Button
             key={intent.id}
             variant="outline"
-            className="flex flex-col items-start gap-1"
+            className="flex h-auto min-h-[52px] flex-col items-start gap-0.5 text-left py-2"
             onClick={() => onSelect(intent.id)}
           >
             <span className="text-sm font-medium">{intent.label}</span>
-            <span className="text-xs text-[color:var(--theme-text-secondary)]">
+            <span className="text-[11px] leading-tight text-[color:var(--theme-text-secondary)] line-clamp-1">
               {intent.description}
             </span>
           </Button>

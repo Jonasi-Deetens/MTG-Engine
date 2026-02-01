@@ -19,6 +19,7 @@ import { EffectList } from '@/features/builder/components/EffectList';
 import { EffectWizard } from '@/features/builder/components/EffectWizard';
 import { isEditableTarget } from '@/context/ShortcutContext';
 import { ArchiveSectionHeader } from '@/components/ui/ArchiveSectionHeader';
+import { Card } from '@/components/ui/Card';
 
 export default function BuilderPage() {
   const searchParams = useSearchParams();
@@ -222,46 +223,48 @@ export default function BuilderPage() {
   const editingStep = steps.find((step) => step.id === editingStepId) ?? null;
 
   return (
-    <div className="p-4">
-      <div className="max-w-7xl mx-auto space-y-4">
-        {/* Top Section: Card Preview */}
-        <div className="bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] rounded-lg p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h1
-              className="text-2xl font-bold text-[color:var(--theme-text-primary)] nier-glitch"
-              data-text="Ability Builder"
-            >
-              Ability Builder
-            </h1>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <div className="w-64">
-                  <SearchInput
-                    value={searchTerm}
-                    onChange={setSearchTerm}
-                    onSearch={handleSearchCard}
-                    placeholder="Search card by name..."
-                    size="sm"
-                  />
-                </div>
-                <Button
-                  onClick={handleSearchCard}
-                  disabled={searching || !searchTerm.trim()}
-                  variant="secondary"
+    <div className="space-y-6">
+      <div>
+        <h1
+          className="font-heading text-3xl font-bold text-[color:var(--theme-text-primary)] mb-2 nier-glitch"
+          data-text="Ability Builder"
+        >
+          Ability Builder
+        </h1>
+      </div>
+      {/* Top Section: Card Preview */}
+      <Card variant="elevated">
+        <div className="p-6">
+          <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-3 mb-4">
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+              <div className="w-full sm:w-64">
+                <SearchInput
+                  value={searchTerm}
+                  onChange={setSearchTerm}
+                  onSearch={handleSearchCard}
+                  placeholder="Search card by name..."
                   size="sm"
-                >
-                  {searching ? 'Searching...' : 'Search'}
-                </Button>
+                />
               </div>
+              <Button
+                onClick={handleSearchCard}
+                disabled={searching || !searchTerm.trim()}
+                variant="secondary"
+                size="sm"
+                className="w-full sm:w-auto"
+              >
+                {searching ? 'Searching...' : 'Search'}
+              </Button>
+            </div>
               <Button
                 onClick={handleGetRandomCard}
                 disabled={loading}
                 variant="primary"
                 size="sm"
+                className="w-full sm:w-auto"
               >
-                {loading ? 'Loading...' : 'Random Card'}
-              </Button>
-            </div>
+              {loading ? 'Loading...' : 'Random Card'}
+            </Button>
           </div>
           {error && (
             <div className="mb-4 p-3 bg-[color:var(--theme-status-error)]/20 text-[color:var(--theme-status-error)] rounded text-sm">
@@ -269,8 +272,8 @@ export default function BuilderPage() {
             </div>
           )}
           {currentCard && (
-            <div className="flex items-start gap-6">
-              <div className="w-48 shrink-0">
+            <div className="flex flex-col items-start gap-6 sm:flex-row">
+              <div className="w-full sm:w-48 shrink-0">
                 <CardPreview card={currentCard} onVersionChange={handleVersionChange} />
               </div>
               <div className="flex-1 text-[color:var(--theme-text-secondary)] space-y-3">
@@ -279,7 +282,7 @@ export default function BuilderPage() {
                     title={currentCard.name}
                     status="CARD_RECORD: ACTIVE"
                     className="mb-1"
-                    titleClassName="text-2xl font-bold tracking-[0.15em] normal-case"
+                    titleClassName="text-2xl tracking-[0.15em] normal-case"
                   />
                   {currentCard.mana_cost && (
                     <p className="text-base font-mono text-[color:var(--theme-accent-primary)]">
@@ -307,7 +310,7 @@ export default function BuilderPage() {
                 {currentCard.colors && currentCard.colors.length > 0 && (
                   <div>
                     <span className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">Colors</span>
-                    <div className="flex gap-2 mt-1">
+                    <div className="flex flex-wrap gap-2 mt-1">
                       {currentCard.colors.map((color, idx) => (
                         <span
                           key={idx}
@@ -330,7 +333,7 @@ export default function BuilderPage() {
                 )}
                 
                 {(currentCard.set_code || currentCard.collector_number) && (
-                  <div className="flex gap-4 text-xs text-[color:var(--theme-text-secondary)]">
+                  <div className="flex flex-wrap gap-4 text-xs text-[color:var(--theme-text-secondary)]">
                     {currentCard.set_code && (
                       <div>
                         <span className="uppercase tracking-wide">Set:</span>{' '}
@@ -355,43 +358,58 @@ export default function BuilderPage() {
             </div>
           )}
         </div>
+      </Card>
 
-        {/* Main Section: Split between Builder and Preview */}
-        <div className="grid grid-cols-2 gap-4">
-          {/* Left: Effect Builder */}
-          <div className="bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] rounded-lg p-6 min-h-[500px] space-y-4">
+      {/* Main Section: Split between Builder and Preview */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Left: Effect Builder */}
+        <Card variant="elevated" className="min-h-[500px] lg:min-h-[500px]">
+          <div className="p-6 space-y-4">
             <ArchiveSectionHeader
               title="Effects"
               status="EFFECT_QUEUE: READY"
               className="mb-4"
-              titleClassName="text-xl font-bold"
+              titleClassName="text-xl"
               action={
-                <Button variant="primary" size="sm" onClick={handleAddEffect}>
-                  Add Effect
-                </Button>
+                <div className="hidden sm:block">
+                  <Button variant="primary" size="sm" onClick={handleAddEffect}>
+                    Add Effect
+                  </Button>
+                </div>
               }
             />
+            <div className="sm:hidden">
+              <Button variant="primary" size="sm" onClick={handleAddEffect} className="w-full">
+                Add Effect
+              </Button>
+            </div>
             <EffectList onEdit={handleEditEffect} />
           </div>
+        </Card>
 
-          {/* Right: Tree View Preview */}
-          <div className="bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] rounded-lg p-6 min-h-[500px] overflow-y-auto">
+        {/* Right: Tree View Preview */}
+        <Card variant="elevated" className="min-h-[500px] overflow-y-auto">
+          <div className="p-6">
             <ArchiveSectionHeader
               title="Effect Preview"
               status="GRAPH_VIEW: LIVE"
-              titleClassName="text-xl font-bold"
+              titleClassName="text-xl"
             />
             <EffectGraphPreview />
           </div>
-        </div>
+        </Card>
+      </div>
 
-        {/* Bottom Section: Validation */}
-        <div className="bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] rounded-lg p-6">
+      {/* Bottom Section: Validation */}
+      <Card variant="elevated">
+        <div className="p-6">
           <ValidationPanel />
         </div>
+      </Card>
 
-        {debugOpen && (
-          <div className="bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] rounded-lg p-6">
+      {debugOpen && (
+        <Card variant="elevated">
+          <div className="p-6">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-[color:var(--theme-text-primary)]">
                 Debug Overlay
@@ -407,8 +425,8 @@ export default function BuilderPage() {
               {JSON.stringify(toEffectGraph(), null, 2) || 'No graph'}
             </pre>
           </div>
-        )}
-      </div>
+        </Card>
+      )}
       <EffectWizard
         isOpen={wizardOpen}
         onClose={() => setWizardOpen(false)}

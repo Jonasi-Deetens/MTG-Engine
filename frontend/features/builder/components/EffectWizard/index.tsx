@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 import type { EffectStep, SourceKind, UnifiedEffect } from '@/lib/unifiedEffect';
 import { Button } from '@/components/ui/Button';
@@ -248,10 +249,6 @@ export function EffectWizard({
     []
   );
 
-  if (!isOpen) {
-    return null;
-  }
-
   const currentKey = stepKeys[stepIndex];
   const handleIntentSelect = (nextIntent: IntentType) => {
     setIntent(nextIntent);
@@ -281,15 +278,60 @@ export function EffectWizard({
     onClose();
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] rounded-lg w-full max-w-2xl">
-        <div className="px-6 py-4 border-b border-[color:var(--theme-card-border)]">
-          <h3 className="text-lg font-semibold text-[color:var(--theme-text-primary)]">
+  if (!isOpen || typeof document === 'undefined') {
+    return null;
+  }
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-start sm:items-center justify-center bg-[color:var(--theme-overlay-strong)]/70 backdrop-blur-sm p-4 sm:p-8 overflow-y-auto"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Effect wizard"
+    >
+      <div
+        className="ui-card relative w-full max-w-2xl max-h-[calc(100vh-2rem)] sm:max-h-[90vh] overflow-y-auto"
+        data-variant="default"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="w-full p-4 sm:p-6 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[color:var(--theme-border-default)] pb-2 lg:pb-3">
+            <div className="text-xs font-mono tracking-[0.3em] text-[color:var(--theme-text-secondary)]">
+              EFFECT_WIZARD
+            </div>
+            <div className="flex w-full justify-end sm:w-auto">
+              <Button
+                type="button"
+                variant="frame"
+                size="xs"
+                onClick={onClose}
+                aria-label="Close effect wizard"
+                className="w-8 p-0"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </Button>
+            </div>
+          </div>
+          <h3
+            className="font-heading text-2xl font-bold text-[color:var(--theme-text-primary)] nier-glitch"
+            data-text={editingEffect ? 'Edit Effect' : 'Add Effect'}
+          >
             {editingEffect ? 'Edit Effect' : 'Add Effect'}
           </h3>
-        </div>
-        <div className="px-6 py-4 space-y-4 max-h-[70vh] overflow-y-auto">
           {currentKey === 'intent' && (
             <IntentStep onSelect={handleIntentSelect} intents={intentOptions} />
           )}
@@ -328,32 +370,33 @@ export function EffectWizard({
           )}
           {currentKey === 'review' && draft && <ReviewStep effect={draft} />}
         </div>
-        <div className="px-6 py-4 border-t border-[color:var(--theme-card-border)] flex items-center justify-between">
-          <div className="text-xs text-[color:var(--theme-text-secondary)]">
-            Step {stepIndex + 1} of {stepKeys.length}
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={onClose}>
-              Cancel
-            </Button>
-            {stepIndex > 0 && (
-              <Button variant="outline" size="sm" onClick={handleBack}>
-                Back
+          <div className="border-t border-[color:var(--theme-border-default)] pt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-6 pb-4 sm:pb-6">
+            <div className="text-xs text-[color:var(--theme-text-secondary)]">
+              Step {stepIndex + 1} of {stepKeys.length}
+            </div>
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+              <Button variant="outline" size="sm" onClick={onClose} className="w-full sm:w-auto">
+                Cancel
               </Button>
-            )}
-            {currentKey !== 'review' && (
-              <Button variant="primary" size="sm" onClick={handleNext} disabled={!draft}>
-                Next
-              </Button>
-            )}
-            {currentKey === 'review' && (
-              <Button variant="primary" size="sm" onClick={handleSave} disabled={!draft}>
-                Save Effect
-              </Button>
-            )}
+              {stepIndex > 0 && (
+                <Button variant="outline" size="sm" onClick={handleBack} className="w-full sm:w-auto">
+                  Back
+                </Button>
+              )}
+              {currentKey !== 'review' && (
+                <Button variant="primary" size="sm" onClick={handleNext} disabled={!draft} className="w-full sm:w-auto">
+                  Next
+                </Button>
+              )}
+              {currentKey === 'review' && (
+                <Button variant="primary" size="sm" onClick={handleSave} disabled={!draft} className="w-full sm:w-auto">
+                  Save Effect
+                </Button>
+              )}
+            </div>
           </div>
         </div>
-      </div>
-    </div>
+      </div>,
+    document.body
   );
 }

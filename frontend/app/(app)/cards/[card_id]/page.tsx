@@ -170,18 +170,20 @@ export default function CardDetailPage() {
   return (
     <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <Link href="/search" className="text-[color:var(--theme-text-secondary)] hover:text-[color:var(--theme-accent-primary)] transition-colors">
-            ← Back to Search
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <Link href="/search" className="w-full sm:w-auto">
+            <Button variant="outline" size="sm" className="w-full sm:w-auto">
+              ← Back to Search
+            </Button>
           </Link>
-          <div className="flex items-center gap-2">
-            <Button onClick={handleShare} variant="outline" size="sm">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            <Button onClick={handleShare} variant="outline" size="sm" className="w-full sm:w-auto">
               Share
             </Button>
             {isAuthenticated && (
               <>
                 <AddToCollectionButton cardId={card.card_id} />
-                <Button onClick={handleEditInBuilder} variant="primary" size="sm">
+                <Button onClick={handleEditInBuilder} variant="primary" size="sm" className="w-full sm:w-auto">
                   Edit in Builder
                 </Button>
               </>
@@ -190,23 +192,26 @@ export default function CardDetailPage() {
         </div>
 
         {/* Main Card Info */}
-        <div className="bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] rounded-lg p-6">
+        <div className="ui-card border border-[color:var(--theme-card-border)] rounded-none p-4 sm:p-6" data-variant="default">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Card Image */}
             <div className="md:col-span-1">
               {imageUrl ? (
-                <div className="aspect-[63/88] relative rounded-xl overflow-hidden">
-                  <Image
-                    src={imageUrl}
-                    alt={card.name}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 100vw, 33vw"
-                    unoptimized
-                  />
+                <div className="relative w-full aspect-[63/88] bg-[color:var(--theme-card-bg)] p-2">
+                  <div className="card-modal-overlay" />
+                  <div className="relative w-full h-full overflow-hidden">
+                    <Image
+                      src={imageUrl}
+                      alt={card.name}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 100vw, 33vw"
+                      unoptimized
+                    />
+                  </div>
                 </div>
               ) : (
-                <div className="aspect-[63/88] flex items-center justify-center bg-[color:var(--theme-card-hover)] border border-[color:var(--theme-card-border)] rounded-xl text-[color:var(--theme-text-muted)]">
+                <div className="aspect-[63/88] flex items-center justify-center bg-[color:var(--theme-card-hover)] border border-[color:var(--theme-card-border)] rounded-none text-[color:var(--theme-text-muted)]">
                   No Image
                 </div>
               )}
@@ -226,7 +231,7 @@ export default function CardDetailPage() {
 
             {/* Card Details */}
             <div className="md:col-span-2 space-y-4">
-              <div className="flex items-start justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <div className="flex items-center gap-2 flex-wrap mb-2">
                     <h1
@@ -263,11 +268,11 @@ export default function CardDetailPage() {
               {card.colors && card.colors.length > 0 && (
                 <div>
                   <span className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">Colors</span>
-                  <div className="flex gap-2 mt-1">
+                  <div className="flex flex-wrap gap-2 mt-1">
                     {card.colors.map((color, idx) => (
                       <span
                         key={idx}
-                        className="px-3 py-1 rounded text-sm font-medium bg-[color:var(--theme-card-hover)] text-[color:var(--theme-text-primary)] capitalize border border-[color:var(--theme-card-border)]"
+                        className="px-3 py-1 rounded-none text-xs font-mono uppercase tracking-[0.2em] bg-[color:var(--theme-card-hover)] text-[color:var(--theme-text-primary)] border border-[color:var(--theme-card-border)]"
                       >
                         {color}
                       </span>
@@ -340,7 +345,7 @@ export default function CardDetailPage() {
               )}
 
               {(card.set_code || card.collector_number) && (
-                <div className="flex gap-4 text-sm text-[color:var(--theme-text-secondary)]">
+                <div className="flex flex-wrap gap-4 text-sm text-[color:var(--theme-text-secondary)]">
                   {card.set_code && (
                     <div>
                       <span className="uppercase tracking-wide">Set:</span>{' '}
@@ -363,16 +368,16 @@ export default function CardDetailPage() {
         {isAuthenticated && (
           <>
             {loadingGraph ? (
-              <div className="bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] rounded-lg p-6">
+              <div className="ui-card border border-[color:var(--theme-card-border)] rounded-none p-6" data-variant="default">
                 <div className="text-center text-[color:var(--theme-text-secondary)]">Loading ability graph...</div>
               </div>
             ) : effectGraph ? (
-              <div className="bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] rounded-lg p-6">
+              <div className="ui-card border border-[color:var(--theme-card-border)] rounded-none p-6" data-variant="default">
                 <ArchiveSectionHeader
                   title="Saved Effect Graph"
                   status="GRAPH_ARCHIVE: READY"
                   className="mb-4"
-                  titleClassName="text-2xl font-bold"
+                  titleClassName="text-2xl"
                   action={
                     <>
                       <Button onClick={handleExportGraph} variant="outline" size="sm">
@@ -384,15 +389,15 @@ export default function CardDetailPage() {
                     </>
                   }
                 />
-                <div className="bg-[color:var(--theme-card-hover)] border border-[color:var(--theme-card-border)] rounded-lg p-4">
+                <div className="bg-[color:var(--theme-card-hover)] border border-[color:var(--theme-card-border)] rounded-none p-4">
                   <EffectGraphPreview graph={effectGraph} />
                 </div>
               </div>
             ) : (
-              <div className="bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] rounded-lg p-6">
+              <div className="ui-card border border-[color:var(--theme-card-border)] rounded-none p-6" data-variant="default">
                 <div className="text-center space-y-4">
                   <p className="text-[color:var(--theme-text-secondary)]">No effect graph saved for this card yet.</p>
-                  <Button onClick={handleEditInBuilder} variant="primary">
+                  <Button onClick={handleEditInBuilder} variant="primary" size="sm" className="w-full sm:w-auto">
                     Create Effect Graph
                   </Button>
                 </div>
@@ -403,18 +408,18 @@ export default function CardDetailPage() {
 
         {/* All Versions Section */}
         {allVersions.length > 1 && (
-          <div className="bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] rounded-lg p-6">
+          <div className="ui-card border border-[color:var(--theme-card-border)] rounded-none p-6" data-variant="default">
             <ArchiveSectionHeader
               title={`All Printings (${allVersions.length})`}
               status="PRINTINGS_INDEX: READY"
-              titleClassName="text-2xl font-bold"
+              titleClassName="text-2xl"
             />
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
               {allVersions.map((version) => (
                 <Link
                   key={version.card_id}
                   href={`/cards/${version.card_id}`}
-                  className={`aspect-[63/88] relative rounded-lg overflow-hidden transition-all ${
+                  className={`aspect-[63/88] relative rounded-none overflow-hidden transition-all ${
                     version.card_id === card.card_id
                       ? 'ring-2 ring-[color:var(--theme-accent-primary)]'
                       : 'hover:scale-105 hover:shadow-lg'

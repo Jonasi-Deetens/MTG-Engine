@@ -68,7 +68,7 @@ export function SearchFilters({
       </div>
 
       {showFilters && (
-        <div className="bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] rounded-lg p-4 space-y-4">
+        <div className="bg-[color:var(--theme-card-bg)] border border-[color:var(--theme-card-border)] rounded-none p-4 space-y-4">
           <div className="pb-4 border-b border-[color:var(--theme-card-border)]">
             <label className="block text-xs font-mono tracking-[0.2em] uppercase text-[color:var(--theme-text-muted)] mb-2">
               Colors
@@ -122,6 +122,7 @@ export function SearchFilters({
                 placeholder="e.g., M21, CMR"
                 value={setFilter}
                 onChange={(e) => onSetFilterChange(e.target.value.toUpperCase())}
+                className="text-xs font-mono uppercase tracking-[0.12em]"
               />
             </div>
 
@@ -168,6 +169,7 @@ export function SearchFilters({
                 placeholder="e.g., Flying, Trample"
                 value={keywordFilter}
                 onChange={(e) => onKeywordFilterChange(e.target.value)}
+                className="text-xs font-mono uppercase tracking-[0.12em]"
               />
             </div>
           </div>

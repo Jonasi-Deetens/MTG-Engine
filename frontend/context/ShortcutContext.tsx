@@ -195,7 +195,7 @@ export function ShortcutProvider({
       <button
         type="button"
         onClick={openShortcutHelp}
-        className="fixed bottom-5 right-5 z-[10001] h-12 w-12 rounded-full bg-[color:var(--theme-button-primary-bg)] text-[color:var(--theme-button-primary-text)] shadow-lg hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[color:var(--theme-border-focus)] flex items-center justify-center"
+        className="fixed bottom-5 right-5 z-[10001] hidden h-12 w-12 rounded-full bg-[color:var(--theme-button-primary-bg)] text-[color:var(--theme-button-primary-text)] shadow-lg hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[color:var(--theme-border-focus)] sm:flex items-center justify-center"
         aria-label="Open shortcut help"
       >
         ?

@@ -32,7 +32,7 @@ function describeEffect(step: EffectStep): string {
 export function EffectCard({ step, onEdit, onDelete }: EffectCardProps) {
   return (
     <div className="border border-[color:var(--theme-card-border)] rounded-lg p-3 bg-[color:var(--theme-card-bg)] space-y-2">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="text-sm font-medium text-[color:var(--theme-text-primary)]">
             {describeEffect(step)}
@@ -41,7 +41,7 @@ export function EffectCard({ step, onEdit, onDelete }: EffectCardProps) {
             {step.effect.initiation} · {step.effect.persistence} · {step.effect.resolution}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           <Button size="sm" variant="outline" onClick={() => onEdit(step.id)}>
             Edit
           </Button>

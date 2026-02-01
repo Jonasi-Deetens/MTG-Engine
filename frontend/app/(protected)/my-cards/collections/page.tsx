@@ -75,8 +75,8 @@ export default function CollectionsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
           <Link href="/my-cards" className="text-[color:var(--theme-text-secondary)] hover:text-[color:var(--theme-accent-primary)] transition-colors mb-2 inline-block">
             ← Back to My Cards
           </Link>
@@ -90,12 +90,15 @@ export default function CollectionsPage() {
             Organize your cards into collections
           </p>
         </div>
-        <Button
-          onClick={() => setShowCreateForm(!showCreateForm)}
-          variant="primary"
-        >
-          {showCreateForm ? 'Cancel' : 'New Collection'}
-        </Button>
+        <div className="flex w-full sm:w-auto">
+          <Button
+            onClick={() => setShowCreateForm(!showCreateForm)}
+            variant="primary"
+            className="w-full sm:w-auto"
+          >
+            {showCreateForm ? 'Cancel' : 'New Collection'}
+          </Button>
+        </div>
       </div>
 
       {showCreateForm && (

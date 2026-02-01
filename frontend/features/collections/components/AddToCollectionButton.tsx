@@ -55,11 +55,12 @@ export function AddToCollectionButton({ cardId, onAdded }: AddToCollectionButton
   }
 
   return (
-    <div className="relative">
+    <div className="relative w-full sm:w-auto">
       <Button
         onClick={() => setShowMenu(!showMenu)}
         variant="outline"
         size="sm"
+        className="w-full sm:w-auto"
       >
         Add to Collection
       </Button>

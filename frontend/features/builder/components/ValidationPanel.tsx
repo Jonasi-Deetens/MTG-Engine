@@ -142,9 +142,9 @@ export function ValidationPanel() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
         <h3 className="text-lg font-semibold text-[color:var(--theme-text-primary)]">Validation</h3>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           <div className="text-sm text-[color:var(--theme-text-secondary)]">
             {totalAbilities} effect{totalAbilities !== 1 ? 's' : ''} added
           </div>
@@ -153,6 +153,7 @@ export function ValidationPanel() {
               onClick={handleExport}
               variant="outline"
               size="sm"
+              className="w-full sm:w-auto"
             >
               Export JSON
             </Button>
@@ -163,6 +164,7 @@ export function ValidationPanel() {
                 onClick={handleShare}
                 variant="outline"
                 size="sm"
+                className="w-full sm:w-auto"
               >
                 Share Card
               </Button>
@@ -171,6 +173,7 @@ export function ValidationPanel() {
                 disabled={saving || totalAbilities === 0}
                 variant="primary"
                 size="sm"
+                className="w-full sm:w-auto"
               >
                 {saving ? 'Saving...' : 'Save Graph'}
               </Button>

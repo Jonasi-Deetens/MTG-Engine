@@ -145,7 +145,6 @@ export function GameHUD({
               <Button
                 variant="primary"
                 size="sm"
-                className="h-8"
                 onClick={onStart}
               >
                 Restart
@@ -153,7 +152,6 @@ export function GameHUD({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8"
                 onClick={onReset}
               >
                 Reset
@@ -180,7 +178,6 @@ export function GameHUD({
                 <Button
                   variant="primary"
                   size="sm"
-                  className="h-8"
                   onClick={onStart}
                 >
                   Start
@@ -190,7 +187,6 @@ export function GameHUD({
                 <Button
                   variant="primary"
                   size="sm"
-                  className="h-8"
                   onClick={onResume}
                 >
                   Resume
@@ -200,7 +196,6 @@ export function GameHUD({
                 <Button
                   variant="primary"
                   size="sm"
-                  className="h-8"
                   onClick={onStart}
                 >
                   Restart
@@ -209,7 +204,6 @@ export function GameHUD({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8"
                 onClick={onReset}
               >
                 Reset

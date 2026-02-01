@@ -39,10 +39,10 @@ export function Button({
   };
   
   const sizes = {
-    xs: 'px-2 py-1 text-xs',
-    sm: 'px-3 py-1.5 text-sm',
-    md: 'px-4 py-2 text-base',
-    lg: 'px-6 py-3 text-lg',
+    xs: 'h-8 px-2 text-xs',
+    sm: 'h-10 px-4 text-sm',
+    md: 'h-10 px-4 text-base',
+    lg: 'h-10 px-4 text-lg',
   };
   const sizeClassName = sizes[size];
   

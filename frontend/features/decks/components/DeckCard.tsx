@@ -123,17 +123,6 @@ export function DeckCard({
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[color:var(--theme-card-bg)]/80" />
 
           <div
-            className="absolute inset-0 opacity-20 transition-opacity duration-300"
-            style={{
-              backgroundImage: `
-                linear-gradient(to right, var(--theme-text-primary) 1px, transparent 1px),
-                linear-gradient(to bottom, var(--theme-text-primary) 1px, transparent 1px)
-              `,
-              backgroundSize: '20px 20px',
-            }}
-          />
-
-          <div
             className="absolute left-0 right-0 h-px bg-[color:var(--theme-text-primary)]/60 transition-all duration-75"
             style={{ top: `${scanProgress}%` }}
           >
@@ -227,7 +216,7 @@ export function DeckCard({
             </div>
 
             {showActions && (
-              <div className="flex gap-2 pt-2 items-stretch">
+              <div className="flex flex-col gap-2 pt-2 items-stretch sm:flex-row">
                 <Link href={`/decks/${deck.id}`} className="flex-1 min-w-0">
                   <Button variant="primary" size="sm" className="w-full h-full">
                     View

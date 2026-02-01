@@ -31,11 +31,15 @@ export function ArchiveSectionHeader({
         </h2>
       </div>
       <div className="hidden sm:block flex-1 h-px bg-[color:var(--theme-text-primary)]/30" />
-      <div className="flex w-full items-center gap-3 sm:w-auto sm:flex-wrap sm:shrink-0">
+      <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 sm:shrink-0">
         <div className="font-mono text-xs tracking-wider text-[color:var(--theme-accent-secondary)] uppercase">
           {status}
         </div>
-        {action ? <div className="ml-auto flex items-center gap-2">{action}</div> : null}
+        {action ? (
+          <div className="flex w-full items-center gap-2 sm:ml-auto sm:w-auto [&_button]:w-full sm:[&_button]:w-auto [&_a]:w-full sm:[&_a]:w-auto">
+            {action}
+          </div>
+        ) : null}
       </div>
     </div>
   );

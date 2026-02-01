@@ -3,6 +3,7 @@
 // frontend/app/(protected)/decks/builder/page.tsx
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { DndContext, DragOverlay } from '@dnd-kit/core';
 import { useDeckBuilder } from '@/features/decks/hooks/useDeckBuilder';
 import { useTypeLists } from '@/features/decks/hooks/useTypeLists';
@@ -165,8 +166,73 @@ export default function DeckBuilderPage() {
     setFocusedDeckCard(card);
   };
 
+  const importModal =
+    showImport && currentDeck && typeof document !== 'undefined'
+      ? createPortal(
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-[color:var(--theme-overlay-strong)]/70 backdrop-blur-sm p-4 sm:p-8"
+            onClick={() => setShowImport(false)}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Import deck list"
+          >
+            <div
+              className="ui-card relative w-full max-w-2xl max-h-[90vh] overflow-hidden"
+              data-variant="default"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="w-full max-h-[90vh] overflow-y-auto p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[color:var(--theme-border-default)] pb-2 lg:pb-3 mb-4">
+                <div className="text-xs font-mono tracking-[0.3em] text-[color:var(--theme-text-secondary)]">
+                  IMPORT_DECK
+                </div>
+                <div className="flex w-full justify-end sm:w-auto">
+                  <Button
+                    onClick={() => setShowImport(false)}
+                    variant="frame"
+                    size="xs"
+                    aria-label="Close import modal"
+                    className="w-8 p-0"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                  </Button>
+                </div>
+              </div>
+              <h2
+                className="font-heading text-2xl font-bold text-[color:var(--theme-text-primary)] mb-3 nier-glitch"
+                data-text="Import Deck List"
+              >
+                Import Deck List
+              </h2>
+                <DeckImport
+                  deckId={currentDeck.id}
+                  onImportSuccess={() => {
+                    refreshDeck(currentDeck.id);
+                    setShowImport(false);
+                  }}
+                />
+              </div>
+            </div>
+          </div>,
+          document.body
+        )
+      : null;
+
   return (
-    <div className="w-full space-y-6">
+    <div className="space-y-6">
       <DeckBuilderHeader
         deckName={currentDeck?.name ?? null}
         onImportClick={() => setShowImport(true)}
@@ -330,37 +396,7 @@ export default function DeckBuilderPage() {
         />
       )}
 
-      {/* Import Modal */}
-      {showImport && currentDeck && (
-        <div className="fixed inset-0 bg-[color:var(--theme-overlay)] z-50 flex items-center justify-center p-4">
-          <Card variant="elevated" className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <ArchiveSectionHeader
-                title="Import Deck List"
-                status="IMPORT_CHANNEL: READY"
-                className="mb-4"
-                titleClassName="text-xl font-semibold"
-                action={
-                  <Button
-                    onClick={() => setShowImport(false)}
-                    variant="outline"
-                    size="sm"
-                  >
-                    Close
-                  </Button>
-                }
-              />
-              <DeckImport
-                deckId={currentDeck.id}
-                onImportSuccess={() => {
-                  refreshDeck(currentDeck.id);
-                  setShowImport(false);
-                }}
-              />
-            </div>
-          </Card>
-        </div>
-      )}
+      {importModal}
     </div>
   );
 }

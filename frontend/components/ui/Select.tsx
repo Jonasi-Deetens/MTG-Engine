@@ -28,7 +28,7 @@ export function Select({
       <select
         className={cn(
           className,
-          'select-input w-full px-4 py-2 pr-10 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)]',
+          'select-input w-full h-10 px-4 pr-10 bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)]',
           'border border-[color:var(--theme-input-border)] rounded-lg',
           'text-xs font-mono uppercase tracking-[0.12em] appearance-none',
           'hover:border-[color:var(--theme-accent-primary)]',

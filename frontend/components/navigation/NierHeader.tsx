@@ -103,7 +103,7 @@ export function NierHeader({ showSpacer = true }: NierHeaderProps) {
               <button
                 type="button"
                 onClick={logout}
-                className="font-mono text-xs tracking-[0.2em] text-[color:var(--theme-text-secondary)] hover:text-[color:var(--theme-text-primary)] transition-colors"
+                className="font-mono text-xs tracking-[0.2em] text-[color:var(--theme-text-secondary)] hover:text-[color:var(--theme-text-primary)] transition-colors cursor-pointer"
               >
                 LOGOUT
               </button>

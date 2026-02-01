@@ -35,8 +35,8 @@ export function DeckInfoForm({
 }: DeckInfoFormProps) {
   return (
     <Card variant="elevated">
-      <div className="p-3 space-y-2">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+      <div className="p-3 space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
             <label className="block text-xs font-medium text-[color:var(--theme-text-secondary)] mb-1">
               Deck Name *
@@ -46,7 +46,7 @@ export function DeckInfoForm({
               value={deckName}
               onChange={(e) => onNameChange(e.target.value)}
               placeholder="My Awesome Deck"
-              className="w-full px-2 py-1.5 text-sm bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+              className="w-full px-2 text-sm bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none"
             />
           </div>
           <div>
@@ -58,37 +58,38 @@ export function DeckInfoForm({
               value={deckDescription}
               onChange={(e) => onDescriptionChange(e.target.value)}
               placeholder="Describe your deck..."
-              className="w-full px-2 py-1.5 text-sm bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none"
+              className="w-full px-2 text-sm bg-[color:var(--theme-input-bg)] text-[color:var(--theme-input-text)] rounded border border-[color:var(--theme-input-border)] focus:border-[color:var(--theme-border-focus)] focus:outline-none"
             />
           </div>
-          <div className="flex items-end gap-2">
-            <div className="flex-1">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-2">
+            <div className="w-full sm:flex-1">
               <FormatSelector
                 value={deckFormat}
                 onChange={onFormatChange}
                 disabled={hasDeck}
               />
             </div>
-            <div className="flex items-center gap-1">
-              <input
-                type="checkbox"
-                id="isPublic"
-                checked={isPublic}
-                onChange={(e) => onPublicChange(e.target.checked)}
-                className="w-4 h-4 text-[color:var(--theme-accent-primary)] bg-[color:var(--theme-input-bg)] border-[color:var(--theme-input-border)] rounded focus:ring-[color:var(--theme-border-focus)]"
-              />
-              <label htmlFor="isPublic" className="text-xs text-[color:var(--theme-text-secondary)]">
+            <div className="flex items-center justify-between gap-3 sm:justify-start">
+              <label className="flex items-center gap-2 text-xs text-[color:var(--theme-text-secondary)]">
+                <input
+                  type="checkbox"
+                  id="isPublic"
+                  checked={isPublic}
+                  onChange={(e) => onPublicChange(e.target.checked)}
+                  className="w-4 h-4 text-[color:var(--theme-accent-primary)] bg-[color:var(--theme-input-bg)] border-[color:var(--theme-input-border)] rounded focus:ring-[color:var(--theme-border-focus)]"
+                />
                 Public
               </label>
+              <Button
+                onClick={onSave}
+                disabled={saving || loading || !deckName.trim()}
+                variant="primary"
+                size="sm"
+                className="w-full sm:w-auto"
+              >
+                {saving ? 'Saving...' : hasDeck ? 'Update' : 'Create'}
+              </Button>
             </div>
-            <Button
-              onClick={onSave}
-              disabled={saving || loading || !deckName.trim()}
-              variant="primary"
-              size="sm"
-            >
-              {saving ? 'Saving...' : hasDeck ? 'Update' : 'Create'}
-            </Button>
           </div>
         </div>
       </div>

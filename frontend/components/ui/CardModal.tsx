@@ -61,14 +61,14 @@ export function CardModal({ isOpen, onClose, card, imageUrl }: CardModalProps) {
             CARD_VIEW
           </div>
           <div className="flex w-full flex-wrap items-stretch justify-end gap-2 sm:w-auto sm:justify-start">
-            <div className="pr-3 flex items-center h-8">
+            <div className="pr-3 flex items-center">
               <FavoriteButton cardId={card.card_id} size="md" />
             </div>
             <Button
               type="button"
               variant="primary"
               size="xs"
-              className="gap-2 h-8"
+              className="gap-2"
               onClick={() => {
                 onClose();
                 router.push(`/cards/${card.card_id}`);
@@ -98,7 +98,7 @@ export function CardModal({ isOpen, onClose, card, imageUrl }: CardModalProps) {
               size="xs"
               onClick={onClose}
               aria-label="Close modal"
-              className="h-8 w-8 p-0"
+              className="w-8 p-0"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"

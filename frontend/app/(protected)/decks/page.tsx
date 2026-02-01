@@ -84,9 +84,9 @@ export default function DecksPage() {
             Create and manage your Magic: The Gathering decks
           </p>
         </div>
-        <div className="flex w-full justify-end sm:w-auto">
-          <Link href="/decks/builder">
-            <Button variant="primary">
+        <div className="flex w-full sm:w-auto">
+          <Link href="/decks/builder" className="w-full sm:w-auto">
+            <Button variant="primary" className="w-full sm:w-auto">
               Create New Deck
             </Button>
           </Link>

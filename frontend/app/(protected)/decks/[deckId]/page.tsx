@@ -100,8 +100,8 @@ export default function DeckDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
           <Button
             onClick={() => router.push('/decks')}
             variant="outline"
@@ -118,7 +118,7 @@ export default function DeckDetailPage() {
           {currentDeck.description && (
             <p className="text-[color:var(--theme-text-secondary)] mb-2">{currentDeck.description}</p>
           )}
-          <div className="flex items-center gap-4 text-sm text-[color:var(--theme-text-secondary)]">
+          <div className="flex flex-wrap items-center gap-4 text-sm text-[color:var(--theme-text-secondary)]">
             <span>Format: {currentDeck.format}</span>
             <span>{currentDeck.card_count} cards</span>
             {currentDeck.commander_count > 0 && (
@@ -129,17 +129,18 @@ export default function DeckDetailPage() {
             )}
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
           <Button
             onClick={() => router.push(`/decks/builder?deck=${deckId}`)}
             variant="primary"
+            className="w-full sm:w-auto"
           >
             Edit Deck
           </Button>
           <Button
             onClick={handleDelete}
             variant="outline"
-            className="text-[color:var(--theme-status-error)] hover:opacity-90"
+            className="w-full text-[color:var(--theme-status-error)] hover:opacity-90 sm:w-auto"
           >
             Delete
           </Button>

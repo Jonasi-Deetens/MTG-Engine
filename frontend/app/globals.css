@@ -551,7 +551,7 @@
 }
 
 [data-theme="nier"] select {
-  background: color-mix(in srgb, var(--theme-bg-secondary) 75%, transparent);
+  background-color: color-mix(in srgb, var(--theme-bg-secondary) 75%, transparent);
   color: var(--theme-input-text);
   border: 1px solid var(--theme-input-border);
   border-radius: 0;
@@ -812,6 +812,19 @@
   z-index: -2;
 }
 
+[data-theme="nier"] .ui-card .nier-glitch::before,
+[data-theme="nier"] .ui-card .nier-glitch::after {
+  background: var(--theme-card-bg);
+}
+
+[data-theme="nier"] .ui-card .nier-glitch::before {
+  color: var(--theme-text-secondary);
+}
+
+[data-theme="nier"] .ui-card .nier-glitch::after {
+  color: var(--theme-text-muted);
+}
+
 [data-theme="nier"] .nier-frame {
   position: relative;
 }
@@ -960,10 +973,9 @@
   font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New");
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  background: color-mix(in srgb, var(--theme-bg-secondary) 75%, transparent) !important;
+  background-color: color-mix(in srgb, var(--theme-bg-secondary) 75%, transparent) !important;
   color: var(--theme-input-text) !important;
   border: 1px solid var(--theme-input-border) !important;
-  padding: 0.25rem 0.5rem !important;
   font-size: 0.75rem !important;
 }
 
@@ -1422,17 +1434,18 @@ body {
 }
 
 .select-wrapper::after {
-  content: "";
-  position: absolute;
-  right: 0.85rem;
-  top: 50%;
-  width: 6px;
-  height: 6px;
-  border-right: 1px solid var(--theme-input-text);
-  border-bottom: 1px solid var(--theme-input-text);
-  transform: translateY(-60%) rotate(45deg);
-  pointer-events: none;
-  opacity: 0.8;
+  content: none;
+}
+
+.select-input {
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--theme-input-text) 50%),
+    linear-gradient(135deg, var(--theme-input-text) 50%, transparent 50%);
+  background-position:
+    calc(100% - 0.95rem) 50%,
+    calc(100% - 0.7rem) 50%;
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
 }
 
 [data-theme="sakura"] .card-elevated-shadow {
