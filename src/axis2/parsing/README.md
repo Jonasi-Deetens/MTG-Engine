@@ -43,6 +43,15 @@ PYTHONPATH=src python3 scripts/parse_coverage.py --limit 500
 
 Use `axis2.compiler.CardCompiler` for per-card `ParseReport` (parsed vs unparsed clauses).
 
-## Goal
+## Coverage targets
 
-**Executable** means: every parsed clause becomes an `axis2.schema.Effect` subclass that `EffectExecutor` knows how to run. Unparsed clauses stay in `ParseReport.unparsed_clauses` until a new parser is added.
+| Metric | Meaning | Target |
+|--------|---------|--------|
+| **Structural** | Every oracle clause becomes an `Effect` (including `UnparsedOracleEffect` fallback) | **100%** |
+| **Semantic** | Clause matched by a specialized regex parser | Raise over time (37%+ on commander sample) |
+
+```bash
+PYTHONPATH=src python3 scripts/parse_coverage.py --limit 500
+```
+
+**Executable** means: specialized effects run in `EffectExecutor`; fallback effects are logged and can gain parsers later.

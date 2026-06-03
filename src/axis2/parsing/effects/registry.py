@@ -1,9 +1,12 @@
 # axis2/parsing/effects/registry.py
 
+import logging
 from typing import List
 from .base import EffectParser, ParseResult
 from axis2.schema import ParseContext
 from axis2.parsing.base_registry import BaseParserRegistry
+
+logger = logging.getLogger(__name__)
 
 class ParserRegistry(BaseParserRegistry):
     """Manages all effect parsers with priority ordering"""
@@ -22,41 +25,31 @@ class ParserRegistry(BaseParserRegistry):
         if not text:
             return ParseResult()
         
-        # Find candidates using base class method
+        from axis2.schema import UnparsedOracleEffect
+        from axis2.validation import validate_effect
+        from axis2.parsing.effects.fallback import FallbackParser
+
         candidates = self._find_candidates(text, ctx)
-        
-        # Try parsers using base class method
-        best = self._try_parsers(candidates, lambda p: p.parse(text, ctx))
-        
-        if best:
-            print(f"[DEBUG Registry] Parser matched, got {len(best.all_effects)} effects")
-            # Validate the parsed effect(s) before returning
-            from axis2.validation import validate_effect
+
+        for parser in candidates:
+            result = parser.parse(text, ctx)
+            if not result.is_success:
+                continue
+            if any(isinstance(e, UnparsedOracleEffect) for e in result.all_effects):
+                return result
             validation_errors = []
-            for effect in best.all_effects:
-                errors = validate_effect(effect)
-                validation_errors.extend(errors)
-                if errors:
-                    print(f"[DEBUG Registry] Validation errors for effect {type(effect).__name__}: {errors}")
-            if validation_errors:
-                print(f"[DEBUG Registry] Validation failed, marking as not matched. Errors: {validation_errors}")
-                best.errors.extend(validation_errors)
-                # Don't mark as success if validation fails
-                best.matched = False
-            else:
-                print(f"[DEBUG Registry] Validation passed, returning {len(best.all_effects)} effects. matched={best.matched}, is_success={best.is_success}")
-            return best
-        
-        # No parser matched - include parser names in error for better diagnostics
-        parser_names = [type(p).__name__ for p in candidates[:3]]  # Show first 3 attempted
-        error_msg = self._get_error_message(text)
-        if parser_names:
-            error_msg += f" (tried: {', '.join(parser_names)})"
-        
-        return ParseResult(
-            matched=False,
-            errors=[error_msg]
-        )
+            for effect in result.all_effects:
+                validation_errors.extend(validate_effect(effect))
+            if not validation_errors:
+                return result
+            logger.debug(
+                "Parser %s validation failed: %s",
+                type(parser).__name__,
+                validation_errors,
+            )
+
+        # Guaranteed structural coverage
+        return FallbackParser().parse(text, ctx)
     
     def parse_all(self, texts: List[str], ctx: ParseContext) -> List[ParseResult]:
         """Parse multiple texts"""

@@ -12,11 +12,18 @@ def _register_all_parsers():
     Explicitly register all parsers in priority order.
     This gives us full control over registration and makes dependencies clear.
     """
-    from . import damage, search, tokens, zone_changes, counters, life, draw, mana, look_pick, protection, misc, casting_permission, discard, conditional_mana, continuous_wrapper, replacement_wrapper
-    
+    from . import (
+        damage, search, tokens, zone_changes, counters, life, draw, mana,
+        look_pick, protection, misc, casting_permission, discard,
+        conditional_mana, continuous_wrapper, replacement_wrapper,
+        catch_all, fallback,
+    )
+
     # Register in priority order (high to low)
     # Very specific patterns first
     register_parser(conditional_mana.ConditionalManaParser())  # priority 70 - must come before ManaParser
+    register_parser(catch_all.DynamicTokenParser())   # priority 65
+    register_parser(catch_all.AnyTargetDamageParser())  # priority 55
     register_parser(search.LightpawsSearchParser())  # priority 100
     register_parser(look_pick.LookAndPickParser())   # priority 90
     register_parser(search.SearchParser())            # priority 80
@@ -31,6 +38,9 @@ def _register_all_parsers():
     register_parser(counters.CounterParser())         # priority 50
     register_parser(counters.RemoveCounterParser())    # priority 50
     register_parser(life.LifeParser())                # priority 50
+    register_parser(catch_all.LoseLifeParser())       # priority 48
+    register_parser(catch_all.MillParser())           # priority 48
+    register_parser(catch_all.FightParser())          # priority 48
     register_parser(misc.CounterSpellParser())        # priority 50
     register_parser(misc.PTBoostParser())             # priority 50
     register_parser(discard.DiscardParser())          # priority 50
@@ -50,6 +60,11 @@ def _register_all_parsers():
     
     # Low priority generic effects
     register_parser(misc.ShuffleParser())             # priority 20
+    register_parser(catch_all.CopySpellParser())      # priority 45
+    register_parser(catch_all.ProliferateParser())    # priority 40
+    register_parser(catch_all.VentureParser())        # priority 40
+  # Guaranteed 100% structural coverage (lowest priority)
+    register_parser(fallback.FallbackParser())        # priority 0
 
 _register_all_parsers()
 

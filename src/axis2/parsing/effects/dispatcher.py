@@ -98,8 +98,7 @@ def parse_effect_text(text: str, ctx: ParseContext) -> List[Effect]:
                 result.errors,
             )
             if result.errors:
-                print(f"[DEBUG Dispatcher] Errors: {result.errors}")
-            print(f"[DEBUG Dispatcher] Tried parsers: {[type(p).__name__ for p in candidates[:3]]}")
-    
+                logger.debug("Parse errors for %s: %s", s[:50], result.errors)
+
     return effects
 

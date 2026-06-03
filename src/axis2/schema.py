@@ -398,6 +398,56 @@ class PutOntoBattlefieldEffect(Effect):
     constraint: Optional[Dict[str, Any]] = None
 
 @dataclass
+class UnparsedOracleEffect(Effect):
+    """
+    Fallback when no specialized parser matched.
+    Preserves raw oracle text so coverage stays at 100% and parsers can be added later.
+    """
+    raw_text: str
+    hints: List[str] = field(default_factory=list)
+    heuristic_kind: Optional[str] = None
+
+
+@dataclass
+class LoseLifeEffect(Effect):
+    """Player loses life (not damage)."""
+    amount: Union[int, SymbolicValue]
+    subject: str = "target_player"
+
+
+@dataclass
+class MillEffect(Effect):
+    """Mill cards from library to graveyard."""
+    amount: Union[int, SymbolicValue]
+    subject: Subject
+
+
+@dataclass
+class FightEffect(Effect):
+    """Fight or battle."""
+    subject: Subject
+    optional: bool = False
+
+
+@dataclass
+class CopyEffect(Effect):
+    """Copy a spell or ability."""
+    target: str = "that_spell"
+    optional: bool = False
+
+
+@dataclass
+class ProliferateEffect(Effect):
+    pass
+
+
+@dataclass
+class VentureEffect(Effect):
+    """Dungeon / venture (placeholder for rules module)."""
+    action: str = "venture"
+
+
+@dataclass
 class GrantCastingPermissionEffect(Effect):
     """
     Grants permission to cast spells from a specific zone.

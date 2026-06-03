@@ -17,7 +17,7 @@ from typing import Any, List, Optional
 
 from axis1.schema import Axis1Card
 from axis2.builder import Axis2Builder
-from axis2.schema import Axis2Card, Effect, ParseContext
+from axis2.schema import Axis2Card, Effect, ParseContext, UnparsedOracleEffect
 from axis2.parsing.effects import parse_effect_text
 from axis2.parsing.effects.utils import split_effect_sentences
 
@@ -27,6 +27,8 @@ class ParseReport:
     card_name: str
     oracle_text: str
     parsed_clause_count: int = 0
+    semantic_clause_count: int = 0
+    fallback_clause_count: int = 0
     unparsed_clauses: List[str] = field(default_factory=list)
     effect_count: int = 0
 
@@ -35,11 +37,22 @@ class ParseReport:
         return len(self.unparsed_clauses) == 0
 
     @property
-    def parse_rate(self) -> float:
+    def structural_parse_rate(self) -> float:
+        """100% when fallback parser is enabled — every clause becomes an Effect."""
         total = self.parsed_clause_count + len(self.unparsed_clauses)
         if total == 0:
             return 1.0
         return self.parsed_clause_count / total
+
+    @property
+    def semantic_parse_rate(self) -> float:
+        """Share of clauses parsed by specialized regex parsers (not fallback)."""
+        total = self.parsed_clause_count + len(self.unparsed_clauses)
+        if total == 0:
+            return 1.0
+        return self.semantic_clause_count / total
+
+    parse_rate = structural_parse_rate
 
 
 @dataclass
@@ -65,6 +78,16 @@ class CardCompiler:
         oracle = (face.oracle_text or "").strip()
         name = axis1.names[0] if axis1.names else "unknown"
 
+        if not oracle:
+            return ParseReport(
+                card_name=name,
+                oracle_text="",
+                parsed_clause_count=0,
+                semantic_clause_count=0,
+                fallback_clause_count=0,
+                effect_count=self._count_effects(axis2),
+            )
+
         clean_types = [t for t in face.card_types if t not in face.supertypes]
         ctx = ParseContext(
             card_name=name,
@@ -76,6 +99,8 @@ class CardCompiler:
 
         unparsed: List[str] = []
         parsed_count = 0
+        semantic_count = 0
+        fallback_count = 0
 
         for sentence in split_effect_sentences(oracle):
             s = sentence.strip()
@@ -84,6 +109,10 @@ class CardCompiler:
             effects = parse_effect_text(s, ctx)
             if effects:
                 parsed_count += 1
+                if any(isinstance(e, UnparsedOracleEffect) for e in effects):
+                    fallback_count += 1
+                else:
+                    semantic_count += 1
             else:
                 unparsed.append(s)
 
@@ -93,6 +122,8 @@ class CardCompiler:
             card_name=name,
             oracle_text=oracle,
             parsed_clause_count=parsed_count,
+            semantic_clause_count=semantic_count,
+            fallback_clause_count=fallback_count,
             unparsed_clauses=unparsed,
             effect_count=effect_count,
         )

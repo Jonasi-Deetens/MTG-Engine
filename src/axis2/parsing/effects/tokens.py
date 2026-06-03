@@ -142,7 +142,7 @@ class TokenParser(EffectParser):
                         "power": None,
                         "toughness": None,
                         "colors": [],
-                        "types": ["Artifact"],
+                        "types": ["Creature"],
                         "subtypes": [token_name],
                         "abilities": [],
                     },

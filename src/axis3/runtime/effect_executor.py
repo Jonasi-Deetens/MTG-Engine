@@ -86,6 +86,13 @@ class EffectExecutor:
             a2.DayboundEffect: self._daybound,
             a2.NightboundEffect: self._nightbound,
             a2.DraftFromSpellbookEffect: self._draft_spellbook,
+            a2.UnparsedOracleEffect: self._unparsed_oracle,
+            a2.LoseLifeEffect: self._lose_life,
+            a2.MillEffect: self._mill,
+            a2.FightEffect: self._fight,
+            a2.CopyEffect: self._copy,
+            a2.ProliferateEffect: self._proliferate,
+            a2.VentureEffect: self._venture,
         }
         for cls, fn in mapping.items():
             if isinstance(effect, cls):
@@ -525,6 +532,92 @@ class EffectExecutor:
         self, effect: a2.DraftFromSpellbookEffect, source_id: str, controller: int
     ) -> bool:
         self.game_state.add_debug_log("[DraftFromSpellbook] not fully implemented")
+        return True
+
+    def _unparsed_oracle(
+        self, effect: a2.UnparsedOracleEffect, source_id: str, controller: int
+    ) -> bool:
+        self.game_state.add_debug_log(
+            f"[UnparsedOracle] kind={effect.heuristic_kind} hints={effect.hints}: "
+            f"{effect.raw_text[:120]}"
+        )
+        return False
+
+    def _lose_life(self, effect: a2.LoseLifeEffect, source_id: str, controller: int) -> bool:
+        amount = resolve_amount(
+            effect.amount,
+            game_state=self.game_state,
+            source_id=source_id,
+            controller=controller,
+            default=0,
+        )
+        if amount <= 0:
+            return True
+        subj = (effect.subject or "target_player").lower()
+        if "each_opponent" in subj or "opponent" in subj:
+            for pid, player in enumerate(self.game_state.players):
+                if pid != controller:
+                    atomic_life.apply_life_change(
+                        self.game_state,
+                        Event(
+                            type=EventType.LIFE_CHANGE,
+                            payload={"player_id": pid, "amount": -amount, "cause": source_id},
+                        ),
+                    )
+        elif subj == "you":
+            atomic_life.apply_life_change(
+                self.game_state,
+                Event(
+                    type=EventType.LIFE_CHANGE,
+                    payload={"player_id": controller, "amount": -amount, "cause": source_id},
+                ),
+            )
+        else:
+            atomic_life.apply_life_change(
+                self.game_state,
+                Event(
+                    type=EventType.LIFE_CHANGE,
+                    payload={"player_id": controller, "amount": -amount, "cause": source_id},
+                ),
+            )
+        return True
+
+    def _mill(self, effect: a2.MillEffect, source_id: str, controller: int) -> bool:
+        amount = resolve_amount(
+            effect.amount,
+            game_state=self.game_state,
+            source_id=source_id,
+            controller=controller,
+            default=1,
+        )
+        for player in self.subjects.resolve(effect.subject, source_id, controller):
+            if not hasattr(player, "library"):
+                continue
+            pid = player.id
+            for _ in range(amount):
+                if not player.library:
+                    break
+                cid = player.library.pop()
+                self.game_state.zone_list(pid, "GRAVEYARD").append(cid)
+                obj = self.game_state.get_object(cid)
+                if obj:
+                    obj.zone = ZoneType.GRAVEYARD
+        return True
+
+    def _fight(self, effect: a2.FightEffect, source_id: str, controller: int) -> bool:
+        self.game_state.add_debug_log("[Fight] combat module required")
+        return True
+
+    def _copy(self, effect: a2.CopyEffect, source_id: str, controller: int) -> bool:
+        self.game_state.add_debug_log(f"[Copy] target={effect.target}")
+        return True
+
+    def _proliferate(self, effect: a2.ProliferateEffect, source_id: str, controller: int) -> bool:
+        self.game_state.add_debug_log("[Proliferate] counter propagation required")
+        return True
+
+    def _venture(self, effect: a2.VentureEffect, source_id: str, controller: int) -> bool:
+        self.game_state.add_debug_log(f"[Venture] {effect.action[:80]}")
         return True
 
     # ─────────────────────────────────────────────────────────

@@ -26,11 +26,22 @@ def resolve_amount(
         return default
     if isinstance(value, SymbolicValue):
         if value.kind == "variable":
-            # X and similar — caller should pass via game state when available
             x = getattr(game_state, "chosen_x", None) if game_state else None
             return int(x) if x is not None else default
         if value.kind == "star":
             return 0
+        if value.kind == "formula" and game_state:
+            expr = (value.expression or "").lower()
+            if "opponent" in expr and controller is not None:
+                return max(1, len(game_state.players) - 1)
+            if "creature" in expr and "control" in expr:
+                n = sum(
+                    1
+                    for oid in game_state.zone_list(controller, "BATTLEFIELD")
+                    if game_state.get_object(oid)
+                    and game_state.get_object(oid).is_creature()
+                )
+                return n
         return default
     if isinstance(value, DynamicValue):
         if value.kind == "counter_count" and game_state and source_id:
