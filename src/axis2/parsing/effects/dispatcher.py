@@ -87,16 +87,16 @@ def parse_effect_text(text: str, ctx: ParseContext) -> List[Effect]:
                 continue
         
         # Use registry to find matching parser
-        print(f"[DEBUG Dispatcher] Parsing sentence: '{s}'")
-        candidates = registry._find_candidates(s, ctx)
-        print(f"[DEBUG Dispatcher] Found {len(candidates)} candidate parsers: {[type(p).__name__ for p in candidates[:5]]}")
         result = registry.parse(s, ctx)
-        print(f"[DEBUG Dispatcher] Parse result: matched={result.matched}, is_success={result.is_success}, errors={result.errors}, effects={result.all_effects}")
         if result.is_success:
-            print(f"[DEBUG Dispatcher] Successfully parsed '{s}' -> {len(result.all_effects)} effects")
             effects.extend(result.all_effects)
         else:
-            print(f"[DEBUG Dispatcher] Failed to parse: {s[:50]}... matched={result.matched}, errors={result.errors}")
+            logger.debug(
+                "Failed to parse sentence: %s... matched=%s errors=%s",
+                s[:50],
+                result.matched,
+                result.errors,
+            )
             if result.errors:
                 print(f"[DEBUG Dispatcher] Errors: {result.errors}")
             print(f"[DEBUG Dispatcher] Tried parsers: {[type(p).__name__ for p in candidates[:3]]}")

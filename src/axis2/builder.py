@@ -908,7 +908,27 @@ def _parse_face(face: Axis1Face, ctx: ParseContext) -> Axis2Face:
                     continuous_effects.append(effect)
                 elif isinstance(effect, ReplacementEffect):
                     replacement_effects.append(effect)
-    
+
+            # Fallback: regex effect registry (parse_effect_text)
+            spell_ctx = ctx.with_flag("is_spell_text", True)
+            fallback_effects = parse_effect_text(chunk.text, spell_ctx)
+            types_lower = [t.lower() for t in face.card_types]
+            is_instant_sorcery = any(
+                t in types_lower for t in ("instant", "sorcery")
+            )
+            for effect in fallback_effects:
+                if isinstance(effect, (ReplacementEffect, ContinuousEffect)):
+                    if isinstance(effect, ReplacementEffect):
+                        replacement_effects.append(effect)
+                    else:
+                        continuous_effects.append(effect)
+                elif is_instant_sorcery:
+                    spell_effects.append(effect)
+                elif isinstance(effect, ContinuousEffect):
+                    continuous_effects.append(effect)
+                else:
+                    spell_effects.append(effect)
+
     # Merge with Axis1 structured abilities (hybrid approach)
     axis1_activated = _parse_axis1_activated(face, ctx)
     axis1_triggered = _parse_axis1_triggered(face, ctx)

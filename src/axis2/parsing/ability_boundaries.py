@@ -237,6 +237,9 @@ def _classify_ability_type(line: str, ctx: ParseContext) -> str:
         return "static"
     elif _is_spell_ability_start(line):
         return "spell"
+    # Instants/sorceries: oracle text without ability markers is the spell effect
+    elif ctx.primary_type in ("instant", "sorcery"):
+        return "spell"
     else:
         return "unknown"
 
