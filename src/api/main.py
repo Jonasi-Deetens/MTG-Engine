@@ -6,7 +6,7 @@ from db.connection import SessionLocal
 from db.repository import Axis1Repository
 from scryfall.client import ScryfallClient
 from scryfall.mappers.axis1_mapper import Axis1Mapper
-from services.deck_import_service import DeckImportService
+from scryfall.services.deck_import_service import DeckImportService
 from .schemas.request_schemas import DeckImportRequest
 
 app = FastAPI(title="MTG Engine API")
