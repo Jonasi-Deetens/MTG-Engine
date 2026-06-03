@@ -1,0 +1,167 @@
+'use client';
+
+// frontend/app/(protected)/decks/page.tsx
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { decks, DeckResponse, DeckDetailResponse } from '@/lib/decks';
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import { Select } from '@/components/ui/Select';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { DeckCard } from '@/features/decks/components/DeckCard';
+import { SearchInput } from '@/components/ui/SearchInput';
+import { LoadingState } from '@/components/ui/LoadingState';
+import { BookOpen, SearchX } from 'lucide-react';
+import Link from 'next/link';
+
+export default function DecksPage() {
+  const router = useRouter();
+  const [decksList, setDecksList] = useState<DeckResponse[]>([]);
+  const [deckDetails, setDeckDetails] = useState<Record<number, DeckDetailResponse>>({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [formatFilter, setFormatFilter] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const loadDecks = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await decks.getDecks(formatFilter || undefined);
+      setDecksList(response);
+
+      // Fetch deck details for all decks to get commander/first card images
+      const allDeckDetails: Record<number, DeckDetailResponse> = {};
+      await Promise.all(
+        response.map(async (deck) => {
+          try {
+            const detail = await decks.getDeck(deck.id);
+            allDeckDetails[deck.id] = detail;
+          } catch (err) {
+            console.error(`Failed to load details for deck ${deck.id}:`, err);
+          }
+        })
+      );
+      setDeckDetails(allDeckDetails);
+    } catch (err: any) {
+      setError(err?.data?.detail || err?.message || 'Failed to load decks');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadDecks();
+  }, [formatFilter]);
+
+  const filteredDecks = decksList.filter(deck =>
+    deck.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const handleDelete = async (id: number, name: string) => {
+    if (!confirm(`Are you sure you want to delete "${name}"?`)) return;
+
+    try {
+      await decks.deleteDeck(id);
+      setDecksList(decksList.filter(d => d.id !== id));
+    } catch (err: any) {
+      alert(err?.data?.detail || 'Failed to delete deck');
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h1
+            className="font-heading text-3xl font-bold text-[color:var(--theme-text-primary)] mb-2 nier-glitch"
+            data-text="My Decks"
+          >
+            My Decks
+          </h1>
+          <p className="text-[color:var(--theme-text-secondary)]">
+            Create and manage your Magic: The Gathering decks
+          </p>
+        </div>
+        <div className="flex w-full sm:w-auto">
+          <Link href="/decks/builder" className="w-full sm:w-auto">
+            <Button variant="primary" className="w-full sm:w-auto">
+              Create New Deck
+            </Button>
+          </Link>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+        <div className="w-full sm:flex-1 sm:max-w-2xl">
+          <SearchInput
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Search decks..."
+          />
+        </div>
+        <div className="flex w-full justify-end sm:w-auto">
+          <Select
+            value={formatFilter}
+            onChange={(e) => setFormatFilter(e.target.value)}
+            className="max-w-[12rem] sm:min-w-[160px]"
+          >
+            <option value="">All Formats</option>
+            <option value="Commander">Commander</option>
+            <option value="Standard">Standard</option>
+            <option value="Modern">Modern</option>
+            <option value="Pauper">Pauper</option>
+            <option value="Legacy">Legacy</option>
+            <option value="Vintage">Vintage</option>
+          </Select>
+        </div>
+      </div>
+
+      {error && (
+        <div className="p-4 bg-[color:var(--theme-status-error)]/20 border border-[color:var(--theme-status-error)]/50 rounded-lg text-[color:var(--theme-status-error)]">
+          {error}
+        </div>
+      )}
+
+      {loading ? (
+        <LoadingState fullScreen={false} className="py-12" />
+      ) : filteredDecks.length === 0 ? (
+        <Card variant="elevated">
+          {decksList.length === 0 ? (
+            <EmptyState
+              icon={BookOpen}
+              title="No decks yet"
+              description="Create your first deck to start building your collection. You can add cards, set commanders, and validate your deck."
+              actionLabel="Create New Deck"
+              actionHref="/decks/builder"
+            />
+          ) : (
+            <EmptyState
+              icon={SearchX}
+              title="No decks found"
+              description="Try adjusting your search query or format filter to find what you're looking for."
+            />
+          )}
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-4">
+          {filteredDecks.map((deck) => {
+            const detail = deckDetails[deck.id];
+            return (
+              <DeckCard
+                key={deck.id}
+                deck={deck}
+                deckDetail={detail}
+                showActions={true}
+                onDelete={handleDelete}
+              />
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+

@@ -1,6 +1,6 @@
-from sqlalchemy import Column, String, JSON
-from sqlalchemy.orm import declarative_base
-from sqlalchemy import Integer
+from sqlalchemy import Column, String, JSON, Integer, DateTime, Boolean, ForeignKey, UniqueConstraint
+from sqlalchemy.orm import declarative_base, relationship
+from datetime import datetime
 
 Base = declarative_base()
 
@@ -22,3 +22,242 @@ class Axis2TestCard(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, index=True, unique=True)
     axis2_json = Column(JSON, nullable=False)
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    username = Column(String, unique=True, index=True, nullable=False)
+    email = Column(String, unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=False)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationship to sessions (optional, for database-backed sessions)
+    sessions = relationship("Session", back_populates="user", cascade="all, delete-orphan")
+
+class Session(Base):
+    """
+    Optional: Database-backed session storage.
+    Currently using in-memory sessions, but this model allows
+    switching to database-backed sessions for production.
+    """
+    __tablename__ = "sessions"
+
+    id = Column(String, primary_key=True)  # session_id
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    expires_at = Column(DateTime, nullable=False, index=True)
+    
+    # Relationship to user
+    user = relationship("User", back_populates="sessions")
+
+
+class GameSession(Base):
+    """Persistent snapshot for a running game session."""
+    __tablename__ = "game_sessions"
+
+    game_id = Column(String, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    snapshot_json = Column(JSON, nullable=False)
+    version = Column(Integer, default=1, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    user = relationship("User", backref="game_sessions")
+
+class Keyword(Base):
+    """MTG keyword abilities with their configurable parameters."""
+    __tablename__ = "keywords"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String, unique=True, index=True, nullable=False)
+    description = Column(String)
+    
+    # Parameter flags
+    has_cost = Column(Boolean, default=False)
+    has_mana_cost = Column(Boolean, default=False)
+    has_number = Column(Boolean, default=False)
+    has_life_cost = Column(Boolean, default=False)
+    has_sacrifice_cost = Column(Boolean, default=False)
+    has_discard_cost = Column(Boolean, default=False)
+    
+    # Parameter type identifiers
+    cost_type = Column(String)  # "mana", "life", "sacrifice", "discard", etc.
+    number_type = Column(String)  # "annihilator", "bloodthirst", "ward", etc.
+    
+    # Additional metadata
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class CardEffectGraph(Base):
+    """Stores canonical effect graphs built for specific cards."""
+    __tablename__ = "card_effect_graphs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    card_id = Column(String, nullable=False, index=True)  # Reference to Axis1CardModel.card_id
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+
+    # Store the full effect graph JSON
+    effect_graph_json = Column(JSON, nullable=False)
+
+    # Additional metadata
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationship to user
+    user = relationship("User", backref="card_effect_graphs")
+
+    __table_args__ = (
+        {"sqlite_autoincrement": True},
+    )
+
+
+class UserFavorite(Base):
+    """User's favorite cards."""
+    __tablename__ = "user_favorites"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    card_id = Column(String, nullable=False, index=True)  # Reference to Axis1CardModel.card_id
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationship to user
+    user = relationship("User", backref="favorites")
+    
+    # Unique constraint: one favorite per card per user
+    __table_args__ = (
+        UniqueConstraint('user_id', 'card_id', name='uq_user_favorite'),
+        {"sqlite_autoincrement": True},
+    )
+
+
+class Collection(Base):
+    """User-created card collections."""
+    __tablename__ = "collections"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    name = Column(String, nullable=False)
+    description = Column(String)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationship to user
+    user = relationship("User", backref="collections")
+    
+    # Relationship to collection items
+    items = relationship("CollectionItem", back_populates="collection", cascade="all, delete-orphan")
+    
+    __table_args__ = (
+        {"sqlite_autoincrement": True},
+    )
+
+
+class CollectionItem(Base):
+    """Cards in a collection."""
+    __tablename__ = "collection_items"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    collection_id = Column(Integer, ForeignKey("collections.id"), nullable=False, index=True)
+    card_id = Column(String, nullable=False, index=True)  # Reference to Axis1CardModel.card_id
+    quantity = Column(Integer, default=1, nullable=False)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationship to collection
+    collection = relationship("Collection", back_populates="items")
+    
+    # Unique constraint: one card per collection
+    __table_args__ = (
+        UniqueConstraint('collection_id', 'card_id', name='uq_collection_item'),
+        {"sqlite_autoincrement": True},
+    )
+
+
+class Deck(Base):
+    """User-created Magic: The Gathering decks."""
+    __tablename__ = "decks"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    name = Column(String, nullable=False)
+    description = Column(String)
+    format = Column(String, nullable=False)  # Commander, Standard, Modern, etc.
+    is_public = Column(Boolean, default=False)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    user = relationship("User", backref="decks")
+    cards = relationship("DeckCard", back_populates="deck", cascade="all, delete-orphan")
+    commanders = relationship("DeckCommander", back_populates="deck", cascade="all, delete-orphan")
+    custom_lists = relationship("DeckCustomList", back_populates="deck", cascade="all, delete-orphan")
+    
+    __table_args__ = (
+        {"sqlite_autoincrement": True},
+    )
+
+
+class DeckCard(Base):
+    """Cards in a deck with quantities."""
+    __tablename__ = "deck_cards"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    deck_id = Column(Integer, ForeignKey("decks.id"), nullable=False, index=True)
+    card_id = Column(String, nullable=False, index=True)  # Reference to Axis1CardModel.card_id
+    quantity = Column(Integer, default=1, nullable=False)
+    list_id = Column(Integer, ForeignKey("deck_custom_lists.id"), nullable=True, index=True)  # Custom list assignment
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    deck = relationship("Deck", back_populates="cards")
+    
+    # Unique constraint: one entry per card per deck
+    __table_args__ = (
+        UniqueConstraint('deck_id', 'card_id', name='uq_deck_card'),
+        {"sqlite_autoincrement": True},
+    )
+
+
+class DeckCommander(Base):
+    """Commander(s) for Commander format decks."""
+    __tablename__ = "deck_commanders"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    deck_id = Column(Integer, ForeignKey("decks.id"), nullable=False, index=True)
+    card_id = Column(String, nullable=False, index=True)  # Reference to Axis1CardModel.card_id
+    position = Column(Integer, default=0)  # For partner commanders (0 = first, 1 = second, etc.)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    deck = relationship("Deck", back_populates="commanders")
+    
+    __table_args__ = (
+        {"sqlite_autoincrement": True},
+    )
+
+
+class DeckCustomList(Base):
+    """Custom lists/categories for organizing deck cards."""
+    __tablename__ = "deck_custom_lists"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    deck_id = Column(Integer, ForeignKey("decks.id"), nullable=False, index=True)
+    name = Column(String, nullable=False)  # Custom list title
+    position = Column(Integer, default=0)  # Order of lists
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    deck = relationship("Deck", back_populates="custom_lists")
+    
+    __table_args__ = (
+        {"sqlite_autoincrement": True},
+    )

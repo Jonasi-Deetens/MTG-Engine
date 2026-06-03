@@ -1,0 +1,45 @@
+'use client';
+
+// Theme switcher component for user theme selection
+
+import { useTheme } from '@/context/ThemeContext';
+import { Theme } from '@/lib/themes/themeConfig';
+import { Moon, Sun } from 'lucide-react';
+import { Select, SelectOption } from './Select';
+
+const themeIcons: Record<Theme, React.ComponentType<{ className?: string }>> = {
+  light: Sun,
+  sakura: Sun,
+  neon: Moon,
+  dark: Moon,
+  nier: Sun,
+};
+
+const themeLabels: Record<Theme, string> = {
+  light: 'Light',
+  sakura: 'Sakura',
+  neon: 'Neon',
+  dark: 'Dark',
+  nier: 'NieR',
+};
+
+export function ThemeSwitcher() {
+  const { currentTheme, setTheme, availableThemes } = useTheme();
+
+  const options: SelectOption[] = availableThemes.map((theme) => ({
+    value: theme,
+    label: themeLabels[theme],
+    icon: themeIcons[theme],
+  }));
+
+  return (
+    <Select
+      options={options}
+      value={currentTheme}
+      onChange={(e) => setTheme(e.target.value as Theme)}
+      placeholder="Select theme"
+      className="w-full"
+    />
+  );
+}
+
