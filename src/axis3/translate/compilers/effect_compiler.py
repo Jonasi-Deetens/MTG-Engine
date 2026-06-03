@@ -314,8 +314,17 @@ def parse_untap(text: str):
 
 def compile_effect(effect_text: str):
     """
-    Compile a single rules text line into one Axis3Effect.
+    DEPRECATED — compile a single rules text line into a legacy Axis3 effect object.
+
+    Prefer Axis2 parse_effect_text + EffectExecutor (see axis2_bridge).
     """
+    import warnings
+
+    warnings.warn(
+        "compile_effect is deprecated; use axis2.parsing.effects.parse_effect_text",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     text = effect_text.strip()
 
     lower = text.lower()

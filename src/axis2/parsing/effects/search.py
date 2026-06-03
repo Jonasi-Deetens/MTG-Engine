@@ -137,18 +137,12 @@ class LightpawsSearchParser(EffectParser):
     def can_parse(self, text: str, ctx: ParseContext) -> bool:
         # ⚠️ CHEAP CHECK ONLY
         t = text.lower()
-        result = "search" in t and "aura" in t and "mana value" in t
-        if result:
-            print(f"[DEBUG LightpawsSearchParser] can_parse=True for: {text[:80]}...")
-        return result
+        return "search" in t and "aura" in t and "mana value" in t
     
     def parse(self, text: str, ctx: ParseContext) -> ParseResult:
-        print(f"[DEBUG LightpawsSearchParser] parse called with: {text[:100]}...")
         m = AURA_SEARCH_RE.search(text)
         if not m:
-            print(f"[DEBUG LightpawsSearchParser] Regex did not match")
             return ParseResult(matched=False)
-        print(f"[DEBUG LightpawsSearchParser] Regex matched!")
         
         t = text.lower()
         

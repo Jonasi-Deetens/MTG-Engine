@@ -17,8 +17,14 @@ def build_continuous_effects_for_object(game_state: GameState, rt_obj: RuntimeOb
     """
 
     axis2 = rt_obj.axis2_card
+    if not axis2:
+        return
 
-    for ce in getattr(axis2, "continuous_effects", []):
+    continuous_effects = []
+    for face in getattr(axis2, "faces", []) or []:
+        continuous_effects.extend(getattr(face, "continuous_effects", []) or [])
+
+    for ce in continuous_effects:
         kind = ce.kind  # This depends on your Axis2 schema
 
         # Example 1: global anthem: "Creatures you control get +1/+1"

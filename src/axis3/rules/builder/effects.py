@@ -1,6 +1,17 @@
+"""
+DEPRECATED — use Axis2BuildPipeline + EffectExecutor instead.
+
+See axis3/rules/builder/README.md and docs/EFFECT_BUILDER_ARCHITECTURE.md.
+"""
+
+import logging
 import re
+import warnings
+
 from axis3.rules.builder.keywords import KEYWORD_TRIGGER_MAP
 from typing import List
+
+logger = logging.getLogger(__name__)
 
 from axis1.schema import Axis1Card
 from axis3.abilities.triggered.trigger import Trigger
@@ -372,6 +383,11 @@ def _parse_static_effects(text: str) -> List[str]:
 # ------------------------------------------------------------
 
 def derive_triggers(axis1_card: Axis1Card, game_state: "GameState") -> List[Trigger]:
+    warnings.warn(
+        "derive_triggers is deprecated; use Axis2BuildPipeline triggered_abilities",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     triggers: List[Trigger] = []
 
     text = _oracle_text(axis1_card)
@@ -445,9 +461,14 @@ def derive_triggers(axis1_card: Axis1Card, game_state: "GameState") -> List[Trig
 
 def derive_effects(axis1_card, game_state):
     """
-    Derive spell effects for this card from oracle text.
-    Returns a list of Axis3 Effect objects (CreateDynamicTokenEffect, DealDamageEffect, etc.).
+    DEPRECATED. Use Axis2BuildPipeline().build(axis1_card).faces[0].spell_effects
+    and axis3.runtime.effect_executor.EffectExecutor at resolution time.
     """
+    warnings.warn(
+        "derive_effects is deprecated; use Axis2BuildPipeline and EffectExecutor",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     oracle = axis1_card.faces[0].oracle_text or ""
     effects = []
 
@@ -456,16 +477,12 @@ def derive_effects(axis1_card, game_state):
         if not line or (line.startswith("(") and line.endswith(")")):
             continue
 
-        print("LINE:", line)
         try:
             eff = compile_effect(line)
         except Exception as e:
-            print("ERROR compiling effect line:", line)
-            print("  TYPE:", type(e))
-            print("  MSG:", e)
+            logger.debug("compile_effect failed for %r: %s", line, e)
             eff = None
 
-        print("PARSED:", eff)
         if eff is not None:
             effects.append(eff)
 

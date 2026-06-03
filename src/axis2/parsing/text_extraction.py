@@ -89,7 +89,6 @@ def get_remaining_text_for_parsing(
             keyword_result = registry.detect_keyword(stripped)
             if keyword_result:
                 keyword_name, reminder_text, cost_text = keyword_result
-                print(f"[TEXT_EXTRACT PRINT] Line '{stripped}' detected as keyword: {keyword_name}")
                 logger.debug(f"[TEXT_EXTRACT] Found keyword: {keyword_name}, reminder: {reminder_text[:50] if reminder_text else None}")
                 
                 # Parse the keyword ability
@@ -108,9 +107,6 @@ def get_remaining_text_for_parsing(
             cleaned_lines.append(stripped)
         
         text = "\n".join(cleaned_lines)
-        print(f"[TEXT_EXTRACT PRINT] Removed {len(keyword_lines_to_remove)} keyword lines")
-        print(f"[TEXT_EXTRACT PRINT] Parsed {len(keyword_effects)} keyword effects")
-        print(f"[TEXT_EXTRACT PRINT] Remaining text after keyword removal: {text[:300]}")
         logger.debug(f"[TEXT_EXTRACT] Removed {len(keyword_lines_to_remove)} keyword lines")
         logger.debug(f"[TEXT_EXTRACT] Parsed {len(keyword_effects)} keyword effects")
         logger.debug(f"[TEXT_EXTRACT] Remaining text after keyword removal: {text[:300]}")

@@ -45,10 +45,7 @@ class DamageParser(ReplacementEffectParser):
         
         # Try damage redirection pattern first (more specific)
         redir_match = RE_DAMAGE_REDIRECTION.search(text)
-        print(f"[DamageParser PRINT] Regex match result: {redir_match is not None}")
-        print(f"[DamageParser PRINT] Text being matched: '{text}'")
-        print(f"[DamageParser PRINT] Pattern: {RE_DAMAGE_REDIRECTION.pattern}")
-        logger.debug(f"[DamageParser] Regex match result: {redir_match is not None}")
+        logger.debug(f"[DamageParser] redirection match: {redir_match is not None}")
         if redir_match:
             logger.debug(f"[DamageParser] Matched groups: 1='{redir_match.group(1)}', 2='{redir_match.group(2)}'")
             original_target_text = redir_match.group(1).strip()

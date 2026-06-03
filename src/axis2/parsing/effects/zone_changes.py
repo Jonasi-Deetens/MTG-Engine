@@ -243,12 +243,8 @@ class ZoneChangeParser(EffectParser):
         # Check this BEFORE the generic return pattern to ensure it matches first
         # Match variations: "return the exiled card", "return the exiled card to the battlefield", etc.
         if "exiled card" in t.lower() and "return" in t.lower():
-            print(f"[DEBUG ZoneChange] Checking 'return exiled card' pattern for text: '{t}'")
-            # Try the specific pattern first
             m = RETURN_EXILED_CARD_RE.search(t)
-            print(f"[DEBUG ZoneChange] Pattern search result: {m}")
             if m:
-                print(f"[DEBUG ZoneChange] Pattern matched! Creating linked_exiled_card effect")
                 return ParseResult(
                     matched=True,
                     effect=ChangeZoneEffect(
@@ -260,9 +256,6 @@ class ZoneChangeParser(EffectParser):
                     ),
                     consumed_text=text
                 )
-            else:
-                print(f"[DEBUG ZoneChange] Pattern did NOT match text: '{t}'")
-                print(f"[DEBUG ZoneChange] Pattern regex: {RETURN_EXILED_CARD_RE.pattern}")
 
         # 3b. Return → battlefield (generic)
         m = RETURN_BATTLEFIELD_RE.search(t)

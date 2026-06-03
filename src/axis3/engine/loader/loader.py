@@ -1,31 +1,27 @@
-# src/axis3/compiler/loader.py
+# axis3/engine/loader/loader.py
+"""
+Legacy entry point — delegates to canonical Axis2 integration loader.
+
+Prefer: axis3.integration.runtime_loader
+"""
 
 from __future__ import annotations
-import itertools
-import random
-from typing import Iterable, List
+
+from typing import Iterable
 
 from axis1.schema import Axis1Card
-from axis2.builder import Axis2Builder
 from axis2.schema import Axis2Card
 
-from axis3.state.objects import RuntimeObject, RuntimeObjectId
-from axis3.model.characteristics import PrintedCharacteristics
-from axis3.state.game_state import GameState, PlayerState
+from axis3.state.game_state import GameState
 from axis3.state.zones import ZoneType as Zone
-from axis3.engine.stack.stack import Stack
-from axis3.rules.events import EventBus
+from axis3.state.objects import RuntimeObject
 
-from axis3.engine.translate.ability_builder import register_runtime_abilities_for_object
-from axis3.engine.translate.continuous_builder import build_continuous_effects_for_object
-from axis3.engine.translate.replacement_builder import build_replacement_effects_for_object
-from axis3.engine.translate.activated_builder import register_runtime_activated_abilities
+from axis3.integration.runtime_loader import (
+    compile_axis2,
+    create_runtime_object as _create_runtime_object,
+    build_game_state_from_axis1_decks,
+)
 
-
-_uid_counter = itertools.count(1)
-
-def _next_id() -> RuntimeObjectId:
-    return str(next(_uid_counter))
 
 def create_runtime_object(
     axis1_card: Axis1Card,
@@ -34,101 +30,13 @@ def create_runtime_object(
     zone: Zone,
     game_state: GameState,
 ) -> RuntimeObject:
-    obj_id = axis1_card.card_id
-    characteristics = axis2_card.characteristics
-
-    rt_obj = RuntimeObject(
-        id=obj_id,
-        owner=int(owner_id),
-        controller=int(owner_id),
-        zone=zone,
-        name=axis1_card.names[0] if hasattr(axis1_card, "names") else "",
-        axis1_card=axis1_card,
-        axis2_card=axis2_card,
-        characteristics=characteristics,
-    )
-
-    # --- FULL INTEGRATION ---
-    register_runtime_abilities_for_object(game_state, rt_obj)
-    build_continuous_effects_for_object(game_state, rt_obj)
-    build_replacement_effects_for_object(game_state, rt_obj)
-    register_runtime_activated_abilities(game_state, rt_obj)
-
-    return rt_obj
+    return _create_runtime_object(axis1_card, axis2_card, owner_id, zone, game_state)
 
 
 def build_game_state_from_decks(
     player1_deck_axis1: Iterable[Axis1Card],
     player2_deck_axis1: Iterable[Axis1Card],
-    axis2_builder: Axis2Builder,
+    axis2_builder=None,
 ) -> GameState:
-
-    players: List[PlayerState] = [
-        PlayerState(id=0, life=20),
-        PlayerState(id=1, life=20),
-    ]
-
-    # Temporary dummy state for Axis2 builder
-    dummy_state = GameState(
-        players=players,
-        objects={},
-        stack=Stack(),
-        event_bus=None,
-        replacement_effects=[],
-        continuous_effects=[],
-    )
-
-    # Prepare final objects dict
-    objects: dict = {}
-
-    # Build Axis2 + runtime objects for Player 0
-    for axis1_card in player1_deck_axis1:
-        axis2 = axis2_builder.build(axis1_card, game_state=dummy_state)
-
-        # IMPORTANT: do NOT attach runtime objects to dummy_state
-        rt_obj = create_runtime_object(
-            axis1_card,
-            axis2,
-            owner_id=0,
-            zone=Zone.LIBRARY,
-            game_state=dummy_state,
-        )
-
-        objects[rt_obj.id] = rt_obj
-        players[0].library.append(rt_obj.id)
-
-    # Build Axis2 + runtime objects for Player 1
-    for axis1_card in player2_deck_axis1:
-        axis2 = axis2_builder.build(axis1_card, game_state=dummy_state)
-
-        rt_obj = create_runtime_object(
-            axis1_card,
-            axis2,
-            owner_id=1,
-            zone=Zone.LIBRARY,
-            game_state=dummy_state,
-        )
-
-        objects[rt_obj.id] = rt_obj
-        players[1].library.append(rt_obj.id)
-
-    # Shuffle libraries
-    random.shuffle(players[0].library)
-    random.shuffle(players[1].library)
-
-    # Now create the REAL game state
-    game_state = GameState(
-        players=players,
-        objects=objects,
-        stack=Stack(),
-        event_bus=None,
-        replacement_effects=[],
-        continuous_effects=[],
-    )
-
-    # Patch runtime objects so they reference the real game_state
-    for obj in objects.values():
-        obj.game_state = game_state
-
-    return game_state
-
+    """axis2_builder is ignored; Axis2BuildPipeline is always used."""
+    return build_game_state_from_axis1_decks(player1_deck_axis1, player2_deck_axis1)

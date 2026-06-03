@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 from typing import Any, List, Optional
 
 from axis1.schema import Axis1Card
-from axis2.builder import Axis2Builder
+from axis2.build_pipeline import Axis2BuildPipeline
 from axis2.schema import Axis2Card, Effect, ParseContext, UnparsedOracleEffect
 from axis2.parsing.effects import parse_effect_text
 from axis2.parsing.effects.utils import split_effect_sentences
@@ -65,8 +65,8 @@ class CompiledCard:
 class CardCompiler:
     """Compile a card from Axis1 to Axis2 with parse coverage metadata."""
 
-    def __init__(self, builder: Optional[Axis2Builder] = None):
-        self.builder = builder or Axis2Builder()
+    def __init__(self, builder: Optional[Axis2BuildPipeline] = None):
+        self.builder = builder or Axis2BuildPipeline()
 
     def compile(self, axis1: Axis1Card, game_state: Any = None) -> CompiledCard:
         axis2 = self.builder.build(axis1)

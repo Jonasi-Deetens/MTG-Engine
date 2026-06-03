@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 from typing import Optional
+import logging
 import re
+
+logger = logging.getLogger(__name__)
 from axis1.schema import Axis1Card, Axis1Face, Axis1ActivatedAbility, Axis1TriggeredAbility
 from axis2.schema import (
     Axis2Card, Axis2Face, Axis2Characteristics,
@@ -370,9 +373,8 @@ def _extract_effect_text_from_oracle(face: Axis1Face, condition: str, ctx: Parse
 def _find_return_effect_in_text(face: Axis1Face, ctx: ParseContext) -> str:
     from axis2.parsing.sentences import split_into_sentences
     
-    print(f"[DEBUG LTB] Effect text empty, searching oracle text for return pattern")
+    logger.debug("[LTB] searching oracle for return pattern on %s", ctx.card_name)
     for sentence in split_into_sentences(face.oracle_text or ""):
-        print(f"[DEBUG LTB] Checking sentence: '{sentence}'")
         if "return" in sentence.lower() and ("exiled" in sentence.lower() or "that card" in sentence.lower()):
             if "leaves" in sentence.lower() or any(variant in sentence.lower() for variant in ["when " + ctx.card_name.lower(), "when this"]):
                 effect_text = sentence
@@ -382,7 +384,7 @@ def _find_return_effect_in_text(face: Axis1Face, ctx: ParseContext) -> str:
                         if "return" in part.lower():
                             effect_text = part.strip()
                             break
-                print(f"[DEBUG LTB] Found return pattern in sentence: '{sentence}' -> extracted: '{effect_text}'")
+                logger.debug("[LTB] return pattern: %s -> %s", sentence, effect_text)
                 return effect_text
     return ""
 
@@ -490,20 +492,18 @@ def _parse_axis1_triggered(face: Axis1Face, ctx: ParseContext) -> list[Triggered
         
         triggered_ctx = ctx.with_flag("is_triggered_ability", True)
         
-        if "leaves the battlefield" in t.condition.lower():
-            print(f"[DEBUG LTB] Condition: '{t.condition}'")
-            print(f"[DEBUG LTB] Initial effect_text from Axis1: '{effect_text}'")
-            print(f"[DEBUG LTB] Full oracle text: '{face.oracle_text}'")
-        
         if not effect_text and "leaves the battlefield" in t.condition.lower():
             effect_text = _find_return_effect_in_text(face, ctx)
-        
-        print(f"[DEBUG LTB] Final effect_text being parsed: '{effect_text}'")
-        
+
         conditional_effect = parse_conditional(effect_text, triggered_ctx)
         effects = [conditional_effect] if conditional_effect else parse_effect_text(effect_text, triggered_ctx)
-        
-        print(f"[DEBUG LTB] Parsed {len(effects)} effects: {effects}")
+
+        if "leaves the battlefield" in t.condition.lower():
+            logger.debug(
+                "LTB trigger %s effects=%s",
+                t.condition,
+                [type(e).__name__ for e in effects],
+            )
         targeting = parse_targeting(t.effect)
         trigger_filter = parse_trigger_filter(t.condition)
 
@@ -1029,40 +1029,22 @@ def _add_special_casting_costs(axis1_card: Axis1Card, faces: list[Axis2Face]) ->
 
 
 class Axis2Builder:
+    """
+    Builds Axis2Card from Axis1Card.
+
+    Implementation is delegated to Axis2BuildPipeline (see build_pipeline.py)
+  for a documented step-by-step wizard. This class remains for backward compatibility.
+    """
+
+    _pipeline = None
+
+    @classmethod
+    def _get_pipeline(cls):
+        if cls._pipeline is None:
+            from axis2.build_pipeline import Axis2BuildPipeline
+            cls._pipeline = Axis2BuildPipeline()
+        return cls._pipeline
 
     @staticmethod
     def build(axis1_card: Axis1Card) -> Axis2Card:
-        face1: Axis1Face = axis1_card.faces[0]
-        print(f"Building Axis2Card: {axis1_card.names[0]}")
-        
-        characteristics = _extract_characteristics(axis1_card, face1)
-
-        faces = []
-        for f in axis1_card.faces:
-            ctx = _create_context(axis1_card, f)
-            face = _parse_face(f, ctx)
-            faces.append(face)
-
-        _expand_keywords(faces)
-        _add_special_casting_costs(axis1_card, faces)
-
-        keywords = list(face1.keywords) + extract_keywords(face1.oracle_text or "")
-
-        card = Axis2Card(
-            card_id=axis1_card.card_id,
-            oracle_id=axis1_card.oracle_id,
-            set=axis1_card.set,
-            collector_number=axis1_card.collector_number,
-            faces=faces,
-            characteristics=characteristics,
-            keywords=keywords,
-        )
-        
-        from axis2.validation import validate_axis2_card
-        validation_errors = validate_axis2_card(card)
-        if validation_errors:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.warning(f"Validation errors for card {card.card_id}: {validation_errors}")
-        
-        return card
+        return Axis2Builder._get_pipeline().build(axis1_card)

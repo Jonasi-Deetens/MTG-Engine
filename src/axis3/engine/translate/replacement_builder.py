@@ -4,10 +4,18 @@ from axis3.rules.replacement.types import ReplacementEffect
 from axis3.state.zones import ZoneType as Zone
 
 
+def _face_replacement_effects(axis2_card):
+    for face in getattr(axis2_card, "faces", []) or []:
+        for repl in getattr(face, "replacement_effects", []) or []:
+            yield repl
+
+
 def build_replacement_effects_for_object(game_state, rt_obj):
     axis2 = rt_obj.axis2_card
+    if not axis2:
+        return
 
-    for repl in axis2.replacement_effects:
+    for repl in _face_replacement_effects(axis2):
         kind = repl.kind
 
         if kind == "enters_tapped":
