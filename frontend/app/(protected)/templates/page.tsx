@@ -23,7 +23,7 @@ export default function TemplatesPage() {
   }, []);
 
   const handleUseTemplate = async (_template: any) => {
-    setUsingTemplate(template.id);
+    setUsingTemplate(_template.id);
     setError('Legacy templates are not supported in the unified effect builder yet.');
     setUsingTemplate(null);
   };

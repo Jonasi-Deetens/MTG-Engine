@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 
 interface EffectTargetGroup {
   label: string;
-  minTargets?: number;
+  minTargets?: number | null;
   selectedObjectIds: string[];
   selectedPlayerIds: number[];
   errors?: string[];

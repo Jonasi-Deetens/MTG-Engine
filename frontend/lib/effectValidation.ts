@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import type { EffectGraph } from './unifiedEffect';
+import type { EffectGraph, EffectStep } from './unifiedEffect';
 import { CONDITION_TYPE_VALUES } from './conditionTypes';
 
 const InitiationSchema = z.enum(['static', 'triggered', 'activated']);
@@ -37,7 +37,7 @@ const OptionalCostSchema = z.object({
 const CostSpecSchema = z.object({
   items: z.array(CostItemSchema),
   timing: z.string().optional(),
-  limit: z.record(z.unknown()).optional(),
+  limit: z.record(z.string(), z.unknown()).optional(),
 }).passthrough();
 
 const DurationSchema = z.union([
@@ -65,20 +65,20 @@ const ContinuousEffectSchema = z.object({
   kind: z.literal('continuous'),
   layer: z.number(),
   modifier: ModifierSchema,
-  appliesTo: z.union([z.string(), z.record(z.unknown())]).optional(),
+  appliesTo: z.union([z.string(), z.record(z.string(), z.unknown())]).optional(),
   duration: DurationSchema,
 }).passthrough();
 
 const ReplacementEffectSchema = z.object({
   kind: z.literal('replacement'),
-  replaces: z.record(z.unknown()),
-  with: z.record(z.unknown()),
+  replaces: z.record(z.string(), z.unknown()),
+  with: z.record(z.string(), z.unknown()),
 }).passthrough();
 
 const PreventionEffectSchema = z.object({
   kind: z.literal('prevention'),
-  prevents: z.record(z.unknown()),
-  amount: z.union([z.number(), z.string(), z.record(z.unknown())]).optional(),
+  prevents: z.record(z.string(), z.unknown()),
+  amount: z.union([z.number(), z.string(), z.record(z.string(), z.unknown())]).optional(),
 }).passthrough();
 
 const EffectBodySchema = z.union([
@@ -129,7 +129,7 @@ const EffectStepSchema = z.object({
   id: z.string(),
   effect: UnifiedEffectSchema,
   next: z.array(z.string()).optional(),
-  nextByMode: z.record(z.string()).optional(),
+  nextByMode: z.record(z.string(), z.string()).optional(),
 });
 
 const EffectGraphSchema = z.object({
@@ -174,7 +174,7 @@ const getRootSteps = (steps: EffectStep[]) => {
   };
   steps.forEach((step) => {
     if (Array.isArray(step.next)) {
-      step.next.forEach((id) => referenced.add(id));
+      step.next.forEach((id: string) => referenced.add(id));
     }
     if (step.nextByMode) {
       Object.values(step.nextByMode).forEach((nextId) => addReferenced(nextId as any));

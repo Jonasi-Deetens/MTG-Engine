@@ -22,6 +22,8 @@ export const metadata: Metadata = {
   description: "Magic: The Gathering card search and engine",
 };
 
+export const dynamic = 'force-dynamic';
+
 export default function RootLayout({
   children,
 }: Readonly<{

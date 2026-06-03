@@ -2,7 +2,7 @@
 
 // frontend/app/(app)/search/page.tsx
 
-import { useMemo, useCallback } from 'react';
+import { Suspense, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { CardGrid } from '@/components/cards/CardGrid';
@@ -20,7 +20,7 @@ import { SearchHeader } from '@/features/search/components/SearchHeader';
 import { SearchFilters } from '@/features/search/components/SearchFilters';
 import { PAGE_SIZE } from '@/lib/constants/search';
 
-export default function SearchPage() {
+function SearchPageContent() {
   const router = useRouter();
 
   const {
@@ -245,5 +245,13 @@ export default function SearchPage() {
         </>
       )}
     </div>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={<LoadingState />}>
+      <SearchPageContent />
+    </Suspense>
   );
 }

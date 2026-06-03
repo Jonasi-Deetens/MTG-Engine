@@ -4,6 +4,8 @@ import { CardData } from '@/components/cards/CardPreview';
 
 export interface EngineGameObjectSnapshot {
   id: string;
+  /** Scryfall / DB card id — used to load saved effect graphs from the builder. */
+  card_id?: string | null;
   name: string;
   owner_id: number;
   controller_id: number;
@@ -120,7 +122,7 @@ export interface EngineResolveContextSnapshot {
   targets_by_effect?: Record<string, Record<string, any>>;
   required_targets_by_effect?: Record<string, string[]>;
   distinct_targets_by_effect?: Record<string, string[]>;
-  min_targets_by_effect?: Record<string, Record<string, number>>;
+  min_targets_by_effect?: Record<string, Record<string, number> | null>;
   choices?: Record<string, any>;
   previous_results?: Array<Record<string, any>>;
 }
@@ -324,6 +326,7 @@ const expandDeckCards = (deck: DeckDetailResponse, playerId: number) => {
       const objectId = `${entry.card_id}-${playerId}-${index}-${copy}`;
       objects.push({
         id: objectId,
+        card_id: entry.card_id,
         name: entry.card.name,
         owner_id: playerId,
         controller_id: playerId,
@@ -373,6 +376,7 @@ const expandDeckCards = (deck: DeckDetailResponse, playerId: number) => {
     const objectId = `${commander.card_id}-commander-${playerId}-${index}`;
     objects.push({
       id: objectId,
+      card_id: commander.card_id,
       name: commander.card.name,
       owner_id: playerId,
       controller_id: playerId,

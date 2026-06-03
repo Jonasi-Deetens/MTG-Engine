@@ -41,7 +41,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       ) as Theme | null;
       // Migrate 'angel' theme to 'light' for backward compatibility
       let initialTheme: Theme = defaultTheme;
-      if (storedTheme === "angel") {
+      if ((storedTheme as string | null) === "angel") {
         initialTheme = "light";
         // Update localStorage to reflect the migration
         localStorage.setItem(THEME_STORAGE_KEY, "light");

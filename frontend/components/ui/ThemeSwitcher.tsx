@@ -36,7 +36,7 @@ export function ThemeSwitcher() {
     <Select
       options={options}
       value={currentTheme}
-      onChange={(value) => setTheme(value as Theme)}
+      onChange={(e) => setTheme(e.target.value as Theme)}
       placeholder="Select theme"
       className="w-full"
     />

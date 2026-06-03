@@ -27,6 +27,9 @@ Activation costs are edited in **Setup** (via `CostListEditor`). Spell-only extr
 
 - Graphs are stored per card via `POST/GET /api/effects/cards/{card_id}/effects`  
 - Validation: `POST /api/effects/validate` (Pydantic, mirrors frontend zod)  
+- **Play engine** (`src/engine/effects/effect_resolver.py`): resolves `EffectGraph` steps at runtime  
+- **Session start**: `POST /api/engine/sessions` hydrates saved graphs onto objects by `card_id`  
+- **Execute**: cast/activate passes `effect_graph` on the payload; server attaches via `_attach_effect_graph_to_object`  
 - Oracle parsing pipeline (`Axis2BuildPipeline`) is separate — used to *import* text, not to drive this UI  
 
 ## Not the same as Axis2 build pipeline

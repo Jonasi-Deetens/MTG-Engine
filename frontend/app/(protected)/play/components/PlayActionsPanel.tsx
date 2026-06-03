@@ -247,7 +247,7 @@ export function PlayActionsPanel() {
         hasActivationCostErrors={hasActivationCostErrors}
         hasAdditionalCastCostErrors={hasAdditionalCastCostErrors}
         hasAlternativeExtraCostErrors={hasAlternativeExtraCostErrors}
-        hasOptionalCastCostErrors={hasOptionalCostErrors}
+        hasOptionalCostErrors={hasOptionalCostErrors}
         isMainPhase={isMainPhase}
         isPriorityActivePlayer={isPriorityActivePlayer}
         isDeclareAttackers={isDeclareAttackers}
@@ -484,12 +484,10 @@ export function PlayActionsPanel() {
             })(),
           }))
         }
-        onUpdateWardPaymentDetail={(objectId, updater) =>
+        onUpdateWardPaymentDetail={(objectId, _costIndex, detail) =>
           setWardPaymentDetails((prev: Record<string, any>) => ({
             ...prev,
-            [objectId]: updater(
-              prev[objectId] ?? { hybrid_choices: [], two_brid_choices: [], phyrexian_choices: [] }
-            ),
+            [objectId]: detail,
           }))
         }
         effectTargetGroups={hasEffectTargets ? effectTargetGroups : []}
@@ -522,6 +520,13 @@ export function PlayActionsPanel() {
             return next;
           })
         }
+        replacementConflicts={replacementConflicts}
+        replacementChoices={replacementChoices}
+        highlightedReplacementKey={highlightedReplacementKey}
+        onResolveReplacement={(key, choice) =>
+          setReplacementChoices((prev: Record<string, string>) => ({ ...prev, [key]: choice }))
+        }
+        onHighlightReplacement={setHighlightedReplacementKey}
       />
 
       <CombatDamagePanel

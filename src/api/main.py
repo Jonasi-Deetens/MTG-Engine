@@ -1,15 +1,50 @@
 import uvicorn
 from fastapi import FastAPI, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
-from db.connection import SessionLocal
+from db.connection import SessionLocal, engine
+from db.models import Base
 from db.repository import Axis1Repository
 from scryfall.client import ScryfallClient
 from scryfall.mappers.axis1_mapper import Axis1Mapper
 from scryfall.services.deck_import_service import DeckImportService
 from .schemas.request_schemas import DeckImportRequest
+from .routes import auth, cards, collections, decks
+from .routes.effects import router as effects_router
+from .routes.engine import router as engine_router
 
-app = FastAPI(title="MTG Engine API")
+try:
+    Base.metadata.create_all(bind=engine)
+except Exception as e:
+    print(f"WARNING: Could not create database tables: {e}")
+
+app = FastAPI(
+    title="MTG Simulator API",
+    description="Magic: The Gathering card engine API",
+    version="1.0.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:3001",
+    ],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+)
+
+app.include_router(auth.router)
+app.include_router(cards.router)
+app.include_router(collections.router)
+app.include_router(decks.router)
+app.include_router(effects_router)
+app.include_router(engine_router)
 
 
 def get_db():
@@ -26,11 +61,10 @@ def import_deck(req: DeckImportRequest, db: Session = Depends(get_db)):
     mapper = Axis1Mapper()
     repo = Axis1Repository(db)
     service = DeckImportService(scry_client, mapper, repo)
-
     result = service.import_deck(req.deck_url)
     return {
         "imported_count": len(result),
-        "cards": [c.card_id for c in result]
+        "cards": [c.card_id for c in result],
     }
 
 

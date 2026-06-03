@@ -43,7 +43,7 @@ export const useEffectGraphs = ({ gameState, cardMap, setGameState }: UseEffectG
       setGameState((prevState) => {
         if (!prevState) return prevState;
         const updatedObjects = prevState.objects.map((obj) => {
-          const objCardId = cardMap[obj.id]?.card_id;
+          const objCardId = obj.card_id ?? cardMap[obj.id]?.card_id;
           const graph = objCardId ? graphsByCardId[objCardId] : undefined;
           if (!graph) return obj;
           if (obj.effect_graphs && obj.effect_graphs.length > 0) return obj;
@@ -96,8 +96,8 @@ export const useEffectGraphs = ({ gameState, cardMap, setGameState }: UseEffectG
       Array.from(
         new Set(
           gameState.objects
-            .filter((obj) => obj.zone === 'battlefield' || obj.zone === 'command')
-            .map((obj) => cardMap[obj.id]?.card_id)
+            .filter((obj) => obj.zone === 'battlefield' || obj.zone === 'command' || obj.zone === 'hand')
+            .map((obj) => obj.card_id ?? cardMap[obj.id]?.card_id)
             .filter((cardId): cardId is string => Boolean(cardId))
         )
       )

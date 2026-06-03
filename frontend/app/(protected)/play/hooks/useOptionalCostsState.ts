@@ -154,7 +154,7 @@ export function useOptionalCostsState({
         if (obj.tapped) return false;
         if (!obj.types?.includes('Creature')) return false;
         const colors = obj.colors ?? [];
-        return colors.some((color) => spellColors.has(color));
+        return colors.some((color: string) => spellColors.has(color));
       })
       .map((obj) => ({
         value: obj?.id ?? '',

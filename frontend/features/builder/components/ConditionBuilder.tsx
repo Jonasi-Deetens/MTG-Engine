@@ -60,7 +60,7 @@ export function ConditionBuilder({
     }
 
     const structuredCondition: StructuredCondition = {
-      type: conditionType,
+      type: conditionType as StructuredCondition['type'],
     };
 
     if (selectedConditionType.requiresValue) {

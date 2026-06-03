@@ -151,6 +151,8 @@ export interface PlayTargetingContextValue {
   copySpellConfig: { enabled: boolean; amount: number };
   copyTargetSelections: Array<{ objectIds: string[]; playerIds: number[] }>;
   copyTargetErrorsGlobal: string[];
+  /** Legacy single-list copy target count (when not using per-effect groups). */
+  copyTargetsCount: number;
   copyTargetsByEffectCount: number;
   copyEffectTargetGroups: any[];
   copyTargetsByEffectList: any[];
