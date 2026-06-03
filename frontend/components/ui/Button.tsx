@@ -1,0 +1,68 @@
+// frontend/components/ui/Button.tsx
+
+import React from 'react';
+import { cn } from '@/lib/utils';
+
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?:
+    | 'primary'
+    | 'secondary'
+    | 'outline'
+    | 'ghost'
+    | 'danger'
+    | 'link'
+    | 'frame';
+  size?: 'xs' | 'sm' | 'md' | 'lg';
+  isLoading?: boolean;
+}
+
+export function Button({
+  children,
+  variant = 'primary',
+  size = 'md',
+  isLoading = false,
+  className,
+  disabled,
+  ...props
+}: ButtonProps): React.ReactElement {
+  const baseStyles =
+    'ui-button font-medium rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer inline-flex items-center justify-center';
+  
+  const variants = {
+    primary: 'bg-[color:var(--theme-button-primary-bg)] hover:bg-[color:var(--theme-button-primary-hover)] text-[color:var(--theme-button-primary-text)]',
+    secondary: 'bg-[color:var(--theme-button-secondary-bg)] hover:bg-[color:var(--theme-button-secondary-hover)] text-[color:var(--theme-button-secondary-text)] border border-[color:var(--theme-border-default)]',
+    outline: 'border-2 border-[color:var(--theme-button-outline-border)] text-[color:var(--theme-button-outline-text)] hover:bg-[color:var(--theme-button-outline-hover)] hover:text-[color:var(--theme-button-primary-text)] bg-transparent',
+    ghost: 'bg-transparent hover:bg-[color:var(--theme-button-ghost-hover)] text-[color:var(--theme-button-ghost-text)] hover:text-[color:var(--theme-text-primary)]',
+    danger: 'bg-[color:var(--theme-status-error)] hover:opacity-90 text-[color:var(--theme-text-primary)]',
+    link: 'bg-transparent text-[color:var(--theme-accent-primary)] hover:text-[color:var(--theme-accent-hover)] underline-offset-4 hover:underline p-0',
+    frame: 'bg-transparent text-[color:var(--theme-accent-primary)] nier-frame nier-frame--accent rounded-none hover:bg-[color:var(--theme-accent-primary)]/10 hover:text-[color:var(--theme-accent-hover)]',
+  };
+  
+  const sizes = {
+    xs: 'h-8 px-2 text-xs',
+    sm: 'h-10 px-4 text-sm',
+    md: 'h-10 px-4 text-base',
+    lg: 'h-10 px-4 text-lg',
+  };
+  const sizeClassName = sizes[size];
+  
+  return (
+    <button
+      data-variant={variant}
+      data-size={size}
+      className={cn(baseStyles, variants[variant], sizeClassName, className)}
+      disabled={disabled || isLoading}
+      {...props}
+    >
+      {isLoading ? (
+        <span className="flex items-center gap-2">
+          <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-[color:var(--theme-button-primary-text)]"></span>
+          Loading...
+        </span>
+      ) : (
+        children
+      )}
+    </button>
+  );
+}
+

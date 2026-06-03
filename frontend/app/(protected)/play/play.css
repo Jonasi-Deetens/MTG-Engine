@@ -1,0 +1,230 @@
+/* Play page layout and structure */
+.play-page {
+  min-height: 100vh;
+  padding-bottom: 32px;
+}
+
+.play-surface {
+  position: relative;
+}
+
+.play-layout {
+  display: grid;
+  gap: 20px;
+}
+
+@media (min-width: 1024px) {
+  .play-layout {
+    grid-template-columns: minmax(0, 1fr) 360px;
+    align-items: start;
+  }
+}
+
+.play-panel {
+  position: sticky;
+  top: 16px;
+  align-self: start;
+}
+
+.play-mat-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--theme-border-default);
+  background: var(--theme-card-bg);
+  box-shadow: 6px 6px 0 color-mix(in srgb, var(--theme-border-default) 70%, transparent);
+}
+
+.player-mat {
+  border: 1px solid var(--theme-border-default);
+  background: var(--theme-card-bg);
+  padding: 16px;
+  box-shadow: 6px 6px 0 color-mix(in srgb, var(--theme-border-default) 70%, transparent);
+}
+
+.player-mat-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.player-mat-grid {
+  display: grid;
+  gap: 14px;
+}
+
+@media (min-width: 1024px) {
+  .player-mat-grid {
+    grid-template-columns: minmax(0, 1fr) 240px;
+    grid-template-rows: auto auto;
+  }
+}
+
+.player-mat-battlefield {
+  min-height: 220px;
+}
+
+.player-mat-hand {
+  grid-column: 1 / -1;
+}
+
+.player-mat-side {
+  display: grid;
+  gap: 12px;
+}
+
+.mat-zone {
+  border: 1px solid var(--theme-border-default);
+  background: var(--theme-card-bg);
+  padding: 12px;
+  box-shadow: 6px 6px 0 color-mix(in srgb, var(--theme-border-default) 70%, transparent);
+}
+
+.mat-zone-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--theme-text-secondary);
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.deck-stack {
+  position: relative;
+  width: 96px;
+  height: 132px;
+  margin: 0 auto;
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.deck-stack:hover {
+  transform: translateY(-2px);
+  filter: none;
+}
+
+.deck-card {
+  position: absolute;
+  inset: 0;
+  border-radius: 0;
+  border: 1px solid var(--theme-border-default);
+  background: var(--theme-card-bg);
+  box-shadow: 6px 6px 0 color-mix(in srgb, var(--theme-border-default) 70%, transparent);
+}
+
+.deck-card-1 {
+  transform: translate(0, 0);
+}
+
+.deck-card-2 {
+  transform: translate(6px, -6px);
+}
+
+.deck-card-3 {
+  transform: translate(12px, -12px);
+}
+
+.deck-count {
+  position: absolute;
+  bottom: -6px;
+  right: -6px;
+  padding: 2px 8px;
+  border-radius: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--theme-text-primary);
+  background: var(--theme-card-bg);
+  border: 1px solid var(--theme-border-default);
+}
+
+.zone-card {
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.zone-card-face {
+  position: relative;
+}
+
+.zone-card-pt {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  padding: 2px 6px;
+  border-radius: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: #f8fafc;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.zone-card-attachment {
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: #e7e0d0;
+  background: rgba(18, 16, 14, 0.85);
+  border: 1px solid rgba(231, 224, 208, 0.5);
+  box-shadow:
+    0 0 6px rgba(231, 224, 208, 0.15),
+    0 0 12px rgba(231, 224, 208, 0.1);
+  z-index: 3;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.zone-card-tapped {
+  transform: rotate(90deg);
+  transform-origin: center;
+  filter: brightness(0.8);
+}
+
+.zone-card-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 0;
+  background: rgba(0, 0, 0, 0.25);
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.3);
+}
+
+.zone-card {
+  position: relative;
+}
+
+.zone-card::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border: 1px solid transparent;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.zone-card:hover::after {
+  border-color: color-mix(in srgb, var(--theme-accent-primary) 55%, transparent);
+  opacity: 1;
+}
+
+.zone-card .rounded-xl,
+.zone-card .rounded-lg,
+.zone-card .rounded-full,
+.zone-card img,
+.zone-card-face {
+  border-radius: 0 !important;
+}
+

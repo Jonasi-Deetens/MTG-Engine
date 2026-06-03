@@ -1,0 +1,184 @@
+// frontend/lib/api.ts
+
+// Use relative URLs to proxy through Next.js API routes
+// This avoids CORS issues and allows Next.js server to reach API container
+const API_URL = typeof window === 'undefined' 
+  ? (process.env.NEXT_PUBLIC_API_URL || 'http://api:8000') // Server-side: use service name
+  : ''; // Client-side: use relative URLs (proxied through Next.js)
+
+export interface ApiError {
+  detail: string;
+}
+
+export class ApiClientError extends Error {
+  constructor(
+    message: string,
+    public status?: number,
+    public data?: ApiError
+  ) {
+    super(message);
+    this.name = 'ApiClientError';
+  }
+}
+
+async function handleResponse<T>(response: Response): Promise<T> {
+  if (!response.ok) {
+    let errorData: ApiError | null = null;
+    try {
+      errorData = await response.json();
+    } catch {
+      // If response is not JSON, use status text
+    }
+    
+    throw new ApiClientError(
+      errorData?.detail || response.statusText || 'An error occurred',
+      response.status,
+      errorData || undefined
+    );
+  }
+  
+  // Handle empty responses
+  const contentType = response.headers.get('content-type');
+  if (!contentType || !contentType.includes('application/json')) {
+    return {} as T;
+  }
+  
+  return response.json();
+}
+
+export interface ApiRequestOptions extends RequestInit {
+  timeoutMs?: number;
+}
+
+export async function apiRequest<T>(
+  endpoint: string,
+  options: ApiRequestOptions = {}
+): Promise<T> {
+  const url = `${API_URL}${endpoint}`;
+
+  const { timeoutMs = 10000, ...requestOptions } = options;
+  const config: RequestInit = {
+    ...requestOptions,
+    headers: {
+      'Content-Type': 'application/json',
+      ...requestOptions.headers,
+    },
+    credentials: 'include', // Important for cookies
+  };
+  
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+    }, timeoutMs);
+
+    const response = await fetch(url, {
+      ...config,
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+    return handleResponse<T>(response);
+  } catch (error) {
+    if (error instanceof ApiClientError) {
+      throw error;
+    }
+    if (error instanceof Error && (error.name === 'AbortError' || error.message.includes('aborted'))) {
+      throw new ApiClientError(
+        `Request timeout: API did not respond within ${Math.round(timeoutMs / 1000)} seconds.`,
+        0
+      );
+    }
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      throw new ApiClientError(
+        `Cannot connect to API. Make sure the server is running.`,
+        0
+      );
+    }
+    throw new ApiClientError(
+      error instanceof Error ? error.message : 'Network error'
+    );
+  }
+}
+
+export const api = {
+  get: <T>(endpoint: string) => apiRequest<T>(endpoint, { method: 'GET' }),
+  post: <T>(endpoint: string, data?: unknown) =>
+    apiRequest<T>(endpoint, {
+      method: 'POST',
+      body: data ? JSON.stringify(data) : undefined,
+    }),
+  put: <T>(endpoint: string, data?: unknown) =>
+    apiRequest<T>(endpoint, {
+      method: 'PUT',
+      body: data ? JSON.stringify(data) : undefined,
+    }),
+  patch: <T>(endpoint: string, data?: unknown) =>
+    apiRequest<T>(endpoint, {
+      method: 'PATCH',
+      body: data ? JSON.stringify(data) : undefined,
+    }),
+  delete: <T>(endpoint: string) =>
+    apiRequest<T>(endpoint, { method: 'DELETE' }),
+};
+
+// Card API methods
+export const cards = {
+  // Get random card
+  getRandom: async (): Promise<any> => {
+    return api.get('/api/cards/random');
+  },
+  // Get card by ID
+  getById: async (cardId: string): Promise<any> => {
+    return api.get(`/api/cards/${encodeURIComponent(cardId)}`);
+  },
+  // List cards with pagination and optional filters
+  list: async (
+    page: number = 1, 
+    pageSize: number = 20, 
+    filters?: {
+      colors?: string[];
+      types?: string;
+      set_code?: string;
+      rarity?: string;
+      lang?: string;
+      keywords?: string;
+    }
+  ): Promise<any> => {
+    const params = new URLSearchParams();
+    params.set('page', page.toString());
+    params.set('page_size', pageSize.toString());
+    
+    if (filters) {
+      if (filters.colors && filters.colors.length > 0) {
+        params.set('colors', filters.colors.join(','));
+      }
+      if (filters.types) {
+        params.set('types', filters.types);
+      }
+      if (filters.set_code) {
+        params.set('set_code', filters.set_code);
+      }
+      if (filters.rarity) {
+        params.set('rarity', filters.rarity);
+      }
+      if (filters.lang) {
+        params.set('lang', filters.lang);
+      }
+      if (filters.keywords) {
+        params.set('keywords', filters.keywords);
+      }
+    }
+    
+    return api.get(`/api/cards?${params.toString()}`);
+  },
+  // Search cards by name
+  search: async (query: string, page: number = 1, pageSize: number = 20): Promise<any> => {
+    return api.get(`/api/cards/search?q=${encodeURIComponent(query)}&page=${page}&page_size=${pageSize}`);
+  },
+  // Get all versions of a card
+  getVersions: async (cardId: string): Promise<any[]> => {
+    return api.get(`/api/cards/versions/${cardId}`);
+  },
+};
+

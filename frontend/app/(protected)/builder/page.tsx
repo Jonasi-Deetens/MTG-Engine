@@ -1,0 +1,447 @@
+'use client';
+
+// frontend/app/(protected)/builder/page.tsx
+
+import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { useEffectStore } from '@/store/effectStore';
+import type { CardData } from '@/store/builderStore';
+import { cards } from '@/lib/api';
+import { effects } from '@/lib/effects';
+import { getEffectGraphWarnings, validateEffectGraph } from '@/lib/effectValidation';
+import { Button } from '@/components/ui/Button';
+import { SearchInput } from '@/components/ui/SearchInput';
+import { CardPreview } from '@/components/cards/CardPreview';
+import { ValidationPanel } from '@/features/builder/components/ValidationPanel';
+import { EffectGraphPreview } from '@/features/builder/components/EffectGraphPreview';
+import { EffectList } from '@/features/builder/components/EffectList';
+import { EffectWizard } from '@/features/builder/components/EffectWizard';
+import { isEditableTarget } from '@/context/ShortcutContext';
+import { ArchiveSectionHeader } from '@/components/ui/ArchiveSectionHeader';
+import { Card } from '@/components/ui/Card';
+
+export default function BuilderPage() {
+  const searchParams = useSearchParams();
+  const {
+    currentCard,
+    setCurrentCard,
+    fromEffectGraph,
+    clearAll,
+    toEffectGraph,
+    setValidation,
+    addStep,
+    updateStep,
+    steps,
+    setSourceKind,
+    sourceKind,
+  } = useEffectStore();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searching, setSearching] = useState(false);
+  const [debugOpen, setDebugOpen] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [editingStepId, setEditingStepId] = useState<string | null>(null);
+
+  const handleGetRandomCard = async () => {
+    setLoading(true);
+    setError('');
+    setSearchTerm('');
+    try {
+      const card = await cards.getRandom();
+      console.log('Random card received:', card);
+      console.log('Card ID:', card?.card_id);
+      if (!card?.card_id) {
+        console.error('Card missing card_id!', card);
+        setError('Card data is invalid - missing card ID');
+        return;
+      }
+      // Clear abilities first before setting new card
+      clearAll();
+      setCurrentCard(card as CardData);
+      // Try to load saved graph for this card
+      await loadSavedGraph(card.card_id);
+    } catch (err: any) {
+      setError(err.message || 'Failed to fetch random card');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearchCard = async () => {
+    if (!searchTerm.trim()) {
+      setError('Please enter a card name');
+      return;
+    }
+
+    setSearching(true);
+    setError('');
+    try {
+      const results = await cards.search(searchTerm, 1, 1);
+      if (results.cards && results.cards.length > 0) {
+        const card = results.cards[0] as CardData;
+        console.log('Search card received:', card);
+        console.log('Card ID:', card?.card_id);
+        if (!card?.card_id) {
+          console.error('Card missing card_id!', card);
+          setError('Card data is invalid - missing card ID');
+          return;
+        }
+        // Clear abilities first before setting new card
+        clearAll();
+        setCurrentCard(card);
+        setSearchTerm('');
+        // Try to load saved graph for this card
+        await loadSavedGraph(card.card_id);
+      } else {
+        setError(`No card found with name "${searchTerm}"`);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to search for card');
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleSearchKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearchCard();
+    }
+  };
+
+  const runValidation = useCallback(async () => {
+    const graph = toEffectGraph();
+    if (!graph) {
+      setValidation([], [], false);
+      return;
+    }
+    const warnings = getEffectGraphWarnings(graph);
+    const local = validateEffectGraph(graph);
+    try {
+      const remote = await effects.validate(graph);
+      const errors = [...local.errors, ...(remote.valid ? [] : remote.errors)];
+      const deduped = Array.from(new Set(errors));
+      setValidation(deduped, warnings, local.valid && remote.valid);
+    } catch (err: unknown) {
+      console.error('Validation error:', err);
+      setValidation(local.errors, warnings, local.valid);
+    }
+  }, [toEffectGraph, setValidation]);
+
+  const loadSavedGraph = async (cardId: string) => {
+    try {
+      console.log('Loading graph for card_id:', cardId);
+      const saved = await effects.getCardEffectGraph(cardId);
+      console.log('Loaded graph response:', saved);
+      if (saved && saved.effect_graph) {
+        fromEffectGraph(saved.effect_graph);
+        console.log('Effect graph loaded into store');
+      }
+    } catch (err: any) {
+      // Graph doesn't exist yet, that's fine - abilities already cleared
+      if (err.status === 404) {
+        console.log('No saved graph found for card_id:', cardId);
+      } else {
+        console.error('Error loading saved graph:', err);
+      }
+    }
+  };
+
+  const handleVersionChange = async (newCard: CardData) => {
+    console.log('Version changed to:', newCard.card_id);
+    // Clear abilities first
+    clearAll();
+    // Set new card
+    setCurrentCard(newCard);
+    // Load graph for new version (will check all versions)
+    await loadSavedGraph(newCard.card_id);
+  };
+
+  // Load card from query parameter on mount
+  useEffect(() => {
+    const cardId = searchParams.get('card');
+    if (cardId && (!currentCard || currentCard.card_id !== cardId)) {
+      const loadCardFromQuery = async () => {
+        setLoading(true);
+        setError('');
+        try {
+          const card = await cards.getById(cardId);
+          if (card?.card_id) {
+            clearAll();
+            setCurrentCard(card as CardData);
+            await loadSavedGraph(card.card_id);
+          }
+        } catch (err: any) {
+          setError(err?.data?.detail || err?.message || 'Failed to load card');
+        } finally {
+          setLoading(false);
+        }
+      };
+      loadCardFromQuery();
+    }
+  }, [searchParams, currentCard, setCurrentCard, clearAll]);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.isComposing) return;
+      if (isEditableTarget(e.target)) return;
+
+      const key = e.key.toLowerCase();
+      if ((e.ctrlKey || e.metaKey) && key === 'r') {
+        e.preventDefault();
+        e.stopPropagation();
+        runValidation();
+        return;
+      }
+
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+
+      if (key === 'd') {
+        e.preventDefault();
+        e.stopPropagation();
+        setDebugOpen((prev) => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown, { passive: false });
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [runValidation]);
+
+  const handleAddEffect = () => {
+    setEditingStepId(null);
+    setWizardOpen(true);
+  };
+
+  const handleEditEffect = (id: string) => {
+    setEditingStepId(id);
+    setWizardOpen(true);
+  };
+
+  const editingStep = steps.find((step) => step.id === editingStepId) ?? null;
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1
+          className="font-heading text-3xl font-bold text-[color:var(--theme-text-primary)] mb-2 nier-glitch"
+          data-text="Ability Builder"
+        >
+          Ability Builder
+        </h1>
+      </div>
+      {/* Top Section: Card Preview */}
+      <Card variant="elevated">
+        <div className="p-6">
+          <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-3 mb-4">
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+              <div className="w-full sm:w-64">
+                <SearchInput
+                  value={searchTerm}
+                  onChange={setSearchTerm}
+                  onSearch={handleSearchCard}
+                  placeholder="Search card by name..."
+                  size="sm"
+                />
+              </div>
+              <Button
+                onClick={handleSearchCard}
+                disabled={searching || !searchTerm.trim()}
+                variant="secondary"
+                size="sm"
+                className="w-full sm:w-auto"
+              >
+                {searching ? 'Searching...' : 'Search'}
+              </Button>
+            </div>
+              <Button
+                onClick={handleGetRandomCard}
+                disabled={loading}
+                variant="primary"
+                size="sm"
+                className="w-full sm:w-auto"
+              >
+              {loading ? 'Loading...' : 'Random Card'}
+            </Button>
+          </div>
+          {error && (
+            <div className="mb-4 p-3 bg-[color:var(--theme-status-error)]/20 text-[color:var(--theme-status-error)] rounded text-sm">
+              {error}
+            </div>
+          )}
+          {currentCard && (
+            <div className="flex flex-col items-start gap-6 sm:flex-row">
+              <div className="w-full sm:w-48 shrink-0">
+                <CardPreview card={currentCard} onVersionChange={handleVersionChange} />
+              </div>
+              <div className="flex-1 text-[color:var(--theme-text-secondary)] space-y-3">
+                <div>
+                  <ArchiveSectionHeader
+                    title={currentCard.name}
+                    status="CARD_RECORD: ACTIVE"
+                    className="mb-1"
+                    titleClassName="text-2xl tracking-[0.15em] normal-case"
+                  />
+                  {currentCard.mana_cost && (
+                    <p className="text-base font-mono text-[color:var(--theme-accent-primary)]">
+                      {currentCard.mana_cost}
+                    </p>
+                  )}
+                </div>
+                
+                {currentCard.type_line && (
+                  <div>
+                    <span className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">Type</span>
+                    <p className="text-sm text-[color:var(--theme-text-primary)] mt-1">{currentCard.type_line}</p>
+                  </div>
+                )}
+                
+                {(currentCard.power && currentCard.toughness) && (
+                  <div>
+                    <span className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">Power / Toughness</span>
+                    <p className="text-sm text-[color:var(--theme-text-primary)] mt-1 font-mono">
+                      {currentCard.power} / {currentCard.toughness}
+                    </p>
+                  </div>
+                )}
+                
+                {currentCard.colors && currentCard.colors.length > 0 && (
+                  <div>
+                    <span className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">Colors</span>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {currentCard.colors.map((color, idx) => (
+                        <span
+                          key={idx}
+                          className="px-2 py-1 rounded text-xs font-medium bg-[color:var(--theme-card-hover)] text-[color:var(--theme-text-primary)] capitalize border border-[color:var(--theme-card-border)]"
+                        >
+                          {color}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {currentCard.oracle_text && (
+                  <div>
+                    <span className="text-xs text-[color:var(--theme-text-secondary)] uppercase tracking-wide">Oracle Text</span>
+                    <p className="text-sm text-[color:var(--theme-text-primary)] mt-1 whitespace-pre-wrap leading-relaxed">
+                      {currentCard.oracle_text}
+                    </p>
+                  </div>
+                )}
+                
+                {(currentCard.set_code || currentCard.collector_number) && (
+                  <div className="flex flex-wrap gap-4 text-xs text-[color:var(--theme-text-secondary)]">
+                    {currentCard.set_code && (
+                      <div>
+                        <span className="uppercase tracking-wide">Set:</span>{' '}
+                        <span className="text-[color:var(--theme-text-primary)]">{currentCard.set_code.toUpperCase()}</span>
+                      </div>
+                    )}
+                    {currentCard.collector_number && (
+                      <div>
+                        <span className="uppercase tracking-wide">#:</span>{' '}
+                        <span className="text-[color:var(--theme-text-primary)]">{currentCard.collector_number}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          {!currentCard && (
+            <div className="text-center py-8 text-[color:var(--theme-text-secondary)]">
+              <p className="text-lg mb-2">No card selected</p>
+              <p className="text-sm mb-4">Search for a card by name or click "Random Card" to start building abilities</p>
+            </div>
+          )}
+        </div>
+      </Card>
+
+      {/* Main Section: Split between Builder and Preview */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Left: Effect Builder */}
+        <Card variant="elevated" className="min-h-[500px] lg:min-h-[500px]">
+          <div className="p-6 space-y-4">
+            <ArchiveSectionHeader
+              title="Effects"
+              status="EFFECT_QUEUE: READY"
+              className="mb-4"
+              titleClassName="text-xl"
+              action={
+                <div className="hidden sm:block">
+                  <Button variant="primary" size="sm" onClick={handleAddEffect}>
+                    Add Effect
+                  </Button>
+                </div>
+              }
+            />
+            <div className="sm:hidden">
+              <Button variant="primary" size="sm" onClick={handleAddEffect} className="w-full">
+                Add Effect
+              </Button>
+            </div>
+            <EffectList onEdit={handleEditEffect} />
+          </div>
+        </Card>
+
+        {/* Right: Tree View Preview */}
+        <Card variant="elevated" className="min-h-[500px] overflow-y-auto">
+          <div className="p-6">
+            <ArchiveSectionHeader
+              title="Effect Preview"
+              status="GRAPH_VIEW: LIVE"
+              titleClassName="text-xl"
+            />
+            <EffectGraphPreview />
+          </div>
+        </Card>
+      </div>
+
+      {/* Bottom Section: Validation */}
+      <Card variant="elevated">
+        <div className="p-6">
+          <ValidationPanel />
+        </div>
+      </Card>
+
+      {debugOpen && (
+        <Card variant="elevated">
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-[color:var(--theme-text-primary)]">
+                Debug Overlay
+              </h3>
+              <Button variant="outline" size="sm" onClick={() => setDebugOpen(false)}>
+                Close
+              </Button>
+            </div>
+            <div className="text-xs text-[color:var(--theme-text-secondary)] mb-3">
+              Current graph snapshot
+            </div>
+            <pre className="text-xs text-[color:var(--theme-text-secondary)] whitespace-pre-wrap max-h-64 overflow-auto bg-[color:var(--theme-bg-secondary)]/60 border border-[color:var(--theme-card-border)] rounded p-3">
+              {JSON.stringify(toEffectGraph(), null, 2) || 'No graph'}
+            </pre>
+          </div>
+        </Card>
+      )}
+      <EffectWizard
+        isOpen={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+        onSave={(effect) => {
+          if (editingStepId) {
+            updateStep(editingStepId, effect);
+          } else {
+            addStep(effect);
+          }
+        }}
+        editingEffect={editingStep?.effect ?? null}
+        editingStepId={editingStepId}
+        steps={steps}
+        sourceKind={sourceKind}
+        onSourceKindChange={setSourceKind}
+      />
+    </div>
+  );
+}
+

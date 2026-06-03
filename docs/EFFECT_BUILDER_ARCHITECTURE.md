@@ -2,6 +2,9 @@
 
 This repo had **three competing “builders”**. This document defines the **one correct pipeline** and what is deprecated.
 
+> **Frontend UI wizard** (human effect picker with parameters): see [`FRONTEND_EFFECT_WIZARD.md`](./FRONTEND_EFFECT_WIZARD.md).  
+> That lives under `frontend/` on the `frontend` branch / when merged. It is **not** the Axis2 oracle parser below.
+
 ## Canonical pipeline (use this)
 
 ```
